@@ -1,0 +1,42 @@
+# common variables and rules for all Makefiles of RAY++
+
+RAYROOT =       @RAYROOT@
+CXX =		@CXX@
+LINKER =	@LINKER@
+MAKEDEP =	@MAKEDEP@
+MAKE =		@MAKE@
+CXXFLAGS =	@CXXFLAGS@ -c
+LFLAGS =	@LFLAGS@
+SHARELFLAGS =	@SHARELFLAGS@ -o $(SHAREDLIB)
+OBJECTS =	$(SOURCES:.cxx=.o)
+ARCHIVE =	$(RAYROOT)/ray++.o
+SHAREDLIB =	$(RAYROOT)/ray++.so
+ENABLE_SHARED =	@ENABLE_SHARED@
+ENABLE_STRIPPING = @ENABLE_STRIPPING@
+
+@SILENT_RULE@
+
+.PHONY: objclean depclean clean checkin compmsg ocomp compile
+
+%.o: %.cxx
+	@echo "  Compiling" $*.cxx
+	$(CXX) $(CXXFLAGS) $*.cxx
+
+.depend:
+	if test -n "$(SOURCES)"; then \
+		$(MAKEDEP) $(SOURCES) > .depend; \
+	fi
+
+objclean:
+	rm -f $(OBJECTS)
+
+depclean:
+	rm -f .depend
+
+clean:
+	@echo Cleaning up in `pwd`
+	rm -f $(OBJECTS) $(DELETABLES) .depend
+
+compile: $(OBJECTS)
+
+-include .depend

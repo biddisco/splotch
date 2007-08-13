@@ -1,0 +1,77 @@
+# Input/Output options
+infile=snap_f2k_new
+outfile=gal_r
+numfiles=1
+swap_endian=FALSE
+
+# Vizualization properties for gas
+gas=Y
+# labels for gas to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS')
+lable_intensity=XXXX
+lable_color=U
+log_intensity=FALSE
+log_color=FALSE
+#min_int=-6.0
+#max_int=-3.0
+min_col=0
+max_col=255
+hsml_fac=1.0
+filegas_palette=Klaus.pal
+brightness_gas=      0.00200000
+gray_absorbtion_gas=0.75
+
+# Vizualization properties for stars
+stars=Y
+star_hsml=0.0005
+# block for stars smoothing length ('XXXX','HSMS','HSBP')
+stars_hslm=XXXX
+# block for stars to visualize ('XXXX','AGE')
+stars_intensity=XXXX
+stars_color=AGE
+log_stars_intensity=FALSE
+log_stars_color=FALSE
+min_stars_int=0.0
+max_stars_int=1.0
+min_stars_col=0.0
+max_stars_col=1.0
+filestars_palette=Stars.pal
+brightness_stars=      0.0500000
+gray_absorbtion_stars=0.5
+
+
+# Image properties
+#resolution=1032
+#ycut0=344
+#ycut1=688
+
+resolution=1600
+ycut0=200
+ycut1=1400
+
+#resolution=800
+#ycut0=100
+#ycut1=700
+
+boostcolors=TRUE
+colourbar=FALSE
+
+# Geometrical setup
+#alternative read values from file
+geometry_file=mygeometry_r.dat
+#or take give values explicitely
+camera_x=      0.
+camera_y=      3.
+camera_z=      5.
+lookat_x=      0.
+lookat_y=      -0.15
+lookat_z=      0.
+sky_x=0
+sky_y=0
+sky_z=1
+
+
+fov=30
+#zmin=9000.0
+#zmax=11000.0
+
+

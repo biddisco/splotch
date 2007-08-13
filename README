@@ -1,0 +1,46 @@
+  *************************************************************
+  *                         Splotch                           *
+  *                                                           *
+  *************************************************************
+
+  Authors of Splotch:
+
+    Martin Reinecke:  martin@mpa-garching.mpg.de
+
+    Klaus Dolag:      kdolag@mpa-garching.mpg.de
+
+Splotch is written in the C++ language. To install it you have just 
+to unpack the tar.gz and to compile it via:
+g++ -O2 -ffast-math -fomit-frame-pointer -I. -Icxxsupport fullsplotch.cc
+
+To run it on your simulations, have a look into the splotch.par
+file and set the parameters you prefer.
+
+As Splotch reads simulation data in binary format, you have to
+write your simulations using Gadget 
+(http://www.mpa-garching.mpg.de/~volker/gadget/index.html) 
+and choosing SnapFormat = 2. 
+Endian conversion will be done automaticly.
+
+
+Copyrights and Acknowledgements
+
+Splotch is free software, distributed under the GNU General Public License. 
+This implies that you may freely distribute and copy the software.
+You may also modify it as you wish, and distribute these modified 
+versions as long as you indicate prominently any changes you made in the
+original code, and as long as you leave the copyright notices, and 
+the no-warranty notice intact. Please read the General Public License 
+for more details. Note that the authors retain their copyright on the code. 
+
+Splotch uses parts of the Ray++ ray tracing library, which is distributed
+under the GNU Library (or Lesser) General Public License.
+
+Requested Acknowledgement
+
+The authors kindly ask you to acknowledge the use of the Splotch package
+in your publications in the following form: 
+
+At the first image produced with Splotch, a footnote placed in the main 
+body of the paper referring to the Splotch web-site - currently
+http://dipastro.pd.astro.it/~cosmo/Splotch 
