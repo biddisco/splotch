@@ -13,6 +13,9 @@ Splotch is written in the C++ language. To install it you have just
 to unpack the tar.gz and to compile it via:
 g++ -O2 -ffast-math -fomit-frame-pointer -I. -Icxxsupport fullsplotch.cc
 
+Please Check your compiler for the OpenMP flags if you want to use 
+OpenMP functionality.
+
 To run it on your simulations, have a look into the splotch.par
 file and set the parameters you prefer.
 
@@ -43,4 +46,8 @@ in your publications in the following form:
 
 At the first image produced with Splotch, a footnote placed in the main 
 body of the paper referring to the Splotch web-site - currently
-http://dipastro.pd.astro.it/~cosmo/Splotch 
+http://www.mpa-garching.mpg.de/~kdolag/splotch
+Please also refere to the paper
+K. Dolag, M. Reinecke, C. Gheller and S. Imboden:
+"Splotch:  Visualizing Cosmological Simulations ", 2008, NJP, submitted 
+
