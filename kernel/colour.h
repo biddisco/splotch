@@ -34,28 +34,28 @@ class COLOUR
   {
   public:
     /*! */
-    float4 r, g, b;
+    float32 r, g, b;
 
     /*! */
     COLOUR () {}
     /*! */
-    COLOUR (float4 rv, float4 gv, float4 bv)
+    COLOUR (float32 rv, float32 gv, float32 bv)
       : r (rv), g (gv), b (bv) {}
 
     /*! */
-    float4 maxcomp () const
+    float32 maxcomp () const
       {
       return max (max(r,g),b);
       }
 
     /*! */
-    float4 Intensity () const
+    float32 Intensity () const
       {
       return (0.11*b + 0.59*g + 0.30*r);
       }
 
     /*! */
-    float4 AbsoluteSum () const
+    float32 AbsoluteSum () const
       {
       return (abs(r) + abs(g) + abs(b));
       }
@@ -69,7 +69,7 @@ class COLOUR
       }
 
     /*! */
-    bool AllSmaller (float4 thresh) const
+    bool AllSmaller (float32 thresh) const
       {
       return ((r < thresh) && (g < thresh) && (b < thresh));
       }
@@ -81,7 +81,7 @@ class COLOUR
     /*! */
     bool TooSmall () const
       {
-      return ((r < Small_float4) && (g < Small_float4) && (b < Small_float4));
+      return ((r < Small_float32) && (g < Small_float32) && (b < Small_float32));
       }
 
     /*! */
@@ -97,7 +97,7 @@ class COLOUR
       return *this;
       }
     /*! */
-    COLOUR &operator*= (float4 factor)
+    COLOUR &operator*= (float32 factor)
       {
       r *= factor; g *= factor; b *= factor;
       return *this;
@@ -130,19 +130,19 @@ class COLOUR
       return COLOUR (r*Col2.r, g*Col2.g, b*Col2.b);
       }
     /*! */
-    COLOUR operator* (float4 factor) const
+    COLOUR operator* (float32 factor) const
       {
       return COLOUR (r*factor, g*factor, b*factor);
       }
     /*! */
-    COLOUR operator/ (float4 div) const
+    COLOUR operator/ (float32 div) const
       {
-      float4 mult = 1.0/div;
+      float32 mult = 1.0/div;
       return COLOUR (r*mult, g*mult, b*mult);
       }
 
     /*! */
-    friend inline COLOUR operator* (float4 factor, const COLOUR &Col)
+    friend inline COLOUR operator* (float32 factor, const COLOUR &Col)
       {
       return COLOUR (Col.r*factor, Col.g*factor, Col.b*factor);
       }

@@ -23,7 +23,6 @@
 #ifndef RAYPP_BSTREAM_H
 #define RAYPP_BSTREAM_H
 
-#include "config/config.h"
 #include "kernel/byteswap.h"
 
 namespace RAYPP {

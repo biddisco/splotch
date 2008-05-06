@@ -25,10 +25,10 @@
 
 namespace RAYPP {
 
-TRANSMAT:: TRANSMAT (float4 a00, float4 a01, float4 a02,
-                     float4 a10, float4 a11, float4 a12,
-                     float4 a20, float4 a21, float4 a22,
-                     float4 a30, float4 a31, float4 a32)
+TRANSMAT:: TRANSMAT (float32 a00, float32 a01, float32 a02,
+                     float32 a10, float32 a11, float32 a12,
+                     float32 a20, float32 a21, float32 a22,
+                     float32 a30, float32 a31, float32 a32)
   {
   entry[0][0] = a00;
   entry[1][0] = a01;
@@ -74,7 +74,7 @@ TRANSMAT &TRANSMAT::operator-= (const TRANSMAT &b)
   return *this;
   }
 
-TRANSMAT &TRANSMAT::operator*= (float8 factor)
+TRANSMAT &TRANSMAT::operator*= (float64 factor)
   {
   for (int i = 0 ; i < 12 ; ++i) p[i] *= factor;
   return *this;
@@ -83,7 +83,7 @@ TRANSMAT &TRANSMAT::operator*= (float8 factor)
 TRANSMAT TRANSMAT::Inverse () const
   {
   TRANSMAT tmp;
-  float8 d;
+  float64 d;
 
   tmp.entry[0][0] = entry[1][1]*entry[2][2] - entry[2][1]*entry[1][2];
   tmp.entry[0][1] = entry[0][1]*entry[2][2] - entry[2][1]*entry[0][2];
@@ -101,7 +101,7 @@ TRANSMAT TRANSMAT::Inverse () const
              entry[1][0]*tmp.entry[0][1] +
              entry[2][0]*tmp.entry[0][2]);
 
-  if (abs(d) > Huge_float4)
+  if (abs(d) > Huge_float32)
     {
     cerr << "degenerate matrix in TRANSMAT::Inverse()" << endl;
     exit(1);
@@ -161,13 +161,13 @@ bool TRANSMAT::Orthogonal () const
   {
   if (abs (entry[0][0]*entry[1][0] +
            entry[0][1]*entry[1][1] +
-           entry[0][2]*entry[1][2]) > Small_float4) return false;
+           entry[0][2]*entry[1][2]) > Small_float32) return false;
   if (abs (entry[0][0]*entry[2][0] +
            entry[0][1]*entry[2][1] +
-           entry[0][2]*entry[2][2]) > Small_float4) return false;
+           entry[0][2]*entry[2][2]) > Small_float32) return false;
   if (abs (entry[2][0]*entry[1][0] +
            entry[2][1]*entry[1][1] +
-           entry[2][2]*entry[1][2]) > Small_float4) return false;
+           entry[2][2]*entry[1][2]) > Small_float32) return false;
   return true;
   }
 
@@ -176,17 +176,17 @@ bool TRANSMAT::Orthonormal () const
   if (!Orthogonal()) return false;
   if (abs (entry[0][0]*entry[0][0] +
            entry[0][1]*entry[0][1] +
-           entry[0][2]*entry[0][2] - 1.0) > Small_float4) return false;
+           entry[0][2]*entry[0][2] - 1.0) > Small_float32) return false;
   if (abs (entry[1][0]*entry[1][0] +
            entry[1][1]*entry[1][1] +
-           entry[1][2]*entry[1][2] - 1.0) > Small_float4) return false;
+           entry[1][2]*entry[1][2] - 1.0) > Small_float32) return false;
   if (abs (entry[2][0]*entry[2][0] +
            entry[2][1]*entry[2][1] +
-           entry[2][2]*entry[2][2] - 1.0) > Small_float4) return false;
+           entry[2][2]*entry[2][2] - 1.0) > Small_float32) return false;
   return true;
   }
 
-bool TRANSMAT::Scaled_Orthonormal (float8 &factor) const
+bool TRANSMAT::Scaled_Orthonormal (float64 &factor) const
   {
   if (!Orthogonal()) return false;
   factor = entry[0][0]*entry[0][0] +
@@ -194,11 +194,11 @@ bool TRANSMAT::Scaled_Orthonormal (float8 &factor) const
            entry[0][2]*entry[0][2];
   if (abs (entry[1][0]*entry[1][0] +
            entry[1][1]*entry[1][1] +
-           entry[1][2]*entry[1][2] - factor) > Small_float4)
+           entry[1][2]*entry[1][2] - factor) > Small_float32)
     return false;
   if (abs (entry[2][0]*entry[2][0] +
            entry[2][1]*entry[2][1] +
-           entry[2][2]*entry[2][2] - factor) > Small_float4)
+           entry[2][2]*entry[2][2] - factor) > Small_float32)
     return false;
   factor = sqrt (factor);
   return true;
@@ -206,12 +206,12 @@ bool TRANSMAT::Scaled_Orthonormal (float8 &factor) const
 
 bool TRANSMAT::Diagonal () const
   {
-  if ((abs (entry[1][0]) > Small_float4) ||
-      (abs (entry[2][0]) > Small_float4) ||
-      (abs (entry[2][1]) > Small_float4) ||
-      (abs (entry[0][1]) > Small_float4) ||
-      (abs (entry[0][2]) > Small_float4) ||
-      (abs (entry[1][2]) > Small_float4)) return false;
+  if ((abs (entry[1][0]) > Small_float32) ||
+      (abs (entry[2][0]) > Small_float32) ||
+      (abs (entry[2][1]) > Small_float32) ||
+      (abs (entry[0][1]) > Small_float32) ||
+      (abs (entry[0][2]) > Small_float32) ||
+      (abs (entry[1][2]) > Small_float32)) return false;
 
   return true;
   }
@@ -226,7 +226,7 @@ ostream &operator<< (ostream &os, const TRANSMAT &mat)
 
 void TRANSFORM::Make_Scaling_Transform (const VECTOR &vec)
   {
-  if ((vec.x<Small_float4) || (vec.y<Small_float4) || (vec.z<Small_float4))
+  if ((vec.x<Small_float32) || (vec.y<Small_float32) || (vec.z<Small_float32))
     {
     cerr << "TRANSFORM: invalid scaling transformation" << endl;
     exit(1);
@@ -260,7 +260,7 @@ void TRANSFORM::Make_Rotation_Transform (const VECTOR &vec)
   {
   TRANSMAT tmp;
   VECTOR Radian_Vector = vec*Pi/180.0;
-  float8 cosx, cosy, cosz, sinx, siny, sinz;
+  float64 cosx, cosy, cosz, sinx, siny, sinz;
 
   matrix.SetToIdentity();
   cosx = cos (Radian_Vector.x);
@@ -297,11 +297,11 @@ void TRANSFORM::Make_Rotation_Transform (const VECTOR &vec)
   }
 
 void TRANSFORM::Make_Axis_Rotation_Transform
-  (const VECTOR &axis, float8 angle)
+  (const VECTOR &axis, float64 angle)
   {
   VECTOR V = axis.Norm();
   angle *= Pi/180.0;
-  float8 cosx = cos (angle), sinx = sin (angle);
+  float64 cosx = cos (angle), sinx = sin (angle);
 
   matrix.SetToZero();
   matrix.entry[0][0] = V.x * V.x + cosx * (1.0 - V.x * V.x);
@@ -318,7 +318,7 @@ void TRANSFORM::Make_Axis_Rotation_Transform
   }
 
 void TRANSFORM::Make_Shearing_Transform
-  (float4 xy, float4 xz, float4 yx, float4 yz, float4 zx, float4 zy)
+  (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy)
   {
   matrix.SetToIdentity();
 
@@ -350,7 +350,7 @@ bool TRANSFORM::Orthonormal () const
   return matrix.Orthonormal();
   }
 
-bool TRANSFORM::Scaled_Orthonormal (float8 &factor) const
+bool TRANSFORM::Scaled_Orthonormal (float64 &factor) const
   {
   return matrix.Scaled_Orthonormal (factor);
   }
@@ -362,7 +362,7 @@ bool TRANSFORM::Diagonal () const
 
 VECTOR TRANSFORM::TransPoint (const VECTOR &vec) const
   {
-  const float4 *p = matrix.p;
+  const float32 *p = matrix.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
@@ -371,7 +371,7 @@ VECTOR TRANSFORM::TransPoint (const VECTOR &vec) const
 
 VECTOR TRANSFORM::InvTransPoint (const VECTOR &vec) const
   {
-  const float4 *p = inverse.p;
+  const float32 *p = inverse.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
@@ -380,7 +380,7 @@ VECTOR TRANSFORM::InvTransPoint (const VECTOR &vec) const
 
 VECTOR TRANSFORM::TransDirection (const VECTOR &vec) const
   {
-  const float4 *p = matrix.p;
+  const float32 *p = matrix.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6],
@@ -389,7 +389,7 @@ VECTOR TRANSFORM::TransDirection (const VECTOR &vec) const
 
 VECTOR TRANSFORM::InvTransDirection (const VECTOR &vec) const
   {
-  const float4 *p = inverse.p;
+  const float32 *p = inverse.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6],
@@ -398,7 +398,7 @@ VECTOR TRANSFORM::InvTransDirection (const VECTOR &vec) const
 
 VECTOR TRANSFORM::TransNormal (const VECTOR &vec) const
   {
-  const float4 *p = inverse.p;
+  const float32 *p = inverse.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[4] + vec.z*p[8],
      vec.x*p[1] + vec.y*p[5] + vec.z*p[9],
@@ -407,7 +407,7 @@ VECTOR TRANSFORM::TransNormal (const VECTOR &vec) const
 
 VECTOR TRANSFORM::InvTransNormal (const VECTOR &vec) const
   {
-  const float4 *p = matrix.p;
+  const float32 *p = matrix.p;
   return VECTOR
     (vec.x*p[0] + vec.y*p[4] + vec.z*p[8],
      vec.x*p[1] + vec.y*p[5] + vec.z*p[9],
@@ -438,7 +438,7 @@ TRANSFORM Rotation_Transform (const VECTOR &vec)
   return trans;
   }
 
-TRANSFORM Axis_Rotation_Transform (const VECTOR &axis, float8 angle)
+TRANSFORM Axis_Rotation_Transform (const VECTOR &axis, float64 angle)
   {
   TRANSFORM trans;
   
@@ -447,7 +447,7 @@ TRANSFORM Axis_Rotation_Transform (const VECTOR &axis, float8 angle)
   }
 
 TRANSFORM Shearing_Transform
-  (float4 xy, float4 xz, float4 yx, float4 yz, float4 zx, float4 zy)
+  (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy)
   {
   TRANSFORM trans;
   
@@ -458,74 +458,6 @@ TRANSFORM Shearing_Transform
 ostream &operator<< (ostream &os, const TRANSFORM &t)
   {
   os << "Transform\n{\n" << t.matrix << t.inverse << "}" << endl;
-  return os;
-  }
-
-
-STRANSFORM::operator TRANSFORM () const
-  {
-  TRANSFORM trans;
-  trans.matrix = inverse.Inverse();
-  trans.inverse = inverse;
-  return trans;
-  }
-
-void STRANSFORM::Add_Transform (const STRANSFORM &strans)
-  {
-  TRANSMAT tmp=strans.inverse;
-  tmp*=inverse;
-  inverse = tmp;
-  }
-
-bool STRANSFORM::Orthogonal () const
-  {
-  return inverse.Orthogonal();
-  }
-
-bool STRANSFORM::Orthonormal () const
-  {
-  return inverse.Orthonormal();
-  }
-
-bool STRANSFORM::Scaled_Orthonormal (float8 &factor) const
-  {
-  if (!inverse.Scaled_Orthonormal (factor)) return false;
-  factor = 1.0/factor;
-  return true;
-  }
-
-bool STRANSFORM::Diagonal () const
-  {
-  return inverse.Diagonal();
-  }
-
-VECTOR STRANSFORM::InvTransPoint (const VECTOR &vec) const
-  {
-  const float4 *p = inverse.p;
-  return VECTOR (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
-                 vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
-                 vec.x*p[8] + vec.y*p[9] + vec.z*p[10]+ p[11]);
-  }
-
-VECTOR STRANSFORM::InvTransDirection (const VECTOR &vec) const
-  {
-  const float4 *p = inverse.p;
-  return VECTOR (vec.x*p[0] + vec.y*p[1] + vec.z*p[2],
-                 vec.x*p[4] + vec.y*p[5] + vec.z*p[6],
-                 vec.x*p[8] + vec.y*p[9] + vec.z*p[10]);
-  }
-
-VECTOR STRANSFORM::TransNormal (const VECTOR &vec) const
-  {
-  const float4 *p = inverse.p;
-  return VECTOR (vec.x*p[0] + vec.y*p[4] + vec.z*p[8],
-                 vec.x*p[1] + vec.y*p[5] + vec.z*p[9],
-                 vec.x*p[2] + vec.y*p[6] + vec.z*p[10]);
-  }
-
-ostream &operator<< (ostream &os, const STRANSFORM &t)
-  {
-  os << "STransform\n{\n" << t.inverse << "}" << endl;
   return os;
   }
 

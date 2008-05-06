@@ -1,8 +1,8 @@
 # Input/Output options
-infile=snap_f2k_new
-outfile=gal_r
+infile=snap_092
+outfile=test.tga
 numfiles=1
-swap_endian=FALSE
+swap_endian=TRUE
 
 # Vizualization properties for gas
 gas=Y
@@ -10,68 +10,58 @@ gas=Y
 lable_intensity=XXXX
 lable_color=U
 log_intensity=FALSE
-log_color=FALSE
+log_color=TRUE
 #min_int=-6.0
 #max_int=-3.0
-min_col=0
-max_col=255
-hsml_fac=1.0
-filegas_palette=Klaus.pal
-brightness_gas=      0.00200000
-gray_absorbtion_gas=0.75
+min_col=1.0
+max_col=13
+hsml_fac=0.5
+filegas_palette=palettes/NewSplotch.pal
+brightness_gas=      5.000000
+gray_absorbtion_gas=0.01
 
 # Vizualization properties for stars
 stars=Y
-star_hsml=0.0005
+star_hsml=1.0
 # block for stars smoothing length ('XXXX','HSMS','HSBP')
-stars_hslm=XXXX
+stars_hsml=HSMS
 # block for stars to visualize ('XXXX','AGE')
 stars_intensity=XXXX
 stars_color=AGE
 log_stars_intensity=FALSE
 log_stars_color=FALSE
-min_stars_int=0.0
-max_stars_int=1.0
-min_stars_col=0.0
-max_stars_col=1.0
-filestars_palette=Stars.pal
-brightness_stars=      0.0500000
-gray_absorbtion_stars=0.5
+#min_stars_int=0.0
+#max_stars_int=1.0
+#min_stars_col=0.2
+#max_stars_col=0.8
+filestars_palette=palettes/Klaus.pal
+brightness_stars=      1.00000
+gray_absorbtion_stars=0.01
 
 
-# Image properties
-#resolution=1032
-#ycut0=344
-#ycut1=688
-
-resolution=1600
-ycut0=200
-ycut1=1400
-
-#resolution=800
+resolution=800
 #ycut0=100
 #ycut1=700
 
-boostcolors=TRUE
-colourbar=FALSE
+boostcolors=FALSE
+colourbar=TRUE
 
 # Geometrical setup
 #alternative read values from file
 geometry_file=mygeometry_r.dat
 #or take give values explicitely
-camera_x=      0.
-camera_y=      3.
-camera_z=      5.
-lookat_x=      0.
-lookat_y=      -0.15
-lookat_z=      0.
+camera_x=      -3606.6
+camera_y=      10000.0
+camera_z=      2961.9
+lookat_x=      -3606.6
+lookat_y=      3029.6
+lookat_z=      2961.9
 sky_x=0
 sky_y=0
 sky_z=1
 
 
 fov=30
-#zmin=9000.0
-#zmax=11000.0
-
+zmin=5000.0
+zmax=9000.0
 

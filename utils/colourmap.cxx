@@ -29,7 +29,7 @@ COLOURMAP::COLOURMAP(COLOUR Col1, COLOUR Col2)
   Add_Entry(new LINEAR_CMAP_ENTRY (0.0, 1.0, Col1, Col2));
   }
 
-COLOUR COLOURMAP::Get_Colour (float8 val) const
+COLOUR COLOURMAP::Get_Colour (float64 val) const
   {
   vector<HANDLE<CMAP_ENTRY> >::const_iterator i;
     for (i=Entry.begin(); i<Entry.end(); ++i)

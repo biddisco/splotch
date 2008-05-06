@@ -1,26 +1,15 @@
 /*
- * Copyright (c) 2002-2005 Max-Planck-Society
+ *  Class for parsing parameter files
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ *  Copyright (C) 2003, 2004, 2005, 2008 Max-Planck-Society
+ *  Authors: Martin Reinecke, Reinhard Hell
  */
 
 #ifndef PLANCK_PARAMFILE_H
 #define PLANCK_PARAMFILE_H
 
 #include <map>
+#include <set>
 #include <string>
 #include <iostream>
 #include "cxxutils.h"
@@ -28,12 +17,14 @@
 class paramfile
   {
   private:
-    std::map<std::string,std::string> params;
+    typedef std::map<std::string,std::string> params_type;
+    params_type params;
+    mutable std::set<std::string> read_params;
     bool verbose;
 
     std::string get_valstr(const std::string &key) const
       {
-      std::map<std::string,std::string>::const_iterator loc=params.find(key);
+      params_type::const_iterator loc=params.find(key);
       if (loc!=params.end()) return loc->second;
       throw Message_error ("Error: Cannot find the key \"" + key + "\".");
       }
@@ -42,6 +33,20 @@ class paramfile
     paramfile (const std::string &filename, bool verbose_=true)
       : verbose(verbose_)
       { parse_file (filename, params); }
+
+    paramfile (const params_type &par)
+      : params (par), verbose(true)
+      {}
+
+    ~paramfile ()
+      {
+      if (verbose)
+        for (params_type::const_iterator loc=params.begin();
+             loc!=params.end(); ++loc)
+          if (read_params.find(loc->first)==read_params.end())
+            std::cout << "Parser warning: unused parameter "
+                      << loc->first << std::endl;
+      }
 
     bool param_present(const std::string &key) const
       { return (params.find(key)!=params.end()); }
@@ -53,17 +58,27 @@ class paramfile
       if (verbose)
         std::cout << "Parser: " << key << " = " << dataToString(result)
                   << std::endl;
+      read_params.insert(key);
       return result;
       }
     template<typename T> T find
-      (const std::string &key, const T &deflt) const
+      (const std::string &key, const T &deflt)
       {
       if (param_present(key)) return find<T>(key);
       if (verbose)
         std::cout << "Parser: " << key << " = " << dataToString(deflt)
                   << " <default>" << std::endl;
+      params[key]=dataToString(deflt);
+      read_params.insert(key);
       return deflt;
       }
+
+    const params_type &getParams() const
+      { return params; }
+
+    template<typename T> void findParam
+      (const std::string &key, T &value) const
+      { value = find<T>(key); }
   };
 
 #endif

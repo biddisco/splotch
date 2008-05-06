@@ -23,8 +23,6 @@
 #ifndef RAYPP_BYTESWAP_H
 #define RAYPP_BYTESWAP_H
 
-#include "config/config.h"
-
 namespace RAYPP {
 
 template<int size> inline void byteswap_helper (byte *)

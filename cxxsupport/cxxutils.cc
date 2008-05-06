@@ -1,20 +1,9 @@
 /*
- * Copyright (c) 2002-2005 Max-Planck-Society
+ *  This file contains the implementation of various convenience functions
+ *  used by the Planck LevelS package.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ *  Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007 Max-Planck-Society
+ *  Authors: Martin Reinecke, Reinhard Hell
  */
 
 // if we are using g++, check for version 3.0 or higher
@@ -30,7 +19,10 @@
 #include <iomanip>
 #include <string>
 #include <cstdio>
+#include <cctype>
 #include "cxxutils.h"
+#include "datatypes.h"
+#include "openmp_support.h"
 
 using namespace std;
 
@@ -79,22 +71,26 @@ template<> string dataToString (const string &x)
 template<> string dataToString (const float &x)
   {
   ostringstream strstrm;
-  strstrm << setprecision(12) << x;
+  strstrm << setprecision(8) << x;
   return trim(strstrm.str());
   }
 template<> string dataToString (const double &x)
   {
   ostringstream strstrm;
-  strstrm << setprecision(22) << x;
+  strstrm << setprecision(16) << x;
   return trim(strstrm.str());
   }
 
+template string dataToString (const signed char &x);
+template string dataToString (const unsigned char &x);
+template string dataToString (const short &x);
+template string dataToString (const unsigned short &x);
 template string dataToString (const int &x);
 template string dataToString (const unsigned int &x);
 template string dataToString (const long &x);
-template string dataToString (const unsigned long long &x);
-template string dataToString (const long long &x);
 template string dataToString (const unsigned long &x);
+template string dataToString (const long long &x);
+template string dataToString (const unsigned long long &x);
 
 string intToString(int x, int width)
   {
@@ -105,12 +101,18 @@ string intToString(int x, int width)
 
 template<typename T> void stringToData (const string &x, T &value)
   {
+  string error = string("conversion error in stringToData<")
+               + type2typename<T>()
+               +">(\""+x+"\")";
   istringstream strstrm(x);
   strstrm >> value;
-  planck_assert(strstrm, "conversion error in stringToData()");
-// FIXME: disable the test below for now, since some compilers choke on it
-//  planck_assert(strstrm.tellg()==streampos(x.length()),
-//    "parse error in stringToData()");
+  if (!strstrm)
+    throw Message_error(error);
+
+  string rest;
+  strstrm >> rest;
+//  rest=trim(rest);
+  if (rest.length()>0) throw Message_error(error);
   }
 
 template<> void stringToData (const string &x, string &value)
@@ -124,17 +126,51 @@ template<> void stringToData (const string &x, bool &value)
   else if (x=="T" || x=="t" || x=="y" || x=="Y" || x=="true" || x==".true."
        || x=="TRUE" || x==".TRUE.")
     value=true;
-  else throw Message_error ("stringToData<bool>: error parsing argument");
+  else
+    {
+    string error = string("conversion error in stringToData<bool>(\"")+x+"\")";
+    throw Message_error (error);
+    }
   }
 
+template void stringToData (const string &x, signed char &value);
+template void stringToData (const string &x, unsigned char &value);
+template void stringToData (const string &x, short &value);
+template void stringToData (const string &x, unsigned short &value);
 template void stringToData (const string &x, int &value);
+template void stringToData (const string &x, unsigned int &value);
 template void stringToData (const string &x, long &value);
+template void stringToData (const string &x, unsigned long &value);
+template void stringToData (const string &x, long long &value);
+template void stringToData (const string &x, unsigned long long &value);
 template void stringToData (const string &x, float &value);
 template void stringToData (const string &x, double &value);
-template void stringToData (const string &x, unsigned long long &value);
-template void stringToData (const string &x, long long &value);
-template void stringToData (const string &x, unsigned long &value);
-template void stringToData (const string &x, unsigned int &value);
+
+bool equal_nocase (const string &a, const string &b)
+  {
+  if (a.size()!=b.size()) return false;
+  for (unsigned int m=0; m<a.size(); ++m)
+    if (tolower(a[m])!=tolower(b[m])) return false;
+  return true;
+  }
+
+string tolower(const string &input)
+  {
+  string result=input;
+  for (unsigned int m=0; m<result.size(); ++m)
+    result[m]=char(tolower(result[m]));
+  return result;
+  }
+
+// FIXME: this should be configurable from outside
+#define SILENT
+#ifdef SILENT
+
+void announce_progress (int, int) {}
+void announce_progress (double, double, double) {}
+void end_announce_progress () {}
+
+#else
 
 void announce_progress (int now, int total)
   {
@@ -151,6 +187,27 @@ void announce_progress (double now, double last, double total)
     cout << "\r " << setw(3) << nowpercent << "% done\r" << flush;
   }
 
+void end_announce_progress ()
+  { cout << endl; }
+
+#endif
+
+static void openmp_status()
+  {
+  if (openmp_enabled())
+    {
+    cout << "Application was compiled with OpenMP support," << endl;
+    if (openmp_max_threads() == 1)
+      cout << "but running with one process only." << endl;
+    else
+      cout << "running with up to " << openmp_max_threads()
+           << " processes." << endl;
+    }
+  else
+    cout << "Application was compiled without OpenMP support;" << endl
+         << "running in scalar mode." << endl;
+  }
+
 void announce (const string &name)
   {
   cout << endl << "+-";
@@ -159,20 +216,33 @@ void announce (const string &name)
   cout << "| " << name << " |" << endl;
   cout << "+-";
   for (unsigned int m=0; m<name.length(); ++m) cout << "-";
-  cout << "-+" << endl;
+  cout << "-+" << endl << endl;
+  openmp_status();
+  cout << endl;
+  }
+
+void module_startup (const string &name, int argc, const char **,
+  int argc_expected, const string &argv_expected)
+  {
+  announce (name);
+  if (argc==argc_expected) return;
+  cerr << "Usage: " << name << " " << argv_expected << endl;
+  throw Message_error();
   }
 
 void parse_file (const string &filename, map<string,string> &dict)
   {
-  string line;
   int lineno=0;
   dict.clear();
   ifstream inp(filename.c_str());
   planck_assert (inp,"Could not open parameter file "+filename);
   while (inp)
     {
+    string line;
     getline(inp, line);
     ++lineno;
+    // remove potential carriage returns at the end of the line
+    line=line.substr(0,line.find_first_of("\r"));
     line=line.substr(0,line.find_first_of("#"));
     line=trim(line);
     if (line.size()>0)

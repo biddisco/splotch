@@ -45,7 +45,7 @@ template <typename T> class HANDLE
 
       public:
         T *data;
-        uint4 counter;
+        uint32 counter;
 
         HANDLE_DATA (T *val)
           : data (val), counter (1) {}
@@ -170,59 +170,6 @@ template <typename T> class HANDLE
 
     void swap(HANDLE<T>& other)
       { ::std::swap(HandlePtr,other.HandlePtr); }
-  };
-
-namespace std {
-
-template<typename T>
-  inline void swap(RAYPP::HANDLE<T>& a, RAYPP::HANDLE<T>& b)
-    { a.swap(b); }
-
-}
-
-/**
-   \class TMPHANDLE kernel/handle.h kernel/handle.h
-   Reference-like handle class.
-*/
-template <typename T> class TMPHANDLE
-  {
-  private:
-    T *Ptr;
-
-  public:
-    /*! */
-    TMPHANDLE () 
-      : Ptr (0) {}
-    /*! */
-    TMPHANDLE (const TMPHANDLE &orig)
-      : Ptr (orig.Ptr) {}
-    /*! */
-    TMPHANDLE (const HANDLE<T> orig)
-      : Ptr (orig.Pointer()) {}
-    /*! */
-    ~TMPHANDLE ()
-      {}
-    /*! */
-    TMPHANDLE &operator= (const HANDLE<T> orig)
-      { Ptr = orig.Pointer(); return *this; }    
-    /*! */
-    TMPHANDLE &operator= (const TMPHANDLE orig)
-      { Ptr = orig.Ptr; return *this; }    
-    /*! */
-    TMPHANDLE &operator= (T *contents)
-      { Ptr = contents; return *this; }
-    /*! */
-    T *operator-> () const
-      { return Ptr; }
-    /*! */
-    T &operator* () const
-      { return (*Ptr); }
-    /*! */
-    bool Valid () const
-      { return Ptr; }
-    /*! */
-    operator bool () const
-      { return (Ptr!=0); }
   };
 
 } // namespace RAYPP

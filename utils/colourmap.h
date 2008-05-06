@@ -31,24 +31,24 @@ namespace RAYPP {
 class CMAP_ENTRY
   {
   protected:
-    float4 minval, maxval;
-    float4 fract (float4 value) const
+    float32 minval, maxval;
+    float32 fract (float32 value) const
       { return (value-minval)/(maxval-minval); }
 
   public:
     CMAP_ENTRY () {}
-    CMAP_ENTRY (float4 min, float4 max)
+    CMAP_ENTRY (float32 min, float32 max)
       : minval (min), maxval (max) {}
     virtual ~CMAP_ENTRY () {}
 
-    virtual COLOUR Get_Colour (float8) const = 0;
+    virtual COLOUR Get_Colour (float64) const = 0;
 
-    bool Is_Inside (float8 value) const
+    bool Is_Inside (float64 value) const
       {
       return ((value >= minval) && (value <= maxval));
       }
 
-    void Set_Values (float8 min, float8 max)
+    void Set_Values (float64 min, float64 max)
       {
       minval = min; maxval = max;
       }
@@ -63,7 +63,7 @@ class COLOURMAP
     COLOURMAP() {}
     COLOURMAP(COLOUR Col1, COLOUR Col2);
 
-    COLOUR Get_Colour (float8) const;
+    COLOUR Get_Colour (float64) const;
 
     void Add_Entry (const HANDLE<CMAP_ENTRY> &);
   };
@@ -75,10 +75,10 @@ class UNIFORM_CMAP_ENTRY : public CMAP_ENTRY
 
   public:
     UNIFORM_CMAP_ENTRY () {};
-    UNIFORM_CMAP_ENTRY (float8 Start, float8 End, const COLOUR& Col)
+    UNIFORM_CMAP_ENTRY (float64 Start, float64 End, const COLOUR& Col)
       : CMAP_ENTRY (Start, End), Colour (Col) {}
 
-    virtual COLOUR Get_Colour (float8) const 
+    virtual COLOUR Get_Colour (float64) const
       { return Colour; }
   };
 
@@ -90,11 +90,11 @@ class LINEAR_CMAP_ENTRY: public CMAP_ENTRY
   public:
     LINEAR_CMAP_ENTRY ()
       : Colour1 (0,0,0), Colour2 (0,0,0) {}
-    LINEAR_CMAP_ENTRY (float8 Start, float8 End, 
+    LINEAR_CMAP_ENTRY (float64 Start, float64 End,
       const COLOUR &c1, const COLOUR &c2)
       : CMAP_ENTRY (Start, End), Colour1 (c1), Colour2 (c2) {}
 
-    virtual COLOUR Get_Colour (float8 value) const
+    virtual COLOUR Get_Colour (float64 value) const
       {
       return Colour1 + fract(value) * (Colour2 - Colour1);
       }

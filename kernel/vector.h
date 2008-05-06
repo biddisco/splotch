@@ -35,7 +35,7 @@ class VECTOR
   {
   public:
     /*! */
-    float8 x, y, z;
+    float64 x, y, z;
 
     /*!
       Default constructor. Components are NOT initialized!
@@ -44,7 +44,7 @@ class VECTOR
     /*!
       Components are set to xc, yc and zc, respectively.
       */
-    VECTOR (float8 xc, float8 yc, float8 zc)
+    VECTOR (float64 xc, float64 yc, float64 zc)
       : x(xc), y(yc), z(zc) {}
 
     /*!
@@ -54,7 +54,7 @@ class VECTOR
       */
     void Normalize ()
       {
-      float8 l = 1.0/sqrt (x*x + y*y + z*z);
+      float64 l = 1.0/sqrt (x*x + y*y + z*z);
       x*=l; y*=l; z*=l;
       }
     /*!
@@ -64,14 +64,14 @@ class VECTOR
       */
     VECTOR Norm () const
       {
-      float8 l = 1.0/sqrt (x*x + y*y + z*z);
+      float64 l = 1.0/sqrt (x*x + y*y + z*z);
       return VECTOR (x*l, y*l, z*l);
       }
 
     /*!
       returns the vector's length.
       */
-    float8 Length () const
+    float64 Length () const
       {
       return sqrt (x*x + y*y + z*z);
       }
@@ -79,7 +79,7 @@ class VECTOR
       returns the square of the vector's length.
       Faster than Length()!
       */
-    float8 SquaredLength () const
+    float64 SquaredLength () const
       {
       return (x*x + y*y + z*z);
       }
@@ -120,18 +120,18 @@ class VECTOR
       }
 
     /*! */
-    VECTOR &operator*= (float8 factor)
+    VECTOR &operator*= (float64 factor)
       {
       x*=factor; y*=factor; z*=factor;
       return *this;
       }
     /*! */
-    VECTOR operator* (float8 factor) const
+    VECTOR operator* (float64 factor) const
       {
       return VECTOR (x*factor, y*factor, z*factor);
       }
     /*! */
-    friend inline VECTOR operator* (float8 factor, const VECTOR &vec)
+    friend inline VECTOR operator* (float64 factor, const VECTOR &vec)
       {
       return VECTOR (vec.x*factor, vec.y*factor, vec.z*factor);
       }
@@ -147,16 +147,16 @@ class VECTOR
       return VECTOR (x*vec.x, y*vec.y, z*vec.z);
       }
     /*! */
-    VECTOR &operator/= (float8 divisor)
+    VECTOR &operator/= (float64 divisor)
       {
-      float8 mult = 1.0/divisor;
+      float64 mult = 1.0/divisor;
       x*=mult; y*=mult; z*=mult;
       return *this;
       }
     /*! */
-    VECTOR operator/ (float8 divisor) const
+    VECTOR operator/ (float64 divisor) const
       {
-      float8 mult = 1.0/divisor;
+      float64 mult = 1.0/divisor;
       return VECTOR (x*mult, y*mult, z*mult);
       }
     /*! */
@@ -187,7 +187,7 @@ class VECTOR
       }
 
     /*! */
-    friend inline float8 Dot (const VECTOR &a, const VECTOR &b)
+    friend inline float64 Dot (const VECTOR &a, const VECTOR &b)
       {
       return a.x*b.x + a.y*b.y + a.z*b.z;
       }

@@ -37,17 +37,17 @@ class TRANSMAT
   public:
     union
       {
-      float4 entry[3][4];
-      float4 p[12];
+      float32 entry[3][4];
+      float32 p[12];
       };
 
     /*! */
     TRANSMAT () {}
     /*! */
-    TRANSMAT (float4, float4, float4,
-              float4, float4, float4,
-              float4, float4, float4,
-              float4, float4, float4);
+    TRANSMAT (float32, float32, float32,
+              float32, float32, float32,
+              float32, float32, float32,
+              float32, float32, float32);
 
     /*! */
     TRANSMAT &operator*= (const TRANSMAT &b);
@@ -57,7 +57,7 @@ class TRANSMAT
     TRANSMAT &operator-= (const TRANSMAT &b);
 
     /*! */
-    TRANSMAT &operator*= (float8 factor);
+    TRANSMAT &operator*= (float64 factor);
 
     /*! */
     TRANSMAT Inverse () const;
@@ -75,7 +75,7 @@ class TRANSMAT
     /*! */
     bool Orthonormal () const;
     /*! */
-    bool Scaled_Orthonormal (float8 &factor) const;
+    bool Scaled_Orthonormal (float64 &factor) const;
     /*! */
     bool Diagonal () const;
 
@@ -120,10 +120,10 @@ class TRANSFORM
     /*! */
     void Make_Rotation_Transform (const VECTOR &vec);
     /*! */
-    void Make_Axis_Rotation_Transform (const VECTOR &axis, float8 angle);
+    void Make_Axis_Rotation_Transform (const VECTOR &axis, float64 angle);
     /*! */
     void Make_Shearing_Transform
-      (float4 xy, float4 xz, float4 yx, float4 yz, float4 zx, float4 zy);
+      (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy);
 
     /*! */
     void Make_General_Transform(const TRANSMAT &trans) 
@@ -137,7 +137,7 @@ class TRANSFORM
     /*! */
     bool Orthonormal () const;
     /*! */
-    bool Scaled_Orthonormal (float8 &factor) const;
+    bool Scaled_Orthonormal (float64 &factor) const;
     /*! */
     bool Diagonal () const;
 
@@ -162,58 +162,13 @@ class TRANSFORM
     friend TRANSFORM Rotation_Transform (const VECTOR &vec);
     /*! */
     friend TRANSFORM Axis_Rotation_Transform
-      (const VECTOR &axis, float8 angle);
+      (const VECTOR &axis, float64 angle);
     /*! */
     friend TRANSFORM Shearing_Transform
-      (float4 xy, float4 xz, float4 yx, float4 yz, float4 zx, float4 zy);
+      (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy);
 
     /*! */
     friend ostream &operator<< (ostream &os, const TRANSFORM &trans);
-  };  
-
-/**
-  \class STRANSFORM kernel/transform.h kernel/transform.h
-  A compact version of TRANSFORM.
-*/
-class STRANSFORM 
-  {
-  private:
-    TRANSMAT inverse;
-
-  public:
-    /*! */
-    STRANSFORM () {inverse.SetToIdentity();}
-
-    /*! */
-    STRANSFORM (const TRANSFORM &trans) : inverse (trans.inverse) {}
-    /*! */
-    operator TRANSFORM () const;
-
-    /*! */
-    const TRANSMAT &Inverse () const
-      { return inverse; }
-
-    /*! */
-    void Add_Transform (const STRANSFORM &strans);
-
-    /*! */
-    bool Orthogonal () const;
-    /*! */
-    bool Orthonormal () const;
-    /*! */
-    bool Scaled_Orthonormal (float8 &factor) const;
-    /*! */
-    bool Diagonal () const;
-
-    /*! */
-    VECTOR InvTransPoint (const VECTOR &vec) const;
-    /*! */
-    VECTOR InvTransDirection (const VECTOR &vec) const;
-    /*! */
-    VECTOR TransNormal (const VECTOR &vec) const;
-
-    /*! */
-    friend ostream &operator<< (ostream &, const STRANSFORM &);
   };  
 
 } // namespace RAYPP

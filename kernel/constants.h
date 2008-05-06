@@ -27,19 +27,19 @@
 
 namespace RAYPP {
 
-const float8 Pi = float8 (3.14159265358979323846264338327950288);
+const float64 Pi = float64 (3.14159265358979323846264338327950288);
       /*!< is 3.14159265358979323846264338327950288 */
 
-const float4 Small_float4 = float4 (1.0e-4);  /*!< is 1e-4 */
-const float4 Large_float4 = float4 (1.0e+4);  /*!< is 1e+4 */
-const float4  Huge_float4 = float4 (1.0e+10);  /*!< is 1e+10 */
+const float32 Small_float32 = float32 (1.0e-4);  /*!< is 1e-4 */
+const float32 Large_float32 = float32 (1.0e+4);  /*!< is 1e+4 */
+const float32  Huge_float32 = float32 (1.0e+10);  /*!< is 1e+10 */
 
-const float8 Small_float8 = float8 (1.0e-6);  /*!< is 1e-6 */
-const float8 Large_float8 = float8 (1.0e+6);  /*!< is 1e+6 */
-const float8  Huge_float8 = float8 (1.0e+20);  /*!< is 1e+20 */
+const float64 Small_float64 = float64 (1.0e-6);  /*!< is 1e-6 */
+const float64 Large_float64 = float64 (1.0e+6);  /*!< is 1e+6 */
+const float64  Huge_float64 = float64 (1.0e+20);  /*!< is 1e+20 */
 
-const float8 Small_dist   = float8 (1.0e-7);  /*!< is 1e-7 */
-const float8 Large_dist   = float8 (1.0e+7);  /*!< is 1e+7 */
+const float64 Small_dist   = float64 (1.0e-7);  /*!< is 1e-7 */
+const float64 Large_dist   = float64 (1.0e+7);  /*!< is 1e+7 */
 
 } // namespace RAYPP
 

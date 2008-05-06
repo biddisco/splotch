@@ -1,7 +1,7 @@
 /*
- * Copyright (c) 2004-2006  
+ * Copyright (c) 2004-2008
  *              Martin Reinecke (1), Klaus Dolag (1)
- *               (1) Max-Plank-Institute for Astrophysics
+ *               (1) Max-Planck-Institute for Astrophysics
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,6 +35,8 @@
 using namespace std;
 using namespace RAYPP;
 
+#include "splotch/splotchutils.h"
+
 #define NO_SORTBYHSML
 #define NO_SORTBYVAL
 #define NO_REVERSESORT
@@ -44,18 +46,16 @@ using namespace RAYPP;
 #define NO_TIPSY
 #define NO_PROJECTION_OFF
 #define NO_PATCH_MACH
-#define GEOMETRY_FILE
+#define NO_GEOMETRY_FILE
 #define NO_STARS_ABSORB_RED
 #define NO_PATCH_STARS
-#define COLOR_VECTOR
-
-const float8 Pi=3.14159265358979323846;
+#define NO_COLOR_VECTOR
 
 struct PARTICLE
   {
-  float4 x,y,z,r,ro,I,T;
+  float32 x,y,z,r,ro,I,T;
 #ifdef COLOR_VECTOR
-    float4 T2,T3;
+    float32 T2,T3;
 #endif
   int type;
   };
@@ -80,38 +80,10 @@ struct zcmp
     }
   };
 
-class exptable
-  {
-  private:
-    int nexp;
-    float8 maxexptab;
-    float8 expfac;
-    float8 *exptab;
-
-  public:
-    exptable (int nexp_, float8 maxexp_)
-      : nexp(nexp_), maxexptab(maxexp_), expfac(nexp/maxexptab),
-        exptab(new float8[nexp])
-      {
-      for (int m=0; m<nexp; ++m)
-        exptab[m]=exp(m/expfac);
-      }
-
-    float8 operator() (float8 arg) const
-      {
-      arg *= expfac;
-      int iarg=int(arg);
-      if (iarg<0) return 1.;
-      if (iarg>=nexp-1) return 0.;
-      float8 frac=arg-iarg;
-      return (1.-frac)*exptab[iarg]+frac*exptab[iarg+1];
-      }
-  };
-
 int gadget_find_block(bifstream &file,const string &label)
   {
   int i;
-  int4 blocksize=0, blksize;
+  int32 blocksize=0, blksize;
   char blocklabel[5]={"    "};
 
   file.clear();
@@ -120,6 +92,11 @@ int gadget_find_block(bifstream &file,const string &label)
   while(!file.eof() && blocksize == 0)
     {
     file >> blksize;
+    if(file.eof())
+      {
+	blksize=-1;
+	break;
+      }
     if (blksize != 8)
       {
 	cout << "wrong structure in GADGET file: " << blksize << endl;
@@ -169,7 +146,7 @@ int gadget_read_header(bifstream &file, int *npart,double *massarr,
 
 int main (int argc, const char ** argv)
   {
-const float8 Pi=3.14159265358979323846;
+  const float64 Pi=3.14159265358979323846;
   announce ("splotch");
   planck_assert (argc==2,"usage: splotch <parameter file>");
   paramfile params (argv[1]);
@@ -204,20 +181,17 @@ const float8 Pi=3.14159265358979323846;
   string stars_int = params.find<string>("stars_intensity","XXXX");
   string stars_col = params.find<string>("stars_color","XXXX");
 
-  bool log_stars_int = params.find<bool>("log_stars_intensity",true);
   bool log_stars_col = params.find<bool>("log_stars_color",true);
   float minval_stars_int = params.find<float>("min_stars_int",1024);
   float maxval_stars_int = params.find<float>("max_stars_int",1024);
   float minval_stars_col = params.find<float>("min_stars_col",1024);
   float maxval_stars_col = params.find<float>("max_stars_col",1024);
-  
-  float8 brightness_stars = params.find<double>("brightness_stars",1.);
-  float8 brightness_gas = params.find<double>("brightness_gas",1.);
 
-  exptable xexp(10000,-20.);
+  float64 brightness_stars = params.find<double>("brightness_stars",1.);
+  float64 brightness_gas = params.find<double>("brightness_gas",1.);
 
-  int4 npart[6],npartall[6];
-  float8 massarr[6],time,redshift;
+  int32 npart[6],npartall[6];
+  float64 massarr[6],time,redshift;
 
   if(numfiles>1) filename=infilename+"."+dataToString(0);
   else           filename=infilename;
@@ -239,11 +213,11 @@ const float8 Pi=3.14159265358979323846;
 #ifdef GEOMETRY_FILE
   PARTICLE *p_orig=new PARTICLE[np+nstar];
 #endif
-  float4 mintmp=1e30, maxtmp=-1e30,minint=1e30, maxint=-1e30;
+  float32 mintmp=1e30, maxtmp=-1e30,minint=1e30, maxint=-1e30;
 #ifdef COLOR_VECTOR
-  float4 mintmp2=1e30, maxtmp2=-1e30,mintmp3=1e30, maxtmp3=-1e30;
+  float32 mintmp2=1e30, maxtmp2=-1e30,mintmp3=1e30, maxtmp3=-1e30;
 #endif
-  float4 mintmp_stars=1e30, maxtmp_stars=-1e30,minint_stars=1e30, maxint_stars=-1e30;
+  float32 mintmp_stars=1e30, maxtmp_stars=-1e30,minint_stars=1e30, maxint_stars=-1e30;
   int nskip,npstart=0,nstarstart=np;
 
   for(int f=0;f<numfiles;f++)
@@ -352,7 +326,10 @@ const float8 Pi=3.14159265358979323846;
 	     {
 	       infile.skip(4);
 	       for (int m=0; m<npart[4]; ++m)
-		 infile >> p[m+nstarstart].r;
+		 {
+		   infile >> p[m+nstarstart].r;
+	           p[m+nstarstart].r *= hsml_fac;
+		 }
 	     }
 	   else
 	     for (int m=0; m<npart[4]; ++m)
@@ -549,12 +526,13 @@ const float8 Pi=3.14159265358979323846;
 #endif
        p_orig[m].type=p[m].type;
     }
-  float cam_x,cam_y,cam_z,lat_x,lat_y,lat_z,sky_x,sky_y,sky_z;
+  double cam_x,cam_y,cam_z,lat_x,lat_y,lat_z,sky_x,sky_y,sky_z;
   string geometry_file = params.find<string>("geometry_file");
   string line;
   ifstream inp(geometry_file.c_str());
   int linecount=10000;
   int geometry_skip = params.find<int>("geometry_start",0);
+  int geometry_incr = params.find<int>("geometry_incr",1);
 
   for(int i=0; i<geometry_skip; i++, linecount++)
     getline(inp, line);
@@ -576,7 +554,7 @@ const float8 Pi=3.14159265358979323846;
 #endif
            p[m].type=p_orig[m].type;
         }
-    sscanf(line.c_str(),"%f %f %f %f %f %f %f %f %f",
+    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf",
                       &cam_x,&cam_y,&cam_z,
 	              &lat_x,&lat_y,&lat_z,
                       &sky_x,&sky_y,&sky_z);
@@ -586,6 +564,7 @@ const float8 Pi=3.14159265358979323846;
     cout << "Camera: (" << cam_x << "," << cam_y << "," << cam_z << ")" << endl;
     cout << "Lookat: (" << lat_x << "," << lat_y << "," << lat_z << ")" << endl;
     cout << "Sky:    (" << sky_x << "," << sky_y << "," << sky_z << ")" << endl;
+    printf("%lf %lf %lf\n",cam_x,cam_y,cam_z);
 #else
   VECTOR campos(params.find<double>("camera_x"),
                 params.find<double>("camera_y"),
@@ -622,13 +601,13 @@ const float8 Pi=3.14159265358979323846;
     p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
     }
 #ifdef PROJECTION_OFF
-    float8 dist=sqrt((campos.x-lookat.x) * (campos.x-lookat.x)
+    float64 dist=sqrt((campos.x-lookat.x) * (campos.x-lookat.x)
                     +(campos.y-lookat.y) * (campos.y-lookat.y)
 		    +(campos.z-lookat.z) * (campos.z-lookat.z));
-    float8 xfac=1./(fovfct*dist);
+    float64 xfac=1./(fovfct*dist);
     cout << "Field of fiew: " << 1./xfac*2. << endl;
 #else
-    float8 xfac;
+    float64 xfac;
 #endif
 
 
@@ -678,24 +657,15 @@ const float8 Pi=3.14159265358979323846;
 
   float brightness,grayabsorb;
 
-  float8 rfac=1.5;
-  float8 powtmp = pow(float8(Pi/2),float8(1./3.));
-  float8 sigma0=powtmp/sqrt(2*Pi);
-  float8 i00,bfak=1./(2*sqrt(Pi)*powtmp);
+  float64 rfac=1.5;
 
   arr2<COLOUR> pic(res,res);
-  for(int ix=0;ix<res;ix++)
-	for(int iy=0;iy<res;iy++)
-	  {
-	    pic[ix][iy].r=0;
-	    pic[ix][iy].g=0;
-	    pic[ix][iy].b=0;
-	  }
+  pic.fill(COLOUR(0,0,0));
 
 #ifdef STOP_AFTER_N
   int z_count[res][res];
 #endif
-
+  vector<particle2> p2;
   for (int m=0; m<np+nstar; ++m)
     {
     if ((m%100000)==0)
@@ -704,119 +674,59 @@ const float8 Pi=3.14159265358979323846;
     if (p[m].z<=0) continue;
     if (p[m].z<=zminval) continue;
     if (p[m].z>=zmaxval) continue;
-    //        cout << zminval << " " << p[m].z << " " << zmaxval << endl;
     if (!gas and p[m].type==0) continue;
     if (!stars and p[m].type==1) continue;
-#ifdef STOP_AFTER_N
-    int pxt=int(p[m].x),pyt=int(p[m].y);
-    if (pxt < 0 || pxt >= res) continue;  
-    if (pyt < 0 || pyt >= res) continue;  
-    z_count[pxt][pyt]++;
-    if (z_count[pxt][pyt] > STOP_AFTER_N) continue;
-#endif
+
+    float64 r=p[m].r;
+    float64 posx=p[m].x, posy=p[m].y;
+
+    float64 rfacr=rfac*r;
+
+    int minx=int(posx-rfacr+1);
+    if (minx>=res) continue;
+    minx=max(minx,0);
+    int maxx=int(posx+rfacr+1);
+    if (maxx<=0) continue;
+    maxx=min(maxx,res);
+    if (minx>=maxx) continue;
+    int miny=int(posy-rfacr+1);
+    if (miny>=ycut1) continue;
+    miny=max(miny,ycut0);
+    int maxy=int(posy+rfacr+1);
+    if (maxy<=ycut0) continue;
+    maxy=min(maxy,ycut1);
+    if (miny>=maxy) continue;
 
     if (p[m].type==1)
       {
-         amap=&amap_stars;
-         emap=&emap_stars;
-         brightness=brightness_stars;       
-         grayabsorb=grayabsorb_stars;       
+      amap=&amap_stars;
+      emap=&emap_stars;
+      brightness=brightness_stars;
+      grayabsorb=grayabsorb_stars;
       }
     else
       {
-         amap=&amap_gas;
-         emap=&emap_gas;
-         brightness=brightness_gas;       
-         grayabsorb=grayabsorb_gas;       
+      amap=&amap_gas;
+      emap=&emap_gas;
+      brightness=brightness_gas;
+      grayabsorb=grayabsorb_gas;
       }
-    i00=brightness*bfak;
 
-    float8 temp=p[m].T;
-    temp=max(float8(0.0000001),min(float8(0.9999999),temp));
-#ifdef COLOR_VECTOR
-    float8 temp2=p[m].T2,temp3=p[m].T3;
-    temp2=max(float8(0.0000001),min(float8(0.9999999),temp2));
-    temp3=max(float8(0.0000001),min(float8(0.9999999),temp3));
-#endif
-    float8 intensity=p[m].I;
-    intensity=max(float8(0.0000001),min(float8(0.9999999),intensity));
+    float64 temp=p[m].T;
+    temp=max(float64(0.0000001),min(float64(0.9999999),temp));
+    float64 intensity=p[m].I;
+    intensity=max(float64(0.0000001),min(float64(0.9999999),intensity));
     COLOUR e;
-#ifndef COLOR_VECTOR
-    e=amap->Get_Colour(temp)*intensity;
-#else
-    if (p[m].type==1)
-      e=amap->Get_Colour(temp)*intensity;
-    else
-      {
-	e.r=temp*intensity;
-	e.g=temp2*intensity;
-	e.b=temp3*intensity;
-      }
-#endif
-    float8 r=p[m].r;
-    float8 radsq = rfac*rfac*r*r;
-#ifndef TIPSY
+    e=amap->Get_Colour(temp)*intensity*brightness;
+
     COLOUR a;
-#ifdef FULLABSROB
-    a=COLOUR(1,1,1);
-#else
     a=e;
-#endif
-#ifdef STARS_ABSORB_RED
-    if (p[m].type==1)  a.r=intensity;
-#endif
 
-    COLOUR q (e.r/(a.r+grayabsorb),e.g/(a.g+grayabsorb),e.b/(a.b+grayabsorb));
-
-    float8 ro=p[m].ro;
-    float8 sigma=ro*sigma0;
-    float8 fac0=-0.5/(sigma*sigma);
-    float8 i0=i00/ro;
-    float8 prefac1 = ro/r*ro/r*fac0;
-    float8 prefac2 = -0.5*i0;
-#endif
-
-    float8 posx=p[m].x, posy=p[m].y;
-    int minx = max(int(posx-rfac*r),0), maxx = min(int(posx+rfac*r+1),res),
-        miny = max(int(posy-rfac*r),ycut0), maxy = min(int(posy+rfac*r+1),ycut1);
-    for (int y=miny; y<maxy; ++y)
-      {
-      float8 ysq=(y-posy)*(y-posy);
-      for (int x=minx; x<maxx; ++x)
-        {
-        float8 dsq = (x-posx)*(x-posx) + ysq;
-        if (dsq<radsq)
-          {
-#ifdef TIPSY
-	    float8 uu=max(float8(0.),min(float8(1.0),sqrt(dsq/radsq)));
-            float8 lfac=0.0;
-            if(uu < 0.5) lfac=1.-6.*uu*uu*(1.-uu); 
-            else         lfac=2*(1-uu)*(1-uu)*(1-uu);
-	    pic[x][y].r = min(e.r * lfac + (1 - lfac) * pic[x][y].r,float8(1.0));
-	    pic[x][y].g = min(e.g * lfac + (1 - lfac) * pic[x][y].g,float8(1.0));
-	    pic[x][y].b = min(e.b * lfac + (1 - lfac) * pic[x][y].b,float8(1.0));
-	    //	    	    pic[x][y].r = e.r;
-	    //	    	    pic[x][y].g = e.g;
-	    //	    	    pic[x][y].b = e.b;
-#else
-          float8 fac = prefac2*xexp(prefac1*dsq);
-	  if(boostcolors)
-	    {
-	      pic[x][y].r = e.r+(pic[x][y].r-e.r)*xexp(fac*q.r);
-	      pic[x][y].g = e.g+(pic[x][y].g-e.g)*xexp(fac*q.g);
-	      pic[x][y].b = e.b+(pic[x][y].b-e.b)*xexp(fac*q.b);
-	    }
-	  else
-	    {
-	      pic[x][y].r = q.r+(pic[x][y].r-q.r)*xexp(fac*a.r);
-	      pic[x][y].g = q.g+(pic[x][y].g-q.g)*xexp(fac*a.g);
-	      pic[x][y].b = q.b+(pic[x][y].b-q.b)*xexp(fac*a.b);
-	    }
-#endif
-          }
-        }
-      }
+    p2.push_back(particle2(p[m].x, p[m].y,p[m].r,p[m].ro,a,e));
     }
+
+  splotch_renderer renderer;
+  renderer.render(p2,pic,true,grayabsorb_gas);
 
   bool colbar = params.find<bool>("colourbar",false);
   if (colbar)
@@ -824,7 +734,7 @@ const float8 Pi=3.14159265358979323846;
       cout << "adding colour bar ..." << endl;
       for (int x=0; x<res; x++)
         {
-           float8 temp=x/float8(res);
+           float64 temp=x/float64(res);
            COLOUR e=amap_gas.Get_Colour(temp);
            for (int y=0; y<10; y++)
 	     {
@@ -835,7 +745,7 @@ const float8 Pi=3.14159265358979323846;
         }
       for (int x=0; x<res; x++)
         {
-           float8 temp=x/float8(res);
+           float64 temp=x/float64(res);
            COLOUR e=amap_stars.Get_Colour(temp);
            for (int y=10; y<20; y++)
 	     {
@@ -864,19 +774,21 @@ const float8 Pi=3.14159265358979323846;
     {
     for (int x=0; x<res; ++x)
       {
-      pic[x][y].b=min(float8(1.), max(float8(0.), float8(pic[x][y].b)));
+      pic[x][y].b=min(float64(1.), max(float64(0.), float64(pic[x][y].b)));
       byte pix = min(byte(255),byte(256*pic[x][y].b));
       file << pix;
-      pic[x][y].g=min(float8(1.), max(float8(0.), float8(pic[x][y].g)));
+      pic[x][y].g=min(float64(1.), max(float64(0.), float64(pic[x][y].g)));
       pix = min(byte(255),byte(256*pic[x][y].g));
       file << pix;
-      pic[x][y].r=min(float8(1.), max(float8(0.), float8(pic[x][y].r)));
+      pic[x][y].r=min(float64(1.), max(float64(0.), float64(pic[x][y].r)));
       pix = min(byte(255),byte(256*pic[x][y].r));
       file << pix;
       }
     }
 
 #ifdef GEOMETRY_FILE
+  for(int i=1; i<geometry_incr; i++, linecount++)
+    getline(inp, line);
     }
 #endif
   }
