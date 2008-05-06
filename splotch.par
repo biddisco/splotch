@@ -18,7 +18,7 @@ max_col=13
 hsml_fac=0.5
 filegas_palette=palettes/NewSplotch.pal
 brightness_gas=      5.000000
-gray_absorbtion_gas=0.01
+gray_absorption_gas=0.01
 
 # Vizualization properties for stars
 stars=Y
@@ -36,7 +36,7 @@ log_stars_color=FALSE
 #max_stars_col=0.8
 filestars_palette=palettes/Klaus.pal
 brightness_stars=      1.00000
-gray_absorbtion_stars=0.01
+gray_absorption_stars=0.01
 
 
 resolution=800

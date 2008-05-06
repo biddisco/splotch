@@ -507,8 +507,8 @@ int main (int argc, const char ** argv)
   bool gas = params.find<bool>("gas",true);
   float zmaxval = params.find<float>("zmax",1.e23);
   float zminval = params.find<float>("zmin",0.0);
-  float grayabsorb_gas = params.find<float>("gray_absorbtion_gas",0.2);
-  float grayabsorb_stars = params.find<float>("gray_absorbtion_stars",0.2);
+  float grayabsorb_gas = params.find<float>("gray_absorption_gas",0.2);
+  float grayabsorb_stars = params.find<float>("gray_absorption_stars",0.2);
 
 #ifdef GEOMETRY_FILE
   for (int m=0; m<np+nstar; ++m)
