@@ -7,8 +7,8 @@ swap_endian=TRUE
 # Vizualization properties for gas
 gas=Y
 # labels for gas to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS')
-lable_intensity=XXXX
-lable_color=U
+label_intensity=XXXX
+label_color=U
 log_intensity=FALSE
 log_color=TRUE
 #min_int=-6.0

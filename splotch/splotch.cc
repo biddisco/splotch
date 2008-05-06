@@ -41,7 +41,7 @@ using namespace RAYPP;
 #define NO_SORTBYVAL
 #define NO_REVERSESORT
 #define NO_STOP_AFTER_N 5
-#define NO_FULLABSROB
+#define NO_FULLABSORB
 #define NO_MINHSMLPIXEL
 #define NO_TIPSY
 #define NO_PROJECTION_OFF
@@ -161,8 +161,8 @@ int main (int argc, const char ** argv)
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",true);
 
-  string lable_int = params.find<string>("lable_intensity","XXXX");
-  string lable_col = params.find<string>("lable_color","XXXX");
+  string label_int = params.find<string>("label_intensity","XXXX");
+  string label_col = params.find<string>("label_color","XXXX");
 
   bool boostcolors = params.find<bool>("boostcolors",false);
 
@@ -176,7 +176,7 @@ int main (int argc, const char ** argv)
 
   bool stars = params.find<bool>("stars",false);
   float star_hsml = params.find<float>("star_hsml",5.0);
-  string stars_hsml_lable = params.find<string>("stars_hsml","XXXX");
+  string stars_hsml_label = params.find<string>("stars_hsml","XXXX");
 
   string stars_int = params.find<string>("stars_intensity","XXXX");
   string stars_col = params.find<string>("stars_color","XXXX");
@@ -265,7 +265,7 @@ int main (int argc, const char ** argv)
 	   }
 
 	 cout << "Reading Colors (gas) ..." << endl;
-	 if(gadget_find_block(infile,lable_col) > 0)
+	 if(gadget_find_block(infile,label_col) > 0)
 	   {
 	     infile.skip(4);
 	     for (int m=0; m<npart[0]; ++m)
@@ -294,7 +294,7 @@ int main (int argc, const char ** argv)
 	   }
 
 	 cout << "Reading Intensity (gas) ..." << endl;
-	 if(gadget_find_block(infile,lable_int) > 0)
+	 if(gadget_find_block(infile,label_int) > 0)
 	   {
 	     infile.skip(4);
 	     for (int m=0; m<npart[0]; ++m)
@@ -322,7 +322,7 @@ int main (int argc, const char ** argv)
              p[m+nstarstart].type=1;
 
 	   cout << "Reading HSML (stars) ..." << endl;
-	   if(gadget_find_block(infile,stars_hsml_lable) > 0)
+	   if(gadget_find_block(infile,stars_hsml_label) > 0)
 	     {
 	       infile.skip(4);
 	       for (int m=0; m<npart[4]; ++m)
@@ -714,10 +714,26 @@ int main (int argc, const char ** argv)
 
     float64 temp=p[m].T;
     temp=max(float64(0.0000001),min(float64(0.9999999),temp));
+#ifdef COLOR_VECTOR
+    float64 temp2=p[m].T2,temp3=p[m].T3;
+    temp2=max(float64(0.0000001),min(float64(0.9999999),temp2));
+    temp3=max(float64(0.0000001),min(float64(0.9999999),temp3));
+#endif
     float64 intensity=p[m].I;
     intensity=max(float64(0.0000001),min(float64(0.9999999),intensity));
     COLOUR e;
+#ifndef COLOR_VECTOR
     e=amap->Get_Colour(temp)*intensity*brightness;
+#else
+    if (p[m].type==1)
+      e=amap->Get_Colour(temp)*intensity*brightness;
+    else
+      {
+      e.r=temp*intensity*brightness;
+      e.g=temp2*intensity*brightness;
+      e.b=temp3*intensity*brightness;
+      }
+#endif
 
     COLOUR a;
     a=e;
