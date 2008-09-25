@@ -56,14 +56,9 @@ class exptable
 
     float64 operator() (float64 arg) const
       {
-      int iarg= (int)(arg*expfac)&mask2;
-#if 0
-if (iarg&mask3)
-  {
-      if (iarg<0) return 1.;
-      if (iarg>=(1<<20)) return 0.;
-  }
-#endif
+      int iarg= (int)(arg*expfac);
+      if (iarg&mask3)
+        return (iarg<0) ? 1. : 0.;
       return tab1[iarg>>nbits]*tab2[iarg&mask1];
       }
   };
@@ -96,7 +91,7 @@ class splotch_renderer
       double grayabsorb)
       {
       const float64 rfac=1.5;
-      const float64 powtmp = pow(float64(Pi/2),float64(1./3.));
+      const float64 powtmp = pow(Pi,1./3.);
       const float64 sigma0=powtmp/sqrt(2*Pi);
       const float64 bfak=1./(2*sqrt(Pi)*powtmp);
       exptable xexp(-20.);

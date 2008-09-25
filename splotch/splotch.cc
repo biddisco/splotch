@@ -146,7 +146,6 @@ int gadget_read_header(bifstream &file, int *npart,double *massarr,
 
 int main (int argc, const char ** argv)
   {
-  const float64 Pi=3.14159265358979323846;
   announce ("splotch");
   planck_assert (argc==2,"usage: splotch <parameter file>");
   paramfile params (argv[1]);
@@ -442,7 +441,7 @@ int main (int argc, const char ** argv)
     }
 
   double fov = params.find<double>("fov",45); //in degrees
-  double fovfct = tan(fov*0.5*Pi/180.);
+  double fovfct = tan(fov*0.5*degr2rad);
 
   COLOURMAP amap_gas,emap_gas,amap_stars,emap_stars;
   COLOURMAP *amap,*emap;
@@ -791,13 +790,13 @@ int main (int argc, const char ** argv)
     for (int x=0; x<res; ++x)
       {
       pic[x][y].b=min(float64(1.), max(float64(0.), float64(pic[x][y].b)));
-      byte pix = min(byte(255),byte(256*pic[x][y].b));
+      byte pix = byte(min(255,int(256*pic[x][y].b)));
       file << pix;
       pic[x][y].g=min(float64(1.), max(float64(0.), float64(pic[x][y].g)));
-      pix = min(byte(255),byte(256*pic[x][y].g));
+      pix = byte(min(255,int(256*pic[x][y].g)));
       file << pix;
       pic[x][y].r=min(float64(1.), max(float64(0.), float64(pic[x][y].r)));
-      pix = min(byte(255),byte(256*pic[x][y].r));
+      pix = byte(min(255,int(256*pic[x][y].r)));
       file << pix;
       }
     }
