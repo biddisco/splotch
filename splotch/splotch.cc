@@ -49,12 +49,13 @@ using namespace RAYPP;
 #define NO_GEOMETRY_FILE
 #define NO_STARS_ABSORB_RED
 #define NO_PATCH_STARS
-#define NO_COLOR_VECTOR
+#define COLOR_VECTOR
+#define COLOR_VECTOR_STARS
 
 struct PARTICLE
   {
   float32 x,y,z,r,ro,I,T;
-#ifdef COLOR_VECTOR
+#if defined(COLOR_VECTOR) || defined(COLOR_VECTOR_STARS)
     float32 T2,T3;
 #endif
   int type;
@@ -167,6 +168,7 @@ int main (int argc, const char ** argv)
 
   bool log_int = params.find<bool>("log_intensity",true);
   bool log_col = params.find<bool>("log_color",true);
+  bool asinh_col = params.find<bool>("asinh_color",false);
   float minval_int = params.find<float>("min_int",1024);
   float maxval_int = params.find<float>("max_int",1024);
   float minval_col = params.find<float>("min_col",1024);
@@ -181,6 +183,8 @@ int main (int argc, const char ** argv)
   string stars_col = params.find<string>("stars_color","XXXX");
 
   bool log_stars_col = params.find<bool>("log_stars_color",true);
+  bool log_stars_int = params.find<bool>("log_stars_intensity",true);
+  bool asinh_stars_col = params.find<bool>("asinh_stars_color",false);
   float minval_stars_int = params.find<float>("min_stars_int",1024);
   float maxval_stars_int = params.find<float>("max_stars_int",1024);
   float minval_stars_col = params.find<float>("min_stars_col",1024);
@@ -217,6 +221,9 @@ int main (int argc, const char ** argv)
   float32 mintmp2=1e30, maxtmp2=-1e30,mintmp3=1e30, maxtmp3=-1e30;
 #endif
   float32 mintmp_stars=1e30, maxtmp_stars=-1e30,minint_stars=1e30, maxint_stars=-1e30;
+#ifdef COLOR_VECTOR_STARS
+  float32 mintmp2_stars=1e30, maxtmp2_stars=-1e30,mintmp3_stars=1e30, maxtmp3_stars=-1e30;
+#endif
   int nskip,npstart=0,nstarstart=np;
 
   for(int f=0;f<numfiles;f++)
@@ -274,9 +281,14 @@ int main (int argc, const char ** argv)
 		 infile >> p[m+npstart].T2 >> p[m+npstart].T3;
 #endif
 		 if(log_col) p[m+npstart].T = log(p[m+npstart].T);
+                 if(asinh_col) p[m+npstart].T = log((double)p[m+npstart].T+sqrt((double)1+(double)p[m+npstart].T*(double)p[m+npstart].T)); 
 		 mintmp=min(mintmp,p[m+npstart].T);
 		 maxtmp=max(maxtmp,p[m+npstart].T);
 #ifdef COLOR_VECTOR
+                 if(log_col) p[m+npstart].T2 = log(p[m+npstart].T2);
+                 if(log_col) p[m+npstart].T3 = log(p[m+npstart].T3);
+		 if(asinh_col) p[m+npstart].T2 = log((double)p[m+npstart].T2+sqrt((double)1+(double)p[m+npstart].T2*(double)p[m+npstart].T2));
+		 if(asinh_col) p[m+npstart].T3 = log((double)p[m+npstart].T3+sqrt((double)1+(double)p[m+npstart].T3*(double)p[m+npstart].T3));
 		 mintmp2=min(mintmp2,p[m+npstart].T2);
 		 maxtmp2=max(maxtmp2,p[m+npstart].T2);
 		 mintmp3=min(mintmp3,p[m+npstart].T3);
@@ -334,14 +346,14 @@ int main (int argc, const char ** argv)
 	     for (int m=0; m<npart[4]; ++m)
 	       p[m+nstarstart].r=star_hsml;
 
-	   cout << "Reading Colors (stars) ..." << endl;
+	   cout << "Reading Intensity (stars) ..." << endl;
 	   if(gadget_find_block(infile,stars_int) > 0)
 	     {
 	       infile.skip(4);
 	       for (int m=0; m<npart[4]; ++m)
 		 {
 		   infile >> p[m+nstarstart].I;
-		   if(log_int) p[m+nstarstart].I = log(p[m+nstarstart].I);
+		   if(log_stars_int) p[m+nstarstart].I = log(p[m+nstarstart].I);
 		   minint_stars=min(minint_stars,p[m+nstarstart].I);
 		   maxint_stars=max(maxint_stars,p[m+nstarstart].I);
 		 }
@@ -354,16 +366,33 @@ int main (int argc, const char ** argv)
 	       maxint_stars=1;
 	     }
 
-	   cout << "Reading Intensities (stars) ..." << endl;
+	   cout << "Reading Colors (stars) ..." << endl;
 	   if(gadget_find_block(infile,stars_col) > 0)
 	     {
 	       infile.skip(4);
 	       for (int m=0; m<npart[4]; ++m)
 		 {
 		   infile >> p[m+nstarstart].T;
+#ifdef COLOR_VECTOR_STARS
+		   infile >> p[m+nstarstart].T2 >> p[m+nstarstart].T3;
+#endif
 		   if(log_stars_col) p[m+nstarstart].T = log(p[m+nstarstart].T);
-		   mintmp_stars=min(mintmp_stars,p[m+nstarstart].T);
+                   if(asinh_stars_col) p[m+nstarstart].T = log((double)p[m+nstarstart].T+sqrt((double)1+
+                                                                                              (double)p[m+nstarstart].T*(double)p[m+nstarstart].T));
+ 		   mintmp_stars=min(mintmp_stars,p[m+nstarstart].T);
 		   maxtmp_stars=max(maxtmp_stars,p[m+nstarstart].T);
+ #ifdef COLOR_VECTOR_STARS
+                   if(log_stars_col) p[m+nstarstart].T2 = log(p[m+nstarstart].T2);
+                   if(log_stars_col) p[m+nstarstart].T3 = log(p[m+nstarstart].T3);
+                   if(asinh_stars_col) p[m+nstarstart].T2 = log((double)p[m+nstarstart].T2+sqrt((double)1+
+												(double)p[m+nstarstart].T2*(double)p[m+nstarstart].T2));
+                   if(asinh_stars_col) p[m+nstarstart].T3 = log((double)p[m+nstarstart].T3+sqrt((double)1+
+												(double)p[m+nstarstart].T3*(double)p[m+nstarstart].T3));
+                   mintmp2_stars=min(mintmp2_stars,p[m+nstarstart].T2);
+                   maxtmp2_stars=max(maxtmp2_stars,p[m+nstarstart].T2);
+                   mintmp3_stars=min(mintmp3_stars,p[m+nstarstart].T3);
+                   maxtmp3_stars=max(maxtmp3_stars,p[m+nstarstart].T3);
+#endif
 		 }
 	     }
 	   else
@@ -403,6 +432,13 @@ int main (int argc, const char ** argv)
     {
     mintmp_stars=minval_stars_col;
     maxtmp_stars=maxval_stars_col;
+#ifdef COLOR_VECTOR_STARS
+    mintmp2_stars=minval_stars_col;
+    maxtmp2_stars=maxval_stars_col;
+    mintmp3_stars=minval_stars_col;
+    maxtmp3_stars=maxval_stars_col;
+#endif
+
     }
 
   if(minval_stars_int!=maxval_stars_int) 
@@ -437,6 +473,10 @@ int main (int argc, const char ** argv)
       {
         if(mintmp_stars != maxtmp_stars) p[m].T = (p[m].T-mintmp_stars)/(maxtmp_stars-mintmp_stars);
         if(minint_stars != maxint_stars) p[m].I = (p[m].I-minint_stars)/(maxint_stars-minint_stars);
+#ifdef COLOR_VECTOR_STARS
+        if(mintmp2_stars != maxtmp2_stars) p[m].T2 = (p[m].T2-mintmp2_stars)/(maxtmp2_stars-mintmp2_stars);
+        if(mintmp3_stars != maxtmp3_stars) p[m].T3 = (p[m].T3-mintmp3_stars)/(maxtmp3_stars-mintmp3_stars);
+#endif
       }
     }
 
@@ -519,7 +559,7 @@ int main (int argc, const char ** argv)
        p_orig[m].ro=p[m].ro;
        p_orig[m].I=p[m].I;
        p_orig[m].T=p[m].T;
-#ifdef COLOR_VECTOR
+#if defined(COLOR_VECTOR) || defined(COLOR_VECTOR_STARS)
        p_orig[m].T2=p[m].T2;
        p_orig[m].T3=p[m].T3;
 #endif
@@ -547,7 +587,7 @@ int main (int argc, const char ** argv)
            p[m].ro=p_orig[m].ro;
            p[m].I=p_orig[m].I;
            p[m].T=p_orig[m].T;
-#ifdef COLOR_VECTOR
+#if defined(COLOR_VECTOR) || defined(COLOR_VECTOR_STARS)
            p[m].T2=p_orig[m].T2;
            p[m].T3=p_orig[m].T3;
 #endif
@@ -713,7 +753,7 @@ int main (int argc, const char ** argv)
 
     float64 temp=p[m].T;
     temp=max(float64(0.0000001),min(float64(0.9999999),temp));
-#ifdef COLOR_VECTOR
+#if defined(COLOR_VECTOR) or defined(COLOR_VECTOR_STARS)
     float64 temp2=p[m].T2,temp3=p[m].T3;
     temp2=max(float64(0.0000001),min(float64(0.9999999),temp2));
     temp3=max(float64(0.0000001),min(float64(0.9999999),temp3));
@@ -721,18 +761,27 @@ int main (int argc, const char ** argv)
     float64 intensity=p[m].I;
     intensity=max(float64(0.0000001),min(float64(0.9999999),intensity));
     COLOUR e;
+
+    if (p[m].type==0)
+      {
 #ifndef COLOR_VECTOR
-    e=amap->Get_Colour(temp)*intensity*brightness;
+	e=amap->Get_Colour(temp)*intensity*brightness;
 #else
-    if (p[m].type==1)
-      e=amap->Get_Colour(temp)*intensity*brightness;
+	e.r=temp*intensity*brightness;
+	e.g=temp2*intensity*brightness;
+	e.b=temp3*intensity*brightness;
+#endif
+      }
     else
       {
-      e.r=temp*intensity*brightness;
-      e.g=temp2*intensity*brightness;
-      e.b=temp3*intensity*brightness;
-      }
+#ifndef COLOR_VECTOR_STARS
+        e=amap->Get_Colour(temp)*intensity*brightness;
+#else
+        e.r=temp*intensity*brightness;
+        e.g=temp2*intensity*brightness;
+        e.b=temp3*intensity*brightness;
 #endif
+      }
 
     COLOUR a;
     a=e;
@@ -741,7 +790,7 @@ int main (int argc, const char ** argv)
     }
 
   splotch_renderer renderer;
-  renderer.render(p2,pic,true,grayabsorb_gas);
+  renderer.render(p2,pic,false,grayabsorb_gas);
 
   bool colbar = params.find<bool>("colourbar",false);
   if (colbar)
