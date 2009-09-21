@@ -12,9 +12,8 @@
 Splotch is written in the C++ language. To install it you have just 
 to unpack the tar.gz and to compile it via:
 g++ -O2 -ffast-math -fomit-frame-pointer -I. -Icxxsupport fullsplotch.cc
-
 Please Check your compiler for the OpenMP flags if you want to use 
-OpenMP functionality.
+OpenMP functionality (-fopenmp).
 
 To run it on your simulations, have a look into the splotch.par
 file and set the parameters you prefer.
