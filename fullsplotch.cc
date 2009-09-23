@@ -1,4 +1,6 @@
 #include "kernel/transform.cxx"
 #include "utils/colourmap.cxx"
 #include "cxxsupport/cxxutils.cc"
+#include "reader/gadget_reader.cc"
+#include "writer/write_tga.cc"
 #include "splotch/splotch.cc"
