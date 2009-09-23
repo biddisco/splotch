@@ -36,7 +36,7 @@ long Bin_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpo
    float readarray[nfields];
 
    char datafile[500];
-   long stride=pe_size*sizeof(float)*nfields*mype+4;
+   long stride=pe_size*sizeof(float)*nfields*mype;
 
    scalar->resize(pe_size);
    xpos->resize(pe_size);
@@ -68,7 +68,7 @@ long Bin_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpo
       ypos->at(index) = readarray[1];
       zpos->at(index) = readarray[2];
       scalar->at(index) = readarray[3];
-      smooth->at(index) = readarray[5];
+      smooth->at(index) = readarray[4];
       //smooth.at(index) = 0.01;
       stride += sizeof(readarray);
       minradius = (minradius <= smooth->at(index) ? minradius : smooth->at(index));
