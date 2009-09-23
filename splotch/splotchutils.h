@@ -18,15 +18,55 @@ class COLOUR8
       }
   };
 
-struct particle2
+struct particle_sim
+  {
+  float32 x,y,z,r,ro,I,C1,C2,C3;
+  int type;
+  };
+
+
+struct particle_splotch
   {
   float32 x,y,r,ro;
   COLOUR a,e;
 
-  particle2 (float32 x_, float32 y_, float32 r_, float32 ro_, const COLOUR &a_,
+  particle_splotch (float32 x_, float32 y_, float32 r_, float32 ro_, const COLOUR &a_,
              const COLOUR &e_)
     : x(x_), y(y_), r(r_), ro(ro_), a(a_), e(e_) {}
   };
+
+struct zcmp
+  {
+  int operator()(const particle_sim &p1, const particle_sim &p2)
+    {
+    return p1.z>p2.z;
+    }
+  };
+
+struct vcmp1
+  {
+  int operator()(const particle_sim &p1, const particle_sim &p2)
+    {
+    return p1.C1>p2.C1;
+    }
+  };
+
+struct vcmp2
+  {
+  int operator()(const particle_sim &p1, const particle_sim &p2)
+    {
+    return p1.C1<p2.C1;
+    }
+  };
+
+struct hcmp
+  {
+  int operator()(const particle_sim &p1, const particle_sim &p2)
+    {
+    return p1.r>p2.r;
+    }
+  };
+
 
 
 class exptable
@@ -87,7 +127,7 @@ class work_distributor
 class splotch_renderer
   {
   public:
-    void render (const vector<particle2> &p, arr2<COLOUR> &pic, bool a_eq_e,
+    void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, bool a_eq_e,
       double grayabsorb)
       {
       const float64 rfac=1.5;
