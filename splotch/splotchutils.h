@@ -1,3 +1,11 @@
+#ifdef USEMPI
+#include <mpi.h>
+#endif
+
+#ifdef USEMPI
+extern int ThisTask,NTask;
+#endif
+
 class COLOUR8
   {
   public:
@@ -127,8 +135,8 @@ class work_distributor
 class splotch_renderer
   {
   public:
-    void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, bool a_eq_e,
-      double grayabsorb)
+    void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, 
+                 bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
       const float64 powtmp = pow(Pi,1./3.);
@@ -216,6 +224,35 @@ class splotch_renderer
 
         }
 }
+#ifdef USEMPI
+      double * red    = new double[xres*yres];
+      double * green  = new double[xres*yres];
+      double * blue   = new double[xres*yres];
+      double * red0   = new double[xres*yres];
+      double * green0 = new double[xres*yres];
+      double * blue0  = new double[xres*yres];
+
+      for(int ix=0,icount=0;ix<xres;ix++)
+        for(int iy=0;iy<yres;iy++,icount++)
+          {
+            red[icount]=pic[ix][iy].r;
+            green[icount]=pic[ix][iy].g;
+            blue[icount]=pic[ix][iy].b;
+          }
+
+      MPI_Allreduce(red, red0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(green, green0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+      MPI_Allreduce(blue, blue0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+      for(int ix=0,icount=0;ix<xres;ix++)
+        for(int iy=0;iy<yres;iy++,icount++)
+          {
+            pic[ix][iy].r=red0[icount];
+            pic[ix][iy].g=green0[icount];
+            pic[ix][iy].b=blue0[icount];
+          }
+      if(ThisTask==0)
+#endif
       if (a_eq_e)
         for(int ix=0;ix<xres;ix++)
           for(int iy=0;iy<yres;iy++)

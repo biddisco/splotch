@@ -19,7 +19,7 @@
  *
  */
 #ifdef USEMPI
-#include "mpi.h"
+#include <mpi.h>
 #endif
 #include<iostream>
 #include<cmath>
@@ -37,9 +37,26 @@
 using namespace std;
 using namespace RAYPP;
 
-int main (int argc, const char ** argv)
+#ifdef USEMPI
+int ThisTask,NTask;
+#endif
+
+int main (int argc, char **argv)
 {
-  announce ("splotch");
+#ifdef USEMPI
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &ThisTask);
+  MPI_Comm_size(MPI_COMM_WORLD, &NTask);
+  if(ThisTask == 0)
+    {
+#endif
+      announce ("splotch");
+#ifdef USEMPI
+      cout << "Application was compiled with MPI support," << endl;
+      cout << "runing with " << NTask << " MPI tasks." << endl << endl;
+    }
+#endif
+
   planck_assert (argc==2,"usage: splotch <parameter file>");
   paramfile params (argv[1],false);
   vector<particle_sim> p;
@@ -70,9 +87,13 @@ int main (int argc, const char ** argv)
     }
 
 #ifdef USEMPI                      // ----------- Ranging ---------------
+  long npart_all;
+  MPI_Allreduce(&npart, &npart_all, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   if(ThisTask==0)
-#endif
+    cout << "ranging values (" << npart_all << ") ..." << endl;
+#else
     cout << "ranging values (" << npart << ") ..." << endl;
+#endif
 
   bool log_int = params.find<bool>("log_intensity0",true);
   bool log_col = params.find<bool>("log_color0",true);
@@ -114,6 +135,17 @@ int main (int argc, const char ** argv)
 	}
 
     }
+#ifdef USEMPI
+  float32 mincol_all=1e30, maxcol_all=-1e30,minint_all=1e30, maxint_all=-1e30;
+  MPI_Allreduce(&mincol, &mincol_all, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&minint, &minint_all, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
+  MPI_Allreduce(&maxcol, &maxcol_all, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
+  MPI_Allreduce(&maxint, &maxint_all, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
+  mincol=mincol_all;
+  minint=minint_all;
+  maxcol=maxcol_all;
+  maxint=maxint_all;
+#endif
 
   float minval_int = params.find<float>("min_int0",minint);
   float maxval_int = params.find<float>("max_int0",maxint);
@@ -189,8 +221,10 @@ int main (int argc, const char ** argv)
 
 #ifdef USEMPI                      // ----------- Transforming ------------
   if(ThisTask==0)
-#endif
+    cout << "applying geometry (" << npart_all << ") ..." << endl;
+#else
     cout << "applying geometry (" << npart << ") ..." << endl;
+#endif
 
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
@@ -304,8 +338,10 @@ int main (int argc, const char ** argv)
 
 #ifdef USEMPI                      // ----------- Sorting ------------
       if(ThisTask==0)
-#endif
+	cout << "applying local sort ..." << endl;
+#else
 	cout << "applying sort (" << npart << ") ..." << endl;
+#endif
 
       int sort_type = params.find<int>("sort_type",1);
 
@@ -333,8 +369,10 @@ int main (int argc, const char ** argv)
 
 #ifdef USEMPI                      // ----------- Coloring ---------------
       if(ThisTask==0)
-#endif
+	cout << "calculating colors (" << npart_all << ") ..." << endl;
+#else
 	cout << "calculating colors (" << npart << ") ..." << endl;
+#endif
 
       int ycut0 = params.find<int>("ycut0",0);
       int ycut1 = params.find<int>("ycut1",res);
@@ -398,13 +436,17 @@ int main (int argc, const char ** argv)
 
 	  p2.push_back(particle_splotch(p[m].x, p[m].y,p[m].r,p[m].ro,a,e));
 	}
-      int nsplotch=p2.size();
+      long nsplotch=p2.size();
 
 
 #ifdef USEMPI                      // ----------- Rendering ------------
+      long nsplotch_all;
+      MPI_Allreduce(&nsplotch, &nsplotch_all, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if(ThisTask==0)
-#endif
+	cout << "rendering (" << nsplotch_all << "/" << npart << ")..." << endl;
+#else
 	cout << "rendering (" << nsplotch << "/" << npart << ")..." << endl;
+#endif
 
       bool a_eq_e = params.find<bool>("a_eq_e",true);
 
@@ -415,6 +457,10 @@ int main (int argc, const char ** argv)
       renderer.render(p2,pic,a_eq_e,grayabsorb);
 
       bool colbar = params.find<bool>("colorbar",false);
+#ifdef USEMPI                   
+      if(ThisTask==0)
+	{
+#endif
       if (colbar)
 	{
 	  cout << "adding colour bar ..." << endl;
@@ -430,8 +476,10 @@ int main (int argc, const char ** argv)
 		}
 	    }
 	}
+#ifdef USEMPI                   
+	}
+                                // ----------- Saving ------------
 
-#ifdef USEMPI                      // ----------- Saving ------------
       if(ThisTask==0)
 #endif
 	cout << "saving file ..." << endl;
@@ -445,7 +493,11 @@ int main (int argc, const char ** argv)
 	
       switch(pictype)
 	{
-	case 0: write_tga(params,pic,res,outfile);
+	case 0: 
+#ifdef USEMPI                   
+	  if(ThisTask==0)
+#endif
+	    write_tga(params,pic,res,outfile);
 	  break;
 	default: 
 #ifdef USEMPI
@@ -456,10 +508,15 @@ int main (int argc, const char ** argv)
 	  break;
 	}
 
+
 #ifdef GEOMETRY_FILE
       for(int i=1; i<geometry_incr; i++, linecount++)
 	getline(inp, line);
     }
+#endif
+
+#ifdef USEMPI
+  MPI_Finalize();
 #endif
 
   exit(0);
