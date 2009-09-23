@@ -1,67 +1,95 @@
-# Input/Output options
-infile=snap_092
-outfile=test.tga
+############################
+# Input Options
+############################
+infile=/afs/mpa/home/kdolag/HydroSims/Hutt/g51/ovisc/snap_091
+# 0: plain binary file, 1: Gadget2, 2: Enzo
+simtype=1
+
+# Additional flags for Gadget
 numfiles=1
 swap_endian=TRUE
+ptypes=2
+ptype0=0
+ptype1=4
 
-# Vizualization properties for gas
-gas=Y
-# labels for gas to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS')
-label_intensity=XXXX
-label_color=U
-log_intensity=FALSE
-log_color=TRUE
-#min_int=-6.0
-#max_int=-3.0
-min_col=1.0
-max_col=13
-hsml_fac=0.5
-filegas_palette=palettes/NewSplotch.pal
-brightness_gas=      5.000000
-gray_absorption_gas=0.01
+# labels to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS')
+fix_size0=0
+size0=HSML
+hsml_fac0=0.5
+intensity0=XXXX
+color0=U
+color_is_vector0=FALSE
 
-# Vizualization properties for stars
-stars=Y
-star_hsml=1.0
-# block for stars smoothing length ('XXXX','HSMS','HSBP')
-stars_hsml=HSMS
-# block for stars to visualize ('XXXX','AGE')
-stars_intensity=XXXX
-stars_color=AGE
-log_stars_intensity=FALSE
-log_stars_color=FALSE
-#min_stars_int=0.0
-#max_stars_int=1.0
-#min_stars_col=0.2
-#max_stars_col=0.8
-filestars_palette=palettes/Klaus.pal
-brightness_stars=      1.00000
-gray_absorption_stars=0.01
+fix_size1=0
+size1=HSMS
+hsml_fac10=0.5
+intensity1=XXXX
+color1=AGE
 
+# Additinal flags for Enzo
 
+############################
+# Output Options
+############################
+pictype=0
+outfile=test2.tga
 resolution=800
 #ycut0=100
 #ycut1=700
 
-boostcolors=FALSE
-colourbar=TRUE
+colorbar=TRUE
 
+############################
+# Vizualization properties
+############################
+boostcolors=FALSE
+a_eq_e=FALSE
+# 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size 
+sort_type=1
+
+log_intensity0=FALSE
+log_color0=TRUE
+asinh_color0=FALSE
+#min_col0=3.0
+#max_col0=14
+#min_int0=3.0
+#max_int0=14
+palette0=palettes/OldSplotch.pal
+brightness0=1.5
+gray_absorption0=0.5
+
+log_intensity1=TRUE
+log_color1=TRUE
+asinh_color1=FALSE
+#min_col1=3.0
+#max_col1=14
+#min_int1=3.0
+#max_int1=14
+palette1=palettes/OldSplotch.pal
+brightness1=1.5
+gray_absorption1=0.5
+
+
+############################
 # Geometrical setup
+############################
 #alternative read values from file
 geometry_file=mygeometry_r.dat
+geometry_start=0
+geometry_incr=1
 #or take give values explicitely
-camera_x=      -3606.6
-camera_y=      10000.0
-camera_z=      2961.9
-lookat_x=      -3606.6
-lookat_y=      3029.6
-lookat_z=      2961.9
+camera_x=      3244.4
+camera_y=      25289.3 
+camera_z=      4764.7
+lookat_x=      3244.4
+lookat_y=      5289.3 
+lookat_z=      4764.7
 sky_x=0
 sky_y=0
 sky_z=1
 
 
 fov=30
-zmin=5000.0
-zmax=9000.0
+#zmin=5000.0
+#zmax=9000.0
 
