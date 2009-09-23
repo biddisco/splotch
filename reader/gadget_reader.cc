@@ -99,8 +99,9 @@ long gadget_reader(paramfile &params, vector<particle_sim> &p)
 
 #ifdef USEMPI
   if(ThisTask==0)
-    cout << "sorry, reading Gadget files is not yet MPI parellelized ..." < endl;
-  exit(1);
+    cout << "sorry, reading Gadget files is not yet MPI parellelized ..." << endl;
+  if(NTask > 1)
+    exit(1);
 #endif
 
   if(numfiles>1) filename=infilename+"."+dataToString(0);
