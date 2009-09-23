@@ -39,6 +39,7 @@ using namespace RAYPP;
 
 #ifdef USEMPI
 int ThisTask,NTask;
+double times[100];
 #endif
 
 int main (int argc, char **argv)
@@ -47,6 +48,8 @@ int main (int argc, char **argv)
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &ThisTask);
   MPI_Comm_size(MPI_COMM_WORLD, &NTask);
+  times[0] = MPI_Wtime();
+
   if(ThisTask == 0)
     {
 #endif
@@ -87,6 +90,8 @@ int main (int argc, char **argv)
     }
 
 #ifdef USEMPI                      // ----------- Ranging ---------------
+  times[1] = MPI_Wtime();
+
   long npart_all;
   MPI_Allreduce(&npart, &npart_all, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
   if(ThisTask==0)
@@ -179,6 +184,8 @@ int main (int argc, char **argv)
 
 
 #ifdef USEMPI                      // ----------- Loading Color Maps ---------------
+  times[2] = MPI_Wtime();
+
   if(ThisTask==0)
 #endif
     cout << "building color maps ..." << endl;
@@ -220,6 +227,8 @@ int main (int argc, char **argv)
 
 
 #ifdef USEMPI                      // ----------- Transforming ------------
+  times[3] = MPI_Wtime();
+
   if(ThisTask==0)
     cout << "applying geometry (" << npart_all << ") ..." << endl;
 #else
@@ -337,6 +346,8 @@ int main (int argc, char **argv)
 
 
 #ifdef USEMPI                      // ----------- Sorting ------------
+      times[4] = MPI_Wtime();
+
       if(ThisTask==0)
 	cout << "applying local sort ..." << endl;
 #else
@@ -368,7 +379,9 @@ int main (int argc, char **argv)
 
 
 #ifdef USEMPI                      // ----------- Coloring ---------------
-      if(ThisTask==0)
+     times[5] = MPI_Wtime();
+
+     if(ThisTask==0)
 	cout << "calculating colors (" << npart_all << ") ..." << endl;
 #else
 	cout << "calculating colors (" << npart << ") ..." << endl;
@@ -385,9 +398,6 @@ int main (int argc, char **argv)
       vector<particle_splotch> p2;
       for (int m=0; m<npart; ++m)
 	{
-	  if ((m%1000000)==0)
-	    cout << m << " of " << npart << " Particles ..." << endl;
-
 	  if (p[m].z<=0) continue;
 	  if (p[m].z<=zminval) continue;
 	  if (p[m].z>=zmaxval) continue;
@@ -440,6 +450,8 @@ int main (int argc, char **argv)
 
 
 #ifdef USEMPI                      // ----------- Rendering ------------
+      times[6] = MPI_Wtime();
+
       long nsplotch_all;
       MPI_Allreduce(&nsplotch, &nsplotch_all, 1, MPI_LONG, MPI_SUM, MPI_COMM_WORLD);
       if(ThisTask==0)
@@ -458,6 +470,8 @@ int main (int argc, char **argv)
 
       bool colbar = params.find<bool>("colorbar",false);
 #ifdef USEMPI                   
+      times[7] = MPI_Wtime();
+
       if(ThisTask==0)
 	{
 #endif
@@ -516,6 +530,23 @@ int main (int argc, char **argv)
 #endif
 
 #ifdef USEMPI
+  times[8] = MPI_Wtime();
+
+  if(ThisTask==0)
+    {
+      cout << "--------------------------------------------" << endl; 
+      cout << "Summary of timings" << endl;
+      cout << "Read Data (secs)           :" << times[1]-times[0] << endl;
+      cout << "Ranging Data (secs)        :" << times[2]-times[1] << endl;
+      cout << "Constructing Pallet (secs) :" << times[3]-times[2] << endl;
+      cout << "Transforming Data (secs)   :" << times[4]-times[3] << endl;
+      cout << "Sorting Data (secs)        :" << times[5]-times[4] << endl;
+      cout << "Coloring Sub-Data (secs)   :" << times[6]-times[5] << endl;
+      cout << "Rendering Sub-Data (secs)  :" << times[7]-times[6] << endl;
+      cout << "Write Data (secs)          :" << times[8]-times[7] << endl;
+      cout << "Total (secs)               :" << times[8]-times[0] << endl;
+   }
+
   MPI_Finalize();
 #endif
 
