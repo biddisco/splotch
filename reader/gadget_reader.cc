@@ -102,6 +102,8 @@ long gadget_reader(paramfile &params, vector<particle_sim> &p)
     cout << "sorry, reading Gadget files is not yet MPI parellelized ..." << endl;
   if(NTask > 1)
     exit(1);
+  else
+    cout << " ... however, as you run only in one MPI task, i can contine ..." << endl;
 #endif
 
   if(numfiles>1) filename=infilename+"."+dataToString(0);
@@ -110,8 +112,6 @@ long gadget_reader(paramfile &params, vector<particle_sim> &p)
 
   if (!infile) {cout << "could not open input file! <" << filename << ">" << endl; exit(1);}
   gadget_read_header(infile,npartthis,massarr,time,redshift,npartall);
-
-  cout <<  time << " " << redshift << " " << npartall[0] << endl;
   infile.close();
 
   long npart=npartall[0],ncount=0;
