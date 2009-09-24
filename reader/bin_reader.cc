@@ -1,14 +1,12 @@
-#ifdef USEMPI
-#include "mpi.h"
-#endif
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <string>
-#include <math.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <vector.h>
+#include <cmath>
+#include <cassert>
+#include <cstdlib>
+#include <vector>
 
+#include "mpi_support.h"
 
 using namespace std;
 
@@ -27,7 +25,7 @@ long Bin_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpo
    FILE * auxFile;
    float * dataarray;
    float * destarray;
-   
+
    long total_size=0;
    float minradius=1e30;
    float maxradius=-1e30;
@@ -46,13 +44,11 @@ long Bin_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpo
 
 
    if(mype == 0)
-   { 
+   {
      printf("Input File Name\n");
      scanf("%s", datafile);
    }
-#ifdef USEMPI
-   MPI_Bcast(&datafile[0], 500, MPI_CHAR, 0, MPI_COMM_WORLD);
-#endif
+   mpiMgr.broadcast_raw(&datafile[0],500);
 
    cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
 
@@ -82,9 +78,7 @@ long Bin_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpo
    *maxr=maxradius;
    *minr=minradius;
 
-#ifdef USEMPI
-   MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
-   MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
-#endif
+   mpiMgr.allreduce_max_raw(maxr, 1);
+   mpiMgr.allreduce_min_raw(minr, 1);
    return pe_size;
 }

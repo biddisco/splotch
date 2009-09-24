@@ -222,7 +222,8 @@ class splotch_renderer
         }
 }
 
-      mpiMgr.allreduce_sum(reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
+      mpiMgr.allreduce_sum_raw
+        (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
       if (mpiMgr.master())
         {
         if (a_eq_e)

@@ -35,6 +35,8 @@
 #include "arr.h"
 
 template <typename T> inline MPI_Datatype getMpiType();
+template<> inline MPI_Datatype getMpiType<char>()
+  { return MPI_CHAR; }
 template<> inline MPI_Datatype getMpiType<int>()
   { return MPI_INT; }
 template<> inline MPI_Datatype getMpiType<unsigned int>()
@@ -153,6 +155,8 @@ class MPI_Manager
         MPI_COMM_WORLD);
       }
 
+    template<typename T> void broadcast_raw (T *ptr, tsize nvals)
+      { MPI_Bcast (ptr,nvals,getMpiType<T>(),0,MPI_COMM_WORLD); }
     template<typename T> void broadcast (T &val)
       { MPI_Bcast (&val,1,getMpiType<T>(),0,MPI_COMM_WORLD); }
     template<typename T> void allreduce_sum (T &val)
@@ -161,17 +165,29 @@ class MPI_Manager
       MPI_Allreduce (&val,&val2,1,getMpiType<T>(),MPI_SUM,MPI_COMM_WORLD);
       val=val2;
       }
-    template<typename T> void allreduce_sum (T *val, tsize nvals)
+    template<typename T> void allreduce_sum_raw (T *ptr, tsize nvals)
       {
-      arr<T> v2(nvals,0);
-      MPI_Allreduce (val,&v2[0],nvals,getMpiType<T>(),MPI_SUM,MPI_COMM_WORLD);
-      for (tsize i=0; i<nvals; ++i) val[i]=v2[i];
+      arr<T> v2(nvals);
+      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_SUM,MPI_COMM_WORLD);
+      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
+      }
+    template<typename T> void allreduce_min_raw (T *ptr, tsize nvals)
+      {
+      arr<T> v2(nvals);
+      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_MIN,MPI_COMM_WORLD);
+      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
       }
     template<typename T> void allreduce_min (T &val)
       {
       T val2;
       MPI_Allreduce (&val,&val2,1,getMpiType<T>(),MPI_MIN,MPI_COMM_WORLD);
       val=val2;
+      }
+    template<typename T> void allreduce_max_raw (T *ptr, tsize nvals)
+      {
+      arr<T> v2(nvals);
+      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_MAX,MPI_COMM_WORLD);
+      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
       }
     template<typename T> void allreduce_max (T &val)
       {
@@ -198,9 +214,13 @@ class MPI_Manager
     template<typename T> void gatherv_m (const arr2<T> &in, arr2<T> &out)
       { out=in; }
     template<typename T> void gatherv_s (const arr2<T> &) {}
+    template<typename T> void broadcast_raw (T *, tsize) {}
     template<typename T> void broadcast (T &) {}
+    template<typename T> void allreduce_sum_raw (T *, tsize) {}
     template<typename T> void allreduce_sum (T &) {}
+    template<typename T> void allreduce_min_raw (T *, tsize) {}
     template<typename T> void allreduce_min (T &) {}
+    template<typename T> void allreduce_max_raw (T *, tsize) {}
     template<typename T> void allreduce_max (T &) {}
   };
 
