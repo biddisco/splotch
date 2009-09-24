@@ -72,6 +72,26 @@ struct hcmp
     }
   };
 
+template<typename T> void get_minmax (T &minv, T &maxv, T val)
+  {
+  minv=min(minv,val);
+  maxv=max(maxv,val);
+  }
+
+double my_asinh (double val)
+  {
+  return log(val+sqrt(1.+val*val));
+  }
+
+template<typename T> void my_normalize (T minv, T maxv, T &val)
+  {
+  if (minv!=maxv) val =  (val-minv)/(maxv-minv);
+  }
+
+template<typename T> void clamp (T minv, T maxv, T &val)
+  {
+  val = min(maxv, max(minv, val));
+  }
 
 
 class exptable
@@ -129,11 +149,8 @@ class work_distributor
       }
   };
 
-class splotch_renderer
-  {
-  public:
-    void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, 
-                 bool a_eq_e,double grayabsorb)
+void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, 
+      bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
       const float64 powtmp = pow(Pi,1./3.);
@@ -142,6 +159,7 @@ class splotch_renderer
       exptable xexp(-20.);
 
       int xres = pic.size1(), yres=pic.size2();
+      pic.fill(COLOUR(0,0,0));
 
       work_distributor wd (xres,yres,200,200);
 
@@ -235,7 +253,250 @@ class splotch_renderer
               pic[ix][iy].b=1-xexp(pic[ix][iy].b);
               }
         }
+}
+
+void add_colorbar(arr2<COLOUR> &pic, COLOURMAP &amap)
+{
+   int xres = pic.size1(), yres=pic.size2();
+
+   cout << "adding colour bar ..." << endl;
+   for (int x=0; x<xres; x++)
+     {  
+       float64 temp=x/float64(xres);
+       COLOUR e=amap.Get_Colour(temp);
+       for (int y=0; y<10; y++)
+         {
+           pic[x][yres-1-y].r = e.r;
+           pic[x][yres-1-y].g = e.g;
+           pic[x][yres-1-y].b = e.b;
+         }
      }
-  };
+}
+
+
+void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
+{
+  bool log_int = params.find<bool>("log_intensity0",true);
+  bool log_col = params.find<bool>("log_color0",true);
+  bool asinh_col = params.find<bool>("asinh_color0",false);
+  bool col_vector = params.find<bool>("color_is_vector0",false);
+  float32 mincol=1e30, maxcol=-1e30,minint=1e30, maxint=-1e30;
+
+  int npart=p.size();
+
+  for (int m=0; m<npart; ++m)
+    {
+      if (log_int)
+	p[m].I = log(p[m].I);
+      get_minmax(minint, maxint, p[m].I);
+      if (log_col)
+	p[m].C1 = log(p[m].C1);
+      if(asinh_col)
+	p[m].C1 = my_asinh(p[m].C1);
+      get_minmax(mincol, maxcol, p[m].C1);
+      if (col_vector)
+	{
+	  if (log_col)
+	    {
+	      p[m].C2 = log(p[m].C2);
+	      p[m].C3 = log(p[m].C3);
+	    }
+	  if (asinh_col)
+	    {
+	      p[m].C2 = my_asinh(p[m].C2);
+	      p[m].C3 = my_asinh(p[m].C3);
+	    }
+	  get_minmax(mincol, maxcol, p[m].C2);
+	  get_minmax(mincol, maxcol, p[m].C3);
+	}
+    }
+  
+  mpiMgr.allreduce_min(minint);
+  mpiMgr.allreduce_min(mincol);
+  mpiMgr.allreduce_max(maxint);
+  mpiMgr.allreduce_max(maxcol);
+
+  float minval_int = params.find<float>("min_int0",minint);
+  float maxval_int = params.find<float>("max_int0",maxint);
+  float minval_col = params.find<float>("min_col0",mincol);
+  float maxval_col = params.find<float>("max_col0",maxcol);
+
+  if(verbose)
+    {
+      cout << "From data: " << endl;
+      cout << "Color Range:     " << mincol << " (min) , " <<
+                                     maxcol << " (max) " << endl;
+      cout << "Intensity Range: " << minint << " (min) , " <<
+                                     maxint << " (max) " << endl;
+      cout << "Restricted to: " << endl;
+      cout << "Color Range:     " << minval_col << " (min) , " <<
+                                     maxval_col << " (max) " << endl;
+      cout << "Intensity Range: " << minval_int << " (min) , " <<
+                                     maxval_int << " (max) " << endl;
+    }
+
+  for (int m=0; m<npart; ++m)
+    {
+      my_normalize(minval_int,maxval_int,p[m].I);
+      my_normalize(minval_col,maxval_col,p[m].C1);
+      if (col_vector)
+	{
+	  my_normalize(minval_col,maxval_col,p[m].C2);
+	  my_normalize(minval_col,maxval_col,p[m].C3);
+	}
+    }
+}
+
+
+void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, VECTOR lookat, VECTOR sky)
+{
+  int res = params.find<int>("resolution",200);
+  double fov = params.find<double>("fov",45); //in degrees
+  double fovfct = tan(fov*0.5*degr2rad);
+  int npart=p.size();
+
+  sky.Normalize();
+  VECTOR zaxis = (lookat-campos).Norm();
+  VECTOR xaxis = Cross (sky,zaxis).Norm();
+  VECTOR yaxis = Cross (zaxis,xaxis);
+  TRANSFORM trans;
+  trans.Make_General_Transform
+    (TRANSMAT(xaxis.x,xaxis.y,xaxis.z,
+	      yaxis.x,yaxis.y,yaxis.z,
+	      zaxis.x,zaxis.y,zaxis.z,
+	      0,0,0));
+  trans.Invert();
+  TRANSFORM trans2;
+  trans2.Make_Translation_Transform(-campos);
+  trans2.Add_Transform(trans);
+  trans=trans2;
+  //  trans.Add_Transform(trans2);
+  
+  for (long m=0; m<npart; ++m)
+    {
+      VECTOR v(p[m].x,p[m].y,p[m].z);
+      v=trans.TransPoint(v);
+      p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
+    }
+#ifdef PROJECTION_OFF
+  float64 dist= (campos-lookat).Length();
+  float64 xfac=1./(fovfct*dist);
+  cout << "Field of fiew: " << 1./xfac*2. << endl;
+#endif
+      
+  for (long m=0; m<npart; ++m)
+    {
+#ifdef PROJECTION_OFF
+      p[m].x = res*.5 * (p[m].x+fovfct*dist)*xfac;
+      p[m].y = res*.5 * (p[m].y+fovfct*dist)*xfac;
+#else
+      float64 xfac=1./(fovfct*p[m].z);
+      p[m].x = res*.5 * (p[m].x+fovfct*p[m].z)*xfac;
+      p[m].y = res*.5 * (p[m].y+fovfct*p[m].z)*xfac;
+#endif
+      p[m].ro = p[m].r;
+      p[m].r = p[m].r *res*.5*xfac;
+#ifdef MINHSMLPIXEL
+      if ((p[m].r <= 0.5) && (p[m].r >= 0.0))
+	{
+          p[m].r = 0.5;
+          p[m].ro = p[m].r/(res*.5*xfac);
+	}
+#endif
+    }
+}
+
+
+void particle_colorize(paramfile &params, vector<particle_sim> &p, vector<particle_splotch> &p2, 
+                       COLOURMAP &amap, COLOURMAP &emap)
+{
+  int res = params.find<int>("resolution",200);
+  bool col_vector = params.find<bool>("color_is_vector0",false);
+  int ycut0 = params.find<int>("ycut0",0);
+  int ycut1 = params.find<int>("ycut1",res);
+  float zmaxval = params.find<float>("zmax",1.e23);
+  float zminval = params.find<float>("zmin",0.0);
+  float64 brightness = params.find<double>("brightness",1.);
+  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+  float64 rfac=1.5;
+  int npart=p.size();
+  
+  for (int m=0; m<npart; ++m)
+    {
+      if (p[m].z<=0) continue;
+      if (p[m].z<=zminval) continue;
+      if (p[m].z>=zmaxval) continue;
+      
+      float64 r=p[m].r;
+      float64 posx=p[m].x, posy=p[m].y;
+      
+      float64 rfacr=rfac*r;
+      
+      int minx=int(posx-rfacr+1);
+      if (minx>=res) continue;
+      minx=max(minx,0);
+      int maxx=int(posx+rfacr+1);
+      if (maxx<=0) continue;
+      maxx=min(maxx,res);
+      if (minx>=maxx) continue;
+      int miny=int(posy-rfacr+1);
+      if (miny>=ycut1) continue;
+      miny=max(miny,ycut0);
+      int maxy=int(posy+rfacr+1);
+      if (maxy<=ycut0) continue;
+      maxy=min(maxy,ycut1);
+      if (miny>=maxy) continue;
+
+      float64 col1=p[m].C1,col2=p[m].C2,col3=p[m].C3;
+      clamp (0.0000001,0.9999999,col1);
+      if (col_vector)
+	{
+          clamp (0.0000001,0.9999999,col2);
+          clamp (0.0000001,0.9999999,col3);
+	}
+      float64 intensity=p[m].I;
+      clamp (0.0000001,0.9999999,intensity);
+      
+      COLOUR e;
+      if (col_vector)
+	{
+          e.r=col1*intensity*brightness;
+          e.g=col2*intensity*brightness;
+          e.b=col3*intensity*brightness;
+	}
+      else
+	e=amap.Get_Colour(col1)*intensity*brightness;
+      
+      COLOUR a=e;
+
+      p2.push_back(particle_splotch(p[m].x, p[m].y,p[m].r,p[m].ro,a,e));
+    }
+}
+
+void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
+{
+  switch(sort_type)
+    {
+    case 0: if(verbose) cout << "skipped sorting ..." << endl;
+      break;
+    case 1: if(verbose) cout << "sorting by z ..." << endl;
+      sort(p.begin(), p.end(), zcmp());
+      break;
+    case 2: if(verbose) cout << "sorting by value ..." << endl;
+      sort(p.begin(), p.end(), vcmp1());
+      break;
+    case 3: if(verbose) cout << "reverse sorting by value ..." << endl;
+      sort(p.begin(), p.end(), vcmp2());
+      break;
+    case 4: if(verbose) cout << "sorting by size ..." << endl;
+      sort(p.begin(), p.end(), hcmp());
+      break;
+    default:
+      planck_fail("unknown sorting choosen ...");
+      break;
+    }
+}
 
 #endif
+
+
