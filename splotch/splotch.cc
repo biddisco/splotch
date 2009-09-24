@@ -37,6 +37,7 @@
 #include "kernel/colour.h"
 #include "config/config.h"
 #include "utils/colourmap.h"
+#include "reader/bin_reader.h"
 
 using namespace std;
 using namespace RAYPP;
@@ -96,14 +97,20 @@ int main (int argc, char **argv)
 
   int simtype = params.find<int>("simtype");
 
+  float maxr, minr;
   vector<particle_sim> p;
   switch(simtype)
     {
-    case 0: // bin_reader(params,p);
+    case 0: 
+      bin_reader_tab(p, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
       break;
-    case 1: gadget_reader(params,p);
+    case 1: 
+      bin_reader_block(p, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
       break;
-    case 2: //enzo_reader(params,p);
+    case 2: 
+      gadget_reader(params,p);
+      break;
+    case 3: //enzo_reader(params,p);
       break;
     default:
       planck_fail("No valid file type given ...");
