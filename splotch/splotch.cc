@@ -155,12 +155,12 @@ int main (int argc, char **argv)
 
   for (int m=0; m<npart; ++m)
     {
-    my_normalize(minint,maxint,p[m].I);
-    my_normalize(mincol,maxcol,p[m].C1);
+    my_normalize(minval_int,maxval_int,p[m].I);
+    my_normalize(minval_col,maxval_col,p[m].C1);
     if (col_vector)
       {
-      my_normalize(mincol,maxcol,p[m].C2);
-      my_normalize(mincol,maxcol,p[m].C3);
+      my_normalize(minval_col,maxval_col,p[m].C2);
+      my_normalize(minval_col,maxval_col,p[m].C3);
       }
     }
 
