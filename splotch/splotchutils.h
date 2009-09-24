@@ -1,10 +1,7 @@
-#ifdef USEMPI
-#include <mpi.h>
-#endif
+#ifndef SPLOTCHUTILS_H
+#define SPLOTCHUTILS_H
 
-#ifdef USEMPI
-extern int ThisTask,NTask;
-#endif
+#include "mpi_support.h"
 
 class COLOUR8
   {
@@ -224,42 +221,20 @@ class splotch_renderer
 
         }
 }
-#ifdef USEMPI
-      double * red    = new double[xres*yres];
-      double * green  = new double[xres*yres];
-      double * blue   = new double[xres*yres];
-      double * red0   = new double[xres*yres];
-      double * green0 = new double[xres*yres];
-      double * blue0  = new double[xres*yres];
 
-      for(int ix=0,icount=0;ix<xres;ix++)
-        for(int iy=0;iy<yres;iy++,icount++)
-          {
-            red[icount]=pic[ix][iy].r;
-            green[icount]=pic[ix][iy].g;
-            blue[icount]=pic[ix][iy].b;
-          }
-
-      MPI_Allreduce(red, red0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(green, green0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-      MPI_Allreduce(blue, blue0, xres*yres, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
-      for(int ix=0,icount=0;ix<xres;ix++)
-        for(int iy=0;iy<yres;iy++,icount++)
-          {
-            pic[ix][iy].r=red0[icount];
-            pic[ix][iy].g=green0[icount];
-            pic[ix][iy].b=blue0[icount];
-          }
-      if(ThisTask==0)
-#endif
-      if (a_eq_e)
-        for(int ix=0;ix<xres;ix++)
-          for(int iy=0;iy<yres;iy++)
-            {
-            pic[ix][iy].r=1-xexp(pic[ix][iy].r);
-            pic[ix][iy].g=1-xexp(pic[ix][iy].g);
-            pic[ix][iy].b=1-xexp(pic[ix][iy].b);
-            }
+      mpiMgr.allreduce_sum(reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
+      if (mpiMgr.master())
+        {
+        if (a_eq_e)
+          for(int ix=0;ix<xres;ix++)
+            for(int iy=0;iy<yres;iy++)
+              {
+              pic[ix][iy].r=1-xexp(pic[ix][iy].r);
+              pic[ix][iy].g=1-xexp(pic[ix][iy].g);
+              pic[ix][iy].b=1-xexp(pic[ix][iy].b);
+              }
+        }
      }
   };
+
+#endif

@@ -14,7 +14,7 @@ include ./makefiles/Makefile.$(ARCH)
 SPLOTCH_DIR = /sfs/sanfs/home/usercin/agh0/ParallelSplotch/splotch
 INCLUDE = -I. -I$(SPLOTCH_DIR)/cxxsupport -I$(SPLOTCH_DIR)/kernel -I$(HDF5)/include
 LIBS = -L$(HDF5)/lib -lhdf5 -L$(ZLIB)/lib -lz 
-DEFINE = -D USEMPI -D SPLOTCH -DVAR_BRIGHT -D BCX -D DEBUG
+DEFINE = -D USE_MPI -D SPLOTCH -DVAR_BRIGHT -D BCX -D DEBUG
 
 EXEC = splotch$(ARCH)
 

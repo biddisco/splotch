@@ -1,4 +1,28 @@
 /*
+ *  This file is part of libcxxsupport.
+ *
+ *  libcxxsupport is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  libcxxsupport is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with libcxxsupport; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+/*
+ *  libcxxsupport is being developed at the Max-Planck-Institut fuer Astrophysik
+ *  and financially supported by the Deutsches Zentrum fuer Luft- und Raumfahrt
+ *  (DLR).
+ */
+
+/*
  *  Class for parsing parameter files
  *
  *  Copyright (C) 2003, 2004, 2005, 2008 Max-Planck-Society
@@ -26,16 +50,19 @@ class paramfile
       {
       params_type::const_iterator loc=params.find(key);
       if (loc!=params.end()) return loc->second;
-      throw Message_error ("Error: Cannot find the key \"" + key + "\".");
+      planck_fail ("Cannot find the key '" + key + "'.");
       }
+
+    bool param_unread (const std::string &key) const
+      { return (read_params.find(key)==read_params.end()); }
 
   public:
     paramfile (const std::string &filename, bool verbose_=true)
       : verbose(verbose_)
       { parse_file (filename, params); }
 
-    paramfile (const params_type &par)
-      : params (par), verbose(true)
+    paramfile (const params_type &par, bool verbose_=true)
+      : params (par), verbose(verbose_)
       {}
 
     ~paramfile ()
@@ -43,10 +70,13 @@ class paramfile
       if (verbose)
         for (params_type::const_iterator loc=params.begin();
              loc!=params.end(); ++loc)
-          if (read_params.find(loc->first)==read_params.end())
+          if (param_unread(loc->first))
             std::cout << "Parser warning: unused parameter "
                       << loc->first << std::endl;
       }
+
+    void setVerbosity (bool verbose_)
+      { verbose = verbose_; }
 
     bool param_present(const std::string &key) const
       { return (params.find(key)!=params.end()); }
@@ -55,7 +85,7 @@ class paramfile
       {
       T result;
       stringToData(get_valstr(key),result);
-      if (verbose)
+      if (verbose && param_unread(key))
         std::cout << "Parser: " << key << " = " << dataToString(result)
                   << std::endl;
       read_params.insert(key);
@@ -65,7 +95,7 @@ class paramfile
       (const std::string &key, const T &deflt)
       {
       if (param_present(key)) return find<T>(key);
-      if (verbose)
+      if (verbose && param_unread(key))
         std::cout << "Parser: " << key << " = " << dataToString(deflt)
                   << " <default>" << std::endl;
       params[key]=dataToString(deflt);

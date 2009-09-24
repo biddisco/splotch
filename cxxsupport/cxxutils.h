@@ -1,7 +1,31 @@
+/*
+ *  This file is part of libcxxsupport.
+ *
+ *  libcxxsupport is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  libcxxsupport is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with libcxxsupport; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+/*
+ *  libcxxsupport is being developed at the Max-Planck-Institut fuer Astrophysik
+ *  and financially supported by the Deutsches Zentrum fuer Luft- und Raumfahrt
+ *  (DLR).
+ */
+
 /*! \file cxxutils.h
  *  Various convenience functions used by the Planck LevelS package.
  *
- *  Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007 Max-Planck-Society
+ *  Copyright (C) 2002 - 2008 Max-Planck-Society
  *  \author Martin Reinecke \author Reinhard Hell
  */
 
@@ -12,8 +36,9 @@
 #include <string>
 #include <map>
 #include <cmath>
-#include "message_error.h"
+#include "error_handling.h"
 #include "lsconstants.h"
+#include "datatypes.h"
 
 /*! \defgroup mathutilsgroup Mathematical helper functions */
 /*! \{ */
@@ -63,20 +88,40 @@ inline double fmodulo (double v1, double v2)
 /*! The result is non-negative.
     \a v1 can be positive or negative; \a v2 must be positive. */
 template<typename I> inline I imodulo (I v1, I v2)
-  { return (v1>=0) ? ((v1<v2) ? v1 : (v1%v2)) : ((v1%v2)+v2); }
+  { I v=v1%v2; return (v>=0) ? v : v+v2; }
 
 //! Returns -1 if \a signvalue is negative, else +1.
 template<typename T> inline T sign (const T& signvalue)
   { return (signvalue>=0) ? 1 : -1; }
 
-//! Returns the integer \a n, which fulfills \a n*n<=arg<(n+1)*(n+1).
-template<typename I> inline unsigned int isqrt (I arg)
+//! Returns \a val*pow(-1,m)
+template<typename T, typename I> inline T xpow (I m, T val)
+  { return (m&1) ? -val : val; }
+
+template <typename I, bool g4> struct isqrt_helper__
+  {};
+template <typename I> struct isqrt_helper__ <I, false>
   {
-  using namespace std;
-  if (sizeof(I)<=4)
-    return unsigned (sqrt(arg+0.5));
-  long double arg2 = arg;
-  return unsigned (sqrt(arg2+0.5));
+  static uint32 isqrt (I arg)
+    {
+    using namespace std;
+    return uint32 (sqrt(arg+0.5));
+    }
+  };
+template <typename I> struct isqrt_helper__ <I, true>
+  {
+  static uint32 isqrt (I arg)
+    {
+    using namespace std;
+    long double arg2 = static_cast<long double>(arg)+0.5;
+    return uint32 (sqrt(arg2));
+    }
+  };
+
+//! Returns the integer \a n, which fulfills \a n*n<=arg<(n+1)*(n+1).
+template<typename I> inline uint32 isqrt (I arg)
+  {
+  return isqrt_helper__<I,(sizeof(I)>4)>::isqrt(arg);
   }
 
 //! Returns the largest integer \a n that fulfills \a 2^n<=arg.
@@ -148,25 +193,12 @@ void remove_file (const std::string &filename);
 /*! \defgroup assertgroup Assertions */
 /*! \{ */
 
-//! Throws a Message_error containing \a msg if \a testval is false.
-inline void planck_assert (bool testval, const std::string &msg)
-  {
-  if (testval) return;
-  throw Message_error ("Assertion failed: "+msg);
-  }
-//! Throws a Message_error containing \a msg if \a testval is false.
-inline void planck_assert (bool testval, const char *msg)
-  {
-  if (testval) return;
-  throw Message_error ("Assertion failed: "+std::string(msg));
-  }
-
 //! Checks the presence of the file \a filename.
-/*! If the file is not present, a Message_error is thrown. */
+/*! If the file is not present, a PlanckError is thrown. */
 void assert_present (const std::string &filename);
 
 //! Checks the absence of the file \a filename.
-/*! If the file is present, a Message_error is thrown. */
+/*! If the file is present, a PlanckError is thrown. */
 void assert_not_present (const std::string &filename);
 
 /*! \} */
@@ -229,14 +261,7 @@ void announce (const std::string &name);
 
 /*! Prints a banner containing \a name and checks if \a argc==argc_expected.
     If not, a usage description is given and the program is terminated. */
-void module_startup (const std::string &name, int argc, const char **argv,
-  int argc_expected, const std::string &argv_expected);
+void module_startup (const std::string &name, int argc,
+  int argc_expected, const std::string &argv_expected, bool verbose=true);
 
-//! Returns an appropriate FITS repetition count for a map with \a npix pixels.
-inline unsigned int healpix_repcount (int npix)
-  {
-  if (npix<1024) return 1;
-  if ((npix%1024)==0) return 1024;
-  return isqrt (npix/12);
-  }
 #endif
