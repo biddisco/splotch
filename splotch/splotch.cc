@@ -23,6 +23,12 @@
 #include<fstream>
 #include<algorithm>
 
+#ifdef USE_MPI
+#include "mpi.h"
+#else
+#include <time.h>
+#endif
+
 #include "mpi_support.h"
 #include "arr.h"
 #include "cxxutils.h"
@@ -35,7 +41,17 @@
 using namespace std;
 using namespace RAYPP;
 
-//double times[100];
+double times[100];
+
+double myTime()
+  {
+#ifdef USE_MPI
+  return MPI_Wtime();
+#else
+  using namespace std;
+  return time(0);
+#endif
+  }
 
 template<typename T> void get_minmax (T &minv, T &maxv, T val)
   {
@@ -61,7 +77,7 @@ template<typename T> void clamp (T minv, T maxv, T &val)
 int main (int argc, char **argv)
   {
   mpiMgr.startup (argc, argv);
-//  times[0] = MPI_Wtime();
+  times[0] = myTime();
   bool master = mpiMgr.master();
 
   module_startup ("splotch",argc,2,"splotch <parameter file>",master);
@@ -97,7 +113,7 @@ int main (int argc, char **argv)
 
   if (master)                             // ----------- Ranging ---------------
     cout << "ranging values (" << npart_all << ") ..." << endl;
-//  times[1] = MPI_Wtime();
+  times[1] = myTime();
 
   bool log_int = params.find<bool>("log_intensity0",true);
   bool log_col = params.find<bool>("log_color0",true);
@@ -168,7 +184,7 @@ int main (int argc, char **argv)
   if (master)                  // ----------- Loading Color Maps ---------------
     cout << "building color maps ..." << endl;
 
-//  times[2] = MPI_Wtime();
+  times[2] = myTime();
 
   COLOURMAP amap;
 
@@ -194,7 +210,7 @@ int main (int argc, char **argv)
 
   if (master)                           // ----------- Transforming ------------
     cout << "applying geometry (" << npart_all << ") ..." << endl;
-//  times[3] = MPI_Wtime();
+  times[3] = myTime();
 
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
@@ -293,7 +309,7 @@ int main (int argc, char **argv)
 #else
       cout << "applying sort (" << npart << ") ..." << endl;
 #endif
-//      times[4] = MPI_Wtime();
+      times[4] = myTime();
 
       int sort_type = params.find<int>("sort_type",1);
 
@@ -321,7 +337,7 @@ int main (int argc, char **argv)
       if (master)                        // ----------- Coloring ---------------
         cout << "calculating colors (" << npart_all << ") ..." << endl;
 
-//     times[5] = MPI_Wtime();
+     times[5] = myTime();
 
       int ycut0 = params.find<int>("ycut0",0);
       int ycut1 = params.find<int>("ycut1",res);
@@ -389,7 +405,7 @@ int main (int argc, char **argv)
       if (master)                          // ----------- Rendering ------------
         cout << "rendering (" << nsplotch_all << "/" << npart << ")..." << endl;
 
-//      times[6] = MPI_Wtime();
+      times[6] = myTime();
 
       bool a_eq_e = params.find<bool>("a_eq_e",true);
 
@@ -401,7 +417,7 @@ int main (int argc, char **argv)
 
       bool colbar = params.find<bool>("colorbar",false);
 
-//      times[7] = MPI_Wtime();
+      times[7] = myTime();
 
       if (master)
         {
@@ -448,9 +464,8 @@ int main (int argc, char **argv)
     }
 #endif
 
-//  times[8] = MPI_Wtime();
+  times[8] = myTime();
 
-/*
   if (master)
     {
     cout << "--------------------------------------------" << endl;
@@ -465,7 +480,6 @@ int main (int argc, char **argv)
     cout << "Write Data (secs)          :" << times[8]-times[7] << endl;
     cout << "Total (secs)               :" << times[8]-times[0] << endl;
     }
-*/
 
   mpiMgr.shutdown();
   }
