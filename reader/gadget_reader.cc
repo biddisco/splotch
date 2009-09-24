@@ -85,6 +85,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p)
   bool col_vector = params.find<bool>("color_is_vector0",false);
   float fix_size = params.find<float>("fix_size0",1.0);
   float hsml_fac = params.find<float>("hsml_fac0",1.0);
+  float col_fac = params.find<float>("col_fac0",1.0);
 
   int npartthis[6],npartall[6];
   double massarr[6],time,redshift;
@@ -146,8 +147,13 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p)
       for (int m=0; m<npartthis[0]; ++m)
         {
         infile >> p[ncount+m].C1;
+	p[ncount+m].C1 *= col_fac;
         if (col_vector)
-        infile >> p[ncount+m].C2 >> p[ncount+m].C3;
+	  {
+	    infile >> p[ncount+m].C2 >> p[ncount+m].C3;
+	    p[ncount+m].C2 *= col_fac;
+	    p[ncount+m].C3 *= col_fac;
+	  }
         }
       }
     else
