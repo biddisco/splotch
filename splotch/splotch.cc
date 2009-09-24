@@ -171,14 +171,14 @@ int main (int argc, char **argv)
 
   for (int m=0; m<npart; ++m)
     {
-      if(minint != maxint) p[m].I = (p[m].I-minint)/(maxint-minint);
-      if(mincol != maxcol) 
+      if(minval_int != maxval_int) p[m].I = (p[m].I-minval_int)/(maxval_int-minval_int);
+      if(minval_col != maxval_col) 
 	{
-	  p[m].C1 = (p[m].C1-mincol)/(maxcol-mincol);
+	  p[m].C1 = (p[m].C1-minval_col)/(maxval_col-minval_col);
 	  if(col_vector)
 	    {
-	      p[m].C2 = (p[m].C2-mincol)/(maxcol-mincol);
-	      p[m].C3 = (p[m].C3-mincol)/(maxcol-mincol);
+	      p[m].C2 = (p[m].C2-minval_col)/(maxval_col-minval_col);
+	      p[m].C3 = (p[m].C3-minval_col)/(maxval_col-minval_col);
 	    }
 	}
     }
