@@ -26,7 +26,7 @@
 #ifdef USE_MPI
 #include "mpi.h"
 #else
-#include <time.h>
+#include <sys/time.h>
 #endif
 
 #include "mpi_support.h"
@@ -49,7 +49,10 @@ double myTime()
   return MPI_Wtime();
 #else
   using namespace std;
-  return time(0);
+  struct timeval t;
+  gettimeofday(&t, NULL);
+  return t.tv_sec + 1e-6*t.tv_usec;
+//  return time(0);
 #endif
   }
 
@@ -470,15 +473,15 @@ int main (int argc, char **argv)
     {
     cout << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
-    cout << "Read Data (secs)           :" << times[1]-times[0] << endl;
-    cout << "Ranging Data (secs)        :" << times[2]-times[1] << endl;
-    cout << "Constructing Pallet (secs) :" << times[3]-times[2] << endl;
-    cout << "Transforming Data (secs)   :" << times[4]-times[3] << endl;
-    cout << "Sorting Data (secs)        :" << times[5]-times[4] << endl;
-    cout << "Coloring Sub-Data (secs)   :" << times[6]-times[5] << endl;
-    cout << "Rendering Sub-Data (secs)  :" << times[7]-times[6] << endl;
-    cout << "Write Data (secs)          :" << times[8]-times[7] << endl;
-    cout << "Total (secs)               :" << times[8]-times[0] << endl;
+    cout << "Read Data (secs)           : " << times[1]-times[0] << endl;
+    cout << "Ranging Data (secs)        : " << times[2]-times[1] << endl;
+    cout << "Constructing Palette (secs): " << times[3]-times[2] << endl;
+    cout << "Transforming Data (secs)   : " << times[4]-times[3] << endl;
+    cout << "Sorting Data (secs)        : " << times[5]-times[4] << endl;
+    cout << "Coloring Sub-Data (secs)   : " << times[6]-times[5] << endl;
+    cout << "Rendering Sub-Data (secs)  : " << times[7]-times[6] << endl;
+    cout << "Write Data (secs)          : " << times[8]-times[7] << endl;
+    cout << "Total (secs)               : " << times[8]-times[0] << endl;
     }
 
   mpiMgr.shutdown();
