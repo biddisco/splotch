@@ -65,10 +65,10 @@ int main (int argc, char **argv)
   bool master = mpiMgr.master();
 
   module_startup ("splotch",argc,2,"splotch <parameter file>",master);
-  if (mpiMgr.num_ranks()>1)
+  if (mpiMgr.num_ranks()>1 && master)
     {
     cout << "Application was compiled with MPI support," << endl;
-    cout << "running with " << mpiMgr.num_ranks() << " MPI tasks." << endl;
+    cout << "running with " << mpiMgr.num_ranks() << " MPI tasks." << endl << endl;
     }
 
 
@@ -81,30 +81,45 @@ int main (int argc, char **argv)
   vector<particle_sim> particle_data;
   vector<particle_splotch> particle_col;
   VECTOR campos, lookat, sky;
-  COLOURMAP amap,emap;
+  vector<COLOURMAP> amap,emap;
+  int ptypes = params.find<int>("ptypes",1);
 
 
 // ----------------------------------------------
 // ----------- Loading Color Maps ---------------
 // ----------------------------------------------
 
+  amap.resize(ptypes);
+
   if (master)
-    cout << "building color maps ..." << endl;
-  float rrr,ggg,bbb,rrr_old,ggg_old,bbb_old;
-  ifstream infile (params.find<string>("palette0").c_str());
-  string dummy;
-  int nColours;
-  infile >> dummy >> dummy >> nColours;
-  cout << "Loading " << nColours << " entries of color table"  << endl;
-  infile >> rrr_old >> ggg_old >> bbb_old;
-  double step = 1./(nColours-1);
-  for (int i=1; i<nColours; i++)
+    cout << "building color maps (" << ptypes << ")..." << endl;
+  for(int itype=0;itype<ptypes;itype++)
     {
-    infile >> rrr >> ggg >> bbb;
-    amap.Add_Entry(new LINEAR_CMAP_ENTRY((i-1)*step,i*step,
-                                         COLOUR(rrr_old/255,ggg_old/255,bbb_old/255),
-                                         COLOUR(rrr/255,ggg/255,bbb/255)));
-    rrr_old=rrr; ggg_old=ggg; bbb_old=bbb;
+      if(params.find<bool>("color_is_vector"+dataToString(itype),false))
+	{
+	  if (master)
+	    cout << " color of ptype " << itype << " is vector, so no colormap to load ..." << endl;
+	}
+      else
+	{
+	  float rrr,ggg,bbb,rrr_old,ggg_old,bbb_old;
+	  ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
+	  string dummy;
+	  int nColours;
+	  infile >> dummy >> dummy >> nColours;
+	  if(master)
+	    cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
+	  infile >> rrr_old >> ggg_old >> bbb_old;
+	  double step = 1./(nColours-1);
+	  for (int i=1; i<nColours; i++)
+	    {
+	      infile >> rrr >> ggg >> bbb;
+	      amap[itype].Add_Entry(new LINEAR_CMAP_ENTRY((i-1)*step,i*step,
+							  COLOUR(rrr_old/255,ggg_old/255,bbb_old/255),
+							  COLOUR(rrr/255,ggg/255,bbb/255)));
+	      rrr_old=rrr; ggg_old=ggg; bbb_old=bbb;
+	    }
+	}
     }
   emap=amap;
 
@@ -138,16 +153,16 @@ int main (int argc, char **argv)
 // ----------- Reading ---------------
 // -----------------------------------
   if (master)
-    cout << "reading data ..." << endl;
+    cout << endl << "reading data ..." << endl;
   int simtype = params.find<int>("simtype");
   float maxr, minr;
   switch(simtype)
     {
     case 0:
-      bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+      //      bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
       break;
     case 1: 
-      bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+      //      bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
       break;
     case 2: gadget_reader(params,particle_data);
       break;
@@ -167,7 +182,7 @@ int main (int argc, char **argv)
 // ----------- Ranging ---------------
 // -----------------------------------
   if (master)
-    cout << "ranging values (" << npart_all << ") ..." << endl;
+    cout << endl << "ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(params,particle_data,true);
   times[3] = myTime();
 
@@ -182,7 +197,7 @@ int main (int argc, char **argv)
   double cam_x,cam_y,cam_z,lat_x,lat_y,lat_z,sky_x,sky_y,sky_z;
   string line;
   ifstream inp(params.find<string>("geometry_file").c_str());
-  int linecount=10000;
+  int linecount=0;
   int geometry_skip = params.find<int>("geometry_start",0);
   int geometry_incr = params.find<int>("geometry_incr",1);
 
@@ -196,9 +211,12 @@ int main (int argc, char **argv)
            &campos.x,&campos.y,&campos.z,
            &lookat.x,&lookat.y,&lookat.z,
            &sky.x,&sky.y,&sky.z);
-      cout << "Camera: " << campos << endl;
-      cout << "Lookat: " << lookat << endl;
-      cout << "Sky:    " << sky << endl;
+    if(master)
+      {
+	cout << " Camera: " << campos << endl;
+	cout << " Lookat: " << lookat << endl;
+	cout << " Sky:    " << sky << endl;
+      }
 #else
       campos.x=params.find<double>("camera_x");
       campos.y=params.find<double>("camera_y");
@@ -216,7 +234,7 @@ int main (int argc, char **argv)
 // ----------- Transforming ------------
 // -------------------------------------
       if (master)
-	cout << "applying geometry (" << npart_all << ") ..." << endl;
+	cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
       paticle_project(params, particle_data, campos, lookat, sky);
       times[4] = myTime();
 
@@ -226,9 +244,9 @@ int main (int argc, char **argv)
 // --------------------------------
 #ifdef USE_MPI
       if (master)
-        cout << "applying local sort ..." << endl;
+        cout << endl << "applying local sort ..." << endl;
 #else
-      cout << "applying sort (" << npart << ") ..." << endl;
+      cout << endl << "applying sort (" << npart << ") ..." << endl;
 #endif
       int sort_type = params.find<int>("sort_type",1);
       particle_sort(particle_data,sort_type,true);
@@ -239,7 +257,7 @@ int main (int argc, char **argv)
 // ----------- Coloring ---------------
 // ------------------------------------
       if (master)                        
-        cout << "calculating colors (" << npart_all << ") ..." << endl;
+        cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
       particle_colorize(params, particle_data, particle_col, amap, emap);
       times[6] = myTime();
 
@@ -252,7 +270,7 @@ int main (int argc, char **argv)
       long nsplotch_all=nsplotch;
       mpiMgr.allreduce_sum (nsplotch_all);
       if (master)
-        cout << "rendering (" << nsplotch_all << "/" << npart << ")..." << endl;
+        cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
       arr2<COLOUR> pic(res,res);
       float64 grayabsorb = params.find<float>("gray_absorption",0.2);
       bool a_eq_e = params.find<bool>("a_eq_e",true);
@@ -268,8 +286,8 @@ int main (int argc, char **argv)
 	  bool colbar = params.find<bool>("colorbar",false);
 	  if (colbar)
 	    {
-	      cout << "adding colour bar ..." << endl;
-	      add_colorbar(pic,amap);
+	      cout << endl << "creating color bar ..." << endl;
+	      add_colorbar(params,pic,amap);
 	    }
 	}
 
@@ -278,12 +296,12 @@ int main (int argc, char **argv)
 // ----------- Saving ------------
 // -------------------------------
       if (master)                             
-        cout << "saving file ..." << endl;
+        cout << endl << "saving file ..." << endl;
 
       int pictype = params.find<int>("pictype",0);
       string outfile = params.find<string>("outfile");
 #ifdef GEOMETRY_FILE
-      outfile = outfile + "." + dataToString(linecount);
+      outfile = outfile + "." + intToString(linecount,4);
       linecount++;
 #endif
 
@@ -309,7 +327,7 @@ int main (int argc, char **argv)
   times[8] = myTime();
   if (master)
     {
-    cout << "--------------------------------------------" << endl;
+      cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
     cout << "Setup Data (secs)          : " << times[1]-times[0] << endl;
     cout << "Read Data (secs)           : " << times[2]-times[1] << endl;

@@ -255,95 +255,129 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
         }
 }
 
-void add_colorbar(arr2<COLOUR> &pic, COLOURMAP &amap)
+void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
 {
-   int xres = pic.size1(), yres=pic.size2();
+  int xres = pic.size1(), yres=pic.size2();
+  int offset=0;
+  int ptypes = params.find<int>("ptypes",1);
 
-   cout << "adding colour bar ..." << endl;
-   for (int x=0; x<xres; x++)
-     {  
-       float64 temp=x/float64(xres);
-       COLOUR e=amap.Get_Colour(temp);
-       for (int y=0; y<10; y++)
-         {
-           pic[x][yres-1-y].r = e.r;
-           pic[x][yres-1-y].g = e.g;
-           pic[x][yres-1-y].b = e.b;
-         }
-     }
+  for(int itype=0;itype<ptypes;itype++)
+    {
+      if(params.find<bool>("color_is_vector"+dataToString(itype),false))
+        {
+           cout << " adding no color bar for type " << itype 
+                << " as it is color vector ..." << endl;
+        }
+      else
+        {
+          cout << " adding color bar for type " << itype << " ..." << endl;
+          for (int x=0; x<xres; x++)
+            {  
+               float64 temp=x/float64(xres);
+               COLOUR e=amap[itype].Get_Colour(temp);
+               for (int y=0; y<10; y++)
+                 {
+                   pic[x][yres-offset-1-y].r = e.r;
+                   pic[x][yres-offset-1-y].g = e.g;
+                   pic[x][yres-offset-1-y].b = e.b;
+                 }
+            }
+          offset += 10;
+        }
+    }
 }
 
 
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
 {
-  bool log_int = params.find<bool>("log_intensity0",true);
-  bool log_col = params.find<bool>("log_color0",true);
-  bool asinh_col = params.find<bool>("asinh_color0",false);
-  bool col_vector = params.find<bool>("color_is_vector0",false);
-  float32 mincol=1e30, maxcol=-1e30,minint=1e30, maxint=-1e30;
+  int ptypes = params.find<int>("ptypes",1);
+  bool col_vector[ptypes];
+  bool log_int[ptypes];
+  bool log_col[ptypes];
+  bool asinh_col[ptypes];
+  float32 mincol[ptypes], maxcol[ptypes], minint[ptypes], maxint[ptypes];
+
+  for(int itype=0;itype<ptypes;itype++)
+    {
+      log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
+      log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
+      asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
+      col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+      mincol[itype]=1e30;
+      maxcol[itype]=-1e30;
+      minint[itype]=1e30;
+      maxint[itype]=-1e30;
+    }
 
   int npart=p.size();
 
   for (int m=0; m<npart; ++m)
     {
-      if (log_int)
+      if (log_int[p[m].type])
 	p[m].I = log(p[m].I);
-      get_minmax(minint, maxint, p[m].I);
-      if (log_col)
+      get_minmax(minint[p[m].type], maxint[p[m].type], p[m].I);
+      if (log_col[p[m].type])
 	p[m].C1 = log(p[m].C1);
-      if(asinh_col)
+      if(asinh_col[p[m].type])
 	p[m].C1 = my_asinh(p[m].C1);
-      get_minmax(mincol, maxcol, p[m].C1);
-      if (col_vector)
+      get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C1);
+      if (col_vector[p[m].type])
 	{
-	  if (log_col)
+	  if (log_col[p[m].type])
 	    {
 	      p[m].C2 = log(p[m].C2);
 	      p[m].C3 = log(p[m].C3);
 	    }
-	  if (asinh_col)
+	  if (asinh_col[p[m].type])
 	    {
 	      p[m].C2 = my_asinh(p[m].C2);
 	      p[m].C3 = my_asinh(p[m].C3);
 	    }
-	  get_minmax(mincol, maxcol, p[m].C2);
-	  get_minmax(mincol, maxcol, p[m].C3);
+	  get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C2);
+	  get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C3);
 	}
     }
   
-  mpiMgr.allreduce_min(minint);
-  mpiMgr.allreduce_min(mincol);
-  mpiMgr.allreduce_max(maxint);
-  mpiMgr.allreduce_max(maxcol);
-
-  float minval_int = params.find<float>("min_int0",minint);
-  float maxval_int = params.find<float>("max_int0",maxint);
-  float minval_col = params.find<float>("min_col0",mincol);
-  float maxval_col = params.find<float>("max_col0",maxcol);
-
-  if(verbose)
+  for(int itype=0;itype<ptypes;itype++)
     {
-      cout << "From data: " << endl;
-      cout << "Color Range:     " << mincol << " (min) , " <<
-                                     maxcol << " (max) " << endl;
-      cout << "Intensity Range: " << minint << " (min) , " <<
-                                     maxint << " (max) " << endl;
-      cout << "Restricted to: " << endl;
-      cout << "Color Range:     " << minval_col << " (min) , " <<
-                                     maxval_col << " (max) " << endl;
-      cout << "Intensity Range: " << minval_int << " (min) , " <<
-                                     maxval_int << " (max) " << endl;
-    }
+      mpiMgr.allreduce_min(minint[itype]);
+      mpiMgr.allreduce_min(mincol[itype]);
+      mpiMgr.allreduce_max(maxint[itype]);
+      mpiMgr.allreduce_max(maxcol[itype]);
 
-  for (int m=0; m<npart; ++m)
-    {
-      my_normalize(minval_int,maxval_int,p[m].I);
-      my_normalize(minval_col,maxval_col,p[m].C1);
-      if (col_vector)
-	{
-	  my_normalize(minval_col,maxval_col,p[m].C2);
-	  my_normalize(minval_col,maxval_col,p[m].C3);
-	}
+      float minval_int = params.find<float>("intensity_min"+dataToString(itype),minint[itype]);
+      float maxval_int = params.find<float>("intensity_max"+dataToString(itype),maxint[itype]);
+      float minval_col = params.find<float>("color_min"+dataToString(itype),mincol[itype]);
+      float maxval_col = params.find<float>("color_max"+dataToString(itype),maxcol[itype]);
+
+      if(verbose && mpiMgr.master())
+        {
+           cout << " For particles of type " << itype << " : " << endl;
+           cout << " From data: " << endl;
+           cout << " Color Range:     " << mincol[itype] << " (min) , " <<
+                                           maxcol[itype] << " (max) " << endl;
+           cout << " Intensity Range: " << minint[itype] << " (min) , " <<
+                                           maxint[itype] << " (max) " << endl;
+           cout << " Restricted to: " << endl;
+           cout << " Color Range:     " << minval_col << " (min) , " <<
+                                           maxval_col << " (max) " << endl;
+           cout << " Intensity Range: " << minval_int << " (min) , " <<
+                                           maxval_int << " (max) " << endl;
+        }
+
+      for(int m=0; m<npart; ++m)
+        {
+          if(p[m].type == itype)
+            {
+               my_normalize(minval_int,maxval_int,p[m].I);
+               my_normalize(minval_col,maxval_col,p[m].C1);
+               if (col_vector[p[m].type])
+	         {
+	            my_normalize(minval_col,maxval_col,p[m].C2);
+	            my_normalize(minval_col,maxval_col,p[m].C3);
+	         }
+            }
+        }
     }
 }
 
@@ -381,7 +415,7 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
 #ifdef PROJECTION_OFF
   float64 dist= (campos-lookat).Length();
   float64 xfac=1./(fovfct*dist);
-  cout << "Field of fiew: " << 1./xfac*2. << endl;
+  cout << " Field of fiew: " << 1./xfac*2. << endl;
 #endif
       
   for (long m=0; m<npart; ++m)
@@ -407,17 +441,25 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
 }
 
 
-void particle_colorize(paramfile &params, vector<particle_sim> &p, vector<particle_splotch> &p2, 
-                       COLOURMAP &amap, COLOURMAP &emap)
+void particle_colorize(paramfile &params, vector<particle_sim> &p, 
+                       vector<particle_splotch> &p2, 
+                       vector<COLOURMAP> &amap, vector<COLOURMAP> &emap)
 {
   int res = params.find<int>("resolution",200);
-  bool col_vector = params.find<bool>("color_is_vector0",false);
   int ycut0 = params.find<int>("ycut0",0);
   int ycut1 = params.find<int>("ycut1",res);
   float zmaxval = params.find<float>("zmax",1.e23);
   float zminval = params.find<float>("zmin",0.0);
-  float64 brightness = params.find<double>("brightness",1.);
-  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+  int ptypes = params.find<int>("ptypes",1);
+  bool col_vector[ptypes];
+  float64 brightness[ptypes];
+  float64 grayabsorb[ptypes];
+  for(int itype=0;itype<ptypes;itype++)
+    {
+      brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
+      grayabsorb[itype] = params.find<float>("gray_absorption"+dataToString(itype),0.2);
+      col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+    }
   float64 rfac=1.5;
   int npart=p.size();
   
@@ -449,23 +491,24 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p, vector<partic
 
       float64 col1=p[m].C1,col2=p[m].C2,col3=p[m].C3;
       clamp (0.0000001,0.9999999,col1);
-      if (col_vector)
+      if (col_vector[p[m].type])
 	{
           clamp (0.0000001,0.9999999,col2);
           clamp (0.0000001,0.9999999,col3);
 	}
       float64 intensity=p[m].I;
       clamp (0.0000001,0.9999999,intensity);
+      intensity *= brightness[p[m].type];
       
       COLOUR e;
-      if (col_vector)
+      if (col_vector[p[m].type])
 	{
-          e.r=col1*intensity*brightness;
-          e.g=col2*intensity*brightness;
-          e.b=col3*intensity*brightness;
+          e.r=col1*intensity;
+          e.g=col2*intensity;
+          e.b=col3*intensity;
 	}
       else
-	e=amap.Get_Colour(col1)*intensity*brightness;
+	e=amap[p[m].type].Get_Colour(col1)*intensity;
       
       COLOUR a=e;
 
@@ -477,18 +520,27 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 {
   switch(sort_type)
     {
-    case 0: if(verbose) cout << "skipped sorting ..." << endl;
+    case 0: 
+      if(verbose && mpiMgr.master())
+         cout << " skipped sorting ..." << endl;
       break;
-    case 1: if(verbose) cout << "sorting by z ..." << endl;
+    case 1: 
+      if(verbose && mpiMgr.master())
+         cout << " sorting by z ..." << endl;
       sort(p.begin(), p.end(), zcmp());
       break;
-    case 2: if(verbose) cout << "sorting by value ..." << endl;
+    case 2: 
+      if(verbose && mpiMgr.master()) 
+         cout << " sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp1());
       break;
-    case 3: if(verbose) cout << "reverse sorting by value ..." << endl;
+    case 3: if(verbose && mpiMgr.master()) 
+         cout << " reverse sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp2());
       break;
-    case 4: if(verbose) cout << "sorting by size ..." << endl;
+    case 4: 
+      if(verbose && mpiMgr.master())
+      cout << " sorting by size ..." << endl;
       sort(p.begin(), p.end(), hcmp());
       break;
     default:
