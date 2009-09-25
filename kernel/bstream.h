@@ -76,8 +76,16 @@ class bifstream: public ifstream
 
   public:
     /*! */
+    bifstream ()
+      : doswap(false) {}
     bifstream (const char *fname, bool doswap_)
       : ifstream(fname,ios::binary), doswap(doswap_) {}
+
+    void open (const char *fname, bool doswap_)
+      {
+      doswap=doswap_;
+      ifstream::open(fname,ios::binary);
+      }
 
     template<typename T> bifstream &operator>> (T &data)
       {
