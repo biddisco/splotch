@@ -23,26 +23,20 @@
 #ifndef RAYPP_BYTESWAP_H
 #define RAYPP_BYTESWAP_H
 
-#include "config/config.h"
-
 namespace RAYPP {
 
-template<int size> inline void byteswap_helper (byte *)
-  {
-  bool Error_unspecialized_template_used[-(size*size)];
-  // compile time error would be nice here ...
-  }
-template<> inline void byteswap_helper<1> (byte *)
+template<int size> inline void byteswap_helper (char *);
+template<> inline void byteswap_helper<1> (char *)
   {}
-template<> inline void byteswap_helper<2> (byte *val)
+template<> inline void byteswap_helper<2> (char *val)
   {
   swap (val[0],val[1]);
   }
-template<> inline void byteswap_helper<4> (byte *val)
+template<> inline void byteswap_helper<4> (char *val)
   {
   swap (val[0],val[3]); swap (val[1],val[2]);
   }
-template<> inline void byteswap_helper<8> (byte *val)
+template<> inline void byteswap_helper<8> (char *val)
   {
   swap (val[0],val[7]); swap (val[1],val[6]);
   swap (val[2],val[5]); swap (val[3],val[4]);
@@ -50,7 +44,7 @@ template<> inline void byteswap_helper<8> (byte *val)
 
 template<typename T> inline void byteswap (T& val)
   {
-  byteswap_helper<sizeof(T)> (reinterpret_cast<byte *> (&val));
+  byteswap_helper<sizeof(T)> (reinterpret_cast<char *> (&val));
   }
 
 } // namespace RAYPP
