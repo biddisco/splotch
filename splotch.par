@@ -1,30 +1,54 @@
 ############################
 # Input Options
 ############################
-infile=/afs/mpa/home/kdolag/HydroSims/Hutt/g51/ovisc/snap_091
-# 0: plain binary file, 1: Gadget2, 2: Enzo
-simtype=1
+infile=/afs/mpa/home/kdolag/HydroSims/Salacious/snap_136
+ptypes=3
+
+# 0,1: plain binary file, 2: Gadget2, 3: Enzo
+simtype=2
 
 # Additional flags for Gadget
-numfiles=1
+numfiles=8
+readparallel=2
 swap_endian=TRUE
-ptypes=2
+
+# labels to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
 ptype0=0
-ptype1=4
-
-# labels to visualize('XXXX','TEMP','U','RHO','MACH','DTEG','DISS')
-fix_size0=0
-size0=HSML
-hsml_fac0=0.5
-intensity0=XXXX
-color0=U
+size_fix0=0
+size_label0=HSML
+size_present0=1
+size_fac0=0.5
+color_label0=U
+color_present0=1
 color_is_vector0=FALSE
+#color_fac0=1e5
+intensity_label0=XXXX
+intensity_present0=1
 
-fix_size1=0
-size1=HSMS
-hsml_fac10=0.5
-intensity1=XXXX
-color1=AGE
+ptype1=1
+size_fix1=50.0
+size_label1=HSML
+size_present1=1
+size_fac1=0.5
+color_label1=VEL
+color_present1=63               # 1+2+4+8+16+32
+color_is_vector1=TRUE
+#color_fac1=1e5
+intensity_label1=XXXX
+intensity_present1=1
+
+ptype2=4
+size_fix2=0
+size_label2=HSMS
+size_present2=16
+size_fac2=0.5
+color_label2=AGE
+color_present2=16
+color_is_vector2=FALSE
+#color_fac1=1e5
+intensity_label2=XXXX
+intensity_present2=16
+
 
 # Additinal flags for Enzo
 
@@ -32,7 +56,7 @@ color1=AGE
 # Output Options
 ############################
 pictype=0
-outfile=test2.tga
+outfile=test_vel.tga
 resolution=800
 #ycut0=100
 #ycut1=700
@@ -43,31 +67,38 @@ colorbar=TRUE
 # Vizualization properties
 ############################
 boostcolors=FALSE
-a_eq_e=FALSE
+a_eq_e=TRUE
 # 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size 
-sort_type=1
+sort_type=0
 
-log_intensity0=FALSE
-log_color0=TRUE
-asinh_color0=FALSE
-#min_col0=3.0
-#max_col0=14
-#min_int0=3.0
-#max_int0=14
+intensity_log0=FALSE
+color_log0=TRUE
+color_asinh0=FALSE
+#color_min0=10.0
+#color_max0=16.0
 palette0=palettes/OldSplotch.pal
-brightness0=1.5
+brightness0=3.0                # 3.0
 gray_absorption0=0.5
 
-log_intensity1=TRUE
-log_color1=TRUE
-asinh_color1=FALSE
-#min_col1=3.0
-#max_col1=14
-#min_int1=3.0
-#max_int1=14
+intensity_log1=FALSE
+color_log1=FALSE
+color_asinh1=TRUE
+#color_min1=-4.0
+#color_max1=4.0
 palette1=palettes/OldSplotch.pal
-brightness1=1.5
+brightness1=5.0                # 5.0
 gray_absorption1=0.5
+
+intensity_log2=FALSE
+color_log2=FALSE
+color_asinh2=FALSE
+color_min2=0.1
+color_max2=0.5
+palette2=palettes/OrionNew1.pal
+brightness2=10.0                # 10.0
+gray_absorption2=0.5
+
+
 
 
 ############################
@@ -78,12 +109,12 @@ geometry_file=mygeometry_r.dat
 geometry_start=0
 geometry_incr=1
 #or take give values explicitely
-camera_x=      3244.4
-camera_y=      25289.3 
-camera_z=      4764.7
-lookat_x=      3244.4
-lookat_y=      5289.3 
-lookat_z=      4764.7
+camera_x=      120000.0
+camera_y=      360000.0
+camera_z=      120000.0
+lookat_x=      120000.0
+lookat_y=      120000.0
+lookat_z=      120000.0
 sky_x=0
 sky_y=0
 sky_z=1
@@ -91,5 +122,5 @@ sky_z=1
 
 fov=30
 #zmin=5000.0
-#zmax=9000.0
+#zmax=7000.0
 
