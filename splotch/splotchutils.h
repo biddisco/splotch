@@ -2,6 +2,10 @@
 #define SPLOTCHUTILS_H
 
 #include "mpi_support.h"
+#include "kernel/transform.h"
+
+using namespace std;
+using namespace RAYPP;
 
 class COLOUR8
   {
@@ -544,7 +548,7 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
       sort(p.begin(), p.end(), hcmp());
       break;
     default:
-      planck_fail("unknown sorting choosen ...");
+      planck_fail("unknown sorting chosen ...");
       break;
     }
 }

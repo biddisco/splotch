@@ -18,10 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
-#include<iostream>
-#include<cmath>
-#include<fstream>
-#include<algorithm>
+#include <iostream>
+#include <cmath>
+#include <fstream>
+#include <algorithm>
 
 #ifdef USE_MPI
 #include "mpi.h"
@@ -194,13 +194,12 @@ int main (int argc, char **argv)
 // -------------------------------------
   vector<particle_sim> p_orig=particle_data;
 
-  double cam_x,cam_y,cam_z,lat_x,lat_y,lat_z,sky_x,sky_y,sky_z;
-  string line;
   ifstream inp(params.find<string>("geometry_file").c_str());
   int linecount=0;
   int geometry_skip = params.find<int>("geometry_start",0);
   int geometry_incr = params.find<int>("geometry_incr",1);
 
+  string line;
   for(int i=0; i<geometry_skip; i++, linecount++)
     getline(inp, line);
 
