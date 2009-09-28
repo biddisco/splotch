@@ -296,11 +296,16 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
 {
   int ptypes = params.find<int>("ptypes",1);
-  bool col_vector[ptypes];
-  bool log_int[ptypes];
-  bool log_col[ptypes];
-  bool asinh_col[ptypes];
-  float32 mincol[ptypes], maxcol[ptypes], minint[ptypes], maxint[ptypes];
+  vector<bool> col_vector,log_int,log_col,asinh_col;
+  vector<float32> mincol,maxcol,minint,maxint;
+  col_vector.resize(ptypes);
+  log_int.resize(ptypes);
+  log_col.resize(ptypes);
+  asinh_col.resize(ptypes);
+  mincol.resize(ptypes);
+  maxcol.resize(ptypes);
+  minint.resize(ptypes);
+  maxint.resize(ptypes);
 
   for(int itype=0;itype<ptypes;itype++)
     {
@@ -456,9 +461,12 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   float zmaxval = params.find<float>("zmax",1.e23);
   float zminval = params.find<float>("zmin",0.0);
   int ptypes = params.find<int>("ptypes",1);
-  bool col_vector[ptypes];
-  float64 brightness[ptypes];
-  float64 grayabsorb[ptypes];
+  vector<bool> col_vector;
+  vector<float64> brightness,grayabsorb;
+
+  col_vector.resize(ptypes);
+  brightness.resize(ptypes);
+  grayabsorb.resize(ptypes);
 
   p2.resize(0);
   for(int itype=0;itype<ptypes;itype++)
