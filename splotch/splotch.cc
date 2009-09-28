@@ -42,7 +42,7 @@
 using namespace std;
 using namespace RAYPP;
 
-double times[100];
+double last_time,times[100];
 
 double myTime()
   {
@@ -61,7 +61,8 @@ double myTime()
 int main (int argc, char **argv)
 {
   mpiMgr.startup (argc, argv);
-  times[0] = myTime();
+  last_time = myTime();
+  times[0] = last_time;
   bool master = mpiMgr.master();
 
   module_startup ("splotch",argc,2,"splotch <parameter file>",master);
@@ -147,7 +148,8 @@ int main (int argc, char **argv)
 #endif
 
 
-  times[1] = myTime();
+  times[1] += myTime() - last_time;
+  last_time = myTime();
 
 // -----------------------------------
 // ----------- Reading ---------------
@@ -175,7 +177,8 @@ int main (int argc, char **argv)
   long npart=particle_data.size();
   long npart_all=npart;
   mpiMgr.allreduce_sum (npart_all);
-  times[2] = myTime();
+  times[2] += myTime() - last_time;
+  last_time = myTime();
 
 
 // -----------------------------------
@@ -184,7 +187,8 @@ int main (int argc, char **argv)
   if (master)
     cout << endl << "ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(params,particle_data,true);
-  times[3] = myTime();
+  times[3] += myTime() - last_time;
+  last_time = myTime();
 
 
 #ifdef GEOMETRY_FILE
@@ -235,7 +239,8 @@ int main (int argc, char **argv)
       if (master)
 	cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
       paticle_project(params, particle_data, campos, lookat, sky);
-      times[4] = myTime();
+      times[4] += myTime() - last_time;
+      last_time = myTime();
 
 
 // --------------------------------
@@ -249,7 +254,8 @@ int main (int argc, char **argv)
 #endif
       int sort_type = params.find<int>("sort_type",1);
       particle_sort(particle_data,sort_type,true);
-      times[5] = myTime();
+      times[5] += myTime() - last_time;
+      last_time = myTime();
 
 
 // ------------------------------------
@@ -258,7 +264,8 @@ int main (int argc, char **argv)
       if (master)                        
         cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
       particle_colorize(params, particle_data, particle_col, amap, emap);
-      times[6] = myTime();
+      times[6] += myTime() - last_time;
+      last_time = myTime();
 
 
 // ----------------------------------
@@ -274,7 +281,8 @@ int main (int argc, char **argv)
       float64 grayabsorb = params.find<float>("gray_absorption",0.2);
       bool a_eq_e = params.find<bool>("a_eq_e",true);
       render(particle_col,pic,a_eq_e,grayabsorb);
-      times[7] = myTime();
+      times[7] += myTime() - last_time;
+      last_time = myTime();
 
 
 // ---------------------------------
@@ -314,29 +322,34 @@ int main (int argc, char **argv)
           break;
         }
 
+      times[8] += myTime() - last_time;
+      last_time = myTime();
+
 #ifdef GEOMETRY_FILE
       for(int i=1; i<geometry_incr; i++, linecount++)
         getline(inp, line);
     }
 #endif
 
+  
+
 // -------------------------------
 // ----------- Timings -----------
 // -------------------------------
-  times[8] = myTime();
+  times[9] = myTime();
   if (master)
     {
       cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
-    cout << "Setup Data (secs)          : " << times[1]-times[0] << endl;
-    cout << "Read Data (secs)           : " << times[2]-times[1] << endl;
-    cout << "Ranging Data (secs)        : " << times[3]-times[2] << endl;
-    cout << "Transforming Data (secs)   : " << times[4]-times[3] << endl;
-    cout << "Sorting Data (secs)        : " << times[5]-times[4] << endl;
-    cout << "Coloring Sub-Data (secs)   : " << times[6]-times[5] << endl;
-    cout << "Rendering Sub-Data (secs)  : " << times[7]-times[6] << endl;
-    cout << "Write Data (secs)          : " << times[8]-times[7] << endl;
-    cout << "Total (secs)               : " << times[8]-times[0] << endl;
+    cout << "Setup Data (secs)          : " << times[1] << endl;
+    cout << "Read Data (secs)           : " << times[2] << endl;
+    cout << "Ranging Data (secs)        : " << times[3] << endl;
+    cout << "Transforming Data (secs)   : " << times[4] << endl;
+    cout << "Sorting Data (secs)        : " << times[5] << endl;
+    cout << "Coloring Sub-Data (secs)   : " << times[6] << endl;
+    cout << "Rendering Sub-Data (secs)  : " << times[7] << endl;
+    cout << "Write Data (secs)          : " << times[8] << endl;
+    cout << "Total (secs)               : " << times[9]-times[0] << endl;
     }
 
   mpiMgr.shutdown();
