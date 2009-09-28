@@ -42,6 +42,7 @@ struct particle_splotch
   particle_splotch (float32 x_, float32 y_, float32 r_, float32 ro_, const COLOUR &a_,
              const COLOUR &e_)
     : x(x_), y(y_), r(r_), ro(ro_), a(a_), e(e_) {}
+  particle_splotch () {}
   };
 
 struct zcmp
@@ -459,8 +460,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   float64 brightness[ptypes];
   float64 grayabsorb[ptypes];
 
-  particle_splotch.resize(0);
-
+  p2.resize(0);
   for(int itype=0;itype<ptypes;itype++)
     {
       brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
