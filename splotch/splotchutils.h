@@ -458,6 +458,9 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   bool col_vector[ptypes];
   float64 brightness[ptypes];
   float64 grayabsorb[ptypes];
+
+  particle_splotch.resize(0);
+
   for(int itype=0;itype<ptypes;itype++)
     {
       brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);

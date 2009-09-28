@@ -300,7 +300,7 @@ int main (int argc, char **argv)
       int pictype = params.find<int>("pictype",0);
       string outfile = params.find<string>("outfile");
 #ifdef GEOMETRY_FILE
-      outfile = outfile + "." + intToString(linecount,4);
+      outfile = outfile + intToString(linecount,4) + '.tga';
       linecount++;
 #endif
 
