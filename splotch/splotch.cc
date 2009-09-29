@@ -72,6 +72,11 @@ int main (int argc, char **argv)
     cout << "running with " << mpiMgr.num_ranks() << " MPI tasks." << endl << endl;
     }
 
+#ifdef INTERPOLATE
+#ifndef GEOMETRY_FILE
+  planck_fail("splotch: interpolation without geometry file makes no sense !");
+#endif
+#endif
 
 // -----------------------------------
 // ----------- Needed Data -----------
@@ -84,7 +89,12 @@ int main (int argc, char **argv)
   VECTOR campos, lookat, sky;
   vector<COLOURMAP> amap,emap;
   int ptypes = params.find<int>("ptypes",1);
-
+#ifdef INTERPOLATE
+  vector<particle_sim> particle_data1,particle_data2;
+  int snr_start = params.find<int>("snap_start",10);
+  int ninterpol = params.find<int>("snap_interpol",8);  
+  int snr1=0,snr2=0;
+#endif
 
 // ----------------------------------------------
 // ----------- Loading Color Maps ---------------
@@ -147,47 +157,7 @@ int main (int argc, char **argv)
 
 #endif
 
-
   times[1] += myTime() - last_time;
-  last_time = myTime();
-
-// -----------------------------------
-// ----------- Reading ---------------
-// -----------------------------------
-  if (master)
-    cout << endl << "reading data ..." << endl;
-  int simtype = params.find<int>("simtype");
-  float maxr, minr;
-  switch(simtype)
-    {
-    case 0:
-      //      bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-      break;
-    case 1: 
-      //      bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-      break;
-    case 2: gadget_reader(params,particle_data);
-      break;
-    case 3: //enzo_reader(params,particle_data);
-      break;
-    default:
-      planck_fail("No valid file type given ...");
-      break;
-    }
-  long npart=particle_data.size();
-  long npart_all=npart;
-  mpiMgr.allreduce_sum (npart_all);
-  times[2] += myTime() - last_time;
-  last_time = myTime();
-
-
-// -----------------------------------
-// ----------- Ranging ---------------
-// -----------------------------------
-  if (master)
-    cout << endl << "ranging values (" << npart_all << ") ..." << endl;
-  particle_normalize(params,particle_data,true);
-  times[3] += myTime() - last_time;
   last_time = myTime();
 
 
@@ -209,17 +179,17 @@ int main (int argc, char **argv)
 
   while (getline(inp, line))
     {
-    particle_data = p_orig;
-    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf",
-           &campos.x,&campos.y,&campos.z,
-           &lookat.x,&lookat.y,&lookat.z,
-           &sky.x,&sky.y,&sky.z);
-    if(master)
-      {
-	cout << " Camera: " << campos << endl;
-	cout << " Lookat: " << lookat << endl;
-	cout << " Sky:    " << sky << endl;
-      }
+      particle_data = p_orig;
+      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+	     &campos.x,&campos.y,&campos.z,
+	     &lookat.x,&lookat.y,&lookat.z,
+	     &sky.x,&sky.y,&sky.z);
+      if(master)
+	{
+	  cout << " Camera: " << campos << endl;
+	  cout << " Lookat: " << lookat << endl;
+	  cout << " Sky:    " << sky << endl;
+	}
 #else
       campos.x=params.find<double>("camera_x");
       campos.y=params.find<double>("camera_y");
@@ -231,6 +201,80 @@ int main (int argc, char **argv)
       sky.y=params.find<double>("sky_y",0);
       sky.z=params.find<double>("sky_z",0);
 #endif
+
+
+// -----------------------------------
+// ----------- Reading ---------------
+// -----------------------------------
+
+#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
+      if (linecount == geometry_skip)
+	{
+#endif
+	  if (master)
+	    cout << endl << "reading data ..." << endl;
+	  int simtype = params.find<int>("simtype");
+	  float maxr, minr;
+#ifdef INTERPOLATE
+	  int ifrac = linecount % ninterpol;
+	  int snr1_this = snr_start + (linecount / ninterpol);
+	  int snr2_this = snr1_this + 1;
+          double frac=(double)ifrac/(double)ninterpol;
+#endif
+	  switch(simtype)
+	    {
+	    case 0:
+	      //      bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      break;
+	    case 1: 
+	      //      bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      break;
+	    case 2: 
+#ifdef INTERPOLATE
+              if(snr2_this == snr1)
+		{
+		  particle_data2=particle_data1;
+		  snr2 = snr2_this;
+		}
+	      if(snr1_this != snr1)
+		{
+		  gadget_reader(params,particle_data1,snr1_this);
+		  snr1 = snr1_this;
+		}
+	      if(snr2_this != snr2)
+		{
+		  gadget_reader(params,particle_data2,snr2);
+		  snr2 = snr2_this;
+		}
+	      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
+#else
+	      gadget_reader(params,particle_data,0);
+#endif
+	      break;
+	    case 3: //enzo_reader(params,particle_data);
+	      break;
+	    default:
+	      planck_fail("No valid file type given ...");
+	      break;
+	    }
+#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
+	}
+#endif
+      long npart=particle_data.size();
+      long npart_all=npart;
+      mpiMgr.allreduce_sum (npart_all);
+      times[2] += myTime() - last_time;
+      last_time = myTime();
+
+
+// -----------------------------------
+// ----------- Ranging ---------------
+// -----------------------------------
+      if (master)
+	cout << endl << "ranging values (" << npart_all << ") ..." << endl;
+      particle_normalize(params,particle_data,true);
+      times[3] += myTime() - last_time;
+      last_time = myTime();
 
 
 // -------------------------------------
