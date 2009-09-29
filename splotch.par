@@ -7,6 +7,10 @@ ptypes=3
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo
 simtype=2
 
+# In case of interpolating between snaps
+snap_start = 90
+snap_interpol = 8
+
 # Additional flags for Gadget
 numfiles=8
 readparallel=2
