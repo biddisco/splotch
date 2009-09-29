@@ -115,6 +115,8 @@ int main (int argc, char **argv)
 	{
 	  float rrr,ggg,bbb,rrr_old,ggg_old,bbb_old;
 	  ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
+          planck_assert (infile,"could not open palette file  <" + 
+                                params.find<string>("palette"+dataToString(itype)) + ">");
 	  string dummy;
 	  int nColours;
 	  infile >> dummy >> dummy >> nColours;
@@ -166,7 +168,7 @@ int main (int argc, char **argv)
 // -------------------------------------
 // -- Looping over a flight path -------
 // -------------------------------------
-  vector<particle_sim> p_orig=particle_data;
+  vector<particle_sim> p_orig;
 
   ifstream inp(params.find<string>("geometry_file").c_str());
   int linecount=0;
@@ -179,13 +181,13 @@ int main (int argc, char **argv)
 
   while (getline(inp, line))
     {
-      particle_data = p_orig;
       sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf",
 	     &campos.x,&campos.y,&campos.z,
 	     &lookat.x,&lookat.y,&lookat.z,
 	     &sky.x,&sky.y,&sky.z);
       if(master)
 	{
+	  cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
 	  cout << " Camera: " << campos << endl;
 	  cout << " Lookat: " << lookat << endl;
 	  cout << " Sky:    " << sky << endl;
@@ -231,24 +233,35 @@ int main (int argc, char **argv)
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE
-              if(snr2_this == snr1)
+	      cout << "File1: " << snr1_this << " , File2: " << snr2_this << " , interpol fac: " << frac << endl; 
+	      cout << " (old files : " << snr1 << " , " << snr2 << ")" << endl; 
+              if(snr2 == snr1_this)
 		{
-		  particle_data2=particle_data1;
-		  snr2 = snr2_this;
+  	          cout << " old2 = new1 !" << endl; 
+		  particle_data1=particle_data2;
+		  snr1 = snr2;
 		}
 	      if(snr1_this != snr1)
 		{
+  	          cout << " reading new1 " << snr1_this << endl; 
 		  gadget_reader(params,particle_data1,snr1_this);
 		  snr1 = snr1_this;
 		}
 	      if(snr2_this != snr2)
 		{
-		  gadget_reader(params,particle_data2,snr2);
+  	          cout << " reading new2 " << snr2_this << endl; 
+		  gadget_reader(params,particle_data2,snr2_this);
 		  snr2 = snr2_this;
 		}
+	      if (master)
+		cout << "Interpolating between " << particle_data1.size() << " and " << 
+		        particle_data2.size() << " particles ..." << endl; 
 	      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
 #else
 	      gadget_reader(params,particle_data,0);
+#ifdef GEOMETRY_FILE
+	      p_orig = particle_data;
+#endif
 #endif
 	      break;
 	    case 3: //enzo_reader(params,particle_data);
@@ -258,6 +271,10 @@ int main (int argc, char **argv)
 	      break;
 	    }
 #if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
+	}
+      else
+	{
+	  particle_data = p_orig;
 	}
 #endif
       long npart=particle_data.size();
