@@ -50,7 +50,7 @@ struct idcmp
   {
   int operator()(const particle_sim &p1, const particle_sim &p2)
     {
-    return p1.id>p2.id;
+    return p1.id<p2.id;
     }
   };
 
@@ -263,6 +263,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	  int LastType=0;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
+          cout << " Task: " << ThisTask << " reading file " << filename << endl;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
 	  gadget_read_header(infile,npartthis);
@@ -748,6 +749,8 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 
   planck_assert(mpiMgr.num_ranks()==1,
 		"sorry, interpolating between files is not yet MPI parellelized ...");
+  if(mpiMgr.master())
+    cout << " sorting particles by ID ..." << endl;
 
   sort(p.begin(), p.end(), idcmp());
 
