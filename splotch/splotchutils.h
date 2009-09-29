@@ -581,6 +581,22 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 
 
 #ifdef INTERPOLATE
+
+// Higher order interpolation would be:
+// Time between snapshots (cosmology !)
+//    dt=(z2t(h1.redshift)-z2t(h0.redshift))*0.7
+// Velocity factors:
+//    v_unit1=v_unit/l_unit/sqrt(h1.time)*dt
+//    v_unit0=v_unit/l_unit/sqrt(h0.time)*dt
+// Delta_v (cosmology)
+//    vda=2*(x1-x0)-(v0*v_unit0+v1*v_unit1)
+// Delta_t (0..1)
+//     t=FLOAT(k)/FLOAT(nint) == frac (!)
+// Interpolated positions: 
+//    x=x0+v0*v_unit0*t+0.5*(v1*v_unit1-v0*v_unit0+vda)*t^2
+// Interpolated velocities:
+//    v=v0+t*(v1-v0)
+
 void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
                        vector<particle_sim> &p2, double frac) 
 {
@@ -596,6 +612,8 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
          mode=1;
       if(p1[i1].id > p2[i2].id)
          mode=2;
+//      cout << "  (" << i1 << "," << i2 << "): " << p1[i1].id << "," << 
+//              p2[i2].id << " => " << mode << " (" << p.size() << ")" << endl;
       switch(mode)
         {
          case 0:
@@ -625,6 +643,9 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
                 break;
       }
     }
+  if(mpiMgr.master())
+    cout << " found " << p.size() << " common particles ..." << endl;
+
 }
 #endif
 
