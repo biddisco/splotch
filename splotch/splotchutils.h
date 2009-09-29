@@ -31,6 +31,21 @@ struct particle_sim
   {
   float32 x,y,z,r,ro,I,C1,C2,C3;
   int type;
+#ifdef INTERPOLATE
+  unsigned int id;
+#endif
+  particle_sim (float32 x_, float32 y_, float32 z_, float32 r_, float32 ro_, 
+                float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_
+#ifdef INTERPOLATE
+                , unsigned int id_
+#endif
+                ): x(x_), y(y_), z(z_), r(r_), ro(ro_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_)
+#ifdef INTERPOLATE
+                , id(id_)
+#endif
+                 {}
+  particle_sim () {}
+
   };
 
 
@@ -563,6 +578,56 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
       break;
     }
 }
+
+
+#ifdef INTERPOLATE
+void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
+                       vector<particle_sim> &p2, double frac) 
+{
+  int i1=0,i2=0;
+ 
+  p.resize(0);
+  while(i1 < p1.size() && i2 < p2.size())
+    {
+      int mode=-1;
+      if(p1[i1].id == p2[i2].id)
+         mode=0;
+      if(p1[i1].id < p2[i2].id)
+         mode=1;
+      if(p1[i1].id > p2[i2].id)
+         mode=2;
+      switch(mode)
+        {
+         case 0:
+                if (p1[i1].type != p2[i2].type)
+                   planck_fail("interpolate: can not interpolate between different types !");
+                p.push_back(particle_sim((1-frac) * p1[i1].x  + frac*p2[i2].x,
+                                         (1-frac) * p1[i1].y  + frac*p2[i2].y,
+                                         (1-frac) * p1[i1].z  + frac*p2[i2].z,
+                                         (1-frac) * p1[i1].r  + frac*p2[i2].r,
+                                         (1-frac) * p1[i1].ro + frac*p2[i2].ro,
+                                         (1-frac) * p1[i1].I  + frac*p2[i2].I,
+                                         (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
+                                         (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
+                                         (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
+                                         p1[i1].type,p1[i1].id));
+                i1++;
+                i2++;
+                break;
+         case 1:
+                i1++;
+                break;
+         case 2:
+                i2++;
+                break;
+         default:
+                planck_fail("interpolate: should not happen !");
+                break;
+      }
+    }
+}
+#endif
+
 
 #endif
 
