@@ -29,6 +29,32 @@ using namespace RAYPP;
 #define TAG_COL2        17
 #define TAG_COL3        18
 #define TAG_TYPE        19
+#define TAG_ID          20
+
+#ifdef INTERPOLATE
+
+/*
+int io_compare_P_ID(const void *a, const void *b)
+{
+  if(((struct particle_data *) a)->ID < (((struct particle_data *) b)->ID))
+    return -1;
+
+  if(((struct particle_data *) a)->ID > (((struct particle_data *) b)->ID))
+    return +1;
+
+  return 0;
+}
+*/
+
+struct idcmp
+  {
+  int operator()(const particle_sim &p1, const particle_sim &p2)
+    {
+    return p1.id>p2.id;
+    }
+  };
+
+#endif
 
 int gadget_find_block (bifstream &file,const string &label)
   {
@@ -87,7 +113,7 @@ int gadget_read_header(bifstream &file, int *npart)
   return blocksize;
   }
 
-void gadget_reader(paramfile &params, vector<particle_sim> &p)
+void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",true);
@@ -104,6 +130,10 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p)
 
 #ifdef USE_MPI
   MPI_Status status;
+#endif
+
+#ifdef INTERPOLATE
+  infilename += intToString(snr,3);
 #endif
 
   if(mpiMgr.master())
@@ -311,7 +341,94 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p)
 #endif
     }
 
+#ifdef INTERPOLATE
+  if(mpiMgr.master())
+    cout << " Reading ids ..." << endl;
+  if(ThisTaskReads[ThisTask] >= 0)
+    {
+      //      cout << "Task: " << ThisTask << " reading ..."  << NPartThisTask[ThisTask] << endl;
+      int ToTask=ThisTask;
+      int NPartThis=NPartThisTask[ThisTask];
+      long ncount=0;
 
+      for(int f=0;f<NFilePerRead;f++)
+	{
+	  int npartthis[6];
+	  int present=1+2+4+8+16+32;
+	  int LastType=0;
+	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
+	  else           filename=infilename;
+	  infile.open(filename.c_str(),doswap);
+	  planck_assert (infile,"could not open input file! <" + filename + ">");
+	  gadget_read_header(infile,npartthis);
+	  string label_id = params.find<string>("id_label","ID");
+	  gadget_find_block(infile,label_id);
+	  infile.skip(4);
+	  for(int itype=0;itype<ptypes;itype++)
+	    {
+	      int type = params.find<int>("ptype"+dataToString(itype),0);
+	      for(int s=LastType+1; s<type; s++)
+		if(npartthis[s]>0 && (1<<s & present))
+		  {
+		    // cout << " Skipping " << npartthis[s] << " entries in ids <" << label_id << "> ..." << endl;
+		    infile.skip(4*npartthis[s]);
+		  }
+	      for(int m=0; m<npartthis[type]; ++m)
+		{
+		  if(ThisTask == ToTask)
+		    {
+		      infile >> p[ncount].id;
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  //  cout << "Task: " << ThisTask << " filled my particles, switching to read into buffer  ..." 
+                          //     << ncount << endl;
+			  ToTask++;
+			  ncount=0;
+			}
+		    }
+		  else
+		    {
+#ifdef USE_MPI
+		      infile >> i1_tmp[ncount];
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  // cout << "Task: " << ThisTask << " now sending data  ... " 
+                          //     << ncount << ',' << NPartThisTask[ToTask] << ',' << ToTask << endl;
+			  MPI_Ssend(i1_tmp, NPartThisTask[ToTask], MPI_INT, ToTask, TAG_ID, MPI_COMM_WORLD);
+			  ToTask++;
+			  ncount=0;
+			}
+#else
+		      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+		    }
+		}
+	      LastType=type;
+	    }
+	  infile.close();
+	}
+      planck_assert(ncount == 0,"Some Particles where left when reading IDs ...");
+    }
+  else
+    {
+#ifdef USE_MPI
+      //      cout << "Task: " << ThisTask << " waiting for data ... " << NPartThisTask[ThisTask] << endl;
+      MPI_Recv(i1_tmp, NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_ID, MPI_COMM_WORLD, &status);
+      // cout << "Task: " << ThisTask << " ... got data ..." << endl;
+      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+	{
+	  p[m].x=v1_tmp[m];
+	  p[m].y=v2_tmp[m];
+	  p[m].z=v3_tmp[m];
+	  p[m].type=i1_tmp[m];
+	}
+#else
+      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+    }
+#endif
 
   if(mpiMgr.master())
     cout << " Reading smoothing ..." << endl;
@@ -625,5 +742,15 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p)
 #endif
     }
 
+
+#ifdef INTERPOLATE
+  //   parallel_sort(p, npart, sizeof(struct particle_sim), io_compare_P_ID);
+
+  planck_assert(mpiMgr.num_ranks()==1,
+		"sorry, interpolating between files is not yet MPI parellelized ...");
+
+  sort(p.begin(), p.end(), idcmp());
+
+#endif
 
 }
