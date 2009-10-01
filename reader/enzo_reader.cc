@@ -8,8 +8,11 @@
 #include <math.h>
 #include <assert.h>
 #include <stdlib.h>
+#ifdef VSS
+#include <kernel/vector.h>
+#else
 #include <vector.h>
-
+#endif
 
 using namespace std;
 

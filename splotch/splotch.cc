@@ -25,35 +25,59 @@
 
 #ifdef USE_MPI
 #include "mpi.h"
-#else
+#else 
+	#ifndef CUDA
 #include <sys/time.h>
+	#endif
 #endif
 
+#ifdef VSS
+#include "cxxsupport/mpi_support.h"
+#include "cxxsupport/arr.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/paramfile.h"
+#else
 #include "mpi_support.h"
 #include "arr.h"
 #include "cxxutils.h"
 #include "paramfile.h"
+#endif
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
 #include "config/config.h"
 #include "utils/colourmap.h"
-#include "reader/bin_reader.h"
+//#include "reader/bin_reader.h"
+
+#ifdef VSS	//Jin: for compiling under Windows
+#include "reader/gadget_reader.cc"
+#include "writer/write_tga.cc"
+#endif
+
+#ifdef CUDA
+//#include "cuda/splotch_cuda.h"
+#endif
 
 using namespace std;
 using namespace RAYPP;
 
 double last_time,times[100];
 
+
 double myTime()
   {
 #ifdef USE_MPI
   return MPI_Wtime();
 #else
+	#ifndef CUDA
   using namespace std;
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec + 1e-6*t.tv_usec;
 //  return time(0);
+	#else
+	  return 0; //Jin: just for temp now.
+	#endif
+	
 #endif
   }
 
@@ -341,6 +365,11 @@ int main (int argc, char **argv)
       arr2<COLOUR> pic(res,res);
       float64 grayabsorb = params.find<float>("gray_absorption",0.2);
       bool a_eq_e = params.find<bool>("a_eq_e",true);
+
+#ifdef CUDA
+//	  cu_render();
+#endif
+
       render(particle_col,pic,a_eq_e,grayabsorb);
       times[7] += myTime() - last_time;
       last_time = myTime();
@@ -414,4 +443,9 @@ int main (int argc, char **argv)
     }
 
   mpiMgr.shutdown();
+
+  //Jin
+  //Just to hold the screen to see the messages
+  cout << endl << "Press any key to end..." ;
+  getchar();
 }

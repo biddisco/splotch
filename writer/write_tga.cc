@@ -2,9 +2,15 @@
 #include<cmath>
 #include<fstream>
 #include<algorithm>
+#ifdef VSS
+#include "cxxsupport/arr.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/paramfile.h"
+#else
 #include "arr.h"
 #include "cxxutils.h"
 #include "paramfile.h"
+#endif
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
 #include "config/config.h"

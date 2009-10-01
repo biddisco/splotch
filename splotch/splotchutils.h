@@ -1,7 +1,11 @@
 #ifndef SPLOTCHUTILS_H
 #define SPLOTCHUTILS_H
 
+#ifdef VSS
+#include "cxxsupport/mpi_support.h"
+#else
 #include "mpi_support.h"
+#endif
 #include "kernel/transform.h"
 
 using namespace std;
@@ -579,6 +583,8 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
     }
 }
 
+<<<<<<< .mine
+#endif=======
 
 #ifdef INTERPOLATE
 
@@ -653,3 +659,4 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
 #endif
 
 
+>>>>>>> .r6572

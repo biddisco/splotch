@@ -6,10 +6,17 @@
 #include "mpi.h"
 #endif
 
+#ifdef VSS
+#include "cxxsupport/arr.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/mpi_support.h"
+#include "cxxsupport/paramfile.h"
+#else
 #include "arr.h"
 #include "cxxutils.h"
 #include "mpi_support.h"
 #include "paramfile.h"
+#endif
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
 #include "config/config.h"
@@ -125,8 +132,14 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
   bifstream infile;
 
   int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
-  int ThisTaskReads[NTasks],DataFromTask[NTasks];
-  long NPartThisTask[NTasks];
+// Jin
+// int ThisTaskReads[NTasks],DataFromTask[NTasks];
+// long NPartThisTask[NTasks];
+  vector<int>	ThisTaskReads,DataFromTask;
+  vector<long>	NPartThisTask;
+  ThisTaskReads.resize(NTasks);
+  DataFromTask.resize(NTasks);
+  NPartThisTask.resize(NTasks);
 
 #ifdef USE_MPI
   MPI_Status status;

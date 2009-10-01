@@ -26,7 +26,12 @@
 #include <cmath>
 #include <vector>
 #include <cstdlib>
-#include "datatypes.h"
+#ifdef VSS
+#include "cxxsupport/datatypes.h"
+#else
+#include "dtatypes.h"
+#endif
+
 
 /** The namespace enclosing the whole Ray++ library 
  */ 

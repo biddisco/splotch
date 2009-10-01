@@ -23,6 +23,10 @@
 #ifndef RAYPP_BYTESWAP_H
 #define RAYPP_BYTESWAP_H
 
+#ifdef VSS
+#include "config/config.h"
+#endif
+
 namespace RAYPP {
 
 template<int size> inline void byteswap_helper (char *);

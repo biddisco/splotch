@@ -7,11 +7,19 @@
 #include <math.h>
 #include <assert.h>
 #include <stdlib.h>
-#include <vector.h>
 
+#ifdef VSS
+#include <kernel/vector.h>
+#include "cxxsupport/arr.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/paramfile.h"
+#else
+#include <vector.h>
 #include "arr.h"
 #include "cxxutils.h"
 #include "paramfile.h"
+#endif
+
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
 #include "config/config.h"
