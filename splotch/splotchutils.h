@@ -416,6 +416,7 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
   double fovfct = tan(fov*0.5*degr2rad);
+  float64 xfac,dist;
   int npart=p.size();
 
   sky.Normalize();
@@ -441,31 +442,38 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
       v=trans.TransPoint(v);
       p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
     }
-#ifdef PROJECTION_OFF
-  float64 dist= (campos-lookat).Length();
-  float64 xfac=1./(fovfct*dist);
-  cout << " Field of fiew: " << 1./xfac*2. << endl;
-#endif
-      
+  bool projection = params.find<int>("projection",true);
+
+  if(!projection)
+    {
+      dist= (campos-lookat).Length();
+      xfac=1./(fovfct*dist);
+      cout << " Field of fiew: " << 1./xfac*2. << endl;
+    }
+
+  bool minhsmlpixel = params.find<int>("minhsmlpixel",false);
+     
   for (long m=0; m<npart; ++m)
     {
-#ifdef PROJECTION_OFF
-      p[m].x = res*.5 * (p[m].x+fovfct*dist)*xfac;
-      p[m].y = res*.5 * (p[m].y+fovfct*dist)*xfac;
-#else
-      float64 xfac=1./(fovfct*p[m].z);
-      p[m].x = res*.5 * (p[m].x+fovfct*p[m].z)*xfac;
-      p[m].y = res*.5 * (p[m].y+fovfct*p[m].z)*xfac;
-#endif
+      if(!projection)
+        {
+          p[m].x = res*.5 * (p[m].x+fovfct*dist)*xfac;
+          p[m].y = res*.5 * (p[m].y+fovfct*dist)*xfac;
+        }
+      else
+        {
+          float64 xfac=1./(fovfct*p[m].z);
+          p[m].x = res*.5 * (p[m].x+fovfct*p[m].z)*xfac;
+          p[m].y = res*.5 * (p[m].y+fovfct*p[m].z)*xfac;
+        }
       p[m].ro = p[m].r;
       p[m].r = p[m].r *res*.5*xfac;
-#ifdef MINHSMLPIXEL
-      if ((p[m].r <= 0.5) && (p[m].r >= 0.0))
-	{
-          p[m].r = 0.5;
-          p[m].ro = p[m].r/(res*.5*xfac);
-	}
-#endif
+      if(minhsmlpixel)
+         if ((p[m].r <= 0.5) && (p[m].r >= 0.0))
+	   {
+             p[m].r = 0.5;
+             p[m].ro = p[m].r/(res*.5*xfac);
+	   }
     }
 }
 
