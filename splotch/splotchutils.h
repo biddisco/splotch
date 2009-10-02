@@ -583,8 +583,6 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
     }
 }
 
-<<<<<<< .mine
-#endif=======
 
 #ifdef INTERPOLATE
 
@@ -658,5 +656,3 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
 
 #endif
 
-
->>>>>>> .r6572
