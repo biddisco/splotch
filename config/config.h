@@ -29,7 +29,7 @@
 #ifdef VSS
 #include "cxxsupport/datatypes.h"
 #else
-#include "dtatypes.h"
+#include "datatypes.h"
 #endif
 
 
