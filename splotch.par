@@ -109,6 +109,13 @@ gray_absorption2=0.5
 ############################
 # Geometrical setup
 ############################
+
+#increases small HSML values to at least pixel size
+minhsmlpixel = FALSE
+
+#enables projection
+projection = TRUE
+
 #alternative read values from file
 geometry_file=mygeometry_r.dat
 geometry_start=0
@@ -124,7 +131,7 @@ sky_x=0
 sky_y=0
 sky_z=1
 
-
+#define what to see
 fov=30
 #zmin=5000.0
 #zmax=7000.0
