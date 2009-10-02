@@ -444,8 +444,10 @@ int main (int argc, char **argv)
 
   mpiMgr.shutdown();
 
+#ifdef VSS
   //Jin
   //Just to hold the screen to see the messages
   cout << endl << "Press any key to end..." ;
   getchar();
+#endif
 }
