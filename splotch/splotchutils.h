@@ -462,7 +462,7 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
         }
       else
         {
-          float64 xfac=1./(fovfct*p[m].z);
+          xfac=1./(fovfct*p[m].z);
           p[m].x = res*.5 * (p[m].x+fovfct*p[m].z)*xfac;
           p[m].y = res*.5 * (p[m].y+fovfct*p[m].z)*xfac;
         }
