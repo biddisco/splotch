@@ -1,5 +1,5 @@
 #include "VTimer.h"
-#include "windows.h"
+//#include "windows.h"
 
 VTimer::VTimer(void)
 {

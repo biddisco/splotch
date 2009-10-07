@@ -31,7 +31,7 @@ COLOURMAP::COLOURMAP(COLOUR Col1, COLOUR Col2)
 
 COLOUR COLOURMAP::Get_Colour (float64 val) const
   {
-  vector<HANDLE<CMAP_ENTRY> >::const_iterator i;
+  vector<HANDLE_RAYPP<CMAP_ENTRY> >::const_iterator i;
     for (i=Entry.begin(); i<Entry.end(); ++i)
     {
     if ((*i)->Is_Inside (val))
@@ -41,7 +41,7 @@ COLOUR COLOURMAP::Get_Colour (float64 val) const
   return COLOUR (0,0,0);
   }
 
-void COLOURMAP::Add_Entry (const HANDLE<CMAP_ENTRY> &newentry)
+void COLOURMAP::Add_Entry (const HANDLE_RAYPP<CMAP_ENTRY> &newentry)
   {
   Entry.push_back (newentry);
   }

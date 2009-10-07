@@ -23,14 +23,6 @@
 #include <fstream>
 #include <algorithm>
 
-#ifdef USE_MPI
-#include "mpi.h"
-#else 
-	#ifndef CUDA
-#include <sys/time.h>
-	#endif
-#endif
-
 #ifdef VS
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/arr.h"
@@ -57,6 +49,16 @@
 //#include "cuda/splotch_cuda.h"
 #endif
 
+#ifdef USE_MPI
+#include "mpi.h"
+#else
+	#ifdef VS
+	#include "cuda/VTimer.h"
+	#else
+	#include <sys/time.h>
+	#endif
+#endif
+
 using namespace std;
 using namespace RAYPP;
 
@@ -67,17 +69,27 @@ double myTime()
   {
 #ifdef USE_MPI
   return MPI_Wtime();
+#endif
+
+#ifdef VS
+
+  static	VTimer t;
+  static	bool bFirstTimeRun =true;
+
+  if (bFirstTimeRun)
+  {
+	  bFirstTimeRun =false;
+	  t.start();
+  }
+
+  return t.getTime(); //in seconds
+
 #else
-	#ifndef CUDA
   using namespace std;
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec + 1e-6*t.tv_usec;
 //  return time(0);
-	#else
-	  return 0; //Jin: just for temp now.
-	#endif
-	
 #endif
   }
 
@@ -443,9 +455,9 @@ int main (int argc, char **argv)
 
   mpiMgr.shutdown();
 
-#ifdef VSS
+#ifdef VS
   //Jin
-  //Just to hold the screen to see the messages
+  //Just to hold the screen to read the messages
   cout << endl << "Press any key to end..." ;
   getchar();
 #endif

@@ -1,9 +1,9 @@
 #pragma once
-//#include <windows.h>
+#include <windows.h>
 #if !defined(_M_IX86)
  typedef __int64 LONGLONG; 
 #else
- typedef double LONGLONG;
+// typedef double LONGLONG;
 #endif
 
 typedef union _LARGE_INTEGER1 {  

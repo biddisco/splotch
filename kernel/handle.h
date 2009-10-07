@@ -28,12 +28,12 @@
 namespace RAYPP {
 
 /**
-  \class HANDLE kernel/handle.h kernel/handle.h
+  \class HANDLE_RAYPP kernel/handle.h kernel/handle.h
   Pointer with reference counting.
   This class implements a 'smart pointer' with reference count and
   automatic deallocation after deletion of the last reference.
 */
-template <typename T> class HANDLE
+template <typename T> class HANDLE_RAYPP
   {
   private:
     class HANDLE_DATA
@@ -64,12 +64,12 @@ template <typename T> class HANDLE
     /*!
        Default constructor. Handle points to 0.
       */
-    HANDLE () 
+    HANDLE_RAYPP () 
       : HandlePtr (0) {}
     /*!
        Handle points to the same object as orig.
       */
-    HANDLE (const HANDLE &orig)
+    HANDLE_RAYPP (const HANDLE_RAYPP &orig)
       : HandlePtr (orig.HandlePtr)
       { if (HandlePtr) ++(HandlePtr->counter); }
     /*!
@@ -78,10 +78,10 @@ template <typename T> class HANDLE
        After calling this constructor, this pointer should not be used again in
        any form! <br>
        Recommended usage of this constructor:
-       \code HANDLE<A> foo (new A); \endcode
+       \code HANDLE_RAYPP<A> foo (new A); \endcode
        Using it this way, one can make no mistakes.
       */
-    HANDLE (T *contents)
+    HANDLE_RAYPP (T *contents)
       {
        if (contents)
          HandlePtr = new HANDLE_DATA (contents);
@@ -92,7 +92,7 @@ template <typename T> class HANDLE
        Destructor. If this is the last reference to the object pointed to,
        it is deleted.
       */
-    ~HANDLE ()
+    ~HANDLE_RAYPP ()
       { dispose(); }
 
     /*!
@@ -100,7 +100,7 @@ template <typename T> class HANDLE
        (this object is eventually destroyed) and bound to the object
        pointed to by orig.
       */
-    HANDLE &operator= (const HANDLE &orig)
+    HANDLE_RAYPP &operator= (const HANDLE_RAYPP &orig)
       {
       if (orig.HandlePtr) ++(orig.HandlePtr->counter);
       dispose();
@@ -115,10 +115,10 @@ template <typename T> class HANDLE
        After calling this function, this pointer should not be used again in
        any form! <br>
        Recommended usage of this function:
-       \code HANDLE<A> foo; foo = new A; \endcode
+       \code HANDLE_RAYPP<A> foo; foo = new A; \endcode
        using it this way, one can make no mistakes.
       */
-    HANDLE &operator= (T *contents)
+    HANDLE_RAYPP &operator= (T *contents)
       {
       dispose();
       if (contents) HandlePtr = new HANDLE_DATA (contents);
@@ -168,7 +168,7 @@ template <typename T> class HANDLE
       return 0;
       }
 
-    void swap(HANDLE<T>& other)
+    void swap(HANDLE_RAYPP<T>& other)
       { ::std::swap(HandlePtr,other.HandlePtr); }
   };
 

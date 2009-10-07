@@ -57,7 +57,7 @@ class CMAP_ENTRY
 class COLOURMAP
   {
   private:
-    vector<HANDLE<CMAP_ENTRY> > Entry;
+    vector<HANDLE_RAYPP<CMAP_ENTRY> > Entry;
 
   public:
     COLOURMAP() {}
@@ -65,7 +65,7 @@ class COLOURMAP
 
     COLOUR Get_Colour (float64) const;
 
-    void Add_Entry (const HANDLE<CMAP_ENTRY> &);
+    void Add_Entry (const HANDLE_RAYPP<CMAP_ENTRY> &);
   };
 
 class UNIFORM_CMAP_ENTRY : public CMAP_ENTRY

@@ -39,7 +39,7 @@ namespace RAYPP {
 
 using namespace ::std;
 
-typedef unsigned char byte;
+typedef unsigned char byte_RAYPP;
 
 class ENDIAN_TEST
   {
@@ -50,7 +50,7 @@ class ENDIAN_TEST
     ENDIAN_TEST()
       {
       const uint16 a=1;
-      big_end = (reinterpret_cast<const byte *>(&a))[0] == 0;
+      big_end = (reinterpret_cast<const byte_RAYPP *>(&a))[0] == 0;
       }
     operator bool() const { return big_end; }
   };
