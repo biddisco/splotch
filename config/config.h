@@ -26,7 +26,7 @@
 #include <cmath>
 #include <vector>
 #include <cstdlib>
-#ifdef VSS
+#ifdef VS
 #include "cxxsupport/datatypes.h"
 #else
 #include "datatypes.h"
