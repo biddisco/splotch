@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#ifdef VSS
+#ifdef VS
 #include <kernel/vector.h>
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"

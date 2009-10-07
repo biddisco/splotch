@@ -8,7 +8,7 @@
 #include <math.h>
 #include <assert.h>
 #include <stdlib.h>
-#ifdef VSS
+#ifdef VS
 #include <kernel/vector.h>
 #else
 #include <vector.h>

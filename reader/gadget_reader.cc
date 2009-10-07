@@ -6,7 +6,7 @@
 #include "mpi.h"
 #endif
 
-#ifdef VSS
+#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/mpi_support.h"
