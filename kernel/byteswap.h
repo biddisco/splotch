@@ -23,7 +23,7 @@
 #ifndef RAYPP_BYTESWAP_H
 #define RAYPP_BYTESWAP_H
 
-#ifdef VSS
+#ifdef VS
 #include "config/config.h"
 #endif
 
