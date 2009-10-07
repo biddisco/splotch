@@ -31,7 +31,7 @@
 	#endif
 #endif
 
-#ifdef VSS
+#ifdef VS
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
@@ -48,7 +48,7 @@
 #include "utils/colourmap.h"
 //#include "reader/bin_reader.h"
 
-#ifdef VSS	//Jin: for compiling under Windows
+#ifdef VS	//Jin: for compiling under Windows
 #include "reader/gadget_reader.cc"
 #include "writer/write_tga.cc"
 #endif
@@ -84,13 +84,13 @@ double myTime()
 
 int main (int argc, char **argv)
 {
-  mpiMgr.startup (argc, argv);
+  mpiMgr.startup (argc, argv); ///does nothing actually
   last_time = myTime();
   times[0] = last_time;
-  bool master = mpiMgr.master();
+  bool master = mpiMgr.master(); ///return true
 
   module_startup ("splotch",argc,2,"splotch <parameter file>",master);
-  if (mpiMgr.num_ranks()>1 && master)
+  if (mpiMgr.num_ranks()>1 && master) ///as mpi manager always returns 1
     {
     cout << "Application was compiled with MPI support," << endl;
     cout << "running with " << mpiMgr.num_ranks() << " MPI tasks." << endl << endl;
@@ -108,11 +108,11 @@ int main (int argc, char **argv)
 
   //  paramfile params (argv[1],master);
   paramfile params (argv[1],false);
-  vector<particle_sim> particle_data;
-  vector<particle_splotch> particle_col;
-  VECTOR campos, lookat, sky;
+  vector<particle_sim> particle_data; ///row data from file
+  vector<particle_splotch> particle_col; ///used for screen coordinates, x, y, r, ro, a, e
+  VECTOR campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
   vector<COLOURMAP> amap,emap;
-  int ptypes = params.find<int>("ptypes",1);
+  int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
 #ifdef INTERPOLATE
   vector<particle_sim> particle_data1,particle_data2;
   int snr_start = params.find<int>("snap_start",10);
@@ -239,7 +239,7 @@ int main (int argc, char **argv)
 #endif
 	  if (master)
 	    cout << endl << "reading data ..." << endl;
-	  int simtype = params.find<int>("simtype");
+	  int simtype = params.find<int>("simtype"); ///2:Gadget2
 	  float maxr, minr;
 #ifdef INTERPOLATE
 	  int ifrac = linecount % ninterpol;
@@ -282,7 +282,7 @@ int main (int argc, char **argv)
 		        particle_data2.size() << " particles ..." << endl; 
 	      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
 #else
-	      gadget_reader(params,particle_data,0);
+	      gadget_reader(params,particle_data,0); ///vector<particle_sim> particle_data;
 #ifdef GEOMETRY_FILE
 	      p_orig = particle_data;
 #endif
@@ -303,7 +303,7 @@ int main (int argc, char **argv)
 #endif
       long npart=particle_data.size();
       long npart_all=npart;
-      mpiMgr.allreduce_sum (npart_all);
+      mpiMgr.allreduce_sum (npart_all); ///does nothing
       times[2] += myTime() - last_time;
       last_time = myTime();
 
@@ -313,10 +313,9 @@ int main (int argc, char **argv)
 // -----------------------------------
       if (master)
 	cout << endl << "ranging values (" << npart_all << ") ..." << endl;
-      particle_normalize(params,particle_data,true);
+      particle_normalize(params,particle_data,true); ///does log calculations and clamps data
       times[3] += myTime() - last_time;
       last_time = myTime();
-
 
 // -------------------------------------
 // ----------- Transforming ------------
@@ -348,7 +347,7 @@ int main (int argc, char **argv)
 // ------------------------------------
       if (master)                        
         cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
-      particle_colorize(params, particle_data, particle_col, amap, emap);
+      particle_colorize(params, particle_data, particle_col, amap, emap);///things goes to array particle_col now
       times[6] += myTime() - last_time;
       last_time = myTime();
 
