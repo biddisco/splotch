@@ -2,7 +2,7 @@
 #include<cmath>
 #include<fstream>
 #include<algorithm>
-#ifdef VSS
+#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
