@@ -1,7 +1,7 @@
 #ifndef SPLOTCHUTILS_H
 #define SPLOTCHUTILS_H
 
-#ifdef VSS
+#ifdef VS
 #include "cxxsupport/mpi_support.h"
 #else
 #include "mpi_support.h"
@@ -312,7 +312,7 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
 }
 
 
-void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
+void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose) ///verbose means saying sth or not
 {
   int ptypes = params.find<int>("ptypes",1);
   vector<bool> col_vector,log_int,log_col,asinh_col;
@@ -340,7 +340,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   int npart=p.size();
 
-  for (int m=0; m<npart; ++m)
+  for (int m=0; m<npart; ++m) ///do log calcultions if demanded
     {
       if (log_int[p[m].type])
 	p[m].I = log(p[m].I);
@@ -356,7 +356,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 	    {
 	      p[m].C2 = log(p[m].C2);
 	      p[m].C3 = log(p[m].C3);
-	    }
+	    }   
 	  if (asinh_col[p[m].type])
 	    {
 	      p[m].C2 = my_asinh(p[m].C2);
@@ -396,7 +396,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
       for(int m=0; m<npart; ++m)
         {
-          if(p[m].type == itype)
+          if(p[m].type == itype)///clamp into (min,max)
             {
                my_normalize(minval_int,maxval_int,p[m].I);
                my_normalize(minval_col,maxval_col,p[m].C1);
@@ -435,8 +435,9 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
   trans2.Add_Transform(trans);
   trans=trans2;
   //  trans.Add_Transform(trans2);
-  
-  for (long m=0; m<npart; ++m)
+  ///hereby matrix is setup
+
+  for (long m=0; m<npart; ++m) ///now do the calculation
     {
       VECTOR v(p[m].x,p[m].y,p[m].z);
       v=trans.TransPoint(v);
@@ -453,7 +454,7 @@ void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, 
 
   bool minhsmlpixel = params.find<int>("minhsmlpixel",false);
      
-  for (long m=0; m<npart; ++m)
+  for (long m=0; m<npart; ++m) ///calculate ro, r
     {
       if(!projection)
         {
@@ -592,6 +593,8 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 }
 
 
+#endif
+
 #ifdef INTERPOLATE
 
 // Higher order interpolation would be:
@@ -660,7 +663,3 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
 
 }
 #endif
-
-
-#endif
-
