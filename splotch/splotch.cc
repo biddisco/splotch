@@ -40,7 +40,7 @@
 #include "utils/colourmap.h"
 //#include "reader/bin_reader.h"
 
-#ifdef VS	//Jin: for compiling under Windows
+#ifdef VS	//Jin: for compiling under Windows/Visual Studio
 #include "reader/gadget_reader.cc"
 #include "writer/write_tga.cc"
 #endif
@@ -156,7 +156,7 @@ int main (int argc, char **argv)
 	  string dummy;
 	  int nColours;
 	  infile >> dummy >> dummy >> nColours;
-	  if(master)
+	  if(master) 
 	    cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
 	  infile >> rrr_old >> ggg_old >> bbb_old;
 	  double step = 1./(nColours-1);
@@ -456,7 +456,6 @@ int main (int argc, char **argv)
   mpiMgr.shutdown();
 
 #ifdef VS
-  //Jin
   //Just to hold the screen to read the messages
   cout << endl << "Press any key to end..." ;
   getchar();
