@@ -47,6 +47,8 @@
 
 #ifdef CUDA
 #include "cuda/splotch_cuda.h"
+void GoldComparePData
+(vector<particle_sim> particle_data, d_particle_sim* d_particle_data);
 #endif
 
 #ifdef USE_MPI
@@ -323,23 +325,40 @@ int main (int argc, char **argv)
 // ----------- Iint Cuda -------------
 // -----------------------------------
 #ifdef CUDA
-	  cu_init();
+	d_particle_sim	*d_particle_data;
+	d_particle_data =new d_particle_sim[particle_data.size()];
+	cu_init();
 #endif
 
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
       if (master)
-	cout << endl << "ranging values (" << npart_all << ") ..." << endl;
+		cout << endl << "ranging values (" << npart_all << ") ..." << endl;
       particle_normalize(params,particle_data,true); ///does log calculations and clamps data
       times[3] += myTime() - last_time;
       last_time = myTime();
+
+#ifdef	CUDA
+	//copy data to local C-like array d_particle_data
+	for (int i=0; i<particle_data.size(); i++)
+		memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(d_particle_sim));
+	
+	//call cuda range
+	cu_range();
+
+	//compare to gold result
+	GoldComparePData( particle_data, d_particle_data);
+#endif
+
 
 // -----------------------------------
 // ----------- End Cuda --------------
 // -----------------------------------
 #ifdef CUDA
-	  cu_end();
+	if (d_particle_data)
+		delete [] d_particle_data;
+	cu_end();
 #endif
 
 
@@ -347,7 +366,7 @@ int main (int argc, char **argv)
 // ----------- Transforming ------------
 // -------------------------------------
       if (master)
-	cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
+		cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
       paticle_project(params, particle_data, campos, lookat, sky);
       times[4] += myTime() - last_time;
       last_time = myTime();
@@ -475,3 +494,35 @@ int main (int argc, char **argv)
   getchar();
 #endif
 }
+
+
+////////////////CUDA HELP FUNCTION//////////////////////////////
+#ifdef CUDA
+void GoldComparePData
+(vector<particle_sim> particle_data, d_particle_sim* d_particle_data)
+{
+	for (int i=0; i< particle_data.size(); i++)
+	{
+		if ( particle_data[i].x == d_particle_data[i].x &&
+			particle_data[i].y == d_particle_data[i].y &&
+			particle_data[i].z == d_particle_data[i].z &&
+			particle_data[i].r == d_particle_data[i].r &&
+			particle_data[i].ro == d_particle_data[i].ro &&
+			particle_data[i].I == d_particle_data[i].I &&
+			particle_data[i].C1 == d_particle_data[i].C1 &&
+			particle_data[i].C2 == d_particle_data[i].C2 &&
+			particle_data[i].C3 == d_particle_data[i].C3
+			)
+			continue;
+
+		//else
+		cout << "particle " << i << endl;
+		cout << "gold" << endl;
+		cout << 
+
+		//hold screen for reading
+		cout << endl << "Press any key to end..." ;
+		getchar();
+	}
+}
+#endif

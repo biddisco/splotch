@@ -49,6 +49,14 @@ void	cu_end()
     cudaThreadExit();
 }
 
+extern "C"
+void	cu_range()
+{
+    // clean up memory
+    k_range<<<1,1>>>();
+}
+
+
 /*
 extern "C" 
 void    cu_initExp(int nExp, float *h_expTable)
