@@ -516,12 +516,31 @@ void GoldComparePData
 			continue;
 
 		//else
-		cout << "particle " << i << endl;
+		cout << endl << "Gold compare at particle " << i << endl;
 		cout << "gold" << endl;
-		cout << 
+		cout << particle_data[i].x << ",";
+		cout << particle_data[i].y << ",";
+		cout << particle_data[i].z << ",";
+		cout << particle_data[i].r << ",";
+		cout << particle_data[i].ro << ",";
+		cout << particle_data[i].I << ",";
+		cout << particle_data[i].C1 << ",";
+		cout << particle_data[i].C2 << ",";
+		cout << particle_data[i].C3<< endl;
+
+		cout << "cuda" << endl;
+		cout << d_particle_data[i].x << ",";
+		cout << d_particle_data[i].y << ",";
+		cout << d_particle_data[i].z << ",";
+		cout << d_particle_data[i].r << ",";
+		cout << d_particle_data[i].ro << ",";
+		cout << d_particle_data[i].I << ",";
+		cout << d_particle_data[i].C1 << ",";
+		cout << d_particle_data[i].C2 << ",";
+		cout << d_particle_data[i].C3 << endl;
 
 		//hold screen for reading
-		cout << endl << "Press any key to end..." ;
+		cout << endl << "Press any key to continue..." ;
 		getchar();
 	}
 }
