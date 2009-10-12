@@ -200,6 +200,9 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
         int x0s=x0, y0s=y0;
         x1-=x0; x0=0; y1-=y0; y0=0;
 
+//estimate combination time
+//long	t =0;
+
         for (unsigned int m=0; m<p.size(); ++m)
           {
           float64 r=p[m].r;
@@ -237,6 +240,9 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
             float64 xsq=(x-posx)*(x-posx);
             for (int y=miny; y<maxy; ++y)
               {
+//estimate combination time
+//t++;
+//continue;
               float64 dsq = (y-posy)*(y-posy) + xsq;
               if (dsq<radsq)
                 {

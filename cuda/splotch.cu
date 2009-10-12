@@ -16,20 +16,14 @@ Try accelating splotch with CUDA. July 2009.
 // includes, kernels
 #include <splotch_kernel.cu> 
 #include "vtimer.h"
-#include "splotch_cu_data.h"
+#include "splotch_cuda.h"
 
-//global varibles
 //////////////////////////////
+//global varibles
 float       *d_tmp=0;   //used for debug
 float       *d_expTable =0;
-G_VARS      *d_g_vars=0;
-PARTICLE    *d_p=0;
-FRAGMENT    *d_f=0;     //frame buffers are actually in a big linear space
-//FRAGMENT_PTR    d_fs[64];   //frame buffers->more clear if not use it
-const int   nFrgmnt =43851597;
-//??PIXEL       *d_image=0;
-//??const int   nPixel=800*800;
 //////////////////////////////
+
 extern "C" 
 void    cu_init()
 {
@@ -45,20 +39,17 @@ void    cu_init()
     float   f=0.0;
     cutilSafeCall(cudaMemcpy(d_tmp, &f, sizeof(float),
                               cudaMemcpyHostToDevice) );    
-
-    //allocate memory and init for:
-    //exptab, g_vars, p[N], fragmntBuf[M],image[w][h]
-
-
-
-    //fragment buffer. No use in Plan A
-//    s =sizeof(FRAGMENT) *nFrgmnt;
-//    cutilSafeCall( cudaMalloc((void**) &d_frgmntBuf, s));
-
-    //image...
-    
 }
 
+extern "C"
+void	cu_end()
+{
+    // clean up memory
+    cutilSafeCall(cudaFree(d_tmp));
+    cudaThreadExit();
+}
+
+/*
 extern "C" 
 void    cu_initExp(int nExp, float *h_expTable)
 {
@@ -153,7 +144,9 @@ void	cu_combineA()
     dim3    dimGrid(800,800);//dimGrid(40,40); with 400
     k_combineA<<<dimGrid, 1>>>(d_f);
 }
+*/
 
+#ifdef CU_DO_TESTS
 /*
 extern "C"
 void	cu_check1()
@@ -305,3 +298,4 @@ void cu_test2(int *l)
     cudaFree(d_l);  
 }
 */
+#endif //CU_DO_TESTS

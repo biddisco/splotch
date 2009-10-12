@@ -46,7 +46,7 @@
 #endif
 
 #ifdef CUDA
-//#include "cuda/splotch_cuda.h"
+#include "cuda/splotch_cuda.h"
 #endif
 
 #ifdef USE_MPI
@@ -319,6 +319,12 @@ int main (int argc, char **argv)
       times[2] += myTime() - last_time;
       last_time = myTime();
 
+// -----------------------------------
+// ----------- Iint Cuda -------------
+// -----------------------------------
+#ifdef CUDA
+	  cu_init();
+#endif
 
 // -----------------------------------
 // ----------- Ranging ---------------
@@ -328,6 +334,14 @@ int main (int argc, char **argv)
       particle_normalize(params,particle_data,true); ///does log calculations and clamps data
       times[3] += myTime() - last_time;
       last_time = myTime();
+
+// -----------------------------------
+// ----------- End Cuda --------------
+// -----------------------------------
+#ifdef CUDA
+	  cu_end();
+#endif
+
 
 // -------------------------------------
 // ----------- Transforming ------------
