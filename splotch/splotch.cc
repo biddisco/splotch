@@ -324,6 +324,7 @@ int main (int argc, char **argv)
 // -----------------------------------
 // ----------- Iint Cuda -------------
 // -----------------------------------
+// After reading......
 #ifdef CUDA
 	d_particle_sim	*d_particle_data;
 	d_particle_data =new d_particle_sim[particle_data.size()];
@@ -345,7 +346,7 @@ int main (int argc, char **argv)
 		memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(d_particle_sim));
 	
 	//call cuda range
-	cu_range();
+	cu_range(d_particle_data, particle_data.size());
 
 	//compare to gold result
 	GoldComparePData( particle_data, d_particle_data);
@@ -356,9 +357,9 @@ int main (int argc, char **argv)
 // ----------- End Cuda --------------
 // -----------------------------------
 #ifdef CUDA
-	if (d_particle_data)
-		delete [] d_particle_data;
 	cu_end();
+	if (d_particle_data)
+		delete []d_particle_data;
 #endif
 
 
@@ -540,8 +541,18 @@ void GoldComparePData
 		cout << d_particle_data[i].C3 << endl;
 
 		//hold screen for reading
-		cout << endl << "Press any key to continue..." ;
-		getchar();
+		cout << endl << "Press -1 to quit, 0 to continue or (1," << (particle_data.size()-1) <<
+			") to jump to an index..." ;
+		int	in =0;
+		cin.clear();
+		cin >> in;
+		......
+		if ( in == -1)
+			break;
+		if ( in == 0)
+			continue;
+		if ( in >0 && in<particle_data.size() )
+			i =in;
 	}
 }
 #endif
