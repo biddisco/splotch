@@ -17,11 +17,16 @@ Try accelating splotch with CUDA. July 2009.
 #include <splotch_kernel.cu> 
 #include "vtimer.h"
 #include "splotch_cuda.h"
+#include "CuPolicy.h"
+
+//macros
 
 //////////////////////////////
 //global varibles
 float       *d_tmp=0;   //used for debug
 float       *d_expTable =0;
+CuPolicy    *policy=0;
+d_particle_sim  *d_pd=0; //device_particle_data
 //////////////////////////////
 
 extern "C" 
@@ -39,6 +44,9 @@ void    cu_init()
     float   f=0.0;
     cutilSafeCall(cudaMemcpy(d_tmp, &f, sizeof(float),
                               cudaMemcpyHostToDevice) );    
+
+    //Initialize policy class
+    policy =new CuPolicy();
 }
 
 extern "C"
@@ -46,14 +54,42 @@ void	cu_end()
 {
     // clean up memory
     cutilSafeCall(cudaFree(d_tmp));
+    cutilSafeCall(cudaFree(d_pd));
     cudaThreadExit();
+
+    //clear policy object
+    if (policy)
+        delete policy;
 }
 
 extern "C"
-void	cu_range()
+void	cu_range(d_particle_sim* h_pd, unsigned int n)
 {
-    // clean up memory
-    k_range<<<1,1>>>();
+    //allocate device memory for particle data
+    int s =policy->GetSizeDPD(n);
+#ifdef _DEVICEEMU
+    printf("device_particle_data size:%d" ,s);
+#endif
+    //one more space allocated for the dum
+    cutilSafeCall( cudaMalloc((void**) &d_pd, s +sizeof(d_particle_sim)));
+    
+    //copy particle data to device
+    cutilSafeCall(cudaMemcpy(d_pd, h_pd, s,
+                              cudaMemcpyHostToDevice) );    
+    //ask for dims from policy
+    dim3    dimGrid, dimBlock;
+    policy->GetDimsRange(&dimGrid, &dimBlock);    
+
+    // call device
+    k_range<<<dimGrid,dimBlock>>>(d_pd,n);
+    
+
+    //copy result out to host
+    cutilSafeCall(cudaMemcpy(h_pd, d_pd, s,
+                              cudaMemcpyDeviceToHost) );    
+    
+
+    //d_pd will be freed in cu_end
 }
 
 

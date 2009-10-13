@@ -15,7 +15,7 @@ struct d_particle_sim
 //functions
 extern "C" void cu_init();
 extern "C" void	cu_end();
-extern "C" void	cu_range();
+extern "C" void	cu_range(d_particle_sim* p, unsigned int n);
 
 
 #endif
