@@ -14,3 +14,15 @@ CuPolicy::CuPolicy(paramfile *pParam)
 CuPolicy::~CuPolicy(void)
 {
 }
+
+int CuPolicy::GetSizeDPD(unsigned int n)
+{
+	int m =sizeof(d_particle_sim);
+	return n* sizeof(d_particle_sim);
+}
+
+void	CuPolicy::GetDimsRange(dim3 *dimGrid, dim3 *dimBlock)
+{
+	*dimGrid =dim3(1449);
+	*dimBlock =dim3(256);
+}
