@@ -264,10 +264,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-	      //      bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-	      //      bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE
@@ -367,7 +367,7 @@ int main (int argc, char **argv)
 // -------------------------------------
       if (master)
 		cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
-      paticle_project(params, particle_data, campos, lookat, sky);
+      particle_project(params, particle_data, campos, lookat, sky);
       times[4] += myTime() - last_time;
       last_time = myTime();
 

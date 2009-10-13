@@ -417,7 +417,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 }
 
 
-void paticle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, VECTOR lookat, VECTOR sky)
+void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, VECTOR lookat, VECTOR sky)
 {
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
