@@ -128,7 +128,7 @@ which_fields[7] = color 3 (B)
    {
 
       fseek(pFile, stride, SEEK_SET);
-      fread(readarray, sizeof(readarray), 1, pFile);
+      fread(readarray, sizeof(float)*num_of_fields, 1, pFile);
       points.at(index).x=readarray[which_fields[0]];
       points.at(index).y=readarray[which_fields[1]];
       points.at(index).z=readarray[which_fields[2]];
@@ -158,7 +158,7 @@ which_fields[7] = color 3 (B)
 
       float smooth = points.at(index).r;      
 
-      stride += sizeof(readarray);
+      stride += sizeof(float)*num_of_fields;
       minradius = (minradius <= smooth ? minradius : smooth);
       maxradius = (maxradius >= smooth ? maxradius : smooth);
  
@@ -228,21 +228,21 @@ which_fields[7] = color 3 (B)
      cout << datafile << "\n";
      cout << "Number of blocks\n";
      scanf("%d", &num_of_fields);
-     cout << "x block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "x block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[0]);
-     cout << "y block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "y block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[1]);
-     cout << "z block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "z block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[2]);
-     cout << "r block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "r block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[3]);
-     cout << "I block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "I block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[4]);
-     cout << "C1 block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C1 block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[5]);
-     cout << "C2 block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C2 block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[6]);
-     cout << "C3 block (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C3 block (1-" << num_of_fields<< "), -1 NONE\n";
      scanf("%d", &which_fields[7]);
 
      pFile = fopen(datafile, "rb");
@@ -274,13 +274,13 @@ which_fields[7] = color 3 (B)
 #endif
    for(int n_fields=0; n_fields<n_load_fields; n_fields++)
    {
-     int n_fields_eff = which_fields[n_fields];
+     int n_fields_eff = which_fields[n_fields]-1;
      if(which_fields[n_fields] == -1)continue;
 
      stride=sizeof(float)*(n_fields_eff*field_size+pe_size*mype)+offset;
 
      fseek(pFile, stride, SEEK_SET);
-     fread(readarray, sizeof(readarray), 1, pFile);
+     fread(readarray, sizeof(float)*pe_size, 1, pFile);
      switch(n_fields)
      {
      case 0:
@@ -319,6 +319,7 @@ which_fields[7] = color 3 (B)
 
    }
    fclose(pFile);
+   for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
 
    //maxradius = 1.0;
    *maxr=maxradius;
