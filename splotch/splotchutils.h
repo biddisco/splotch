@@ -449,7 +449,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
       v=trans.TransPoint(v);
       p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
     }
-  bool projection = params.find<int>("projection",true);
+  bool projection = params.find<bool>("projection",true);
 
   if(!projection)
     {
@@ -458,7 +458,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
       cout << " Field of fiew: " << 1./xfac*2. << endl;
     }
 
-  bool minhsmlpixel = params.find<int>("minhsmlpixel",false);
+  bool minhsmlpixel = params.find<bool>("minhsmlpixel",false);
      
   for (long m=0; m<npart; ++m) ///calculate ro, r
     {
