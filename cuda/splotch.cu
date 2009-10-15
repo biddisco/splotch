@@ -6,7 +6,7 @@ Try accelating splotch with CUDA. July 2009.
 // includes, system
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
+//#include <string.h>
 #include <math.h>
 
 // includes, project
@@ -19,14 +19,16 @@ Try accelating splotch with CUDA. July 2009.
 #include "splotch_cuda.h"
 #include "CuPolicy.h"
 
-//macros
+
+//functions defs
+void dump_pr(cu_param_range *pr);
 
 //////////////////////////////
 //global varibles
 float       *d_tmp=0;   //used for debug
 float       *d_expTable =0;
 CuPolicy    *policy=0;
-d_particle_sim  *d_pd=0; //device_particle_data
+cu_particle_sim  *d_pd=0; //device_particle_data
 //////////////////////////////
 
 extern "C" 
@@ -63,15 +65,15 @@ void	cu_end()
 }
 
 extern "C"
-void	cu_range(d_particle_sim* h_pd, unsigned int n)
+void	cu_range(paramfile &params ,cu_particle_sim* h_pd, unsigned int n)
 {
     //allocate device memory for particle data
     int s =policy->GetSizeDPD(n);
 #ifdef _DEVICEEMU
     printf("device_particle_data size:%d" ,s);
 #endif
-    //one more space allocated for the dum
-    cutilSafeCall( cudaMalloc((void**) &d_pd, s +sizeof(d_particle_sim)));
+    //one more space allocated for the dumb
+    cutilSafeCall( cudaMalloc((void**) &d_pd, s +sizeof(cu_particle_sim)));
     
     //copy particle data to device
     cutilSafeCall(cudaMemcpy(d_pd, h_pd, s,
@@ -80,18 +82,74 @@ void	cu_range(d_particle_sim* h_pd, unsigned int n)
     dim3    dimGrid, dimBlock;
     policy->GetDimsRange(&dimGrid, &dimBlock);    
 
-    // call device
-    k_range<<<dimGrid,dimBlock>>>(d_pd,n);
+    //prepare parameters for stage 1
+    cu_param_range  pr;
+    int ptypes = params.find<int>("ptypes",1);
+    pr.ptypes =ptypes;
+    //now collect parameters from configuration
+    for(int itype=0;itype<ptypes;itype++)
+    {
+        pr.log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
+        pr.log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
+        pr.asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
+        pr.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+        pr.mincol[itype]=1e30;
+        pr.maxcol[itype]=-1e30;
+        pr.minint[itype]=1e30;
+        pr.maxint[itype]=-1e30;
+    }
+    //allocate memory on device and dump parameters to it
+    cu_param_range  *d_pr=0;
+    s =sizeof(cu_param_range);
+    cutilSafeCall( cudaMalloc((void**) &d_pr, s) );    
+    cutilSafeCall(cudaMemcpy(d_pr, &pr, s,
+                              cudaMemcpyHostToDevice) );    
+
+    // call device for stage 1
+    k_range1<<<dimGrid,dimBlock>>>(d_pr, d_pd, n);
     
+    // copy out pr which were changed, for stage 2
+    s =sizeof(cu_param_range);
+    cutilSafeCall(cudaMemcpy( &pr, d_pr,  s,
+                              cudaMemcpyDeviceToHost) );    
+dump_pr(&pr);
+
+    // call device for stage 2 ptypes times
+    // prepare parameters1 first
+    for(int itype=0;itype<ptypes;itype++)
+    {
+        float minval_int = params.find<float>("intensity_	min"+dataToString(itype),pr.minint[itype]);
+        float maxval_int = params.find<float>("intensity_max"+dataToString(itype),pr.maxint[itype]);
+        float minval_col = params.find<float>("color_min"+dataToString(itype),pr.mincol[itype]);
+        float maxval_col = params.find<float>("color_max"+dataToString(itype),pr.maxcol[itype]);
+        
+        k_range2<<<dimGrid, dimBlock>>>(d_pd, n, minval_int,maxval_int,minval_col,maxval_col);
+    }
 
     //copy result out to host
     cutilSafeCall(cudaMemcpy(h_pd, d_pd, s,
                               cudaMemcpyDeviceToHost) );    
     
+    //free parameters on device
+     cutilSafeCall(cudaFree(d_pr));
 
     //d_pd will be freed in cu_end
 }
 
+void dump_pr(cu_param_range *pr)
+{
+    printf("\ndump_pr:\n");
+    printf("col_vector, log_int,log_col,asinh_col,");
+    printf("mincol, maxcol, minint,maxint\n");
+
+    for (int i=0; i<pr->ptypes; i++)
+    {
+        printf("%d, %d, %d, %d, %f, %f, %f, %f\n",
+            pr->col_vector[i], pr->log_int[i], 
+            pr->log_col[i],	pr->asinh_col[i], pr->mincol[i],
+    		pr->maxcol[i], pr->minint[i], pr->maxint[i]);
+    }                     
+}
 
 /*
 extern "C" 
