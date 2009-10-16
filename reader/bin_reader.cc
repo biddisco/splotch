@@ -319,7 +319,8 @@ which_fields[7] = color 3 (B)
 
    }
    fclose(pFile);
-   for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
+   if(which_fields[4] == -1)
+       for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
 
    //maxradius = 1.0;
    *maxr=maxradius;
