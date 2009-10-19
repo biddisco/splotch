@@ -78,23 +78,24 @@ which_fields[7] = color 3 (B)
      cout << datafile << "\n";
      cout << "Number of columns\n";
      scanf("%d", &num_of_fields);
-     cout << "x column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "x column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[0]);
-     cout << "y column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "y column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[1]);
-     cout << "z column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "z column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[2]);
-     cout << "r column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "r column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[3]);
-     cout << "I column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "I column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[4]);
-     cout << "C1 column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C1 column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[5]);
-     cout << "C2 column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C2 column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[6]);
-     cout << "C3 column (1-%d), -1 NONE\n" << num_of_fields;
+     cout << "C3 column (1-" << num_of_fields << "), -1 NONE\n";
      scanf("%d", &which_fields[7]);
 
+     for (int ii=0; ii<8; ii++)which_fields[ii]--;
 
      pFile = fopen(datafile, "rb");
      fseek (pFile, 0, SEEK_END);
@@ -132,20 +133,22 @@ which_fields[7] = color 3 (B)
       points.at(index).x=readarray[which_fields[0]];
       points.at(index).y=readarray[which_fields[1]];
       points.at(index).z=readarray[which_fields[2]];
-      if(which_fields[3] != -1)
+      if(which_fields[3] >= 0)
       {
         points.at(index).r=readarray[which_fields[3]];
       } else {
         points.at(index).r=1.0;
       }
-      if(which_fields[4] != -1)
+      if(which_fields[4] >= 0)
       {
         points.at(index).I=readarray[which_fields[4]];
       } else {
-        points.at(index).I=1.0;
+        points.at(index).I=0.5;
       }
-        points.at(index).C1=readarray[which_fields[5]];
-      if(which_fields[6] != -1 && which_fields[7] != -1)
+
+      points.at(index).C1=readarray[which_fields[5]];
+
+      if(which_fields[6] >= 0 && which_fields[7] >= 0)
       {
         points.at(index).C2=readarray[which_fields[6]];
         points.at(index).C3=readarray[which_fields[7]];
@@ -319,7 +322,7 @@ which_fields[7] = color 3 (B)
 
    }
    fclose(pFile);
-   if(which_fields[4] == -1)
+   if(which_fields[4] < 0)
        for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
 
    //maxradius = 1.0;
