@@ -106,6 +106,8 @@ which_fields[7] = color 3 (B)
    }
 #ifdef USE_MPI
    MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+   MPI_Bcast(&num_of_fields, 1, MPI_INT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
    points.resize(pe_size);
@@ -123,7 +125,7 @@ which_fields[7] = color 3 (B)
    pFile = fopen(datafile, "rb");
 
 #ifdef DEBUG
-   cout << "Reading " << nfields << " fields for " << pe_size << " particles from " << stride << "\n";
+   cout << "Reading " << num_of_fields << " fields for " << pe_size << " particles\n";
 #endif
    for(long index=0; index<pe_size; index++)
    {
@@ -257,7 +259,9 @@ which_fields[7] = color 3 (B)
      pe_size = (long)(field_size / npes);
    }
 #ifdef USE_MPI
+   MPI_Bcast(&field_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
    MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+   MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
    points.resize(pe_size);
@@ -273,12 +277,12 @@ which_fields[7] = color 3 (B)
    pFile = fopen(datafile, "rb");
 
 #ifdef DEBUG
-   cout << "Reading " << nfields << " fields for " << pe_size << " particles from " << stride << "\n";
+   cout << "Reading " << n_load_fields << " fields for " << pe_size << " particles\n";
 #endif
    for(int n_fields=0; n_fields<n_load_fields; n_fields++)
    {
      int n_fields_eff = which_fields[n_fields]-1;
-     if(which_fields[n_fields] == -1)continue;
+     if(which_fields[n_fields] < 0)continue;
 
      stride=sizeof(float)*(n_fields_eff*field_size+pe_size*mype)+offset;
 
