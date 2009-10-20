@@ -62,6 +62,7 @@ which_fields[7] = color 3 (B)
    
    long total_size=0;
    long pe_size;
+   long last_pe_adding;
    float minradius=1e30;
    float maxradius=-1e30;
 // offset could be a input parameter
@@ -71,6 +72,7 @@ which_fields[7] = color 3 (B)
    int n_load_fields = 8;
    int * which_fields = new int [n_load_fields];
    long totalsize;
+   long totalsize_f;
    if(mype == 0)
    {
      cout << "Input data file name\n";
@@ -102,14 +104,21 @@ which_fields[7] = color 3 (B)
      totalsize = ftell (pFile);
      fclose(pFile);
 // number of elements (of each variable) for a processor
-     pe_size = totalsize/(sizeof(float)*npes*num_of_fields);
+     totalsize_f = totalsize/(sizeof(float)*num_of_fields);
+     pe_size = totalsize_f/npes;
+     last_pe_adding = totalsize_f-pe_size*npes;
+#ifdef DEBUG
+     cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
+#endif
    }
 #ifdef USE_MPI
    MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+   MPI_Bcast(&last_pe_adding, 1, MPI_LONG, 0, MPI_COMM_WORLD);
    MPI_Bcast(&num_of_fields, 1, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
+   if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
    float * readarray;
    readarray = new float [num_of_fields];
@@ -119,8 +128,6 @@ which_fields[7] = color 3 (B)
 #ifdef USE_MPI
    MPI_Bcast(&datafile[0], 500, MPI_CHAR, 0, MPI_COMM_WORLD);
 #endif
-
-   cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
 
    pFile = fopen(datafile, "rb");
 
@@ -226,6 +233,8 @@ which_fields[7] = color 3 (B)
    int num_of_fields;
    int * which_fields = new int [n_load_fields];
    long totalsize;
+   long totalsize_f;
+   long last_pe_adding;
    if(mype == 0)
    {
      cout << "Input data file name\n";
@@ -257,13 +266,19 @@ which_fields[7] = color 3 (B)
 // number of elements (of each variable) for a processor
      field_size = totalsize/(sizeof(float)*num_of_fields);
      pe_size = (long)(field_size / npes);
+     last_pe_adding = field_size-pe_size*npes;
+#ifdef DEBUG
+     cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
+#endif
    }
 #ifdef USE_MPI
    MPI_Bcast(&field_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+   MPI_Bcast(&last_pe_adding, 1, MPI_LONG, 0, MPI_COMM_WORLD);
    MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
    MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
+   if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
    float * readarray;
    readarray = new float [pe_size];
