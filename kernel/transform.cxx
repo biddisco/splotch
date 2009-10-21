@@ -363,6 +363,23 @@ bool TRANSFORM::Diagonal () const
 VECTOR TRANSFORM::TransPoint (const VECTOR &vec) const
   {
   const float32 *p = matrix.p;
+
+#ifdef CUDA //21102009, only for debug now, should remove later.
+  if (0)
+  {
+  cout <<endl << vec.x <<", "<<vec.y<<", "<<vec.z<<endl;
+  for (int i=0; i<12; i++)
+	  cout << p[i] <<", ";
+  cout<<endl;
+  VECTOR v
+    (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
+     vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
+     vec.x*p[8] + vec.y*p[9] + vec.z*p[10]+ p[11]);
+  cout<<"result:"<<endl;
+  cout<<v.x <<", "<<v.y<<", "<<v.z<<endl;
+  }
+#endif
+
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],

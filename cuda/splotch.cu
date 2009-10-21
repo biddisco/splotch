@@ -2,7 +2,6 @@
 Try accelating splotch with CUDA. July 2009. 
 */
 
-
 // includes, system
 #include <stdlib.h>
 #include <stdio.h>
@@ -22,6 +21,10 @@ Try accelating splotch with CUDA. July 2009.
 
 //functions defs
 void dump_pr(cu_param_range *pr);
+template<typename T> T findParamWithoutChange
+    (paramfile *param, const std::string &key, const T &deflt);
+extern "C" void getCuTransformParams(cu_param_transform &p,
+    paramfile &params, double campos[3], double lookat[3], double sky[3]);
 
 //////////////////////////////
 //global varibles
@@ -30,6 +33,9 @@ float       *d_expTable =0;
 CuPolicy    *policy=0;
 cu_particle_sim  *d_pd=0; //device_particle_data
 //////////////////////////////
+
+//usefule functions from splotchutils.h
+template<typename T> void get_minmax (T &minv, T &maxv, T val);
 
 extern "C" 
 void    cu_init()
@@ -67,10 +73,10 @@ void	cu_end()
 extern "C"
 void	cu_range(paramfile &params ,cu_particle_sim* h_pd, unsigned int n)
 {
-    //allocate device memory for particle data
+   //allocate device memory for particle data
     int s =policy->GetSizeDPD(n);
 #ifdef _DEVICEEMU
-    printf("device_particle_data size:%d" ,s);
+    printf("\ndevice_particle_data size:%d\n" ,s);
 #endif
     //one more space allocated for the dumb
     cutilSafeCall( cudaMalloc((void**) &d_pd, s +sizeof(cu_particle_sim)));
@@ -108,25 +114,52 @@ void	cu_range(paramfile &params ,cu_particle_sim* h_pd, unsigned int n)
     // call device for stage 1
     k_range1<<<dimGrid,dimBlock>>>(d_pr, d_pd, n);
     
-    // copy out pr which were changed, for stage 2
-    s =sizeof(cu_param_range);
-    cutilSafeCall(cudaMemcpy( &pr, d_pr,  s,
+    // copy out particles for min_maxes
+    s =policy->GetSizeDPD(n);
+    cutilSafeCall(cudaMemcpy( h_pd, d_pd,  s,
                               cudaMemcpyDeviceToHost) );    
-dump_pr(&pr);
+
+
+
+    //find the min-maxes
+    for (int m=0; m<n; m++)
+    {
+        get_minmax(pr.minint[h_pd[m].type], pr.maxint[h_pd[m].type], h_pd[m].I);
+        get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C1);
+        if (pr.col_vector[h_pd[m].type])
+        {
+            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C2);
+            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C3);
+        }
+    }
+//for debug: dump_pr(&pr);
+
+
+    //??copy pr back into device??
+    //maybe not needed!
 
     // call device for stage 2 ptypes times
     // prepare parameters1 first
+    float minval_int, maxval_int, minval_col, maxval_col;
+    
     for(int itype=0;itype<ptypes;itype++)
     {
-        float minval_int = params.find<float>("intensity_	min"+dataToString(itype),pr.minint[itype]);
-        float maxval_int = params.find<float>("intensity_max"+dataToString(itype),pr.maxint[itype]);
-        float minval_col = params.find<float>("color_min"+dataToString(itype),pr.mincol[itype]);
-        float maxval_col = params.find<float>("color_max"+dataToString(itype),pr.maxcol[itype]);
-        
-        k_range2<<<dimGrid, dimBlock>>>(d_pd, n, minval_int,maxval_int,minval_col,maxval_col);
+        minval_int =findParamWithoutChange<float>(&params,  //in mid of developing only
+            "intensity_min"+dataToString(itype),pr.minint[itype]);
+        maxval_int = findParamWithoutChange<float>(&params, 
+            "intensity_max"+dataToString(itype),pr.maxint[itype]);
+        minval_col = findParamWithoutChange<float>(&params, 
+            "color_min"+dataToString(itype),pr.mincol[itype]);
+        maxval_col = findParamWithoutChange<float>(&params, 
+            "color_max"+dataToString(itype),pr.maxcol[itype]);
+//for debug: printf("\n%f, %f, %f, %f\n", minval_int, maxval_int, minval_col, maxval_col);
+
+        k_range2<<<dimGrid, dimBlock>>>(d_pr, d_pd, n, itype,
+            minval_int,maxval_int,minval_col,maxval_col);
     }
 
     //copy result out to host
+    //in mid of development only!!!
     cutilSafeCall(cudaMemcpy(h_pd, d_pd, s,
                               cudaMemcpyDeviceToHost) );    
     
@@ -134,7 +167,41 @@ dump_pr(&pr);
      cutilSafeCall(cudaFree(d_pr));
 
     //d_pd will be freed in cu_end
+}//cu range over
+
+extern "C" void	cu_transform
+(paramfile &fparams, unsigned int n,
+ double c[3], double l[3], double s[3],cu_particle_sim* h_pd)
+{
+    //retrieve pamaters for transformaiont first
+    cu_param_transform tparams;
+    getCuTransformParams(tparams,fparams,c,l,s);
+
+    //arrange memory for the parameters and copy to device
+    cu_param_transform  *d_pt;
+    int size =sizeof(cu_param_transform);
+    cutilSafeCall( cudaMalloc((void**) &d_pt, size) );    
+    cutilSafeCall(cudaMemcpy(d_pt, &tparams, size,
+                              cudaMemcpyHostToDevice) );    
+
+    //Get block dim and grid dim from policy object
+    dim3    dimGrid, dimBlock;
+    policy->GetDimsRange(&dimGrid, &dimBlock);    
+
+    //call device transformation
+    k_transform<<<dimGrid,dimBlock>>>(d_pd, n, d_pt);    
+
+    //free parameters' device memory
+     cutilSafeCall(cudaFree(d_pt));
+
+   //copy result out to host
+    //in mid of development only!!!
+    size =policy->GetSizeDPD(n);
+    cutilSafeCall(cudaMemcpy(h_pd, d_pd, size,
+                              cudaMemcpyDeviceToHost) );    
+ 
 }
+
 
 void dump_pr(cu_param_range *pr)
 {
@@ -149,6 +216,19 @@ void dump_pr(cu_param_range *pr)
             pr->log_col[i],	pr->asinh_col[i], pr->mincol[i],
     		pr->maxcol[i], pr->minint[i], pr->maxint[i]);
     }                     
+}
+
+template<typename T> T findParamWithoutChange
+    (paramfile *param, const std::string &key, const T &deflt)
+{
+    T   value;
+    if (param->param_present(key))
+    {
+        param->findParam(key, value);
+        return value;
+    }
+    else
+        return deflt;
 }
 
 /*
@@ -401,3 +481,4 @@ void cu_test2(int *l)
 }
 */
 #endif //CU_DO_TESTS
+

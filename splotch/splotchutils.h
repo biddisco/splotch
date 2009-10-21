@@ -8,6 +8,11 @@
 #endif
 #include "kernel/transform.h"
 
+#ifdef CUDA
+#include "cuda/splotch_cuda.h"
+#endif
+
+
 using namespace std;
 using namespace RAYPP;
 
@@ -187,6 +192,11 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
 
       work_distributor wd (xres,yres,200,200);
 
+//estimate combination time
+//float	t =0;
+//counting fragments
+//long	fragments=0;
+
     #pragma omp parallel
 {
       int chunk;
@@ -200,8 +210,6 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
         int x0s=x0, y0s=y0;
         x1-=x0; x0=0; y1-=y0; y0=0;
 
-//estimate combination time
-//long	t =0;
 
         for (unsigned int m=0; m<p.size(); ++m)
           {
@@ -210,6 +218,7 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
           posx-=x0s; posy-=y0s;
           float64 rfacr=rfac*r;
 
+		  //in one chunk this culling is not necessary as it was done in coloring
           int minx=int(posx-rfacr+1);
           if (minx>=x1) continue;
           minx=max(minx,x0);
@@ -241,7 +250,11 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
             for (int y=miny; y<maxy; ++y)
               {
 //estimate combination time
-//t++;
+//t =t+1.0;
+//t =t+1.0;
+//t =t+1.0; //3 times fload adding
+//counting fragments
+//fragments++;
 //continue;
               float64 dsq = (y-posy)*(y-posy) + xsq;
               if (dsq<radsq)
@@ -261,13 +274,14 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
                   }
                 }
               }
-            }
-          }
+            }//for particle[m]
+          }//for this chunk
         for(int ix=0;ix<x1;ix++)
           for(int iy=0;iy<y1;iy++)
             pic[ix+x0s][iy+y0s]=lpic[ix][iy];
-
         }
+//counting fragments
+//printf("\nfragments=%ld", fragments);
 }
 
       mpiMgr.allreduce_sum_raw
@@ -351,6 +365,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
       if (log_int[p[m].type])
 	p[m].I = log(p[m].I);
       get_minmax(minint[p[m].type], maxint[p[m].type], p[m].I);
+
       if (log_col[p[m].type])
 	p[m].C1 = log(p[m].C1);
       if(asinh_col[p[m].type])
@@ -372,7 +387,8 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 	  get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C3);
 	}
     }
-  
+
+
   for(int itype=0;itype<ptypes;itype++)
     {
       mpiMgr.allreduce_min(minint[itype]);
@@ -380,12 +396,12 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
       mpiMgr.allreduce_max(maxint[itype]);
       mpiMgr.allreduce_max(maxcol[itype]);
 
-      float minval_int = params.find<float>("intensity_min"+dataToString(itype),minint[itype]);
+      float minval_int = params.find<float>("intensity_	min"+dataToString(itype),minint[itype]);
       float maxval_int = params.find<float>("intensity_max"+dataToString(itype),maxint[itype]);
       float minval_col = params.find<float>("color_min"+dataToString(itype),mincol[itype]);
       float maxval_col = params.find<float>("color_max"+dataToString(itype),maxcol[itype]);
 
-      if(verbose && mpiMgr.master())
+	  if(verbose && mpiMgr.master())
         {
            cout << " For particles of type " << itype << " : " << endl;
            cout << " From data: " << endl;
@@ -449,6 +465,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
       v=trans.TransPoint(v);
       p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
     }
+
   bool projection = params.find<bool>("projection",true);
 
   if(!projection)
@@ -483,6 +500,60 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
 	   }
     }
 }
+
+#ifdef CUDA
+extern "C" 
+void getCuTransformParams(cu_param_transform &para_trans,
+paramfile &params, double c[3], double l[3], double s[3])
+{
+	cout<<endl<<"\nRetrieve parameters for do transformation on device\n"<<endl;
+
+	VECTOR	campos(c[0], c[1], c[2]), 
+			lookat(l[0], l[1], l[2]), 
+			sky(s[0], s[1], s[2]);
+	
+	int res = params.find<int>("resolution",200);
+	double fov = params.find<double>("fov",45); //in degrees
+	double fovfct = tan(fov*0.5*degr2rad);
+	float64 xfac=0.0, dist=0.0;
+
+	sky.Normalize();
+	VECTOR zaxis = (lookat-campos).Norm();
+	VECTOR xaxis = Cross (sky,zaxis).Norm();
+	VECTOR yaxis = Cross (zaxis,xaxis);
+	TRANSFORM trans;
+	trans.Make_General_Transform
+	(TRANSMAT(xaxis.x,xaxis.y,xaxis.z,
+		  yaxis.x,yaxis.y,yaxis.z,
+		  zaxis.x,zaxis.y,zaxis.z,
+		  0,0,0));
+	trans.Invert();
+	TRANSFORM trans2;
+	trans2.Make_Translation_Transform(-campos);
+	trans2.Add_Transform(trans);
+	trans=trans2;
+	bool projection = params.find<bool>("projection",true);
+
+	if(!projection)
+	{
+	  dist= (campos-lookat).Length();
+	  xfac=1./(fovfct*dist);
+	  cout << " Field of fiew: " << 1./xfac*2. << endl;
+	}
+
+	bool minhsmlpixel = params.find<bool>("minhsmlpixel",false);
+
+	//retrieve the parameters for tansformation
+	for (int i=0; i<12; i++)
+		para_trans.p[i] =trans.Matrix().p[i];
+	para_trans.projection	=projection;
+	para_trans.res			=res;
+	para_trans.fovfct		=fovfct;
+	para_trans.dist			=dist;
+	para_trans.xfac			=xfac;
+	para_trans.minhsmlpixel =minhsmlpixel;
+}
+#endif	//CUDA
 
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p, 
@@ -668,4 +739,7 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
     cout << " found " << p.size() << " common particles ..." << endl;
 
 }
+
+
+
 #endif

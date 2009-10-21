@@ -14,7 +14,8 @@ struct cu_particle_sim
 #endif
 };
 
-#define MAX_P_TYPE 8 //('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
+#define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
+					//in mid of developing only
 struct cu_param_range //parameters for range calculation
 {
 	int		ptypes;	//meaning how many types
@@ -24,12 +25,24 @@ struct cu_param_range //parameters for range calculation
 			minint[MAX_P_TYPE],		maxint[MAX_P_TYPE];
 };
 
-
+struct cu_param_transform
+{
+	float	p[12];
+	bool	projection;
+	int		res;
+	float	fovfct, dist, xfac;
+	bool	minhsmlpixel;
+};
 
 //functions
 extern "C" void cu_init();
 extern "C" void	cu_end();
-extern "C" void	cu_range(paramfile &params, cu_particle_sim* p, unsigned int n);
 
+extern "C" void	cu_range
+(paramfile &params, cu_particle_sim* p, unsigned int n);
+
+extern "C" void	cu_transform
+(paramfile &params, unsigned int n,
+ double campos[3], double lookat[3], double sky[3],cu_particle_sim* h_pd);
 
 #endif

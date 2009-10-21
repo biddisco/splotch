@@ -48,7 +48,7 @@
 #ifdef CUDA
 #include "cuda/splotch_cuda.h"
 void GoldComparePData
-(vector<particle_sim> particle_data, d_particle_sim* d_particle_data);
+(vector<particle_sim> particle_data, cu_particle_sim* d_particle_data);
 #endif
 
 #ifdef USE_MPI
@@ -264,10 +264,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+//	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+//	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE
@@ -324,34 +324,77 @@ int main (int argc, char **argv)
 // -----------------------------------
 // ----------- Iint Cuda -------------
 // -----------------------------------
-// After reading......
+// After reading, ranging with device
 #ifdef CUDA
-	d_particle_sim	*d_particle_data;
-	d_particle_data =new d_particle_sim[particle_data.size()];
+	VTimer	timer;
+	float	time;
+	cu_particle_sim	*d_particle_data;
+	d_particle_data =new cu_particle_sim[particle_data.size()];
+
 	cu_init();
+
+	//copy data to local C-like array d_particle_data, in mid of developing only
+	for (int i=0; i<particle_data.size(); i++)
+		memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(cu_particle_sim));
+timer.reset();
+timer.start();
+	//call cuda range
+	cu_range(params, d_particle_data, particle_data.size());
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Ranging with device cost time:" << time << "s" <<endl;
+
+	//then copy particles back, in mid of developing only
+	for (int i=0; i<particle_data.size(); i++)
+		memcpy( &(particle_data[i]),&(d_particle_data[i]), sizeof(cu_particle_sim));
+
+	//then continue to do transformation...
+timer.reset();
+timer.start();
+	double	c[3]={campos.x, campos.y, campos.z}, 
+			l[3]={lookat.x, lookat.y, lookat.z}, 
+			s[3]={sky.x, sky.y,	sky.z};
+	cu_transform(params, particle_data.size(),c, l, s,d_particle_data);
+timer.stop();
+time =timer.getTime();
+
+	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
 #endif
 
+#define NO_HOST_RANGING
+#ifndef NO_HOST_RANGING
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
       if (master)
 		cout << endl << "ranging values (" << npart_all << ") ..." << endl;
-      particle_normalize(params,particle_data,true); ///does log calculations and clamps data
+	  particle_normalize(params,particle_data,true); ///does log calculations and clamps data
       times[3] += myTime() - last_time;
       last_time = myTime();
-
-#ifdef	CUDA
-	//copy data to local C-like array d_particle_data
-	for (int i=0; i<particle_data.size(); i++)
-		memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(d_particle_sim));
-	
-	//call cuda range
-	cu_range(d_particle_data, particle_data.size());
-
-	//compare to gold result
-	GoldComparePData( particle_data, d_particle_data);
 #endif
 
+#define NO_HOST_TRANSFORM
+#ifndef NO_HOST_TRANSFORM
+// -------------------------------------
+// ----------- Transforming ------------
+// -------------------------------------
+      if (master)
+		cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
+      particle_project(params, particle_data, campos, lookat, sky);
+      times[4] += myTime() - last_time;
+      last_time = myTime();
+#endif
+
+// -----------------------------------
+// ----------Gold Comparation --------
+// -----------------------------------
+#ifdef	CUDA 
+	//compare to gold result
+//	GoldComparePData( particle_data, d_particle_data);
+	//then copy particles back, in mid of developing only
+	for (int i=0; i<particle_data.size(); i++)
+		memcpy( &(particle_data[i]),&(d_particle_data[i]), sizeof(cu_particle_sim));
+#endif
 
 // -----------------------------------
 // ----------- End Cuda --------------
@@ -361,17 +404,6 @@ int main (int argc, char **argv)
 	if (d_particle_data)
 		delete []d_particle_data;
 #endif
-
-
-// -------------------------------------
-// ----------- Transforming ------------
-// -------------------------------------
-      if (master)
-		cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
-      particle_project(params, particle_data, campos, lookat, sky);
-      times[4] += myTime() - last_time;
-      last_time = myTime();
-
 
 // --------------------------------
 // ----------- Sorting ------------
@@ -500,7 +532,7 @@ int main (int argc, char **argv)
 ////////////////CUDA HELP FUNCTION//////////////////////////////
 #ifdef CUDA
 void GoldComparePData
-(vector<particle_sim> particle_data, d_particle_sim* d_particle_data)
+(vector<particle_sim> particle_data, cu_particle_sim* d_particle_data)
 {
 	for (int i=0; i< particle_data.size(); i++)
 	{
@@ -541,18 +573,12 @@ void GoldComparePData
 		cout << d_particle_data[i].C3 << endl;
 
 		//hold screen for reading
-		cout << endl << "Press -1 to quit, 0 to continue or (1," << (particle_data.size()-1) <<
-			") to jump to an index..." ;
-		int	in =0;
-		cin.clear();
-		cin >> in;
-		......
-		if ( in == -1)
+		cout << endl << "Press q to quit, other to continue..." <<endl;
+		char c;
+		//cin >> c;
+		c =getchar();
+		if (c == 'q')
 			break;
-		if ( in == 0)
-			continue;
-		if ( in >0 && in<particle_data.size() )
-			i =in;
 	}
 }
 #endif

@@ -15,9 +15,10 @@ CuPolicy::~CuPolicy(void)
 {
 }
 
+//Get size of device particle datas
 int CuPolicy::GetSizeDPD(unsigned int n)
 {
-	int m =sizeof(cu_particle_sim);
+	int m =sizeof(cu_particle_sim);//debug
 	return n* sizeof(cu_particle_sim);
 }
 
