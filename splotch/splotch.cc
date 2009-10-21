@@ -361,7 +361,7 @@ time =timer.getTime();
 	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
 #endif
 
-#define NO_HOST_RANGING
+//#define NO_HOST_RANGING
 #ifndef NO_HOST_RANGING
 // -----------------------------------
 // ----------- Ranging ---------------
@@ -373,7 +373,7 @@ time =timer.getTime();
       last_time = myTime();
 #endif
 
-#define NO_HOST_TRANSFORM
+//#define NO_HOST_TRANSFORM
 #ifndef NO_HOST_TRANSFORM
 // -------------------------------------
 // ----------- Transforming ------------
