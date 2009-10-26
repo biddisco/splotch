@@ -49,6 +49,8 @@
 #include "cuda/splotch_cuda.h"
 void GoldComparePData
 (vector<particle_sim> particle_data, cu_particle_sim* d_particle_data);
+cu_color	k_get_color(int ptype, float val, cu_color_map_entry *map, //will move to kernel
+			int	mapSize, int *ptype_points, int ptypes);
 #endif
 
 #ifdef USE_MPI
@@ -322,7 +324,7 @@ int main (int argc, char **argv)
       last_time = myTime();
 
 // -----------------------------------
-// ----------- Iint Cuda -------------
+// ----------- Run Cuda -------------
 // -----------------------------------
 // After reading, ranging with device
 #ifdef CUDA
@@ -331,11 +333,23 @@ int main (int argc, char **argv)
 	cu_particle_sim	*d_particle_data;
 	d_particle_data =new cu_particle_sim[particle_data.size()];
 
+timer.reset();
+timer.start();
 	cu_init();
+timer.stop();
+time =timer.getTime();
+	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
 
+timer.reset();
+timer.start();
 	//copy data to local C-like array d_particle_data, in mid of developing only
 	for (int i=0; i<particle_data.size(); i++)
 		memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(cu_particle_sim));
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Copying particles to device cost time:" << time << "s" <<endl;
+
+
 timer.reset();
 timer.start();
 	//call cuda range
@@ -359,6 +373,10 @@ timer.stop();
 time =timer.getTime();
 
 	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
+
+	//then copy particles back, in mid of developing only
+	for (int i=0; i<particle_data.size(); i++)
+		memcpy( &(particle_data[i]),&(d_particle_data[i]), sizeof(cu_particle_sim));
 #endif
 
 //#define NO_HOST_RANGING
@@ -385,26 +403,6 @@ time =timer.getTime();
       last_time = myTime();
 #endif
 
-// -----------------------------------
-// ----------Gold Comparation --------
-// -----------------------------------
-#ifdef	CUDA 
-	//compare to gold result
-//	GoldComparePData( particle_data, d_particle_data);
-	//then copy particles back, in mid of developing only
-	for (int i=0; i<particle_data.size(); i++)
-		memcpy( &(particle_data[i]),&(d_particle_data[i]), sizeof(cu_particle_sim));
-#endif
-
-// -----------------------------------
-// ----------- End Cuda --------------
-// -----------------------------------
-#ifdef CUDA
-	cu_end();
-	if (d_particle_data)
-		delete []d_particle_data;
-#endif
-
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
@@ -419,7 +417,14 @@ time =timer.getTime();
       times[5] += myTime() - last_time;
       last_time = myTime();
 
+#ifdef CUDA //2009-10-22: sorting is ignored now to simplified things.
+	  if ( sort_type !=0) //means needing sort
+		  cout<< endl << "CAUSION: SORTING NEEDED!"<<endl;
+#endif
 
+
+//#define NO_HOST_COLORING
+#ifndef NO_HOST_COLORING
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
@@ -428,6 +433,100 @@ time =timer.getTime();
       particle_colorize(params, particle_data, particle_col, amap, emap);///things goes to array particle_col now
       times[6] += myTime() - last_time;
       last_time = myTime();
+#endif
+
+#ifdef CUDA//colorize with device
+	//init C style colormap 
+	cu_color_map_entry	*amapD;//amap for Device. emap is not used currently
+	int	*amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
+	amapDTypeStartPos =new int[ptypes];
+	int	curPtypeStartPos =0;
+	int	size =0;
+	//first we need to count all the entries to get colormap size
+	for(int i=0; i<amap.size(); i++)
+	{
+	    vector<HANDLE_RAYPP<CMAP_ENTRY> > e;
+		e = amap[i].Entry;
+		for (int j=0; j<e.size(); j++)
+			size++;
+	}
+	//then fill up the colormap amapD
+	amapD =new cu_color_map_entry[size];
+	int	index =0;
+	for(int i=0; i<amap.size(); i++)
+	{
+	    vector<HANDLE_RAYPP<CMAP_ENTRY> > e;
+		e = amap[i].Entry;
+		int j;
+		for (j=0; j<e.size(); j++)
+		{
+			HANDLE_RAYPP<CMAP_ENTRY> h;
+			h =e[j];
+			COLOUR	clr1, clr2;
+			amapD[index].min =h->minval; 
+			amapD[index].max =h->maxval;
+			clr1 =h->Get_Colour(h->minval);
+			clr2 =h->Get_Colour(h->maxval);
+			amapD[index].color1.r =clr1.r;
+			amapD[index].color1.g =clr1.g;
+			amapD[index].color1.b =clr1.b;
+			amapD[index].color2.r =clr2.r;
+			amapD[index].color2.g =clr2.g;
+			amapD[index].color2.b =clr2.b;
+			index++;
+		}
+		amapDTypeStartPos[i] =curPtypeStartPos;
+		curPtypeStartPos += j;
+	}
+
+	//debug code to test if C-style colormap works
+	int	tmp=0;
+	for (int i=0; i<size_inout_buffer; i++)
+	{
+		float	type=inout_buffer[i][0], val=inout_buffer[i][1], 
+			r=inout_buffer[i][2], g=inout_buffer[i][3], 
+			b=inout_buffer[i][4];
+		
+		cu_color	clr;
+		clr =k_get_color(int(type), val, 
+			amapD, size, amapDTypeStartPos, ptypes);
+		if (i-tmp>1000)//for locate a bug
+		{
+			printf("\n%d\n", i);//set conditianal breakpoint here
+			tmp =i;
+			if ( r!=clr.r || g!=clr.g || b!=clr.b )//if not match, hold the screen
+			{
+				printf("\n%dth getcolor not match!\n", i);
+				getchar();
+			}
+		}
+	}
+
+	//call device
+
+	//delete C style colormap 
+	delete	[]amapD;
+	delete	[]amapDTypeStartPos;
+#endif
+
+
+// -----------------------------------
+// ----------Gold Comparation --------
+// -----------------------------------
+#ifdef	CUDA 
+	//compare to gold result
+//	GoldComparePData( particle_data, d_particle_data);
+	  //GoldCompareCData();//compare particle_col data
+#endif
+
+// -----------------------------------
+// ----------- End Cuda --------------
+// -----------------------------------
+#ifdef CUDA
+	cu_end();
+	if (d_particle_data)
+		delete []d_particle_data;
+#endif
 
 
 // ----------------------------------
@@ -581,4 +680,39 @@ void GoldComparePData
 			break;
 	}
 }
+
+//get color from a kernel colormap. should move to kernel later
+cu_color	k_get_color(int ptype, float val, cu_color_map_entry *map, //will move to kernel
+			int	mapSize, int *ptype_points, int ptypes)
+{
+	cu_color	clr;
+	clr.r =clr.g =clr.b =0.0;
+	
+	//first find the right entry for this ptype
+	if (ptype>=ptypes)
+		return clr; //invalid input
+	int	start, end;
+	start =ptype_points[ptype];
+	if ( ptype == ptypes-1)//the last type
+		end =mapSize-1;
+	else 
+		end =ptype_points[ptype+1]-1;
+	
+	//seach the section of this type to find the val
+	for(int i=start; i<=end; i++)
+	{
+		if ( val>=map[i].min && val<=map[i].max)//if val falls into this entry, set clr
+		{
+			float	fract = (val-map[i].min)/(map[i].max-map[i].min);
+			cu_color	clr1=map[i].color1, clr2=map[i].color2;
+			clr.r =clr1.r + fract*(clr2.r-clr1.r);
+			clr.g =clr1.g + fract*(clr2.g-clr1.g);
+			clr.b =clr1.b + fract*(clr2.b-clr1.b);
+			break;
+		}
+	}
+
+	return clr;
+}
+
 #endif
