@@ -73,8 +73,7 @@ double myTime()
   {
 #ifdef USE_MPI
   return MPI_Wtime();
-#endif
-
+#else
 #ifdef VS
 
   static	VTimer t;
@@ -94,6 +93,7 @@ double myTime()
   gettimeofday(&t, NULL);
   return t.tv_sec + 1e-6*t.tv_usec;
 //  return time(0);
+#endif
 #endif
   }
 
