@@ -3,6 +3,7 @@
 #endif
 #include <stdio.h>
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <math.h>
 #include <assert.h>
@@ -75,6 +76,7 @@ which_fields[7] = color 3 (B)
    long totalsize_f;
    if(mype == 0)
    {
+     cout << "BINARY TABLE\n";
      cout << "Input data file name\n";
      scanf("%s", datafile);
      cout << datafile << "\n";
@@ -118,27 +120,34 @@ which_fields[7] = color 3 (B)
    MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
+   long pe_size_orig = pe_size;
    if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
    float * readarray;
    readarray = new float [num_of_fields];
 
-   long stride=pe_size*sizeof(float)*num_of_fields*mype+offset;
+   long long stride=pe_size_orig*sizeof(float)*num_of_fields*mype+offset;
 
 #ifdef USE_MPI
    MPI_Bcast(&datafile[0], 500, MPI_CHAR, 0, MPI_COMM_WORLD);
 #endif
 
-   pFile = fopen(datafile, "rb");
-
+   bifstream infile;
+   bool doswap = false;
+   infile.open(datafile, doswap);
+   infile.rewind();
+   
 #ifdef DEBUG
    cout << "Reading " << num_of_fields << " fields for " << pe_size << " particles\n";
 #endif
+
+   infile.skip(stride);
+   cout << mype << " -----> " << stride << "\n";
    for(long index=0; index<pe_size; index++)
    {
 
-      fseek(pFile, stride, SEEK_SET);
-      fread(readarray, sizeof(float)*num_of_fields, 1, pFile);
+      for(int ifield=0; ifield<num_of_fields; ifield++) infile >> readarray[ifield];
+
       points.at(index).x=readarray[which_fields[0]];
       points.at(index).y=readarray[which_fields[1]];
       points.at(index).z=readarray[which_fields[2]];
@@ -170,13 +179,14 @@ which_fields[7] = color 3 (B)
 
       float smooth = points.at(index).r;      
 
-      stride += sizeof(float)*num_of_fields;
+      //stride += sizeof(float)*num_of_fields;
       minradius = (minradius <= smooth ? minradius : smooth);
       maxradius = (maxradius >= smooth ? maxradius : smooth);
  
    }
-   fclose(pFile);
+   infile.close();
 
+   //if(mype == npes-1){for (int ii=0; ii<100000; ii+=1000)cout << mype << " " << points.at(ii).x << " " << points.at(ii).y << " " << points.at(ii).C1 << "\n";};
    //maxradius = 1.0;
    *maxr=maxradius;
    *minr=minradius;
@@ -237,6 +247,7 @@ which_fields[7] = color 3 (B)
    long last_pe_adding;
    if(mype == 0)
    {
+     cout << "BLOCK BINARY FILE\n";
      cout << "Input data file name\n";
      scanf("%s", datafile);
      cout << datafile << "\n";
@@ -278,6 +289,7 @@ which_fields[7] = color 3 (B)
    MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
+   long pe_size_orig = pe_size;
    if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
    float * readarray;
@@ -289,7 +301,10 @@ which_fields[7] = color 3 (B)
 
    cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
 
-   pFile = fopen(datafile, "rb");
+   
+   bifstream infile;
+   bool doswap = false;
+   infile.open(datafile, doswap);
 
 #ifdef DEBUG
    cout << "Reading " << n_load_fields << " fields for " << pe_size << " particles\n";
@@ -299,10 +314,12 @@ which_fields[7] = color 3 (B)
      int n_fields_eff = which_fields[n_fields]-1;
      if(which_fields[n_fields] < 0)continue;
 
-     stride=sizeof(float)*(n_fields_eff*field_size+pe_size*mype)+offset;
+     stride=sizeof(float)*(n_fields_eff*field_size+pe_size_orig*mype)+offset;
 
-     fseek(pFile, stride, SEEK_SET);
-     fread(readarray, sizeof(float)*pe_size, 1, pFile);
+     infile.rewind();
+     infile.skip(stride);
+     for(long index=0; index<pe_size; index++)infile >> readarray[index];
+
      switch(n_fields)
      {
      case 0:
@@ -340,7 +357,9 @@ which_fields[7] = color 3 (B)
      }
 
    }
-   fclose(pFile);
+   infile.close();
+
+
    if(which_fields[4] < 0)
        for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
 
