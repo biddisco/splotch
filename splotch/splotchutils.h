@@ -190,7 +190,8 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
       int xres = pic.size1(), yres=pic.size2();
       pic.fill(COLOUR(0,0,0));
 
-      work_distributor wd (xres,yres,200,200);
+      //work_distributor wd (xres,yres,200,200);
+      work_distributor wd (xres,yres,xres,yres);
 
 //estimate combination time
 //float	t =0;
@@ -213,6 +214,7 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
 
         for (unsigned int m=0; m<p.size(); ++m)
           {
+          //cout << ">>>>>> " << mpiMgr.rank() << " " << p[m].r << "\n";
           float64 r=p[m].r;
           float64 posx=p[m].x, posy=p[m].y;
           posx-=x0s; posy-=y0s;
@@ -244,6 +246,9 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
           float64 radsq = rfacr*rfacr;
           float64 prefac1 = -0.5/(r*r*sigma0*sigma0);
           float64 prefac2 = -0.5*bfak/p[m].ro;
+          //float64 prefac2 = -0.5*bfak/p[m].r;
+
+
           for (int x=minx; x<maxx; ++x)
             {
             float64 xsq=(x-posx)*(x-posx);

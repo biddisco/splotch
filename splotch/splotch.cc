@@ -87,12 +87,12 @@ double myTime()
 
   return t.getTime(); //in seconds
 
-#else
+/*#else
   using namespace std;
   struct timeval t;
   gettimeofday(&t, NULL);
   return t.tv_sec + 1e-6*t.tv_usec;
-//  return time(0);
+//  return time(0);*/
 #endif
 #endif
   }
@@ -266,10 +266,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-//	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-//	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE
