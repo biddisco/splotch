@@ -350,6 +350,7 @@ which_fields[7] = color 3 (B)
      for(long index=0; index<pe_size; index++)
      {
        points.at(index).ro=points.at(index).r;
+       points.at(index).type=0;
        float smooth = points.at(index).r;      
 
        minradius = (minradius <= smooth ? minradius : smooth);
