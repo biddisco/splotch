@@ -106,7 +106,7 @@ which_fields[7] = color 3 (B)
      totalsize = ftell (pFile);
      fclose(pFile);
 // number of elements (of each variable) for a processor
-     totalsize_f = totalsize/(sizeof(float)*num_of_fields);
+     totalsize_f = (totalsize-offset)/(sizeof(float)*num_of_fields);
      pe_size = totalsize_f/npes;
      last_pe_adding = totalsize_f-pe_size*npes;
 #ifdef DEBUG
@@ -275,7 +275,7 @@ which_fields[7] = color 3 (B)
      totalsize = ftell (pFile);
      fclose(pFile);
 // number of elements (of each variable) for a processor
-     field_size = totalsize/(sizeof(float)*num_of_fields);
+     field_size = (totalsize-offset)/(sizeof(float)*num_of_fields);
      pe_size = (long)(field_size / npes);
      last_pe_adding = field_size-pe_size*npes;
 #ifdef DEBUG
