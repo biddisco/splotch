@@ -91,9 +91,7 @@ int gadget_find_block (bifstream &file,const string &label)
       blocklabel[i]=0;
       i--;
       }
-    // cout << "blocklabel: <" << blocklabel << "> --> <" << label << ">" << endl;
     file >> blocksize;
-    // cout << "blocksize: " << blocksize << endl;
     file.skip(4);
     if (label!=blocklabel)
       {
@@ -265,7 +263,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
-      //      cout << "Task: " << ThisTask << " reading ..."  << NPartThisTask[ThisTask] << endl;
       int ToTask=ThisTask;
       int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
@@ -289,7 +286,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	      for(int s=LastType+1; s<type; s++)
 		if(npartthis[s]>0 && (1<<s & present))
 		  {
-		    // cout << " Skipping " << npartthis[s] << " entries in Position ..." << endl;
 		    infile.skip(4*3*npartthis[s]);
 		  }
 	      for(int m=0; m<npartthis[type]; ++m)
@@ -301,8 +297,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  //  cout << "Task: " << ThisTask << " filled my particles, switching to read into buffer  ..." 
-                          //     << ncount << endl;
 			  ToTask++;
 			  ncount=0;
 			}
@@ -315,8 +309,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  // cout << "Task: " << ThisTask << " now sending data  ... " 
-                          //     << ncount << ',' << NPartThisTask[ToTask] << ',' << ToTask << endl;
 			  MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD); 
 			  MPI_Ssend(v2_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD); 
 			  MPI_Ssend(v3_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
@@ -338,12 +330,10 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   else
     {
 #ifdef USE_MPI
-      //      cout << "Task: " << ThisTask << " waiting for data ... " << NPartThisTask[ThisTask] << endl;
       MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
       MPI_Recv(v2_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
       MPI_Recv(v3_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
       MPI_Recv(i1_tmp, NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_TYPE, MPI_COMM_WORLD, &status);
-      // cout << "Task: " << ThisTask << " ... got data ..." << endl;
       for (int m=0; m<NPartThisTask[ThisTask]; ++m)
 	{
 	  p[m].x=v1_tmp[m];
@@ -362,7 +352,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
     cout << " Reading velocities ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
-      //      cout << "Task: " << ThisTask << " reading ..."  << NPartThisTask[ThisTask] << endl;
       int ToTask=ThisTask;
       int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
@@ -374,7 +363,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	  int LastType=0;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
-          cout << " Task: " << ThisTask << " reading file " << filename << endl;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
 	  gadget_read_header(infile,npartthis,time);
@@ -386,7 +374,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	      for(int s=LastType+1; s<type; s++)
 		if(npartthis[s]>0 && (1<<s & present))
 		  {
-		    // cout << " Skipping " << npartthis[s] << " entries in Position ..." << endl;
 		    infile.skip(4*3*npartthis[s]);
 		  }
 	      for(int m=0; m<npartthis[type]; ++m)
@@ -397,8 +384,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  //  cout << "Task: " << ThisTask << " filled my particles, switching to read into buffer  ..." 
-                          //     << ncount << endl;
 			  ToTask++;
 			  ncount=0;
 			}
@@ -410,8 +395,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  // cout << "Task: " << ThisTask << " now sending data  ... " 
-                          //     << ncount << ',' << NPartThisTask[ToTask] << ',' << ToTask << endl;
 			  MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD); 
 			  MPI_Ssend(v2_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD); 
 			  MPI_Ssend(v3_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
@@ -432,11 +415,9 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   else
     {
 #ifdef USE_MPI
-      //      cout << "Task: " << ThisTask << " waiting for data ... " << NPartThisTask[ThisTask] << endl;
       MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
       MPI_Recv(v2_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
       MPI_Recv(v3_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
-      // cout << "Task: " << ThisTask << " ... got data ..." << endl;
       for (int m=0; m<NPartThisTask[ThisTask]; ++m)
 	{
 	  p[m].vx=v1_tmp[m];
@@ -453,7 +434,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
     cout << " Reading ids ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
-      //      cout << "Task: " << ThisTask << " reading ..."  << NPartThisTask[ThisTask] << endl;
       int ToTask=ThisTask;
       int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
@@ -477,7 +457,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	      for(int s=LastType+1; s<type; s++)
 		if(npartthis[s]>0 && (1<<s & present))
 		  {
-		    // cout << " Skipping " << npartthis[s] << " entries in ids <" << label_id << "> ..." << endl;
 		    infile.skip(4*npartthis[s]);
 		  }
 	      for(int m=0; m<npartthis[type]; ++m)
@@ -488,8 +467,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  //  cout << "Task: " << ThisTask << " filled my particles, switching to read into buffer  ..." 
-                          //     << ncount << endl;
 			  ToTask++;
 			  ncount=0;
 			}
@@ -501,8 +478,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
-			  // cout << "Task: " << ThisTask << " now sending data  ... " 
-                          //     << ncount << ',' << NPartThisTask[ToTask] << ',' << ToTask << endl;
 			  MPI_Ssend(i1_tmp, NPartThisTask[ToTask], MPI_INT, ToTask, TAG_ID, MPI_COMM_WORLD);
 			  ToTask++;
 			  ncount=0;
@@ -521,9 +496,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   else
     {
 #ifdef USE_MPI
-      //      cout << "Task: " << ThisTask << " waiting for data ... " << NPartThisTask[ThisTask] << endl;
       MPI_Recv(i1_tmp, NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_ID, MPI_COMM_WORLD, &status);
-      // cout << "Task: " << ThisTask << " ... got data ..." << endl;
       for (int m=0; m<NPartThisTask[ThisTask]; ++m)
 	{
 	  p[m].x=v1_tmp[m];
@@ -569,7 +542,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		  for(int s=LastType+1; s<type; s++)
 		    if(npartthis[s]>0 && (1<<s & present))
 		      {
-			// cout << " Skipping " << npartthis[s] << " entries in Size ..." << endl;
 			infile.skip(4*npartthis[s]);
 		      }
 		}
@@ -667,7 +639,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 			int nskip=npartthis[s];
 			if(col_vector)
 			  nskip *=3;
-			// cout << " Skipping " << npartthis[s] << "(" << nskip << ") entries in Color ..." << endl;
 			infile.skip(4*nskip);
 		      }
 		}
@@ -791,7 +762,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		  for(int s=LastType+1; s<type; s++)
 		    if(npartthis[s]>0 && (1<<s & present))
 		      {
-			// cout << " Skipping " << npartthis[s] << " entries in Intensity ..." << endl;
 			infile.skip(4*npartthis[s]);
 		      }
 		}
