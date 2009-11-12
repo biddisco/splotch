@@ -104,23 +104,23 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
   }
 
-int gadget_read_header(bifstream &file, int *npart)
+int gadget_read_header(bifstream &file, int *npart, double *time)
 {
-  double massarr[6],time,redshift;
+  double massarr[6],redshift;
   int npartall[6];
   int blocksize = gadget_find_block (file,"HEAD");
   planck_assert (blocksize>0, "Header block not found");
   file.skip(4);
   file.get(npart,6);
   file.get(massarr,6);
-  file >> time >> redshift;
+  file >> *time >> redshift;
   file.skip(8);
   file.get(npartall,6);
 
   return blocksize;
   }
 
-void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
+void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *time)
 {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",true);
@@ -195,8 +195,9 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	      else           filename=infilename;
 	      infile.open(filename.c_str(),doswap);
 	      planck_assert (infile,"could not open input file! <" + filename + ">");
-	      gadget_read_header(infile,npartthis);
+	      gadget_read_header(infile,npartthis,time);
 	      infile.close();
+              cout << " Timestamp from file : " << *time << endl;
 	      for(int itype=0;itype<ptypes;itype++)
 		{
 		  int type = params.find<int>("ptype"+dataToString(itype),0);
@@ -279,7 +280,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
           cout << " Task: " << ThisTask << " reading file " << filename << endl;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_read_header(infile,npartthis);
+	  gadget_read_header(infile,npartthis,time);
 	  gadget_find_block(infile,"POS");
 	  infile.skip(4);
 	  for(int itype=0;itype<ptypes;itype++)
@@ -356,6 +357,98 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
     }
 
 #ifdef INTERPOLATE
+#ifdef HIGH_ORDER_INTERPOLATION
+  if(mpiMgr.master())
+    cout << " Reading velocities ..." << endl;
+  if(ThisTaskReads[ThisTask] >= 0)
+    {
+      //      cout << "Task: " << ThisTask << " reading ..."  << NPartThisTask[ThisTask] << endl;
+      int ToTask=ThisTask;
+      int NPartThis=NPartThisTask[ThisTask];
+      long ncount=0;
+
+      for(int f=0;f<NFilePerRead;f++)
+	{
+	  int npartthis[6];
+	  int present=1+2+4+8+16+32;
+	  int LastType=0;
+	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
+	  else           filename=infilename;
+          cout << " Task: " << ThisTask << " reading file " << filename << endl;
+	  infile.open(filename.c_str(),doswap);
+	  planck_assert (infile,"could not open input file! <" + filename + ">");
+	  gadget_read_header(infile,npartthis,time);
+	  gadget_find_block(infile,"VEL");
+	  infile.skip(4);
+	  for(int itype=0;itype<ptypes;itype++)
+	    {
+	      int type = params.find<int>("ptype"+dataToString(itype),0);
+	      for(int s=LastType+1; s<type; s++)
+		if(npartthis[s]>0 && (1<<s & present))
+		  {
+		    // cout << " Skipping " << npartthis[s] << " entries in Position ..." << endl;
+		    infile.skip(4*3*npartthis[s]);
+		  }
+	      for(int m=0; m<npartthis[type]; ++m)
+		{
+		  if(ThisTask == ToTask)
+		    {
+		      infile >> p[ncount].vx >> p[ncount].vy >> p[ncount].vz;
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  //  cout << "Task: " << ThisTask << " filled my particles, switching to read into buffer  ..." 
+                          //     << ncount << endl;
+			  ToTask++;
+			  ncount=0;
+			}
+		    }
+		  else
+		    {
+#ifdef USE_MPI
+		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  // cout << "Task: " << ThisTask << " now sending data  ... " 
+                          //     << ncount << ',' << NPartThisTask[ToTask] << ',' << ToTask << endl;
+			  MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD); 
+			  MPI_Ssend(v2_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD); 
+			  MPI_Ssend(v3_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
+			  ToTask++;
+			  ncount=0;
+			}
+#else
+		      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+		    }
+		}
+	      LastType=type;
+	    }
+	  infile.close();
+	}
+      planck_assert(ncount == 0,"Some Particles where left when reading Positions ...");
+    }
+  else
+    {
+#ifdef USE_MPI
+      //      cout << "Task: " << ThisTask << " waiting for data ... " << NPartThisTask[ThisTask] << endl;
+      MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
+      MPI_Recv(v2_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
+      MPI_Recv(v3_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
+      // cout << "Task: " << ThisTask << " ... got data ..." << endl;
+      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+	{
+	  p[m].vx=v1_tmp[m];
+	  p[m].vy=v2_tmp[m];
+	  p[m].vz=v3_tmp[m];
+	}
+#else
+      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+    }
+#endif
+
   if(mpiMgr.master())
     cout << " Reading ids ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
@@ -374,7 +467,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_read_header(infile,npartthis);
+	  gadget_read_header(infile,npartthis,time);
 	  string label_id = params.find<string>("id_label","ID");
 	  gadget_find_block(infile,label_id);
 	  infile.skip(4);
@@ -460,7 +553,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_read_header(infile,npartthis);
+	  gadget_read_header(infile,npartthis,time);
 
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
@@ -555,7 +648,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_read_header(infile,npartthis);
+	  gadget_read_header(infile,npartthis,time);
 
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
@@ -684,7 +777,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr)
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_read_header(infile,npartthis);
+	  gadget_read_header(infile,npartthis,time);
 
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
