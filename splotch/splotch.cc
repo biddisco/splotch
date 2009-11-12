@@ -146,6 +146,7 @@ int main (int argc, char **argv)
   int snr_start = params.find<int>("snap_start",10);
   int ninterpol = params.find<int>("snap_interpol",8);  
   int snr1=0,snr2=0;
+  double time1,time2;
 #endif
 
 // ----------------------------------------------
@@ -292,17 +293,18 @@ int main (int argc, char **argv)
   	          cout << " old2 = new1 !" << endl; 
 		  particle_data1=particle_data2;
 		  snr1 = snr2;
+                  time1 = time2;
 		}
 	      if(snr1_this != snr1)
 		{
   	          cout << " reading new1 " << snr1_this << endl; 
-		  gadget_reader(params,particle_data1,snr1_this);
+		  gadget_reader(params,particle_data1,snr1_this,&time1);
 		  snr1 = snr1_this;
 		}
 	      if(snr2_this != snr2)
 		{
   	          cout << " reading new2 " << snr2_this << endl; 
-		  gadget_reader(params,particle_data2,snr2_this);
+		  gadget_reader(params,particle_data2,snr2_this,&time2);
 		  snr2 = snr2_this;
 		}
 #else
@@ -330,7 +332,7 @@ int main (int argc, char **argv)
       if (master)
 	cout << "Interpolating between " << particle_data1.size() << " and " << 
 	  particle_data2.size() << " particles ..." << endl; 
-      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
+      particle_interpolate(params,particle_data,particle_data1,particle_data2,frac,time1,time2);
 #endif
 
       long npart=particle_data.size();

@@ -42,15 +42,24 @@ struct particle_sim
   int type;
 #ifdef INTERPOLATE
   unsigned int id;
+#ifdef HIGH_ORDER_INTERPOLATION
+  float32 vx,vy,vz;
+#endif
 #endif
   particle_sim (float32 x_, float32 y_, float32 z_, float32 r_, float32 ro_, 
                 float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_
 #ifdef INTERPOLATE
                 , unsigned int id_
+#ifdef HIGH_ORDER_INTERPOLATION
+                , float32 vx_, float32 vy_, float32 vz_
+#endif
 #endif
                 ): x(x_), y(y_), z(z_), r(r_), ro(ro_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_)
 #ifdef INTERPOLATE
                 , id(id_)
+#ifdef HIGH_ORDER_INTERPOLATION
+                , vx(vx_), vy(vy_), vz(vz_)
+#endif
 #endif
                  {}
   particle_sim () {}
@@ -694,11 +703,30 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 // Interpolated velocities:
 //    v=v0+t*(v1-v0)
 
-void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
-                       vector<particle_sim> &p2, double frac) 
+void particle_interpolate(paramfile &params,
+                          vector<particle_sim> &p,vector<particle_sim> &p1,
+                          vector<particle_sim> &p2, double frac, double time1, 
+                          double time2) 
 {
   int i1=0,i2=0;
- 
+
+  cout << " Time1/2 = " << time1 << "," << time2 << endl;
+
+#ifdef HIGH_ORDER_INTERPOLATION
+  double h = params.find<double>("hubble",0.7);
+  double O = params.find<double>("omega",0.3);
+  double L = params.find<double>("lambda",0.7);
+  double mparsck = 3.0856780e+24;
+  double l_unit = params.find<double>("l_unit",3.0856780e+21);
+  double v_unit = params.find<double>("v_unit",100000.00);
+  double t1 = log(sqrt(L/O*time1*time1*time1)+sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+  double t2 = log(sqrt(L/O*time2*time2*time2)+sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+  double dt = (t2 - t1) * h;
+  double v_unit1=v_unit/l_unit/sqrt(time1)*dt;
+  double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
+  double vda_x,vda_y,vda_z;
+#endif
+
   p.resize(0);
   while(i1 < p1.size() && i2 < p2.size())
     {
@@ -716,16 +744,37 @@ void particle_interpolate(vector<particle_sim> &p,vector<particle_sim> &p1,
          case 0:
                 if (p1[i1].type != p2[i2].type)
                    planck_fail("interpolate: can not interpolate between different types !");
-                p.push_back(particle_sim((1-frac) * p1[i1].x  + frac*p2[i2].x,
+#ifdef HIGH_ORDER_INTERPOLATION
+                vda_x = 2 * (p2[i2].x - p1[i1].x) - (p1[i1].vx * v_unit1 + p2[i2].vx * v_unit2);
+                vda_y = 2 * (p2[i2].y - p1[i1].y) - (p1[i1].vy * v_unit1 + p2[i2].vy * v_unit2);
+                vda_z = 2 * (p2[i2].z - p1[i1].z) - (p1[i1].vz * v_unit1 + p2[i2].vz * v_unit2);
+#endif
+                p.push_back(particle_sim(
+#ifdef HIGH_ORDER_INTERPOLATION
+                                         p1[i1].x + p1[i1].vx * v_unit1 * frac 
+                                                  + 0.5 * (p2[i2].vx * v_unit2 - p1[i1].vx * v_unit1 + vda_x) * frac * frac,
+                                         p1[i1].y + p1[i1].vy * v_unit1 * frac 
+                                                  + 0.5 * (p2[i2].vy * v_unit2 - p1[i1].vy * v_unit1 + vda_y) * frac * frac,
+                                         p1[i1].z + p1[i1].vz * v_unit1 * frac 
+                                                  + 0.5 * (p2[i2].vz * v_unit2 - p1[i1].vz * v_unit1 + vda_z) * frac * frac,
+#else
+                                         (1-frac) * p1[i1].x  + frac*p2[i2].x,
                                          (1-frac) * p1[i1].y  + frac*p2[i2].y,
                                          (1-frac) * p1[i1].z  + frac*p2[i2].z,
+#endif
                                          (1-frac) * p1[i1].r  + frac*p2[i2].r,
                                          (1-frac) * p1[i1].ro + frac*p2[i2].ro,
                                          (1-frac) * p1[i1].I  + frac*p2[i2].I,
                                          (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
                                          (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
                                          (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
-                                         p1[i1].type,p1[i1].id));
+                                         p1[i1].type,p1[i1].id
+#ifdef HIGH_ORDER_INTERPOLATION
+                                        ,(1-frac) * p1[i1].vx  + frac*p2[i2].vx,
+                                         (1-frac) * p1[i1].vy  + frac*p2[i2].vy,
+                                         (1-frac) * p1[i1].vz  + frac*p2[i2].vz
+#endif
+                                         ));
                 i1++;
                 i2++;
                 break;
