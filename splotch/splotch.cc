@@ -144,8 +144,7 @@ int main (int argc, char **argv)
 #ifdef INTERPOLATE
   vector<particle_sim> particle_data1,particle_data2;
   int snr_start = params.find<int>("snap_start",10);
-  int ninterpol = params.find<int>("snap_interpol",8);  
-  int snr1=0,snr2=0;
+  int snr1=snr_start,snr2=snr_start+1,snr1_now=-1,snr2_now=-1;
   double time1,time2;
 #endif
 
@@ -224,27 +223,48 @@ int main (int argc, char **argv)
   vector<particle_sim> p_orig;
 
   ifstream inp(params.find<string>("geometry_file").c_str());
-  int linecount=0;
+  int linecount=0,ninterpol=0,nextfile=0;
   int geometry_skip = params.find<int>("geometry_start",0);
   int geometry_incr = params.find<int>("geometry_incr",1);
 
   string line;
   for(int i=0; i<geometry_skip; i++, linecount++)
-    getline(inp, line);
+    {
+      getline(inp, line);
+#ifdef INTERPOLATE
+      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+	     &campos.x,&campos.y,&campos.z,
+	     &lookat.x,&lookat.y,&lookat.z,
+	     &sky.x,&sky.y,&sky.z,&ninterpol);
+      if(linecount == nextfile)
+	{
+	  nextfile=linecount+ninterpol;
+	  snr1=snr2;
+	  snr2=snr2+1;
+	}
+#endif
+    }
 
   while (getline(inp, line))
     {
-      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf",
+      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
 	     &campos.x,&campos.y,&campos.z,
 	     &lookat.x,&lookat.y,&lookat.z,
-	     &sky.x,&sky.y,&sky.z);
+	     &sky.x,&sky.y,&sky.z,&ninterpol);
       if(master)
 	{
 	  cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
-	  cout << " Camera: " << campos << endl;
-	  cout << " Lookat: " << lookat << endl;
-	  cout << " Sky:    " << sky << endl;
+	  cout << " Camera:   " << campos << endl;
+	  cout << " Lookat:   " << lookat << endl;
+	  cout << " Sky:      " << sky << endl;
+#ifdef INTERPOLATE
+          cout << " niterpol: " << ninterpol << endl;
+#endif
 	}
+#ifdef INTERPOLATE
+      if(linecount == 0 && nextfile == 0)
+	nextfile=linecount+ninterpol;
+#endif
 #else
       campos.x=params.find<double>("camera_x");
       campos.y=params.find<double>("camera_y");
@@ -263,7 +283,7 @@ int main (int argc, char **argv)
 // -----------------------------------
 
 #if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
-      if (linecount == geometry_skip)
+      if (linecount == geometry_skip)      // read only once if no interpolation is choosen
 	{
 #endif
 	  if (master)
@@ -271,10 +291,7 @@ int main (int argc, char **argv)
 	  int simtype = params.find<int>("simtype"); ///2:Gadget2
 	  float maxr, minr;
 #ifdef INTERPOLATE
-	  int ifrac = linecount % ninterpol;
-	  int snr1_this = snr_start + (linecount / ninterpol);
-	  int snr2_this = snr1_this + 1;
-          double frac=(double)ifrac/(double)ninterpol;
+          double frac=(double)(linecount-(nextfile-ninterpol))/(double)ninterpol;
 #endif
 	  switch(simtype)
 	    {
@@ -286,26 +303,27 @@ int main (int argc, char **argv)
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
-	      cout << "File1: " << snr1_this << " , File2: " << snr2_this << " , interpol fac: " << frac << endl; 
-	      cout << " (old files : " << snr1 << " , " << snr2 << ")" << endl; 
-              if(snr2 == snr1_this)
+	      cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
+	      cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl; 
+	      cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl; 
+              if(snr1 == snr2_now)
 		{
   	          cout << " old2 = new1 !" << endl; 
 		  particle_data1=particle_data2;
-		  snr1 = snr2;
+		  snr1_now = snr1;
                   time1 = time2;
 		}
-	      if(snr1_this != snr1)
+	      if(snr1_now != snr1)
 		{
-  	          cout << " reading new1 " << snr1_this << endl; 
-		  gadget_reader(params,particle_data1,snr1_this,&time1);
-		  snr1 = snr1_this;
+  	          cout << " reading new1 " << snr1 << endl; 
+		  gadget_reader(params,particle_data1,snr1,&time1);
+		  snr1_now = snr1;
 		}
-	      if(snr2_this != snr2)
+	      if(snr2_now != snr2)
 		{
-  	          cout << " reading new2 " << snr2_this << endl; 
-		  gadget_reader(params,particle_data2,snr2_this,&time2);
-		  snr2 = snr2_this;
+  	          cout << " reading new2 " << snr2 << endl; 
+		  gadget_reader(params,particle_data2,snr2,&time2);
+		  snr2_now = snr2;
 		}
 #else
 	      gadget_reader(params,particle_data,0); ///vector<particle_sim> particle_data;
@@ -888,6 +906,14 @@ time =timer.getTime();
 #ifdef GEOMETRY_FILE
       outfile = outfile + intToString(linecount,4) + ".tga";
       linecount++;
+#ifdef INTERPOLATE
+      if(linecount == nextfile)
+	{
+	  nextfile=linecount+ninterpol;
+	  snr1=snr2;
+	  snr2=snr2+1;
+	}
+#endif
 #endif
 
       switch(pictype)
@@ -904,8 +930,23 @@ time =timer.getTime();
       last_time = myTime();
 
 #ifdef GEOMETRY_FILE
-      for(int i=1; i<geometry_incr; i++, linecount++)
-        getline(inp, line);
+      for(int i=1; i<geometry_incr; i++)
+	{
+	  getline(inp, line);
+	  linecount++;
+#ifdef INTERPOLATE
+	  sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+		 &campos.x,&campos.y,&campos.z,
+		 &lookat.x,&lookat.y,&lookat.z,
+		 &sky.x,&sky.y,&sky.z,&ninterpol);
+	  if(linecount == nextfile)
+	    {
+	      nextfile=linecount+ninterpol;
+	      snr1=snr2;
+	      snr2=snr2+1;
+	    }
+#endif
+	}
     }
 #endif
 
