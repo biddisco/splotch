@@ -284,7 +284,7 @@ int main (int argc, char **argv)
 //	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
-#ifdef INTERPOLATE
+#ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
 	      cout << "File1: " << snr1_this << " , File2: " << snr2_this << " , interpol fac: " << frac << endl; 
 	      cout << " (old files : " << snr1 << " , " << snr2 << ")" << endl; 
               if(snr2 == snr1_this)
@@ -305,10 +305,6 @@ int main (int argc, char **argv)
 		  gadget_reader(params,particle_data2,snr2_this);
 		  snr2 = snr2_this;
 		}
-	      if (master)
-		cout << "Interpolating between " << particle_data1.size() << " and " << 
-		        particle_data2.size() << " particles ..." << endl; 
-	      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
 #else
 	      gadget_reader(params,particle_data,0); ///vector<particle_sim> particle_data;
 #ifdef GEOMETRY_FILE
@@ -329,6 +325,14 @@ int main (int argc, char **argv)
 	  particle_data = p_orig;
 	}
 #endif
+
+#ifdef INTERPOLATE
+      if (master)
+	cout << "Interpolating between " << particle_data1.size() << " and " << 
+	  particle_data2.size() << " particles ..." << endl; 
+      particle_interpolate(particle_data,particle_data1,particle_data2,frac);
+#endif
+
       long npart=particle_data.size();
       long npart_all=npart;
       mpiMgr.allreduce_sum (npart_all); ///does nothing
