@@ -190,8 +190,8 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
       int xres = pic.size1(), yres=pic.size2();
       pic.fill(COLOUR(0,0,0));
 
-      //work_distributor wd (xres,yres,200,200);
-      work_distributor wd (xres,yres,xres,yres);
+      work_distributor wd (xres,yres,200,200);
+      //work_distributor wd (xres,yres,xres,yres);
 
 //estimate combination time
 //float	t =0;
