@@ -41,6 +41,7 @@
 //#include "reader/bin_reader.h"
 
 #ifdef VS	//Jin: for compiling under Windows/Visual Studio
+#include "windows.h"
 #include "reader/gadget_reader.cc"
 #include "writer/write_tga.cc"
 #endif
@@ -55,14 +56,31 @@
 //include head files
 #include "cuda/splotch_cuda.h"
 //function definitions for cuda/testing use
-void GoldComparePData
+void	GoldComparePData
 (vector<particle_sim> particle_data, cu_particle_sim* d_particle_data);
-void GoldCompareSData
+void	GoldCompareSData
 (vector<particle_splotch> host_data, cu_particle_splotch* device_data);
 cu_color	C_get_color(int ptype, float val, cu_color_map_entry *map, //will move to kernel
 			int	mapSize, int *ptype_points, int ptypes);
-void GoldCompareFBuf(cu_fragment_AeqE *goldBuf, cu_fragment_AeqE *buf, int n);
-#endif
+void	GoldCompareFBuf(cu_fragment_AeqE *goldBuf, cu_fragment_AeqE *buf, int n);
+DWORD WINAPI combine(void	*param);
+DWORD WINAPI TestThreadCombineTime(void	*p);
+//for temp
+cu_color	pic1[800][800];//for host combine
+cu_color	pic2[800][800];//for host rendering
+
+struct region_cmp
+{
+	int operator()(const cu_particle_splotch &p1, const cu_particle_splotch &p2)
+	{
+		int	rgn1, rgn2;
+		rgn1 =(p1.maxx -p1.minx)*(p1.maxy -p1.miny);
+		rgn2 =(p2.maxx -p2.minx)*(p2.maxy -p2.miny);
+		return rgn1>rgn2;
+	}
+};
+
+#endif //ifdef CUDA
 
 #ifdef USE_MPI
 #include "mpi.h"
@@ -230,7 +248,7 @@ int main (int argc, char **argv)
   string line;
   for(int i=0; i<geometry_skip; i++, linecount++)
     {
-      getline(inp, line);
+    getline(inp, line);
 #ifdef INTERPOLATE
       sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
 	     &campos.x,&campos.y,&campos.z,
@@ -359,7 +377,6 @@ int main (int argc, char **argv)
       times[2] += myTime() - last_time;
       last_time = myTime();
 
-/////////////Here comes CUDA code//////////////////////////
 #ifndef CUDA
 #ifndef NO_HOST_RANGING
 // -----------------------------------
@@ -436,6 +453,7 @@ int main (int argc, char **argv)
 #endif //ifndef CUDA
 
 
+/////////////Here comes CUDA code//////////////////////////
 // -----------------------------------
 // ----------- Run Cuda -------------
 // -----------------------------------
@@ -443,9 +461,9 @@ int main (int argc, char **argv)
 #ifdef CUDA
 	//CUDA test. for developing only. cut short particle_data
 	vector<particle_sim>::iterator it;
-	int	testPCount =100000/4, n=0;
+	int	testPCount =10000, n=0;
 	it =particle_data.begin();
-	particle_data.erase(it+testPCount, particle_data.end());
+//	particle_data.erase(it+testPCount, particle_data.end());
 
 	VTimer	timer;
 	float	time;
@@ -455,7 +473,7 @@ int main (int argc, char **argv)
 	//CUDA Init 
 timer.reset();
 timer.start();
-	cu_init();
+	cu_init(params);
 timer.stop();
 time =timer.getTime();
 	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
@@ -507,6 +525,8 @@ time =timer.getTime();
 
       int sort_type = params.find<int>("sort_type",1);
       particle_sort(particle_data,sort_type,true);
+	  //sort by size(r) for balancing with cuda
+	  //particle_sort(particle_data,4,true);
       times[5] += myTime() - last_time;
       last_time = myTime();
 
@@ -611,34 +631,127 @@ timer.start();
 
 	//Colorize with device
 	cu_colorize(params, cu_ps, size);
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Coloring with device cost time:" << time << "s" <<endl;
 
+
+//////////////////////////////////////////////////////////////////////////////////
+timer.reset();
+timer.start();
 	//filter particle_splotch array to a cu_ps_filtered
-	cu_particle_splotch	*cu_ps_filtered;
-	size =particle_data.size();
-	cu_ps_filtered =new cu_particle_splotch[size];
 	int	pFiltered=0;
+	//for sorting and splitting
+	vector <cu_particle_splotch> v_ps;	
+	cu_particle_splotch	p;
 	//do filtering
 	unsigned long	posInFragBuf =0;//, countFragments;
 	int		minx=1e6,miny=1e6, maxx=-1,maxy=-1;
+
+//#define OBSERV_SIZES	
+#ifdef	OBSERV_SIZES	
+	//observ sizes of splatting of particles
+	double	sz=0, maxSize=-1, minSize=0xffff, averageSize=0;
+#endif
 	for (int i=0; i<size; i++)
 	{
 		if ( cu_ps[i].isValid )
 		{
 			//IMPORTANT: set the start position of this particle
 			//in fragment buffer
-			cu_ps[i].posInFragBuf =posInFragBuf;
-			posInFragBuf += (cu_ps[i].maxx -cu_ps[i].minx)*
-				(cu_ps[i].maxy -cu_ps[i].miny);
-			memcpy(&cu_ps_filtered[pFiltered], 
-				&cu_ps[i], sizeof(cu_particle_splotch));
+//			cu_ps[i].posInFragBuf =posInFragBuf;
+//			posInFragBuf += (cu_ps[i].maxx -cu_ps[i].minx)*
+//				(cu_ps[i].maxy -cu_ps[i].miny); SHOULD DO AFTER SORTING!
+//			memcpy(&cu_ps_filtered[pFiltered], 
+//				&cu_ps[i], sizeof(cu_particle_splotch));
+			memcpy(&p, &cu_ps[i], sizeof(cu_particle_splotch));
+			v_ps.push_back(p);
 			pFiltered++;
 
 			minx=min(minx,cu_ps[i].minx);
 			miny=min(miny,cu_ps[i].miny);
 			maxx=max(maxx,cu_ps[i].maxx);
 			maxy=max(maxy,cu_ps[i].maxy);
+#ifdef	OBSERV_SIZES	
+			sz =(cu_ps[i].maxx -cu_ps[i].minx) *(cu_ps[i].maxy -cu_ps[i].miny);
+			maxSize =max(sz, maxSize);
+			minSize =min(sz, minSize);
+			averageSize +=sz;
+#endif
 		}
 	}
+#ifdef	OBSERV_SIZES	
+	averageSize =averageSize/pFiltered;
+	cout<< endl<< "Sizes of splatting:" << minSize << ", "<< maxSize<< ", " <<averageSize <<endl; 
+#endif
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Filtering 1 costs time:" << time << "s" <<endl;
+
+timer.reset();
+timer.start();
+	//split large ones
+	int	maxRegion =cu_get_max_region();
+//	int	maxRegion =params.find<int>("max_region", 2048);
+	vector<cu_particle_splotch> v_ps1;//result goes to it
+	for (vector<cu_particle_splotch>::iterator i=v_ps.begin();
+		i<v_ps.end(); i++)
+	{
+		int	h, w;
+		cu_particle_splotch	p, pNew;
+		p =(*i);
+		h = p.maxy - p.miny;
+		w = p.maxx - p.minx;
+		if ( h*w <maxRegion)
+		{
+			v_ps1.push_back(p);
+			continue;
+		}
+
+		//now we split
+		int	w1;
+		w1 = (maxRegion %h==0) ? (maxRegion /h):(maxRegion /h +1);
+		//insert new cells
+		pNew =p;
+		//minx,maxx of pNew need to be set
+		for (int minx =p.minx; minx<p.maxx; minx+=w1)
+		{
+			pNew.minx =minx;
+			pNew.maxx =( minx+w1 >=p.maxx) ? p.maxx : minx+w1;
+			v_ps1.push_back(pNew);
+		}
+	}
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Filtering 2 costs time:" << time << "s" <<endl;
+
+timer.reset();
+timer.start();
+	v_ps.clear();//not useful any more
+	//sort the filtered,splitted v_ps
+//	sort(v_ps1.begin(), v_ps1.end(), region_cmp());
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Sorting costs time:" << time << "s" <<endl;
+
+timer.reset();
+timer.start();
+	//copy to C-style array cu_ps_filtered
+	cu_particle_splotch	*cu_ps_filtered;
+	size =v_ps1.size();
+	cu_ps_filtered =new cu_particle_splotch[size];
+	pFiltered =v_ps1.size();
+	for(int i=0; i<pFiltered; i++)
+	{
+		v_ps1[i].posInFragBuf =posInFragBuf;
+		int	region =(v_ps1[i].maxx -v_ps1[i].minx)*(v_ps1[i].maxy -v_ps1[i].miny); 
+		posInFragBuf +=region;
+		cu_ps_filtered[i] =v_ps1[i];
+	}
+timer.stop();
+time =timer.getTime();
+	cout << endl << "Filtering 3 costs time:" << time << "s" <<endl;
+
 
 /*	//do gold comparation
 //	GoldCompareSData(particle_col, cu_ps_filtered);
@@ -655,10 +768,6 @@ timer.start();
 			 A,E));
 	}
 */
-timer.stop();
-time =timer.getTime();
-	cout << endl << "Coloring with device cost time:" << time << "s" <<endl;
-
 	//here is the point that particle sim array on deivce is useless
 
 	//just for rendering time coming next
@@ -702,10 +811,20 @@ time =timer.getTime();
 //here's the point of multi-go loop starts
 #ifndef CUDA_DEVICE_COMBINE //combined by host
 	//prepare fragment buffer memory space first
-	cu_fragment_AeqE	*fragBuf;
+	cu_fragment_AeqE	*fragBufAeqE;
+	cu_fragment_AneqE	*fragBufAneqE;
 	int	nFBufInByte =cu_get_fbuf_size();
-	int	nFBufInCell =nFBufInByte/sizeof(cu_fragment_AeqE);
-	fragBuf =new cu_fragment_AeqE[nFBufInCell];
+	int	nFBufInCell;
+	if (a_eq_e)
+	{
+		nFBufInCell =nFBufInByte/sizeof(cu_fragment_AeqE);
+		fragBufAeqE =new cu_fragment_AeqE[nFBufInCell];
+	}
+	else
+	{
+		nFBufInCell =nFBufInByte/sizeof(cu_fragment_AneqE);
+		fragBufAneqE =new cu_fragment_AneqE[nFBufInCell];
+	}
 	
 
 timer.reset();
@@ -713,75 +832,169 @@ timer.start();
 
 	cu_prepare_render(cu_ps_filtered,pFiltered);
 
+//#define AUTOMIC_ADD
+#ifdef AUTOMIC_ADD//estimating time
+	cu_render1(0, pFiltered, a_eq_e, grayabsorb);
+	cu_get_fbuf(fragBufAeqE, nFBufInCell);
+timer.stop();
+time =timer.getTime();
+		cout << endl << "AUTOMIC ADD cost time:" << time << "s" <<endl;
+
+#endif //if def AUTOMIC_ADD
+
 	bool bFinished=false;
-	int	 startP, endP;
-	startP =endP =0;
+	int	 renderStartP, renderEndP, combineStartP, combineEndP;
+	renderStartP =renderEndP =0;
+	combineStartP = combineEndP=0;
 	int	 nFragments2Render=0;
 	//cu_ps_filtered:	the particle array
 	//pFiltered:		length of particle array
 	//pPosInFragBuf:	length of the whole fragment buffer counted after filterign
+	VTimer	t1, t2, t3;
+	t1.reset();
+	t2.reset();
+	memset(pic1, 0, sizeof(cu_color)*800*800);
+	param_combine_thread	param;
+	param.a_eq_e =a_eq_e;
+	if (a_eq_e)
+		param.fbuf =(void*)fragBufAeqE;
+	else
+		param.fbuf =(void*)fragBufAneqE;
+	param.ps =cu_ps_filtered;
+	param.bFinished =true;
+	param.timeUsed =0.0;
+
+//#define TEST_A_EQ_E
+#ifdef	TEST_A_EQ_E
+	bFinished =true;
+	render_cu_test1(cu_ps_filtered, pFiltered, (cu_color**)pic1, a_eq_e, grayabsorb, param.fbuf);
+	param.combineStartP=0;
+	param.combineEndP =pFiltered;
+	combine(&param);
+#endif	//ifdef TEST_A_EQ_E
+
+//#define HOST_THREAD_RENDER
+#ifdef HOST_THREAD_RENDER
+	bFinished=true;//let device not working
+
+	param_render_thread	param_render;
+	param_render.p	=cu_ps_filtered;
+	param_render.start =0;
+	param_render.end   =pFiltered;
+	param_render.a_eq_e =a_eq_e;
+	param_render.grayabsorb =grayabsorb;
+	param_render.pic	=(cu_color [][800])pic1;
+
+	render_thread(&param_render);
+#endif
+
+
 	while (!bFinished)
 	{
 		//find a chunk
 		nFragments2Render =0;
-		for (startP =endP; endP<pFiltered; endP++)
+		for (renderStartP =renderEndP; renderEndP<pFiltered; renderEndP++)
 		{
 			int	inc;//increasment
-			inc =(cu_ps_filtered[endP].maxx-cu_ps_filtered[endP].minx) *
-				(cu_ps_filtered[endP].maxy -cu_ps_filtered[endP].miny);
+			inc =(cu_ps_filtered[renderEndP].maxx-cu_ps_filtered[renderEndP].minx) *
+				(cu_ps_filtered[renderEndP].maxy -cu_ps_filtered[renderEndP].miny);
 			if ( nFragments2Render +inc > nFBufInCell)
 				break;
 			else
 				nFragments2Render +=inc;
 		}
-		if (endP == pFiltered)
+		if (renderEndP == pFiltered)
 			bFinished =true;
-		
-		//render it
-		cu_render1(startP, endP, a_eq_e, grayabsorb);
 
-		//collect result
-		cu_get_fbuf(fragBuf, nFragments2Render);
 
-		//combine it
-		cu_fragment_AeqE	*bufWrite;//just for test
-		bufWrite=fragBuf;
-		//bufWrite =fragBufWrittenByHost;
-		for (int pPos=startP, fPos=0; pPos<endP && fPos<nFragments2Render; pPos++)
+		//see if it's the first chunk
+		if ( renderStartP!=0 )
 		{
-		  for (int x =cu_ps_filtered[pPos].minx; 
-			   x <cu_ps_filtered[pPos].maxx; x++)
-		  {
-			 for( int y =cu_ps_filtered[pPos].miny;
-				  y <cu_ps_filtered[pPos].maxy; y++)
-			 {
-				 pic[x][y].r += bufWrite[fPos].deltaR;
-				 pic[x][y].g += bufWrite[fPos].deltaG;
-				 pic[x][y].b += bufWrite[fPos].deltaB;
-				 fPos ++;
-			 }				  
-		  }
+			//combine it
+			param.bFinished =false;
+			param.combineStartP =combineStartP;
+			param.combineEndP =combineEndP;
+			DWORD	id;
+			CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)combine, 
+			    &param, 0, &id );
+		}		
+
+
+		//render it
+		cu_render1(renderStartP, renderEndP, a_eq_e, grayabsorb);
+		//collect result
+		if (a_eq_e)
+			cu_get_fbuf(fragBufAeqE, true, nFragments2Render);
+		else
+			cu_get_fbuf(fragBufAneqE, false, nFragments2Render);
+		combineStartP=renderStartP;
+		combineEndP =renderEndP;
+
+		//wait combine thread to end
+		while(param.bFinished!=true)
+			;
+		//see if last chunk
+		if (bFinished)
+		{
+t3.start();
+			param.bFinished =false;
+			param.combineStartP =combineStartP;
+			param.combineEndP =combineEndP;
+			combine(&param);
+t3.stop();
+			param.timeUsed +=t3.getTime();
 		}
 	}
+
 timer.stop();
 time =timer.getTime();
 		cout << endl << "Render to fragment buffer cost time:" << time << "s" <<endl;
+		cout << endl << "Time for combination:" << param.timeUsed <<endl;
+
+//give a test for combination without device involved
+/*t2.start();
+		for(unsigned int i=0; i<545211005; i++)
+		{
+			int j;
+			j=i+1;
+			pic[0][0].r +=i;
+			pic[0][0].g +=i;
+			pic[0][0].b +=i;
+		}
+t2.stop();
+		cout << endl << "Time for combination:" << t2.getTime() <<endl;
+		cout << endl << "Time for combination-render flies:" << t3.getTime() <<endl;
+*/
 /////////////////////////////////////////////////////////////////////
 
 	//post-process
 timer.reset();
 timer.start();
-     exptable	xexp(MAX_EXP);
-     for(int ix=0; ix<pic.size1(); ix++)
-        for(int iy=0; iy<pic.size2(); iy++)
-          {
-			  pic[ix][iy].r=1-xexp(pic[ix][iy].r);
-			  pic[ix][iy].g=1-xexp(pic[ix][iy].g);
-			  pic[ix][iy].b=1-xexp(pic[ix][iy].b);
-          }
+	if(a_eq_e)
+	{
+		exptable	xexp(MAX_EXP);
+		for(int ix=0; ix<pic.size1(); ix++)
+			for(int iy=0; iy<pic.size2(); iy++)
+			  {
+				  pic[ix][iy].r=1-xexp(pic1[ix][iy].r);
+				  pic[ix][iy].g=1-xexp(pic1[ix][iy].g);
+				  pic[ix][iy].b=1-xexp(pic1[ix][iy].b);
+			  }
+	}
+	else
+	{
+		for(int ix=0; ix<pic.size1(); ix++)
+			for(int iy=0; iy<pic.size2(); iy++)
+			  {
+				  pic[ix][iy].r=pic1[ix][iy].r;
+				  pic[ix][iy].g=pic1[ix][iy].g;
+				  pic[ix][iy].b=pic1[ix][iy].b;
+			  }
+	}
 timer.stop();
 time =timer.getTime();
 	cout << endl << "Post-process pic[] cost time:" << time << "s" <<endl;
+
 #endif //CUDA_DEVICE_COMBINE
 	
 #ifdef	CUDA_DEVICE_COMBINE
@@ -872,9 +1085,45 @@ time =timer.getTime();
 	delete	[]cu_ps;
 	delete	[]cu_ps_filtered;
 	//delete fragment buffer
-	delete  []fragBuf;
+	if (a_eq_e)
+		delete  []fragBufAeqE;
+	else
+		delete  []fragBufAneqE;
 
+//give a test for combination without device involved
+/*t2.reset();
+t2.start();
+		for(unsigned int i=0; i<545211005; i++)
+		{
+			int j;
+			j=i+1;
+			pic[0][0].r +=i;
+			pic[0][0].g +=i;
+			pic[0][0].b +=i;
+		}
+t2.stop();
+		cout << endl << "Test time for combination after cu_end():" << t2.getTime() <<endl;
+//test thread comination time
+		DWORD	id;
+		CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)TestThreadCombineTime, 
+		    0, 0, &id );
+*/
 #endif //ifdef CUDA
+/////////NO CUDA WE TEST THE TIME FOR COMBINE
+/*VTimer t4;
+t4.reset();
+t4.start();
+		for(unsigned int i=0; i<545211005; i++)
+		{
+			int j;
+			j=i+1;
+			pic[0][0].r +=i;
+			pic[0][0].g +=i;
+			pic[0][0].b +=i;
+		}
+t4.stop();
+		cout << endl << "Test time for combination after cu_end():" << t2.getTime() <<endl;
+*/
 //////////////////////CUDA codes end here/////////////////////////////
 
 
@@ -983,6 +1232,76 @@ time =timer.getTime();
 
 ////////////////CUDA HELP FUNCTION//////////////////////////////
 #ifdef CUDA
+DWORD WINAPI TestThreadCombineTime(void	*p)
+{
+	VTimer	t;
+t.start();
+	for(unsigned int i=0; i<545211005; i++)
+	{
+		int j;
+		j=i+1;
+		pic1[0][0].r +=i;
+		pic1[0][0].g +=i;
+		pic1[0][0].b +=i;
+	}
+t.stop();
+	cout << endl << "Time for thread combination:" << t.getTime() <<endl;
+
+	return 1;
+}
+
+DWORD WINAPI combine(void	*param1)
+{
+	param_combine_thread	*param =(param_combine_thread*)param1;
+	//combine it
+	cu_particle_splotch	*ps	=param->ps;
+	VTimer t;
+t.start();
+	if (param->a_eq_e)
+	{
+		cu_fragment_AeqE	*bufWrite =(cu_fragment_AeqE*)param->fbuf;
+
+		for (int pPos=param->combineStartP, fPos=0; 
+			pPos<param-> combineEndP; pPos++)
+		{
+		  for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
+		  {
+			 for( int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
+			 {
+				 pic1[x][y].r += bufWrite[fPos].deltaR;
+				 pic1[x][y].g += bufWrite[fPos].deltaG;
+				 pic1[x][y].b += bufWrite[fPos].deltaB;
+				 fPos ++;
+			 }				  
+		  }
+		}
+	}
+	else
+	{
+		cu_fragment_AneqE	*bufWrite =(cu_fragment_AneqE*)param->fbuf;
+
+		for (int pPos=param->combineStartP, fPos=0; 
+			pPos<param-> combineEndP; pPos++)
+		{
+		  for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
+		  {
+			 for( int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
+			 {
+				 pic1[x][y].r = pic1[x][y].r *bufWrite[fPos].factorR +bufWrite[fPos].deltaR;
+				 pic1[x][y].g = pic1[x][y].g *bufWrite[fPos].factorG +bufWrite[fPos].deltaG;
+				 pic1[x][y].b = pic1[x][y].b *bufWrite[fPos].factorB +bufWrite[fPos].deltaB;
+				 fPos ++;
+			 }				  
+		  }
+		}
+	}
+
+	param->bFinished =true;
+t.stop();
+param->timeUsed +=t.getTime();
+	return 1;
+}
+
 void 
 GoldCompareFBuf(cu_fragment_AeqE *goldBuf, cu_fragment_AeqE *buf, int n)
 {
