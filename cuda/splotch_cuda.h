@@ -16,6 +16,9 @@ struct cu_particle_sim
 
 #define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
 					//in mid of developing only
+#define	MAX_EXP (-20.0)
+
+
 struct cu_param_range //parameters for range calculation
 {
 	int		ptypes;	//meaning how many types
@@ -34,15 +37,131 @@ struct cu_param_transform
 	bool	minhsmlpixel;
 };
 
-//functions
-extern "C" void cu_init();
-extern "C" void	cu_end();
+struct	cu_color
+{
+	float	r,g,b;
+};
 
-extern "C" void	cu_range
+struct	cu_color_map_entry
+{
+	float		min, max;
+	cu_color	color1, color2;
+};
+
+struct	cu_colormap_info
+{
+	cu_color_map_entry *map;
+	int	mapSize; 
+	int *ptype_points;
+	int ptypes;
+};
+
+struct	cu_particle_splotch
+{
+	float		x,y,r,ro;
+	cu_color	a,e;
+	bool		isValid;
+	unsigned short		minx, miny, maxx, maxy;
+//	short		startx,starty, endx,endy;
+	unsigned long		posInFragBuf;
+};
+
+struct	cu_param_colorize
+{
+	int		res, ycut0, ycut1, ptypes;
+	float	zmaxval, zminval;
+	bool	col_vector[MAX_P_TYPE];
+	float	brightness[MAX_P_TYPE], grayabsorb[MAX_P_TYPE];
+	float	rfac;
+};
+
+struct	cu_exptable_info{
+    float expfac;
+    float *tab1, *tab2;
+	enum {
+		nbits=10,
+		dim1=1<<nbits,
+		mask1=dim1-1,
+		dim2=1<<nbits<<nbits,
+		mask2=dim2-1,
+		mask3=~mask2
+	};
+};
+
+struct cu_fragment_AeqE{
+	float	deltaR, deltaG, deltaB;
+};
+
+struct cu_fragment_AneqE{
+	float	deltaR,	deltaG, deltaB;
+	float	factorR, factorG, factorB;
+};
+
+struct	cu_param_combine{//for combination with device
+	cu_color			*pic;
+	unsigned int		xres, yres;
+	cu_fragment_AeqE	*fbuf;
+	unsigned int		lenFBuf;
+	cu_particle_splotch	*p;
+	unsigned int		pStart, pEnd;
+	int					minx,miny, maxx,maxy;
+};
+
+struct	param_combine_thread//for host combine thread
+{
+	bool	bFinished;
+	bool	a_eq_e;
+	void	*fbuf;
+	int		combineStartP, combineEndP;
+	cu_particle_splotch	*ps;
+	float	timeUsed;
+//	cu_color		**pic;
+};
+
+//functions
+extern "C" int cu_get_fbuf_size();
+
+extern "C" void cu_copy_particle_sim_to_device
+(cu_particle_sim *h_p, int n);
+
+extern "C"  void	cu_get_pic(cu_color *h_pic, int xres, int yres);
+extern "C"  void	cu_init_pic(unsigned int xres, unsigned int yres);
+extern "C"	void	cu_combine(cu_param_combine info);
+extern "C"  void	cu_post_process(int xres, int yres);
+
+extern "C"	void	cu_init(paramfile &params);
+extern "C"	void	cu_end();
+
+extern "C"	void	cu_range
 (paramfile &params, cu_particle_sim* p, unsigned int n);
 
-extern "C" void	cu_transform
+extern "C"	void	cu_transform
 (paramfile &params, unsigned int n,
  double campos[3], double lookat[3], double sky[3],cu_particle_sim* h_pd);
+
+extern "C" void		cu_init_colormap(cu_colormap_info info);
+
+extern "C" cu_color	cu_get_color(int ptype, float val);
+
+extern "C"	void	cu_colorize
+(paramfile &params, cu_particle_splotch *h_ps, int n);
+
+extern "C"	void	cu_init_exptab(double maxexp);	
+
+extern "C"	float	cu_get_exp(float arg);
+
+extern "C"	void	cu_prepare_render(cu_particle_splotch *p,int n);
+
+extern "C"	void	cu_render
+(cu_particle_splotch *p, unsigned int size,
+/* int xres, int yres, */bool a_eq_e,double grayabsorb);
+
+extern "C"	void	cu_render1
+(int startP, int endP, bool a_eq_e, double grayabsorb);
+
+extern "C"	void	cu_get_fbuf
+(void *h_fbuf, bool a_eq_e, unsigned long n);
+
+extern "C"	int		cu_get_max_region();
 
 #endif

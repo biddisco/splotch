@@ -30,7 +30,11 @@ namespace RAYPP {
 
 class CMAP_ENTRY
   {
+#ifdef CUDA //need to copy to C-style color map
+  public:
+#else
   protected:
+#endif
     float32 minval, maxval;
     float32 fract (float32 value) const
       { return (value-minval)/(maxval-minval); }
@@ -56,7 +60,11 @@ class CMAP_ENTRY
 
 class COLOURMAP
   {
+#ifdef CUDA //need to copy to a C-style colormap when using CUDA
+  public:
+#else
   private:
+#endif
     vector<HANDLE_RAYPP<CMAP_ENTRY> > Entry;
 
   public:
@@ -84,8 +92,12 @@ class UNIFORM_CMAP_ENTRY : public CMAP_ENTRY
 
 class LINEAR_CMAP_ENTRY: public CMAP_ENTRY
   {
+#ifdef CUDA //need to copy to a C-style colormap when using CUDA
+  public:
+#else
   protected:
-    COLOUR Colour1, Colour2;
+#endif    
+	  COLOUR Colour1, Colour2;
 
   public:
     LINEAR_CMAP_ENTRY ()
