@@ -2,6 +2,8 @@
 #define SPLOTCH_CUDA_H
 
 #include "cxxsupport\paramfile.h"
+//#include "CuPolicy.h"
+class CuPolicy;
 
 //data structs for using on device
 //'d_' means device
@@ -107,61 +109,50 @@ struct	cu_param_combine{//for combination with device
 	int					minx,miny, maxx,maxy;
 };
 
-struct	param_combine_thread//for host combine thread
-{
-	bool	bFinished;
-	bool	a_eq_e;
-	void	*fbuf;
-	int		combineStartP, combineEndP;
-	cu_particle_splotch	*ps;
-	float	timeUsed;
-//	cu_color		**pic;
+struct	cu_gpu_vars{ //varibles used by each gpu
+//	float               *d_tmp;   //used for debug
+//	float               *d_expTable;	//only used for testing
+	CuPolicy            *policy;
+	cu_particle_sim     *d_pd;    //device_particle_data
+	cu_colormap_info    d_colormap_info;    //it contains device pointers
+	cu_particle_splotch *d_ps_colorize; 
+	cu_exptable_info    d_exp_info; //it contains device pointers
+	cu_particle_splotch *d_ps_render; 
+	cu_fragment_AeqE    *d_fbuf;
+	cu_color            *d_pic;
 };
 
 //functions
-extern "C" int cu_get_fbuf_size();
+extern "C"	void	cu_init(paramfile &params, int devID, cu_gpu_vars* pgv);
+extern "C"	void	cu_range
+(paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
+extern "C"	void	cu_transform
+(paramfile &params, unsigned int n, double campos[3], 
+ double lookat[3], double sky[3],cu_particle_sim* h_pd, cu_gpu_vars* pgv);
+extern "C"	void		cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
+extern "C"	void	cu_colorize
+(paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
+extern "C"	int		cu_get_max_region( cu_gpu_vars* pgv);
+extern "C"	int		cu_get_fbuf_size( cu_gpu_vars* pgv);
+extern "C"	void	cu_prepare_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
+extern "C"	void	cu_render1
+(int startP, int endP, bool a_eq_e, double grayabsorb, cu_gpu_vars* pgv);
+extern "C"	void	cu_get_fbuf
+(void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
+extern "C"	void	cu_end( cu_gpu_vars* pgv);
 
+/*
 extern "C" void cu_copy_particle_sim_to_device
 (cu_particle_sim *h_p, int n);
-
 extern "C"  void	cu_get_pic(cu_color *h_pic, int xres, int yres);
 extern "C"  void	cu_init_pic(unsigned int xres, unsigned int yres);
 extern "C"	void	cu_combine(cu_param_combine info);
 extern "C"  void	cu_post_process(int xres, int yres);
-
-extern "C"	void	cu_init(paramfile &params);
-extern "C"	void	cu_end();
-
-extern "C"	void	cu_range
-(paramfile &params, cu_particle_sim* p, unsigned int n);
-
-extern "C"	void	cu_transform
-(paramfile &params, unsigned int n,
- double campos[3], double lookat[3], double sky[3],cu_particle_sim* h_pd);
-
-extern "C" void		cu_init_colormap(cu_colormap_info info);
-
 extern "C" cu_color	cu_get_color(int ptype, float val);
-
-extern "C"	void	cu_colorize
-(paramfile &params, cu_particle_splotch *h_ps, int n);
-
 extern "C"	void	cu_init_exptab(double maxexp);	
-
 extern "C"	float	cu_get_exp(float arg);
-
-extern "C"	void	cu_prepare_render(cu_particle_splotch *p,int n);
-
 extern "C"	void	cu_render
 (cu_particle_splotch *p, unsigned int size,
-/* int xres, int yres, */bool a_eq_e,double grayabsorb);
-
-extern "C"	void	cu_render1
-(int startP, int endP, bool a_eq_e, double grayabsorb);
-
-extern "C"	void	cu_get_fbuf
-(void *h_fbuf, bool a_eq_e, unsigned long n);
-
-extern "C"	int		cu_get_max_region();
-
+/* int xres, int yres, *-/bool a_eq_e,double grayabsorb);
+*/
 #endif

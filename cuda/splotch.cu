@@ -20,9 +20,10 @@ Try accelating splotch with CUDA. July 2009.
 
 ///////////////////////////////////////////////////////////////////
 //functions defs
-void dump_pr(cu_param_range *pr);
+//void dump_pr(cu_param_range *pr);
 template<typename T> T findParamWithoutChange
-    (paramfile *param, const std::string &key, const T &deflt);
+//    (paramfile *param, const std::string &key, const T &deflt);
+    (paramfile *param,  std::string &key,  T &deflt);
 extern "C" void getCuTransformParams(cu_param_transform &p,
     paramfile &params, double campos[3], double lookat[3], double sky[3]);
 //usefule functions from splotchutils.h
@@ -31,6 +32,7 @@ template<typename T> void get_minmax (T &minv, T &maxv, T val);
 
 //////////////////////////////
 //global varibles
+/*
 float               *d_tmp=0;   //used for debug
 float               *d_expTable =0;
 CuPolicy            *policy=0;
@@ -41,26 +43,384 @@ cu_exptable_info    d_exp_info; //it contains device pointers
 cu_particle_splotch *d_ps_render =0; 
 cu_fragment_AeqE    *d_fbuf =0;
 cu_color            *d_pic=0;
+*/
 //////////////////////////////
 
 //////////////////////////////////////////////
 //MACROs
 #define CLEAR_MEM(p) if(p) {cutilSafeCall(cudaFree(p)); p=0;}
 ///////////////////////////////////////////////
-extern "C"	int		cu_get_max_region()
-{
-    if (!policy) return -1;
 
-    return policy->GetMaxRegion();
+extern "C" 
+void    cu_init(paramfile &params, int devID, cu_gpu_vars* pgv)
+{
+    //initilize cuda runtime
+    //cudaSetDevice( cutGetMaxGflopsDeviceId() );
+    cudaSetDevice( devID );
+    
+    int d;
+    cudaGetDevice(&d);
+    printf("\nDevice being used %d\n", d);
+
+    unsigned int s;
+
+/*    //d_tmp used for debug
+    s =sizeof (float);
+    cutilSafeCall( cudaMalloc((void**) &(pgv->d_tmp), s));
+    //copy 0.0 to *d_tmp;
+    float   f=0.0;
+    cutilSafeCall(cudaMemcpy(pgv->d_tmp, &f, sizeof(float),
+                              cudaMemcpyHostToDevice) );    
+*/
+
+    //Initialize pgv->policy class
+    pgv->policy =new CuPolicy(&params);
 }
 
-extern "C" int cu_get_fbuf_size()
+extern "C"
+void	cu_range(paramfile &params ,cu_particle_sim* h_pd, 
+            unsigned int n, cu_gpu_vars* pgv)
 {
-    if (!policy) return -1;
+   //allocate device memory for particle data
+    int s =pgv->policy->GetSizeDPD(n);
+#ifdef _DEVICEEMU
+    printf("\ndevice_particle_data size:%d\n" ,s);
+#endif
+    //one more space allocated for the dumb
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_pd, s +sizeof(cu_particle_sim)));
+    
+    //copy particle data to device
+    cutilSafeCall(cudaMemcpy(pgv->d_pd, h_pd, s,
+                              cudaMemcpyHostToDevice) );    
+    //ask for dims from pgv->policy
+    dim3    dimGrid, dimBlock;
+    pgv->policy->GetDimsRange(n, &dimGrid, &dimBlock);    
 
-    return policy->GetFBufSize();
+    //prepare parameters for stage 1
+    cu_param_range  pr;
+    int ptypes = params.find<int>("ptypes",1);
+    pr.ptypes =ptypes;
+    //now collect parameters from configuration
+    for(int itype=0;itype<ptypes;itype++)
+    {
+        pr.log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
+        pr.log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
+        pr.asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
+        pr.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+        pr.mincol[itype]=1e30;
+        pr.maxcol[itype]=-1e30;
+        pr.minint[itype]=1e30;
+        pr.maxint[itype]=-1e30;
+    }
+    //allocate memory on device and dump parameters to it
+    cu_param_range  *d_pr=0;
+    s =sizeof(cu_param_range);
+    cutilSafeCall( cudaMalloc((void**) &d_pr, s) );    
+    cutilSafeCall(cudaMemcpy(d_pr, &pr, s,
+                              cudaMemcpyHostToDevice) );    
+
+    // call device for stage 1
+    k_range1<<<dimGrid,dimBlock>>>(d_pr, pgv->d_pd, n);
+    
+    // copy out particles for min_maxes
+    s =pgv->policy->GetSizeDPD(n);
+    cutilSafeCall(cudaMemcpy( h_pd, pgv->d_pd,  s,
+                              cudaMemcpyDeviceToHost) );    
+
+
+
+    //find the min-maxes
+    for (int m=0; m<n; m++)
+    {
+        get_minmax(pr.minint[h_pd[m].type], pr.maxint[h_pd[m].type], h_pd[m].I);
+        get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C1);
+        if (pr.col_vector[h_pd[m].type])
+        {
+            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C2);
+            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C3);
+        }
+    }
+    //for debug: dump_pr(&pr);
+
+
+    //??copy pr back into device??
+    //maybe not needed!
+
+    // call device for stage 2 ptypes times
+    // prepare parameters1 first
+    float minval_int, maxval_int, minval_col, maxval_col;
+    
+    for(int itype=0;itype<ptypes;itype++)
+    {
+        minval_int =findParamWithoutChange<float>(&params,  //in mid of developing only
+            "intensity_min"+dataToString(itype),pr.minint[itype]);
+        maxval_int = findParamWithoutChange<float>(&params, 
+            "intensity_max"+dataToString(itype),pr.maxint[itype]);
+        minval_col = findParamWithoutChange<float>(&params, 
+            "color_min"+dataToString(itype),pr.mincol[itype]);
+        maxval_col = findParamWithoutChange<float>(&params, 
+            "color_max"+dataToString(itype),pr.maxcol[itype]);
+    //for debug: printf("\n%f, %f, %f, %f\n", minval_int, maxval_int, minval_col, maxval_col);
+
+        k_range2<<<dimGrid, dimBlock>>>(d_pr, pgv->d_pd, n, itype,
+            minval_int,maxval_int,minval_col,maxval_col);
+    }
+
+    //copy result out to host
+    //in mid of development only!!!
+    cutilSafeCall(cudaMemcpy(h_pd, pgv->d_pd, s,
+                              cudaMemcpyDeviceToHost) );    
+    
+    //free parameters on device
+     CLEAR_MEM((d_pr));
+
+    //pgv->d_pd will be freed in cu_end
+}//cu range over
+
+extern "C" void	cu_transform
+(paramfile &fparams, unsigned int n,
+ double c[3], double l[3], double s[3],
+cu_particle_sim* h_pd, cu_gpu_vars* pgv)
+{
+    //retrieve pamaters for transformaiont first
+    cu_param_transform tparams;
+    getCuTransformParams(tparams,fparams,c,l,s);
+
+    //arrange memory for the parameters and copy to device
+    cu_param_transform  *d_pt;
+    int size =sizeof(cu_param_transform);
+    cutilSafeCall( cudaMalloc((void**) &d_pt, size) );    
+    cutilSafeCall(cudaMemcpy(d_pt, &tparams, size,
+                              cudaMemcpyHostToDevice) );    
+
+    //Get block dim and grid dim from pgv->policy object
+    dim3    dimGrid, dimBlock;
+    pgv->policy->GetDimsRange(n, &dimGrid, &dimBlock);    
+
+    //call device transformation
+    k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, n, d_pt);    
+
+    //free parameters' device memory
+     CLEAR_MEM((d_pt));
+
+   //copy result out to host
+    //in mid of development only!!!
+    size =pgv->policy->GetSizeDPD(n);
+    cutilSafeCall(cudaMemcpy(h_pd, pgv->d_pd, size,
+                              cudaMemcpyDeviceToHost) );    
+ 
 }
 
+extern "C" void		cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
+{
+    //allocate memories for colormap and ptype_pionts
+    //and dump host data into it
+    int size =sizeof(cu_color_map_entry) *h_info.mapSize;    
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_colormap_info.map, size));
+    cutilSafeCall(cudaMemcpy(pgv->d_colormap_info.map, h_info.map, 
+        size, cudaMemcpyHostToDevice) );    
+    //type
+    size =sizeof(int) *h_info.ptypes;
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_colormap_info.ptype_points, size));
+    cutilSafeCall(cudaMemcpy(pgv->d_colormap_info.ptype_points, h_info.ptype_points, 
+        size, cudaMemcpyHostToDevice) );    
+       
+    //set fields of global varible pgv->d_colormap_info
+    pgv->d_colormap_info.mapSize =h_info.mapSize;
+    pgv->d_colormap_info.ptypes  =h_info.ptypes;
+   
+}
+
+extern "C"	void	cu_colorize(paramfile &params, cu_particle_splotch *h_ps, 
+    int n, cu_gpu_vars* pgv)
+{
+    //fetch parameters for device calling first
+    cu_param_colorize   pcolorize;
+    pcolorize.res       = params.find<int>("resolution",200);
+    pcolorize.ycut0     = params.find<int>("ycut0",0);
+    pcolorize.ycut1     = params.find<int>("ycut1",pcolorize.res);
+    pcolorize.zmaxval   = params.find<float>("zmax",1.e23);
+    pcolorize.zminval   = params.find<float>("zmin",0.0);
+    pcolorize.ptypes    = params.find<int>("ptypes",1);
+
+    for(int itype=0; itype<pcolorize.ptypes; itype++)
+    {
+      pcolorize.brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
+      pcolorize.grayabsorb[itype] = params.find<float>("gray_absorption"+dataToString(itype),0.2);
+      pcolorize.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+    }
+    pcolorize.rfac=1.5;
+
+    //prepare memory for parameters and dump to device
+    cu_param_colorize   *d_param_colorize;
+    cutilSafeCall( cudaMalloc((void**) &d_param_colorize, sizeof(cu_param_colorize)));
+    cutilSafeCall( cudaMemcpy(d_param_colorize, &pcolorize, sizeof(cu_param_colorize), 
+        cudaMemcpyHostToDevice));    
+
+    //now prepare memory for d_particle_splotch.
+    //one more for dums
+    int size =n* sizeof(cu_particle_splotch);
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_colorize, size+sizeof(cu_particle_splotch)));
+
+    //fetch grid dim and block dim and call device
+    dim3    dimGrid, dimBlock;
+    pgv->policy->GetDimsColorize(n, &dimGrid, &dimBlock);    
+    k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_colorize,pgv->d_colormap_info);
+
+    //copy the result out
+    cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_colorize, size, cudaMemcpyDeviceToHost) );    
+
+    //free params memory
+    CLEAR_MEM((d_param_colorize));
+
+    //device particle_sim memory can be freed now!
+
+    //particle_splotch memory on device will be freed in cu_end
+}
+
+extern "C"	int		cu_get_max_region(cu_gpu_vars* pgv)
+{
+    if (!pgv->policy) return -1;
+
+    return pgv->policy->GetMaxRegion();
+}
+
+extern "C" int cu_get_fbuf_size(cu_gpu_vars* pgv)
+{
+    if (!pgv->policy) return -1;
+
+    return pgv->policy->GetFBufSize();
+}
+
+extern "C"	void	cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
+{
+    //set common fileds of pgv->d_exp_info
+    pgv->d_exp_info.expfac =pgv->d_exp_info.dim2 / maxexp;
+    //now make up tab1 and tab2 in host
+    float *h_tab1, *h_tab2;
+    int dim1 =pgv->d_exp_info.dim1, dim2 =pgv->d_exp_info.dim2;
+    h_tab1 =new float[dim1];
+    h_tab2 =new float[dim2];
+    for (int m=0; m<dim1; ++m)
+    {
+        h_tab1[m]=exp(m*dim1/pgv->d_exp_info.expfac);
+        h_tab2[m]=exp(m/pgv->d_exp_info.expfac);
+#ifdef _DEVICEEMU
+        if (m==100)
+            printf("\ncu_init_exptab %dth: (%f, %f)\n", 
+                m, h_tab1[m], h_tab2[m]);
+#endif
+        
+    }
+
+    //allocate device memory and dump
+    int size =sizeof(float) *dim1;
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_exp_info.tab1, size));
+    cutilSafeCall( cudaMemcpy(pgv->d_exp_info.tab1, h_tab1, size, 
+        cudaMemcpyHostToDevice));    
+    size =sizeof(float) *dim2;
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_exp_info.tab2, size));
+    cutilSafeCall( cudaMemcpy(pgv->d_exp_info.tab2, h_tab2, size, 
+        cudaMemcpyHostToDevice));    
+    
+    //delete tab1 and tab2 in host
+    delete []h_tab1;
+    delete []h_tab2;
+}
+
+extern "C"	void	cu_prepare_render(cu_particle_splotch *p, 
+    int n, cu_gpu_vars* pgv)
+{
+    //to free some memory that will not be needed
+    printf("\nPrepare device rendering...\n");
+    //init exp table
+    cu_init_exptab(MAX_EXP, pgv);
+
+    //now we just use the space for colorize for particles
+//    pgv->d_ps_render =pgv->d_ps_colorize;
+    //allocate new memory as it may grow longer after spliting
+    CLEAR_MEM(pgv->d_ps_colorize);
+    int size = (n+1) *sizeof(cu_particle_splotch);
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, size));    
+
+    //copy filtered particles into device
+    size = n *sizeof(cu_particle_splotch);
+    cutilSafeCall(cudaMemcpy(pgv->d_ps_render, p,size, 
+        cudaMemcpyHostToDevice) );
+
+    //allocate fragment buffer memory on device
+    size =cu_get_fbuf_size( pgv);
+    cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size));    
+}
+
+extern "C"	void	cu_render1
+(int startP, int endP, bool a_eq_e, double grayabsorb, cu_gpu_vars* pgv)
+{
+    //endP actually exceed the last one to render
+    //get dims from pgv->policy object first
+    dim3 dimGrid, dimBlock;
+    pgv->policy->GetDimsRender(endP-startP, &dimGrid, &dimBlock);
+
+    //call device
+    k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, startP, endP, 
+        pgv->d_fbuf, a_eq_e, grayabsorb,pgv->d_exp_info);
+    
+}
+
+extern "C"	void	cu_get_fbuf
+(void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv)
+{
+    int size;
+    if (a_eq_e)
+        size =n* sizeof(cu_fragment_AeqE);
+    else
+        size =n* sizeof(cu_fragment_AneqE);
+
+    cutilSafeCall(cudaMemcpy(h_fbuf, pgv->d_fbuf,size, 
+        cudaMemcpyDeviceToHost) );
+}
+
+extern "C"
+void	cu_end(cu_gpu_vars* pgv)
+{
+    // clean up memory
+//    CLEAR_MEM((d_tmp));
+    CLEAR_MEM((pgv->d_pd));
+    CLEAR_MEM((pgv->d_ps_colorize));
+    CLEAR_MEM((pgv->d_colormap_info.map));
+    CLEAR_MEM((pgv->d_colormap_info.ptype_points));
+    CLEAR_MEM((pgv->d_exp_info.tab1));
+    CLEAR_MEM((pgv->d_exp_info.tab2));
+    CLEAR_MEM((pgv->d_fbuf));
+    CLEAR_MEM((pgv->d_pic));
+
+    cudaThreadExit();
+
+    //clear pgv->policy object
+    if (pgv->policy)
+        delete pgv->policy;
+}
+
+
+
+template<typename T> T findParamWithoutChange
+//    (paramfile *param, const std::string &key, const T &deflt)
+    (paramfile *param, std::string &key, T &deflt)
+{
+    T   value;
+    if (param->param_present(key))
+    {
+        param->findParam(key, value);
+        return value;
+    }
+    else
+        return deflt;
+}
+
+
+///////////////////////////////////////////////////////////////////////
+////////// NOT USED ////////////////////
+#ifdef NOT_USED
 extern "C" void cu_copy_particle_sim_to_device
 (cu_particle_sim *h_p, int n)
 {
@@ -110,18 +470,7 @@ extern "C"	void	cu_combine(cu_param_combine info)
 }
 
 
-extern "C"	void	cu_get_fbuf
-(void *h_fbuf, bool a_eq_e, unsigned long n)
-{
-    int size;
-    if (a_eq_e)
-        size =n* sizeof(cu_fragment_AeqE);
-    else
-        size =n* sizeof(cu_fragment_AneqE);
 
-    cutilSafeCall(cudaMemcpy(h_fbuf, d_fbuf,size, 
-        cudaMemcpyDeviceToHost) );
-}
 
 extern "C"	void	cu_render //one-go render only
 (cu_particle_splotch *p, unsigned int n,
@@ -153,45 +502,6 @@ extern "C"	void	cu_render //one-go render only
     //fragment buffer will be copied out in cu_get_fbuf();
 }
 
-extern "C"	void	cu_render1
-(int startP, int endP, bool a_eq_e, double grayabsorb)
-{
-    //endP actually exceed the last one to render
-    //get dims from policy object first
-    dim3 dimGrid, dimBlock;
-    policy->GetDimsRender(endP-startP, &dimGrid, &dimBlock);
-
-    //call device
-    k_render1<<<dimGrid, dimBlock>>>(d_ps_render, startP, endP, 
-        d_fbuf, a_eq_e, grayabsorb,d_exp_info);
-    
-}
-
-
-extern "C"	void	cu_prepare_render(cu_particle_splotch *p, int n)
-{
-    //to free some memory that will not be needed
-    printf("\nPrepare device rendering...\n");
-    //init exp table
-    cu_init_exptab(MAX_EXP);
-
-    //now we just use the space for colorize for particles
-//    d_ps_render =d_ps_colorize;
-    //allocate new memory as it may grow longer after spliting
-    CLEAR_MEM(d_ps_colorize);
-    int size = (n+1) *sizeof(cu_particle_splotch);
-    cutilSafeCall( cudaMalloc((void**) &d_ps_render, size));    
-
-    //copy filtered particles into device
-    size = n *sizeof(cu_particle_splotch);
-    cutilSafeCall(cudaMemcpy(d_ps_render, p,size, 
-        cudaMemcpyHostToDevice) );
-
-    //allocate fragment buffer memory on device
-    size =cu_get_fbuf_size();
-    cutilSafeCall( cudaMalloc((void**) &d_fbuf, size));    
-}
-
 extern "C"	float	cu_get_exp(float arg)
 {
     float   *d_result;
@@ -210,109 +520,6 @@ extern "C"	float	cu_get_exp(float arg)
     
 }
 
-extern "C"	void	cu_init_exptab(double maxexp)
-{
-    //set common fileds of d_exp_info
-    d_exp_info.expfac =d_exp_info.dim2 / maxexp;
-    //now make up tab1 and tab2 in host
-    float *h_tab1, *h_tab2;
-    int dim1 =d_exp_info.dim1, dim2 =d_exp_info.dim2;
-    h_tab1 =new float[dim1];
-    h_tab2 =new float[dim2];
-    for (int m=0; m<dim1; ++m)
-    {
-        h_tab1[m]=exp(m*dim1/d_exp_info.expfac);
-        h_tab2[m]=exp(m/d_exp_info.expfac);
-#ifdef _DEVICEEMU
-        if (m==100)
-            printf("\ncu_init_exptab %dth: (%f, %f)\n", 
-                m, h_tab1[m], h_tab2[m]);
-#endif
-        
-    }
-
-    //allocate device memory and dump
-    int size =sizeof(float) *dim1;
-    cutilSafeCall( cudaMalloc((void**) &d_exp_info.tab1, size));
-    cutilSafeCall( cudaMemcpy(d_exp_info.tab1, h_tab1, size, 
-        cudaMemcpyHostToDevice));    
-    size =sizeof(float) *dim2;
-    cutilSafeCall( cudaMalloc((void**) &d_exp_info.tab2, size));
-    cutilSafeCall( cudaMemcpy(d_exp_info.tab2, h_tab2, size, 
-        cudaMemcpyHostToDevice));    
-    
-    //delete tab1 and tab2 in host
-    delete []h_tab1;
-    delete []h_tab2;
-}
-
-
-extern "C"	void	cu_colorize(paramfile &params, cu_particle_splotch *h_ps, int n)
-{
-    //fetch parameters for device calling first
-    cu_param_colorize   pcolorize;
-    pcolorize.res       = params.find<int>("resolution",200);
-    pcolorize.ycut0     = params.find<int>("ycut0",0);
-    pcolorize.ycut1     = params.find<int>("ycut1",pcolorize.res);
-    pcolorize.zmaxval   = params.find<float>("zmax",1.e23);
-    pcolorize.zminval   = params.find<float>("zmin",0.0);
-    pcolorize.ptypes    = params.find<int>("ptypes",1);
-
-    for(int itype=0; itype<pcolorize.ptypes; itype++)
-    {
-      pcolorize.brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
-      pcolorize.grayabsorb[itype] = params.find<float>("gray_absorption"+dataToString(itype),0.2);
-      pcolorize.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
-    }
-    pcolorize.rfac=1.5;
-
-    //prepare memory for parameters and dump to device
-    cu_param_colorize   *d_param_colorize;
-    cutilSafeCall( cudaMalloc((void**) &d_param_colorize, sizeof(cu_param_colorize)));
-    cutilSafeCall( cudaMemcpy(d_param_colorize, &pcolorize, sizeof(cu_param_colorize), 
-        cudaMemcpyHostToDevice));    
-
-    //now prepare memory for d_particle_splotch.
-    //one more for dums
-    int size =n* sizeof(cu_particle_splotch);
-    cutilSafeCall( cudaMalloc((void**) &d_ps_colorize, size+sizeof(cu_particle_splotch)));
-
-    //fetch grid dim and block dim and call device
-    dim3    dimGrid, dimBlock;
-    policy->GetDimsColorize(n, &dimGrid, &dimBlock);    
-    k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, d_pd, n, d_ps_colorize,d_colormap_info);
-
-    //copy the result out
-    cutilSafeCall(cudaMemcpy(h_ps, d_ps_colorize, size, cudaMemcpyDeviceToHost) );    
-
-    //free params memory
-    CLEAR_MEM((d_param_colorize));
-
-    //device particle_sim memory can be freed now!
-
-    //particle_splotch memory on device will be freed in cu_end
-}
-
-extern "C" void		cu_init_colormap(cu_colormap_info h_info)
-{
-    //allocate memories for colormap and ptype_pionts
-    //and dump host data into it
-    int size =sizeof(cu_color_map_entry) *h_info.mapSize;    
-    cutilSafeCall( cudaMalloc((void**) &d_colormap_info.map, size));
-    cutilSafeCall(cudaMemcpy(d_colormap_info.map, h_info.map, 
-        size, cudaMemcpyHostToDevice) );    
-    //type
-    size =sizeof(int) *h_info.ptypes;
-    cutilSafeCall( cudaMalloc((void**) &d_colormap_info.ptype_points, size));
-    cutilSafeCall(cudaMemcpy(d_colormap_info.ptype_points, h_info.ptype_points, 
-        size, cudaMemcpyHostToDevice) );    
-       
-    //set fields of global varible d_colormap_info
-    d_colormap_info.mapSize =h_info.mapSize;
-    d_colormap_info.ptypes  =h_info.ptypes;
-   
-}
-
 //cu_get_color is only for debug
 extern "C" cu_color	cu_get_color(int ptype, float val)
 {
@@ -329,180 +536,6 @@ extern "C" cu_color	cu_get_color(int ptype, float val)
     return clr;
 }
 
-
-extern "C" 
-void    cu_init(paramfile &params)
-{
-    //initilize cuda runtime
-    cudaSetDevice( cutGetMaxGflopsDeviceId() );
-
-    unsigned int s;
-
-    //d_tmp used for debug
-    s =sizeof (float);
-    cutilSafeCall( cudaMalloc((void**) &d_tmp, s));
-    //copy 0.0 to *d_tmp;
-    float   f=0.0;
-    cutilSafeCall(cudaMemcpy(d_tmp, &f, sizeof(float),
-                              cudaMemcpyHostToDevice) );    
-
-    //Initialize policy class
-    policy =new CuPolicy(&params);
-}
-
-extern "C"
-void	cu_end()
-{
-    // clean up memory
-    CLEAR_MEM((d_tmp));
-    CLEAR_MEM((d_pd));
-    CLEAR_MEM((d_ps_colorize));
-    CLEAR_MEM((d_colormap_info.map));
-    CLEAR_MEM((d_colormap_info.ptype_points));
-    CLEAR_MEM((d_exp_info.tab1));
-    CLEAR_MEM((d_exp_info.tab2));
-    CLEAR_MEM((d_fbuf));
-    CLEAR_MEM((d_pic));
-    cudaThreadExit();
-
-    //clear policy object
-    if (policy)
-        delete policy;
-}
-
-extern "C"
-void	cu_range(paramfile &params ,cu_particle_sim* h_pd, unsigned int n)
-{
-   //allocate device memory for particle data
-    int s =policy->GetSizeDPD(n);
-#ifdef _DEVICEEMU
-    printf("\ndevice_particle_data size:%d\n" ,s);
-#endif
-    //one more space allocated for the dumb
-    cutilSafeCall( cudaMalloc((void**) &d_pd, s +sizeof(cu_particle_sim)));
-    
-    //copy particle data to device
-    cutilSafeCall(cudaMemcpy(d_pd, h_pd, s,
-                              cudaMemcpyHostToDevice) );    
-    //ask for dims from policy
-    dim3    dimGrid, dimBlock;
-    policy->GetDimsRange(n, &dimGrid, &dimBlock);    
-
-    //prepare parameters for stage 1
-    cu_param_range  pr;
-    int ptypes = params.find<int>("ptypes",1);
-    pr.ptypes =ptypes;
-    //now collect parameters from configuration
-    for(int itype=0;itype<ptypes;itype++)
-    {
-        pr.log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
-        pr.log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
-        pr.asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
-        pr.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
-        pr.mincol[itype]=1e30;
-        pr.maxcol[itype]=-1e30;
-        pr.minint[itype]=1e30;
-        pr.maxint[itype]=-1e30;
-    }
-    //allocate memory on device and dump parameters to it
-    cu_param_range  *d_pr=0;
-    s =sizeof(cu_param_range);
-    cutilSafeCall( cudaMalloc((void**) &d_pr, s) );    
-    cutilSafeCall(cudaMemcpy(d_pr, &pr, s,
-                              cudaMemcpyHostToDevice) );    
-
-    // call device for stage 1
-    k_range1<<<dimGrid,dimBlock>>>(d_pr, d_pd, n);
-    
-    // copy out particles for min_maxes
-    s =policy->GetSizeDPD(n);
-    cutilSafeCall(cudaMemcpy( h_pd, d_pd,  s,
-                              cudaMemcpyDeviceToHost) );    
-
-
-
-    //find the min-maxes
-    for (int m=0; m<n; m++)
-    {
-        get_minmax(pr.minint[h_pd[m].type], pr.maxint[h_pd[m].type], h_pd[m].I);
-        get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C1);
-        if (pr.col_vector[h_pd[m].type])
-        {
-            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C2);
-            get_minmax(pr.mincol[h_pd[m].type], pr.maxcol[h_pd[m].type], h_pd[m].C3);
-        }
-    }
-//for debug: dump_pr(&pr);
-
-
-    //??copy pr back into device??
-    //maybe not needed!
-
-    // call device for stage 2 ptypes times
-    // prepare parameters1 first
-    float minval_int, maxval_int, minval_col, maxval_col;
-    
-    for(int itype=0;itype<ptypes;itype++)
-    {
-        minval_int =findParamWithoutChange<float>(&params,  //in mid of developing only
-            "intensity_min"+dataToString(itype),pr.minint[itype]);
-        maxval_int = findParamWithoutChange<float>(&params, 
-            "intensity_max"+dataToString(itype),pr.maxint[itype]);
-        minval_col = findParamWithoutChange<float>(&params, 
-            "color_min"+dataToString(itype),pr.mincol[itype]);
-        maxval_col = findParamWithoutChange<float>(&params, 
-            "color_max"+dataToString(itype),pr.maxcol[itype]);
-//for debug: printf("\n%f, %f, %f, %f\n", minval_int, maxval_int, minval_col, maxval_col);
-
-        k_range2<<<dimGrid, dimBlock>>>(d_pr, d_pd, n, itype,
-            minval_int,maxval_int,minval_col,maxval_col);
-    }
-
-    //copy result out to host
-    //in mid of development only!!!
-    cutilSafeCall(cudaMemcpy(h_pd, d_pd, s,
-                              cudaMemcpyDeviceToHost) );    
-    
-    //free parameters on device
-     CLEAR_MEM((d_pr));
-
-    //d_pd will be freed in cu_end
-}//cu range over
-
-extern "C" void	cu_transform
-(paramfile &fparams, unsigned int n,
- double c[3], double l[3], double s[3],cu_particle_sim* h_pd)
-{
-    //retrieve pamaters for transformaiont first
-    cu_param_transform tparams;
-    getCuTransformParams(tparams,fparams,c,l,s);
-
-    //arrange memory for the parameters and copy to device
-    cu_param_transform  *d_pt;
-    int size =sizeof(cu_param_transform);
-    cutilSafeCall( cudaMalloc((void**) &d_pt, size) );    
-    cutilSafeCall(cudaMemcpy(d_pt, &tparams, size,
-                              cudaMemcpyHostToDevice) );    
-
-    //Get block dim and grid dim from policy object
-    dim3    dimGrid, dimBlock;
-    policy->GetDimsRange(n, &dimGrid, &dimBlock);    
-
-    //call device transformation
-    k_transform<<<dimGrid,dimBlock>>>(d_pd, n, d_pt);    
-
-    //free parameters' device memory
-     CLEAR_MEM((d_pt));
-
-   //copy result out to host
-    //in mid of development only!!!
-    size =policy->GetSizeDPD(n);
-    cutilSafeCall(cudaMemcpy(h_pd, d_pd, size,
-                              cudaMemcpyDeviceToHost) );    
- 
-}
-
-
 void dump_pr(cu_param_range *pr)
 {
     printf("\ndump_pr:\n");
@@ -516,19 +549,6 @@ void dump_pr(cu_param_range *pr)
             pr->log_col[i],	pr->asinh_col[i], pr->mincol[i],
     		pr->maxcol[i], pr->minint[i], pr->maxint[i]);
     }                     
-}
-
-template<typename T> T findParamWithoutChange
-    (paramfile *param, const std::string &key, const T &deflt)
-{
-    T   value;
-    if (param->param_present(key))
-    {
-        param->findParam(key, value);
-        return value;
-    }
-    else
-        return deflt;
 }
 
 /*
@@ -781,4 +801,4 @@ void cu_test2(int *l)
 }
 */
 #endif //CU_DO_TESTS
-
+#endif  //if def NOT_USED

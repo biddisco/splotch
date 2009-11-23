@@ -2,6 +2,8 @@
 CuPlicy is the class that knows the overall state of cuda application.
 All 'magic nunbers' are out of this class.
 */
+#ifndef	CUPOLICY_H
+#define	CUPOLICY_H
 
 #pragma once
 
@@ -35,3 +37,5 @@ public:
 	unsigned int GetFBufSize(bool a_eq_e);
 
 };
+
+#endif //CUPOLICY_H
