@@ -205,6 +205,7 @@ int main (int argc, char **argv)
   int snr1=snr_start,snr2=snr_start+1,snr1_now=-1,snr2_now=-1;
   double time1,time2;
 #endif
+  double time;
 
 // ----------------------------------------------
 // ----------- Loading Color Maps ---------------
@@ -384,7 +385,7 @@ int main (int argc, char **argv)
 		  snr2_now = snr2;
 		}
 #else
-	      gadget_reader(params,particle_data,0); ///vector<particle_sim> particle_data;
+	      gadget_reader(params,particle_data,0,&time); ///vector<particle_sim> particle_data;
 #ifdef GEOMETRY_FILE
 	      p_orig = particle_data;
 #endif
@@ -392,6 +393,9 @@ int main (int argc, char **argv)
 	      break;
 	    case 3: //enzo_reader(params,particle_data);
 	      break;
+            case 4:
+              gadget_millenium_reader(params,particle_data,0,&time);
+              break;
 	    default:
 	      planck_fail("No valid file type given ...");
 	      break;
