@@ -58,6 +58,7 @@ struct	cu_colormap_info
 	int ptypes;
 };
 
+
 struct	cu_particle_splotch
 {
 	float		x,y,r,ro;
