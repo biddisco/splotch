@@ -99,6 +99,7 @@ int gadget_find_block (bifstream &file,const string &label)
       blocksize=0;
       }
     }
+  if(file.eof()) file.clear();
   return(blocksize-8);
   }
 
@@ -214,7 +215,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	}
     }
 #ifdef USE_MPI
-  MPI_Bcast(&NPartThisTask, NTasks, MPI_LONG, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&NPartThisTask[0], NTasks, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
 
   if(mpiMgr.master())
@@ -749,7 +750,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
 	  gadget_read_header(infile,npartthis,time);
-
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
 	      int type = params.find<int>("ptype"+dataToString(itype),0);
