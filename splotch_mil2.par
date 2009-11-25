@@ -1,0 +1,116 @@
+############################
+# Input Options
+############################
+infile=/ptmp/mrbk/NewMillennium/BigRun/snapdir_067/snap_newMillen_067
+ptypes=1
+
+# 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: Gadget1
+simtype=4
+
+# In case of interpolating between snaps
+snap_start = 90
+snap_interpol = 8
+
+# Additional flags for Gadget1
+numfiles=512
+readparallel=8
+swap_endian=FALSE
+
+ptype0=1
+size_fix0=0.01
+size_present0=63               # 1+2+4+8+16+32
+size_fac0=1.0
+# 1: Velocity, 2: Internal Energy, 3: Density
+color_field0=1
+color_present0=63               # 1+2+4+8+16+32
+color_is_vector0=TRUE
+#color_fac0=1e5
+
+
+
+# Additinal flags for Enzo
+
+############################
+# Output Options
+############################
+pictype=0
+outfile=test_vel.tga
+resolution=3200
+#ycut0=100
+#ycut1=700
+
+colorbar=TRUE
+
+############################
+# Vizualization properties
+############################
+boostcolors=FALSE
+a_eq_e=TRUE
+# 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size 
+sort_type=0
+
+intensity_log0=FALSE
+color_log0=FALSE
+color_asinh0=TRUE
+color_min0=-4.0
+color_max0=4.0
+palette0=palettes/OldSplotch.pal
+brightness0=0.01                # 3.0
+gray_absorption0=0.5
+
+intensity_log1=FALSE
+color_log1=FALSE
+color_asinh1=TRUE
+#color_min1=-4.0
+#color_max1=4.0
+palette1=palettes/OldSplotch.pal
+brightness1=5.0                # 5.0
+gray_absorption1=0.5
+
+intensity_log2=FALSE
+color_log2=FALSE
+color_asinh2=FALSE
+color_min2=0.1
+color_max2=0.5
+palette2=palettes/OrionNew1.pal
+brightness2=10.0                # 10.0
+gray_absorption2=0.5
+
+
+
+
+############################
+# Geometrical setup
+############################
+
+#increases small HSML values to at least pixel size
+minhsmlpixel = FALSE
+
+#enables projection
+projection = TRUE
+
+#alternative read values from file
+geometry_file=mygeometry_r.dat
+geometry_start=0
+geometry_incr=1
+#or take give values explicitely
+camera_x=      50.0
+camera_y=      400.0
+camera_z=      50.0
+lookat_x=      50.0
+lookat_y=      50.0
+lookat_z=      50.0
+sky_x=0
+sky_y=0
+sky_z=1
+
+#define what to see
+fov=30
+#zmin=5000.0
+#zmax=7000.0
+
+
+
+
+
+
