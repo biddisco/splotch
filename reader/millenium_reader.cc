@@ -59,6 +59,19 @@ void gadget_plain_read_header(bifstream &file, int *npart, double *time)
 
   }
 
+void gadget_hsml_read_header(bifstream &file, int *nhsml)
+{
+  file.clear();
+  file.rewind();
+
+  file.skip(4);
+  file >> nhsml;
+  file.skip(4 + 8 + 4);
+  file.skip(4);
+
+  cout << " Nhsml: " << nhsml << endl;  
+}
+
 void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr, double *time)
 {
   int numfiles = params.find<int>("numfiles",1);
@@ -67,7 +80,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
 
-  string filename;
+  string filename,filenamehsml;
   bifstream infile;
 
   int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
@@ -130,7 +143,6 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	      planck_assert (infile,"could not open input file! <" + filename + ">");
 	      gadget_plain_read_header(infile,npartthis,time);
 	      infile.close();
-              cout << " Timestamp from file : " << *time << endl;
 	      for(int itype=0;itype<ptypes;itype++)
 		{
 		  int type = params.find<int>("ptype"+dataToString(itype),0);
@@ -147,9 +159,11 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	  NPartThisTask[itask] = NPartThisReadTask - SumPartThisReadTask;
 	  itask++;
 	}
+      cout << " Timestamp from file : " << *time << endl;
     }
+
 #ifdef USE_MPI
-  MPI_Bcast(&NPartThisTask, NTasks, MPI_LONG, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&NPartThisTask[0], NTasks, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
 
   if(mpiMgr.master())
@@ -290,16 +304,17 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
       int ToTask=ThisTask;
       int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
+      int nhsml;
 
       for(int f=0;f<NFilePerRead;f++)
 	{
-          int npartthis[6];
+	  int npartthis[6];
 	  int LastType=0;
+	  string inhsmlname = params.find<string>("inhsml");
+	  if(numfiles>1) filenamehsml=inhsmlname+"."+dataToString(ThisTaskReads[ThisTask]+f);
+	  else           filenamehsml=inhsmlname;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
-	  infile.open(filename.c_str(),doswap);
-	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_plain_read_header(infile,npartthis,time);
 
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
@@ -309,15 +324,23 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	      string label_size = params.find<string>("size_label"+dataToString(itype),"XXXX");
 	      if (fix_size == 0.0)
 		{
-                  planck_assert(false,"Should not be executed for millenium format !!!");
-		  // gadget_find_block(infile,label_size);
-		  infile.skip(4);
+		  infile.open(filenamehsml.c_str(),doswap);
+		  planck_assert(infile,"could not open input file! <" + filenamehsml + ">");
+		  gadget_hsml_read_header(infile,&nhsml);
+		  npartthis[0] = nhsml;
 		  int present = params.find<int>("size_present"+dataToString(itype),type);
 		  for(int s=LastType+1; s<type; s++)
 		    if(npartthis[s]>0 && (1<<s & present))
 		      {
+			planck_assert(false,"should not be used in millenium reader !");
 			infile.skip(4*npartthis[s]);
 		      }
+		}
+	      else
+		{
+		  infile.open(filename.c_str(),doswap);
+		  planck_assert (infile,"could not open input file! <" + filename + ">");
+		  gadget_plain_read_header(infile,npartthis,time);
 		}
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
@@ -360,8 +383,8 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		    }
 		}
 	      LastType=type;
+	      infile.close();
 	    }
-	  infile.close();
 	}
       planck_assert(ncount == 0,"Some Particles where left when reading Sizes ...");
     }
