@@ -1,10 +1,10 @@
+#ifdef USE_MPI
+#include "mpi.h"
+#endif
 #include <iostream>
 #include <cmath>
 #include <fstream>
 #include <algorithm>
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
 
 #ifdef VS
 #include "cxxsupport/arr.h"

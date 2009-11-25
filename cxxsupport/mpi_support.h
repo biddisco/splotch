@@ -30,9 +30,11 @@
 #ifndef PLANCK_MPI_SUPPORT_H
 #define PLANCK_MPI_SUPPORT_H
 
-#include "arr.h"
 #ifdef USE_MPI
 #include "mpi.h"
+#endif
+#include "arr.h"
+#ifdef USE_MPI
 
 template <typename T> inline MPI_Datatype getMpiType();
 template<> inline MPI_Datatype getMpiType<char>()
