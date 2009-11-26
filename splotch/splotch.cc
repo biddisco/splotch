@@ -79,27 +79,28 @@ struct	param_combine_thread//for host combine thread
 DWORD WINAPI combine(void	*param);
 DWORD WINAPI TestThreadCombineTime(void	*p);
 
-//for temp testing
-//cu_color	pic1[800][800];//for host combine
-//cu_color	pic2[800][800];//for host rendering
-
-struct region_cmp
-{
-	int operator()(const cu_particle_splotch &p1, const cu_particle_splotch &p2)
-	{
-		int	rgn1, rgn2;
-		rgn1 =(p1.maxx -p1.minx)*(p1.maxy -p1.miny);
-		rgn2 =(p2.maxx -p2.minx)*(p2.maxy -p2.miny);
-		return rgn1>rgn2;
-	}
+//for record times
+enum TimeRecords{
+	CUDA_INIT,
+	COPY2C_LIKE,
+	RANGE,
+	TRANSFORMATION,
+	COLORIZE,
+	FILTER,
+	SORT,
+	RENDER,
+	COMBINE,
+	THIS_THREAD,
+	TIME_RECORDS,	//to indicate number of times
 };
 
 #ifdef CUDA_THREADS
 	//struct containing thread task info
 	struct thread_info{		
-		int	devID;			//index of the device selected
-		int	startP, endP;	//start and end particles to handle
-		arr2	<COLOUR>	*pPic;	//the output image
+		int	devID;						//index of the device selected
+		int	startP, endP;				//start and end particles to handle
+		arr2	<COLOUR>	*pPic;		//the output image
+		float	times[TIME_RECORDS];	//carry out times of computing
 	};
 
 	//some global info shared by all threads
@@ -110,10 +111,25 @@ struct region_cmp
 	int ptypes = 0;
 //	arr2<COLOUR> *g_ppic;	//for testing only
 
-	void	DevideThreadsTasks(thread_info *tInfo, int nDev);
-	DWORD WINAPI cu_thread_func(void *p);
+	void	DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
+	DWORD	WINAPI cu_thread_func(void *p);
+	DWORD	WINAPI host_thread_func(void *p);
 #endif //if CUDA_THREADS defined 
 
+/*for temp testing
+cu_color	pic1[800][800];//for host combine
+cu_color	pic2[800][800];//for host rendering
+struct region_cmp
+{
+	int operator()(const cu_particle_splotch &p1, const cu_particle_splotch &p2)
+	{
+		int	rgn1, rgn2;
+		rgn1 =(p1.maxx -p1.minx)*(p1.maxy -p1.miny);
+		rgn2 =(p2.maxx -p2.minx)*(p2.maxy -p2.miny);
+		return rgn1>rgn2;
+	}
+};
+*/
 #endif //ifdef CUDA
 
 #ifdef USE_MPI
@@ -493,7 +509,6 @@ int main (int argc, char **argv)
       times[7] += myTime() - last_time;
       last_time = myTime();
 #endif//NO_HOST_RENDER
-
 #endif //if not def CUDA
 
 
@@ -503,58 +518,80 @@ int main (int argc, char **argv)
 // -----------------------------------
 // After reading, ranging with device
 #ifdef CUDA
+	//test assign
+    vector<particle_sim>	tmp;
+	int	n1,n2,n3;
+	n1 =particle_data.size();
+	tmp.assign(particle_data.begin(), particle_data.begin()+1000);
+	n2 =particle_data.size();
+	n3 =tmp.size();
+	bool b;
+	b =particle_data.empty();
+
 	//prepare the parameters for the cuda thread
-/*	thread_info	threadInfo;
-	int res = params.find<int>("resolution",200);
-	arr2<COLOUR> pic(res,res);
-	pic.fill(COLOUR(0.0, 0.0, 0.0));
-	threadInfo.pPic =&pic;
-	threadInfo.endP =particle_data.size()-1;
-	threadInfo.startP = 0;
-
-	threadInfo.devID =1;
-
-	//cu_thread_func(&threadInfo);
-	HANDLE h;
-	h =CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)cu_thread_func, 
-				&threadInfo, 0, NULL );
-
-	WaitForSingleObject(h, INFINITE);*/
-
 	//the final image
 	int res = params.find<int>("resolution",200);
 	arr2<COLOUR> pic(res,res);//, pic1(res,res);//pic1 for debug only
 
+	//test host threading
+/*	thread_info	ti;
+	ti.startP=0;
+	ti.endP =25000;
+	ti.pPic =&pic;
+	HANDLE h=CreateThread( NULL, 0, 
+			(LPTHREAD_START_ROUTINE)host_thread_func,&ti, 0, NULL );
+	WaitForSingleObject(h, INFINITE);
+	goto out;
+*/
 	//new arrays of thread_info and HANDLE
 	int	nDev;
-	nDev =params.find<int>("gpu_number",1);
-	thread_info	*tInfo =new thread_info[nDev];
-	HANDLE		*tHandle =new HANDLE[nDev];
+	nDev =params.find<int>("gpu_number",0);
+	//see if use host as a working thread
+	bool bHostThread;
+	bHostThread =params.find<bool>("use_host_as_thread", false);
+	int nThread = bHostThread? nDev+1: nDev;
+	//init objects for threads control
+	thread_info	*tInfo =new thread_info[nThread];
+	HANDLE		*tHandle =new HANDLE[nThread];
 
 	//fill in thread_info
+	tInfo[0].pPic =&pic;
 	for (int i=0; i<nDev; i++)
 	{
 		tInfo[i].devID =i;
 		//local var pic is assigned to the first device
-		if (i==0)
-			tInfo[i].pPic =&pic;
-		else
+		if ( i!=0 )
 			tInfo[i].pPic =new arr2<COLOUR>(res, res);
 	}
+	//make the last one work for host thread
+	if (bHostThread )
+	{
+		tInfo[nThread-1].devID =-1;
+		if ( nThread-1 != 0 )
+			tInfo[nThread-1].pPic =new arr2<COLOUR>(res, res);
+	}
 	//decide how to devide task by another function
-	DevideThreadsTasks(tInfo, nDev);
+	DevideThreadsTasks(tInfo, nThread, bHostThread);
 
 	//issue the threads
 	for (int i=0; i<nDev; i++)
 		tHandle[i] =CreateThread( NULL, 0, 
 			(LPTHREAD_START_ROUTINE)cu_thread_func,&(tInfo[i]), 0, NULL );
+	//issue the host thread too
+	if (bHostThread)
+		tHandle[nDev] =CreateThread( NULL, 0, 
+			(LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
 	//and wait for them to finish
-	WaitForMultipleObjects(nDev, tHandle, true, INFINITE);
+	WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
 
+	//post-process
+//	VTimer	timer;
+//	timer.reset();
+//	timer.start();
 	//combine the results to pic
 	if (1)//a_eq_e)
 	{
-		for (int i=1; i<nDev; i++)
+		for (int i=1; i<nThread; i++)
 			for (int x=0; x<res; x++) //  error when x =1,
 				for (int y=0; y<res; y++)
 					pic[x][y] =pic[x][y] + (*tInfo[i].pPic)[x][y];
@@ -563,10 +600,6 @@ int main (int argc, char **argv)
 	else
 		;//to be done later...
 
-	//post-process
-	VTimer	timer;
-	timer.reset();
-	timer.start();
 	if(1)//a_eq_e)
 	{
 		exptable	xexp(MAX_EXP);
@@ -581,18 +614,46 @@ int main (int argc, char **argv)
 	else
 	{
 	}
-	timer.stop();
-	cout << endl << "Post-process pic[] cost time:" << timer.getTime() << "s" <<endl;
+//	timer.stop();
+//	cout << endl << "Post-process pic[] cost time:" << timer.getTime() << "s" <<endl;
 
+
+	//now output the time records
+	for (int i=0; i<nThread; i++)
+	{
+		if ( tInfo[i].devID!= -1)
+		{
+			cout<< endl <<"Times of GPU" << i << ":" <<endl;
+			cout<< "CUDA_INIT:		" << tInfo[i].times[CUDA_INIT] <<endl;
+			cout<< "COPY2C_LIKE:		" << tInfo[i].times[COPY2C_LIKE] <<endl;
+			cout<< "RANGE:			" << tInfo[i].times[RANGE] <<endl;
+			cout<< "TRANSFORMATION:		" << tInfo[i].times[TRANSFORMATION] <<endl;
+			cout<< "COLORIZE:		" << tInfo[i].times[COLORIZE] <<endl;
+			cout<< "FILTER:			" << tInfo[i].times[FILTER] <<endl;
+			cout<< "SORT:			" << tInfo[i].times[SORT] <<endl;
+			cout<< "RENDER:			" << tInfo[i].times[RENDER] <<endl;
+			cout<< "COMBINE:		" << tInfo[i].times[COMBINE] <<endl;
+			cout<< "THIS_THREAD:		" << tInfo[i].times[THIS_THREAD] <<endl;
+			cout<<endl;
+		}
+		else
+		{
+			cout<< endl <<"Times of CPU as a thread:" <<endl;
+			cout<< "RANGE:			" << tInfo[i].times[RANGE] <<endl;
+			cout<< "TRANSFORMATION:		" << tInfo[i].times[TRANSFORMATION] <<endl;
+			cout<< "COLORIZE:		" << tInfo[i].times[COLORIZE] <<endl;
+			cout<< "RENDER:			" << tInfo[i].times[RENDER] <<endl;
+			cout<< "THIS_THREAD:		" << tInfo[i].times[THIS_THREAD] <<endl;
+			cout<<endl;
+		}
+	}
 
 	//delete pics that were created
-	for (int i=1; i<nDev; i++)
+	for (int i=1; i<nThread; i++)
 	  delete tInfo[i].pPic;
 	//delete thread_info and HANDLE arrays
-
 	delete [] tInfo;
 	delete [] tHandle;
-	  
 
 
 #endif	//if def CUDA
@@ -606,11 +667,14 @@ int main (int argc, char **argv)
 
 /////////////////////////////////////////////////////////////////////
 //Codes merge here whether using CUDA or not
+	
+	//for record the writing time
+	last_time = myTime();
 
 // ---------------------------------
 // ----------- Colorbar ------------
 // ---------------------------------
-      if (master)
+	if (master)
 	{
 	  bool colbar = params.find<bool>("colorbar",false);
 	  if (colbar)
@@ -700,15 +764,73 @@ int main (int argc, char **argv)
   mpiMgr.shutdown();
 
 #ifdef VS
-  //Just to hold the screen to read the messages
+  //Just to hold the screen to read the messages when debuging
   cout << endl << "Press any key to end..." ;
   getchar();
 #endif
+
 }
 
 
 ////////////////CUDA FUNCTIONS AND HELPER FUNCTIONS ////////////////////////////
 #ifdef CUDA
+DWORD	WINAPI host_thread_func(void *p)
+{
+	printf("\nHost Thread Start!\n");
+
+	thread_info	*tInfo = (thread_info*)p;
+
+	paramfile	params =*g_params;
+
+	vector<particle_sim>	particles;
+	vector<particle_sim>::iterator i1,i2;
+	i1 =particle_data.begin() +tInfo->startP;
+	i2 =particle_data.begin() +tInfo->endP;
+	particles.assign(i1, i2);
+
+	VTimer t, t1;
+
+	t1.start();
+
+	t.start();
+	particle_normalize(params,particles,false); 
+	t.stop();
+	tInfo->times[RANGE] =t.getTime();
+
+	t.reset();
+	t.start();
+	vector<particle_splotch> particle_col;
+    particle_project(params, particles, campos, lookat, sky);
+	t.stop();
+	tInfo->times[TRANSFORMATION] =t.getTime();
+
+	// ----------- Sorting ------------
+	// NO SORING FOR NOW
+	//int sort_type = params.find<int>("sort_type",1);
+	//particle_sort(particle_data,sort_type,true);
+
+	t.reset();
+	t.start();
+	particle_colorize(params, particles, particle_col, amap, emap);
+	t.stop();
+	tInfo->times[COLORIZE]=t.getTime();
+
+	t.reset();
+	t.start();
+	int res = params.find<int>("resolution",200);
+	float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+	bool a_eq_e = params.find<bool>("a_eq_e",true);
+	render_as_thread(particle_col,*(tInfo->pPic),a_eq_e,grayabsorb);
+	t.stop();
+	tInfo->times[RENDER] =t.getTime();
+	
+	t1.stop();
+	tInfo->times[THIS_THREAD] =t1.getTime();
+
+	printf("\nHost Thread End!\n");
+	return 1;
+}
+
 
 DWORD WINAPI combine(void	*param1)
 {
@@ -775,12 +897,18 @@ DWORD WINAPI combine(void	*param1)
 	return 1;
 }
 
-
 DWORD WINAPI cu_thread_func(void *pinfo)
 {
+	VTimer	timer, timer1;
+	float	time;
+	timer1.reset(); //for the whole thread
+	timer1.start();
+
 	//get the input info
-	thread_info	tInfo = *((thread_info*)pinfo);	//	if (!tInfo.devID) return 0;
-	int	nParticle =tInfo.endP -tInfo.startP +1;
+	thread_info	*tInfo = (thread_info*)pinfo;	//	if (!tInfo->devID) return 0;
+	int	nParticle =tInfo->endP -tInfo->startP +1;
+	//prepare for recording times
+	memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
 
 	paramfile	params =*g_params;
 	//CUDA test. for developing only. cut short particle_data
@@ -789,8 +917,6 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 	it =particle_data.begin();
 //	particle_data.erase(it+testPCount, particle_data.end());
 
-	VTimer	timer;
-	float	time;
 	cu_particle_sim	*d_particle_data;
 //	d_particle_data =new cu_particle_sim[particle_data.size()];
 	d_particle_data =new cu_particle_sim[nParticle];
@@ -802,21 +928,23 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 	//CUDA Init 
 timer.reset();
 timer.start();
-	cu_init(params, tInfo.devID, &gv);
+	cu_init(params, tInfo->devID, &gv);
 timer.stop();
 time =timer.getTime();
-	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
+//	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
+	tInfo->times[CUDA_INIT]=time;
 
 	//Copy particle sim into C-style object d_particle_data
 timer.reset();
 timer.start();
 	//copy data to local C-like array d_particle_data, in mid of developing only
 //	for (int i=0; i<particle_data.size(); i++)
-	for (int i=tInfo.startP,j=0; i<=tInfo.endP; i++, j++)
+	for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
 		memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Copying particles to device cost time:" << time << "s" <<endl;
+//	cout << endl << "Copying particles to device cost time:" << time << "s" <<endl;
+	tInfo->times[COPY2C_LIKE]=time;
 
 	//CUDA Ranging
 timer.reset();
@@ -826,7 +954,8 @@ timer.start();
 	cu_range(params, d_particle_data, nParticle, &gv);
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Ranging with device cost time:" << time << "s" <<endl;
+//	cout << endl << "Ranging with device cost time:" << time << "s" <<endl;
+	tInfo->times[RANGE]=time;
 
 	//old code then copy particles back, in mid of developing only
 	//CUDA RANGING DONE!
@@ -841,7 +970,8 @@ timer.start();
 	cu_transform(params, nParticle,c, l, s,d_particle_data, &gv);
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
+//	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
+	tInfo->times[TRANSFORMATION]=time;
 
 /*	temporarily ignore sorting 191109.
 	it becomes comlicated when using multiple threads with sorting
@@ -935,7 +1065,8 @@ timer.start();
 	cu_colorize(params, cu_ps, size, &gv);
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Coloring with device cost time:" << time << "s" <<endl;
+//	cout << endl << "Coloring with device cost time:" << time << "s" <<endl;
+	tInfo->times[COLORIZE]=time;
 
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -977,7 +1108,9 @@ timer.start();
 //old code observ size
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Filtering 1 costs time:" << time << "s" <<endl;
+//	cout << endl << "Filtering 1 costs time:" << time << "s" <<endl;
+	tInfo->times[FILTER] =time;
+
 timer.reset();
 timer.start();
 
@@ -1013,7 +1146,8 @@ timer.start();
 	}
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Filtering 2 costs time:" << time << "s" <<endl;
+	//cout << endl << "Filtering 2 costs time:" << time << "s" <<endl;
+	tInfo->times[FILTER] +=time;
 
 timer.reset();
 timer.start();
@@ -1022,7 +1156,8 @@ timer.start();
 //	sort(v_ps1.begin(), v_ps1.end(), region_cmp());
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Sorting costs time:" << time << "s" <<endl;
+	//cout << endl << "Sorting costs time:" << time << "s" <<endl;
+	tInfo->times[SORT]=time;
 
 timer.reset();
 timer.start();
@@ -1040,7 +1175,8 @@ timer.start();
 	}
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Filtering 3 costs time:" << time << "s" <<endl;
+	//cout << endl << "Filtering 3 costs time:" << time << "s" <<endl;
+	tInfo->times[FILTER] +=time;
 
 
 	//old code
@@ -1050,7 +1186,7 @@ time =timer.getTime();
 	//here is the point that particle sim array on deivce is useless
 
 	//just for rendering time coming next
-    last_time = myTime();
+	//last_time = myTime();
 
 	//old codecompare to gold result, test only
 
@@ -1077,6 +1213,8 @@ time =timer.getTime();
 
 //here's the point of multi-go loop starts
 #ifndef CUDA_DEVICE_COMBINE //combined by host
+timer.reset();//for rendering
+timer.start();
 	//prepare fragment buffer memory space first
 	cu_fragment_AeqE	*fragBufAeqE;
 	cu_fragment_AneqE	*fragBufAneqE;
@@ -1094,14 +1232,12 @@ time =timer.getTime();
 	}
 	
 
-timer.reset();
-timer.start();
 
 	cu_prepare_render(cu_ps_filtered,pFiltered, &gv);
 
 //old code test AUTOMIC_ADD
 	//clear the output pic
-	tInfo.pPic ->fill(COLOUR(0.0, 0.0, 0.0));
+	tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
 
 	//initialize combine vars
 	//cu_ps_filtered:	the particle array
@@ -1121,7 +1257,7 @@ timer.start();
 
 	//now prepare the parameters for combination
 	param_combine_thread	param;
-	param.pPic =tInfo.pPic;
+	param.pPic =tInfo->pPic;
 	param.a_eq_e =a_eq_e;
 	if (a_eq_e)
 		param.fbuf =(void*)fragBufAeqE;
@@ -1166,7 +1302,7 @@ timer.start();
 			bFinished =true;
 
 		//render it
-//		printf("\nThread%d, cu_render1, %d-%d of %d", tInfo.devID, renderStartP, renderEndP, pFiltered);
+//		printf("\nThread%d, cu_render1, %d-%d of %d", tInfo->devID, renderStartP, renderEndP, pFiltered);
 		cu_render1(renderStartP, renderEndP, 
 			a_eq_e, grayabsorb, &gv); 
 
@@ -1174,7 +1310,7 @@ timer.start();
 		if ( renderStartP!=0 )
 		{
 			//combine it 
-//			printf("\nThread%d, combine, %d-%d", tInfo.devID, combineStartP, combineEndP);			
+//			printf("\nThread%d, combine, %d-%d", tInfo->devID, combineStartP, combineEndP);			
 			param.combineStartP =combineStartP;
 			param.combineEndP =combineEndP;
 			DWORD	id;
@@ -1192,8 +1328,8 @@ timer.start();
 		//see if last chunk
 		if (bFinished)
 		{
-//			printf("\nThread%d, last chunk to combine",tInfo.devID);
-//			printf("\nThread%d, combine, %d-%d",tInfo.devID, combineStartP, combineEndP);
+//			printf("\nThread%d, last chunk to combine",tInfo->devID);
+//			printf("\nThread%d, combine, %d-%d",tInfo->devID, combineStartP, combineEndP);
 			param.combineStartP =combineStartP;
 			param.combineEndP =combineEndP;
 			combine(&param);
@@ -1203,8 +1339,10 @@ timer.start();
 
 timer.stop();
 time =timer.getTime();
-	cout << endl << "Render to fragment buffer cost time:" << time << "s" <<endl;
-	cout << endl << "Time for combination:" << param.timeUsed <<endl;
+//	cout << endl << "Render to fragment buffer cost time:" << time << "s" <<endl;
+//	cout << endl << "Time for combination:" << param.timeUsed <<endl;
+	tInfo->times[RENDER]=time;
+	tInfo->times[COMBINE]=param.timeUsed;
 
 //....
 //give a test for combination without device involved
@@ -1239,23 +1377,49 @@ time =timer.getTime();
 	else
 		delete  []fragBufAneqE;
 
-	printf("\nThread %d finished!\n", tInfo.devID);
+	printf("\nThread %d finished!\n", tInfo->devID);
+
+	tInfo->times[THIS_THREAD] =timer1.getTime();
 
 	return 1;
 }
 
-void	DevideThreadsTasks(thread_info *tInfo, int nDev)
+void	DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
 {
-	int	curStart =0, len;
-	len =particle_data.size() /nDev;
+	bool	bTestLoadBalancing;
+	bTestLoadBalancing =g_params->find<bool>("test_load_balancing", false);
+	int		hostLoad =g_params->find<int>("host_load",0);
 
-	for (int i=0; i<nDev; i++)
+	int	curStart =0, onePercent, averageDevLen, nDev;
+	nDev =bHostThread? nThread-1: nThread;
+	onePercent =particle_data.size()/100;
+	averageDevLen = (nDev!=0)? onePercent *(100-hostLoad)/nDev :
+		0;
+
+	for (int i=0; i<nThread; i++)
 	{
 		tInfo[i].startP =curStart;
-		tInfo[i].endP	=curStart +len;
+		
+		if (tInfo[i].devID != -1) //not a host
+		{
+			if ( bTestLoadBalancing )
+			{
+				int	gpuLoad;
+				gpuLoad =g_params->find<int>("gpu_load"+dataToString(i),0);
+				tInfo[i].endP =curStart +gpuLoad* onePercent;
+			}
+			else
+				tInfo[i].endP =curStart +averageDevLen;
+		}
+		else //if this is a host
+		{
+			tInfo[i].endP =curStart +hostLoad *onePercent;
+		}
+
 		curStart =tInfo[i].endP +1;
 	}
-	tInfo[nDev-1].endP =particle_data.size()-1;
+
+	tInfo[nThread-1].endP =particle_data.size()-1;
 }
 
 DWORD WINAPI TestThreadCombineTime(void	*p)
