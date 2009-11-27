@@ -1,7 +1,7 @@
 ############################
 # Input Options
 ############################
-infile=/ptmp/mrbk/NewMillennium/BigRun/snapdir_067/snap_newMillen_067
+infile=/afs/mpa/project/sim/Millennium2/SmallRun/snapdir_067/snap_newtest432_subidorder_067
 ptypes=1
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: Gadget1
@@ -12,18 +12,24 @@ snap_start = 90
 snap_interpol = 8
 
 # Additional flags for Gadget1
-numfiles=512
-readparallel=8
+numfiles=16
+readparallel=4
 swap_endian=FALSE
 
 ptype0=1
-size_fix0=0.01
+size_fix0=0
 size_present0=63               # 1+2+4+8+16+32
 size_fac0=1.0
-# 1: Velocity, 2: Internal Energy, 3: Density
-color_field0=1
-color_present0=63               # 1+2+4+8+16+32
+
+# 0: Velocity, 1: Density, 2: Velocity Dispersion
+# For velocity dispersion
+color_field0=0
 color_is_vector0=TRUE
+# For 3D velocity
+#color_field0=2
+#color_is_vector0=FALSE
+
+color_present0=63               # 1+2+4+8+16+32
 #color_fac0=1e5
 
 
@@ -49,33 +55,22 @@ a_eq_e=TRUE
 # 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size 
 sort_type=0
 
+# For velocity dispersion
 intensity_log0=FALSE
-color_log0=FALSE
-color_asinh0=TRUE
-color_min0=-4.0
-color_max0=4.0
+color_log0=TRUE
+color_asinh0=FALSE
 palette0=palettes/OldSplotch.pal
-brightness0=0.01                # 3.0
+brightness0=0.001
 gray_absorption0=0.5
 
-intensity_log1=FALSE
-color_log1=FALSE
-color_asinh1=TRUE
-#color_min1=-4.0
-#color_max1=4.0
-palette1=palettes/OldSplotch.pal
-brightness1=5.0                # 5.0
-gray_absorption1=0.5
-
-intensity_log2=FALSE
-color_log2=FALSE
-color_asinh2=FALSE
-color_min2=0.1
-color_max2=0.5
-palette2=palettes/OrionNew1.pal
-brightness2=10.0                # 10.0
-gray_absorption2=0.5
-
+# For 3D velocity
+#intensity_log0=FALSE
+#color_log0=FALSE
+#color_asinh0=TRUE
+#color_min0=-4.0
+#color_max0=4.0
+#brightness0=0.01
+#gray_absorption0=0.5
 
 
 
@@ -95,7 +90,7 @@ geometry_start=0
 geometry_incr=1
 #or take give values explicitely
 camera_x=      50.0
-camera_y=      400.0
+camera_y=      250.0
 camera_z=      50.0
 lookat_x=      50.0
 lookat_y=      50.0
