@@ -42,12 +42,12 @@ using namespace RAYPP;
 void gadget_plain_read_header(bifstream &file, int *npart, double *time)
 {
   double massarr[6],redshift;
-  int npartall[6];
+  int npartall[6],length1,length2;
 
   file.clear();
   file.rewind();
 
-  file.skip(4);
+  file >> length1;   // file.skip(4);
   file.get(npart,6);
   file.get(massarr,6);
   file >> *time >> redshift;
@@ -55,22 +55,140 @@ void gadget_plain_read_header(bifstream &file, int *npart, double *time)
   file.get(npartall,6);
 
   file.skip(256 - 6*4 - 6*8 - 3*8 - 6*4);
-  file.skip(4);
+  file >> length2;   // file..skip(4);
+  if(length1!=length2)
+    planck_assert(false,"Header is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=256 || length2!=256)
+    planck_assert(false,"Header length is not 256 ! ("+dataToString(length1)+","+dataToString(length2)+")");
 
-  }
-
-void gadget_hsml_read_header(bifstream &file, int *nhsml)
-{
-  file.clear();
-  file.rewind();
-
-  file.skip(4);
-  file >> nhsml;
-  file.skip(4 + 8 + 4);
-  file.skip(4);
-
-  cout << " Nhsml: " << nhsml << endl;  
 }
+
+void gadget_find_pos(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2;
+
+  // Skipping Header
+  gadget_plain_read_header(file, npart, &time);
+}
+
+void gadget_find_vel(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0;
+
+  // Jump to Positions
+  gadget_find_pos(file, npart);
+  // Skipping Positions
+  file >> length1;   // file.skip(4);
+  for(int i=0;i<6;i++)
+    if(npart[i] > 0)
+      ntot+=npart[i];
+  file.skip(3*4*ntot);
+  file >> length2;   // file.skip(4);
+  if(length1!=length2)
+    planck_assert(false,"Position skip is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=3*4*ntot || length2!=3*4*ntot)
+    planck_assert(false,"Position skip length is not "+dataToString(3*4*ntot)+" ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(file.eof()) file.clear();
+}
+
+void gadget_find_id(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0;
+
+  // Jump to Velocities
+  gadget_find_vel(file, npart);
+  // Skipping Velocities
+  file >> length1;   // file.skip(4);
+  for(int i=0;i<6;i++)
+    if(npart[i] > 0)
+      ntot+=npart[i];
+  file.skip(3*4*ntot);
+  file >> length2;   // file.skip(4);
+  if(length1!=length2)
+    planck_assert(false,"Velocity skip is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=3*4*ntot || length2!=3*4*ntot)
+    planck_assert(false,"Velocity skip length is not "+dataToString(3*4*ntot)+" ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(file.eof()) file.clear();
+}
+
+void gadget_find_mass(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0,lid=4;
+
+  // Jump to IDs
+  gadget_find_id(file, npart);
+  // Skipping IDs
+  file >> length1;   // file.skip(4);
+  for(int i=0;i<6;i++)
+    if(npart[i] > 0)
+      ntot+=npart[i];
+  if(length1 > lid*ntot)
+    lid=8;
+  file.skip(lid*ntot);
+  file >> length2;   // file.skip(4);
+  if(length1!=length2)
+    planck_assert(false,"ID skip is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=lid*ntot || length2!=lid*ntot)
+    planck_assert(false,"ID skip length is not "+dataToString(lid*ntot)+" ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(file.eof()) file.clear();
+}
+
+void gadget_find_hsml(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0;
+
+  // Jump to Mass
+  gadget_find_mass(file, npart);
+  // No Massentry to skip !
+}
+
+void gadget_find_density(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0;
+
+  // Jump to HSML
+  gadget_find_hsml(file, npart);
+  // Skipping HSML
+  file >> length1;   // file.skip(4);
+  for(int i=0;i<6;i++)
+    if(npart[i] > 0)
+      ntot+=npart[i];
+  file.skip(4*ntot);
+  file >> length2;   // file.skip(4);
+  if(length1!=length2)
+    planck_assert(false,"HSML skip is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=4*ntot || length2!=4*ntot)
+    planck_assert(false,"HSML skip length is not "+dataToString(4*ntot)+" ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(file.eof()) file.clear();
+}
+
+void gadget_find_veldisp(bifstream &file, int* npart)
+{
+  double time;
+  int length1,length2,ntot=0;
+
+  // Jump to Density
+  gadget_find_density(file, npart);
+  // Skipping Density
+  file >> length1;   // file.skip(4);
+  for(int i=0;i<6;i++)
+    if(npart[i] > 0)
+      ntot+=npart[i];
+  file.skip(4*ntot);
+  file >> length2;   // file.skip(4);
+  if(length1!=length2)
+    planck_assert(false,"Density skip is not matched ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(length1!=4*ntot || length2!=4*ntot)
+    planck_assert(false,"Density skip length is not "+dataToString(4*ntot)+" ! ("+dataToString(length1)+","+dataToString(length2)+")");
+  if(file.eof()) file.clear();
+}
+
 
 void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr, double *time)
 {
@@ -80,7 +198,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
 
-  string filename,filenamehsml;
+  string filename;
   bifstream infile;
 
   int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
@@ -226,7 +344,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
           cout << " Task: " << ThisTask << " reading file " << filename << endl;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_plain_read_header(infile,npartthis,time);
+	  gadget_find_pos(infile,npartthis);
 	  infile.skip(4);
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
@@ -310,37 +428,25 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	{
 	  int npartthis[6];
 	  int LastType=0;
-	  string inhsmlname = params.find<string>("inhsml");
-	  if(numfiles>1) filenamehsml=inhsmlname+"."+dataToString(ThisTaskReads[ThisTask]+f);
-	  else           filenamehsml=inhsmlname;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
+	  infile.open(filename.c_str(),doswap);
+	  planck_assert (infile,"could not open input file! <" + filename + ">");
+	  gadget_plain_read_header(infile,npartthis,time);
 
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
 	      int type = params.find<int>("ptype"+dataToString(itype),1);
 	      float fix_size = params.find<float>("size_fix"+dataToString(itype),1.0);
 	      float size_fac = params.find<float>("size_fac"+dataToString(itype),1.0);
-	      string label_size = params.find<string>("size_label"+dataToString(itype),"XXXX");
 	      if (fix_size == 0.0)
 		{
-		  infile.open(filenamehsml.c_str(),doswap);
-		  planck_assert(infile,"could not open input file! <" + filenamehsml + ">");
-		  gadget_hsml_read_header(infile,&nhsml);
-		  npartthis[0] = nhsml;
+                  gadget_find_hsml(infile,npartthis);
+		  infile.skip(4);
 		  int present = params.find<int>("size_present"+dataToString(itype),type);
 		  for(int s=LastType+1; s<type; s++)
 		    if(npartthis[s]>0 && (1<<s & present))
-		      {
-			planck_assert(false,"should not be used in millenium reader !");
-			infile.skip(4*npartthis[s]);
-		      }
-		}
-	      else
-		{
-		  infile.open(filename.c_str(),doswap);
-		  planck_assert (infile,"could not open input file! <" + filename + ">");
-		  gadget_plain_read_header(infile,npartthis,time);
+		      infile.skip(4*npartthis[s]);
 		}
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
@@ -419,20 +525,34 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
 	  planck_assert (infile,"could not open input file! <" + filename + ">");
-	  gadget_plain_read_header(infile,npartthis,time);
-
 	  for(int itype=0;itype<ptypes;itype++)
 	    {
 	      int type = params.find<int>("ptype"+dataToString(itype),1);
+              int col = params.find<int>("color_field"+dataToString(itype),0);
 	      bool col_vector = params.find<bool>("color_is_vector"+dataToString(itype),true);
 	      float col_fac = params.find<float>("color_fac"+dataToString(itype),1.0);
 	      int read_col = 1;
-              infile.skip(4);
-	      infile.skip(npartthis[type]*3*4);
-	      infile.skip(4);
 
+	      switch(col)
+		{
+		case 0:
+		  gadget_find_vel(infile,npartthis);
+		  planck_assert(col_vector,"Color type "+dataToString(col)+" has to be declared as a vector !!!");
+		  break;
+		case 1:
+		  gadget_find_density(infile,npartthis);
+		  planck_assert(!col_vector,"Color type "+dataToString(col)+" has not to be declared as a vector !!!");
+		  break;
+		case 2:
+		  gadget_find_veldisp(infile,npartthis);
+		  planck_assert(!col_vector,"Color type "+dataToString(col)+" has not to be declared as a vector !!!");
+		  break;
+		default:
+		  planck_assert(false,"Color type "+dataToString(col)+" not known !!!");
+		  break;
+		}
 	      infile.skip(4);
-	      int present = 1+2+4+8+16+32;
+              int present = params.find<int>("color_present"+dataToString(itype),0);
 	      for(int s=LastType+1; s<type; s++)
 		if(npartthis[s]>0 && (1<<s & present))
 		  {
