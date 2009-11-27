@@ -31,7 +31,8 @@ using namespace RAYPP;
 
 #include "splotch/splotchutils.h"
 
-long bin_reader_tab (vector<particle_sim> &points, float *maxr, float *minr, 
+long bin_reader_tab (paramfile &params, vector<particle_sim> &points, 
+                     float *maxr, float *minr, 
                      int mype, int npes)
 {
 /*
@@ -59,7 +60,6 @@ which_fields[7] = color 3 (B)
    FILE * auxFile;
    float * dataarray;
    float * destarray;
-   char datafile[500];
    
    long total_size=0;
    long pe_size;
@@ -69,72 +69,68 @@ which_fields[7] = color 3 (B)
 // offset could be a input parameter
    long offset = 0;
 
-   int num_of_fields;
    int n_load_fields = 8;
    int * which_fields = new int [n_load_fields];
    long totalsize;
    long totalsize_f;
+   int num_of_fields;
+
+   bool doswap = params.find<bool>("swap_endian",true);   
+   string datafile = params.find<string>("infile");
+   
    if(mype == 0)
    {
-     cout << "BINARY TABLE\n";
-     cout << "Input data file name\n";
-     scanf("%s", datafile);
-     cout << datafile << "\n";
-     cout << "Number of columns\n";
-     scanf("%d", &num_of_fields);
-     cout << "x column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[0]);
-     cout << "y column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[1]);
-     cout << "z column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[2]);
-     cout << "r column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[3]);
-     cout << "I column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[4]);
-     cout << "C1 column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[5]);
-     cout << "C2 column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[6]);
-     cout << "C3 column (1-" << num_of_fields << "), -1 NONE\n";
-     scanf("%d", &which_fields[7]);
+     num_of_fields = params.find<int>("num_columns");
+
+     which_fields[0] = params.find<int>("x",-1);
+     which_fields[1] = params.find<int>("y",-1);
+     which_fields[2] = params.find<int>("z",-1);
+     which_fields[3] = params.find<int>("r",-1);
+     which_fields[4] = params.find<int>("I",-1);
+     which_fields[5] = params.find<int>("C1",-1);
+     which_fields[6] = params.find<int>("C2",-1);
+     which_fields[7] = params.find<int>("C3",-1); 
+
+     cout << "TABULAR BINARY FILE\n";
+     cout << "Input data file name: " << datafile << endl;
+     cout << "Number of columns " << num_of_fields << endl;
+     cout << "x column (1 - " << num_of_fields << "), " << which_fields[0] << endl;
+     cout << "y column (2 - " << num_of_fields << "), " << which_fields[1] << endl;
+     cout << "z column (3 - " << num_of_fields << "), " << which_fields[2] << endl;
+     cout << "r column (4 - " << num_of_fields << "), " << which_fields[3] << endl;
+     cout << "I column (5 - " << num_of_fields << "), " << which_fields[4] << endl;
+     cout << "C1 column (6 - " << num_of_fields << "), " << which_fields[5] << endl;
+     cout << "C2 column (7 - " << num_of_fields << "), " << which_fields[6] << endl;
+     cout << "C3 column (8 - " << num_of_fields << "), " << which_fields[7] << endl;
 
      for (int ii=0; ii<8; ii++)which_fields[ii]--;
 
-     pFile = fopen(datafile, "rb");
+     pFile = fopen(datafile.c_str(), "rb");
      fseek (pFile, 0, SEEK_END);
      totalsize = ftell (pFile);
      fclose(pFile);
-// number of elements (of each variable) for a processor
-     totalsize_f = (totalsize-offset)/(sizeof(float)*num_of_fields);
-     pe_size = totalsize_f/npes;
-     last_pe_adding = totalsize_f-pe_size*npes;
-#ifdef DEBUG
-     cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
-#endif
    }
 #ifdef USE_MPI
-   MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-   MPI_Bcast(&last_pe_adding, 1, MPI_LONG, 0, MPI_COMM_WORLD);
    MPI_Bcast(&num_of_fields, 1, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
+   MPI_Bcast(&totalsize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
-
-   long pe_size_orig = pe_size;
+   // number of elements (of each variable) for a processor
+   totalsize_f = (totalsize-offset)/(sizeof(float)*num_of_fields);
+   pe_size = totalsize_f/npes;
+   last_pe_adding = totalsize_f-pe_size*npes;
    if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
-   float * readarray;
-   readarray = new float [num_of_fields];
-
+   long pe_size_orig = pe_size;
+#ifdef DEBUG
+   if(mype == 0)  cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
+#endif
    long long stride=pe_size_orig*sizeof(float)*num_of_fields*mype+offset;
 
-#ifdef USE_MPI
-   MPI_Bcast(&datafile[0], 500, MPI_CHAR, 0, MPI_COMM_WORLD);
-#endif
-
+   float * readarray;
+   readarray = new float [num_of_fields];
    bifstream infile;
-   bool doswap = false;
-   infile.open(datafile, doswap);
+   infile.open(datafile.c_str(), doswap);
    infile.rewind();
    
 #ifdef DEBUG
@@ -195,11 +191,13 @@ which_fields[7] = color 3 (B)
    MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
    MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
 #endif
+   delete [] which_fields;
    delete [] readarray;
    return pe_size;
 }
 
-long bin_reader_block (vector<particle_sim> &points, float *maxr, float *minr, 
+long bin_reader_block (paramfile &params, vector<particle_sim> &points, 
+                       float *maxr, float *minr, 
                        int mype, int npes)
 {
 /*
@@ -228,7 +226,6 @@ which_fields[7] = color 3 (B)
    FILE * auxFile;
    float * dataarray;
    float * destarray;
-   char datafile[500];
    
    long total_size=0;
    long pe_size;
@@ -240,71 +237,61 @@ which_fields[7] = color 3 (B)
    long stride;
 
    int n_load_fields = 8;
-   int num_of_fields;
    int * which_fields = new int [n_load_fields];
    long totalsize;
    long totalsize_f;
    long last_pe_adding;
+
+   bool doswap = params.find<bool>("swap_endian",true);   
+   string datafile = params.find<string>("infile");
+   int num_of_fields = params.find<int>("num_blocks",1);
+
+   which_fields[0] = params.find<int>("x",-1);
+   which_fields[1] = params.find<int>("y",-1);
+   which_fields[2] = params.find<int>("z",-1);
+   which_fields[3] = params.find<int>("r",-1);
+   which_fields[4] = params.find<int>("I",-1);
+   which_fields[5] = params.find<int>("C1",-1);
+   which_fields[6] = params.find<int>("C2",-1);
+   which_fields[7] = params.find<int>("C3",-1);
+
    if(mype == 0)
    {
      cout << "BLOCK BINARY FILE\n";
-     cout << "Input data file name\n";
-     scanf("%s", datafile);
-     cout << datafile << "\n";
-     cout << "Number of blocks\n";
-     scanf("%d", &num_of_fields);
-     cout << "x block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[0]);
-     cout << "y block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[1]);
-     cout << "z block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[2]);
-     cout << "r block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[3]);
-     cout << "I block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[4]);
-     cout << "C1 block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[5]);
-     cout << "C2 block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[6]);
-     cout << "C3 block (1-" << num_of_fields<< "), -1 NONE\n";
-     scanf("%d", &which_fields[7]);
-
-     pFile = fopen(datafile, "rb");
+     cout << "Input data file name: " << datafile << endl;
+     cout << "Number of blocks " << num_of_fields << endl;
+     cout << "x block (1 - " << num_of_fields << "), " << which_fields[0] << endl;
+     cout << "y block (2 - " << num_of_fields << "), " << which_fields[1] << endl;
+     cout << "z block (3 - " << num_of_fields << "), " << which_fields[2] << endl;
+     cout << "r block (4 - " << num_of_fields << "), " << which_fields[3] << endl;
+     cout << "I block (5 - " << num_of_fields << "), " << which_fields[4] << endl;
+     cout << "C1 block (6 - " << num_of_fields << "), " << which_fields[5] << endl;
+     cout << "C2 block (7 - " << num_of_fields << "), " << which_fields[6] << endl;
+     cout << "C3 block (8 - " << num_of_fields << "), " << which_fields[7] << endl;
+     pFile = fopen(datafile.c_str(), "rb");
      fseek (pFile, 0, SEEK_END);
      totalsize = ftell (pFile);
      fclose(pFile);
-// number of elements (of each variable) for a processor
-     field_size = (totalsize-offset)/(sizeof(float)*num_of_fields);
-     pe_size = (long)(field_size / npes);
-     last_pe_adding = field_size-pe_size*npes;
-#ifdef DEBUG
-     cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
-#endif
+     field_size = totalsize/(sizeof(float)*num_of_fields);
    }
 #ifdef USE_MPI
    MPI_Bcast(&field_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-   MPI_Bcast(&last_pe_adding, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-   MPI_Bcast(&pe_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-   MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
 #endif
 
+// number of elements (of each variable) for a processor
+   pe_size = (long)(field_size / npes);
+   last_pe_adding = field_size-pe_size*npes;
    long pe_size_orig = pe_size;
    if(mype == npes-1)pe_size += last_pe_adding;
    points.resize(pe_size);
    float * readarray;
    readarray = new float [pe_size];
 
-#ifdef USE_MPI
-   MPI_Bcast(&datafile[0], 500, MPI_CHAR, 0, MPI_COMM_WORLD);
-#endif
-
    cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
 
    
    bifstream infile;
-   bool doswap = false;
-   infile.open(datafile, doswap);
+   infile.open(datafile.c_str(), doswap);
 
 #ifdef DEBUG
    cout << "Reading " << n_load_fields << " fields for " << pe_size << " particles\n";
@@ -372,6 +359,7 @@ which_fields[7] = color 3 (B)
    MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
    MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
 #endif
+   delete [] which_fields;
    delete [] readarray;
    return pe_size;
 }
