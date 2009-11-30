@@ -319,6 +319,9 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
     if(NPartThisTask[i] > nmax)
       nmax = NPartThisTask[i];
 
+  vector <float> fdummy;
+  vector <int> idummy;
+
   float *v1_tmp,*v2_tmp,*v3_tmp;
   int *i1_tmp;
   v1_tmp=new float[nmax];
@@ -354,12 +357,18 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		  {
 		    infile.skip(4*3*npartthis[s]);
 		  }
-	      for(int m=0; m<npartthis[type]; ++m)
+
+              fdummy.resize(npartthis[type]*3);
+	      idummy.resize(npartthis[type]);
+	      infile.get(&fdummy[0],npartthis[type]*3);
+	      for(int nread=0,m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
-		      infile >> p[ncount].x >> p[ncount].y >> p[ncount].z;
-		      p[ncount].type=itype;
+		      p[ncount].x=fdummy[nread++];
+                      p[ncount].y=fdummy[nread++];
+                      p[ncount].z=fdummy[nread++];
+		      p[ncount].type=itype; 
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
@@ -370,7 +379,9 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		  else
 		    {
 #ifdef USE_MPI
-		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
+		      v1_tmp[ncount] = fdummy[nread++];
+		      v2_tmp[ncount] = fdummy[nread++];
+		      v3_tmp[ncount] = fdummy[nread++];
 		      i1_tmp[ncount] = itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -386,12 +397,16 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		      planck_assert(false,"Should not be executed without MPI support !!!");
 #endif
 		    }
+		  /*
+		  planck_assert(nread < npartthis[type]*3,"Running out of read buffer ("+dataToString(nread)+
+				"/"+dataToString(npartthis[type]*3)+") ...");
+		  */
 		}
 	      LastType=type;
 	    }
 	  infile.close();
 	}
-      planck_assert(ncount == 0,"Some Particles where left when reading Positions ...");
+      planck_assert(ncount == 0,"Some Particles where left when reading Positions ("+dataToString(ncount)+")...");
     }
   else
     {
@@ -448,15 +463,17 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		    if(npartthis[s]>0 && (1<<s & present))
 		      infile.skip(4*npartthis[s]);
 		}
-	      for (int m=0; m<npartthis[type]; ++m)
+	      if (fix_size == 0.0)
+		{
+		  fdummy.resize(npartthis[type]);
+		  infile.get(&fdummy[0],npartthis[type]);
+		}
+	      for (int nread=0,m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
 		      if (fix_size == 0.0)
-			{
-			  infile >> p[ncount].r;
-			  p[ncount].r *= size_fac;
-			}
+			p[ncount].r = fdummy[nread++] * size_fac;
 		      else
 			p[ncount].r = fix_size;
 		      ncount++;
@@ -470,10 +487,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		    {
 #ifdef USE_MPI
 		      if (fix_size == 0.0)
-			{
-			  infile >> v1_tmp[ncount];
-			  v1_tmp[ncount] *= size_fac;
-			}
+			v1_tmp[ncount] = fdummy[nread++] * size_fac;
 		      else
 			v1_tmp[ncount] = fix_size;
 		      ncount++;
@@ -561,21 +575,32 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 		      nskip *=3;
 		    infile.skip(4*nskip);
 		  }
-	      for (int m=0; m<npartthis[type]; ++m)
+	      if (read_col > 0)
+		{
+		  if(col_vector)
+		    {
+		      fdummy.resize(npartthis[type]*3);
+		      infile.get(&fdummy[0],npartthis[type]*3);
+		    }
+		  else
+		    {
+		      fdummy.resize(npartthis[type]);
+		      infile.get(&fdummy[0],npartthis[type]);
+		    }
+		}
+	      for (int nread=0,m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
 		      if (read_col > 0)
 			{
-			  infile >> p[ncount].C1;
-			  p[ncount].C1 *= col_fac;
+			  p[ncount].C1 = fdummy[nread++] * col_fac;
 			  if(col_vector)
 			    {
-			      infile >> p[ncount].C2 >> p[ncount].C3;
-			      p[ncount].C2 *= col_fac;
-			      p[ncount].C3 *= col_fac;
-                              p[ncount].I = 1;
+			      p[ncount].C2 = fdummy[nread++] * col_fac;
+			      p[ncount].C3 = fdummy[nread++] * col_fac;
 			    }
+			  p[ncount].I = 1;
 			}
 		      else
 			{
@@ -596,13 +621,11 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 #ifdef USE_MPI
 		      if (read_col > 0)
 			{
-			  infile >> v1_tmp[ncount];
-			  v1_tmp[ncount] *= col_fac;
+			  v1_tmp[ncount] = fdummy[nread++] * col_fac;
 			  if(col_vector)
 			    {
-			      infile >> v2_tmp[ncount] >> v3_tmp[ncount];
-			      v2_tmp[ncount] *= col_fac;
-			      v3_tmp[ncount] *= col_fac;
+			      v2_tmp[ncount] = fdummy[nread++] * col_fac;
+			      v3_tmp[ncount] = fdummy[nread++] * col_fac;
 			    }
 			}
 		      else
