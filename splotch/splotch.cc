@@ -1,5 +1,4 @@
 /*
- * test
  * Copyright (c) 2004-2008
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
@@ -193,6 +192,7 @@ int main (int argc, char **argv)
     cout << "running with " << mpiMgr.num_ranks() << " MPI tasks." << endl << endl;
     }
 
+
 #ifdef INTERPOLATE
 #ifndef GEOMETRY_FILE
   planck_fail("splotch: interpolation without geometry file makes no sense !");
@@ -203,11 +203,10 @@ int main (int argc, char **argv)
 // ----------- Needed Data -----------
 // -----------------------------------
 
-  //  paramfile params (argv[1],master);
+  //paramfile params (argv[1],master);
   paramfile params (argv[1],false);
 #ifndef CUDA_THREADS
   vector<particle_sim> particle_data; ///row data from file
-  vector<particle_splotch> particle_col; ///used for screen coordinates, x, y, r, ro, a, e
   VECTOR campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
   vector<COLOURMAP> amap,emap;
   int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
@@ -488,7 +487,7 @@ int main (int argc, char **argv)
 // ------------------------------------
       if (master)                        
         cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
-      particle_colorize(params, particle_data, particle_col, amap, emap);///things goes to array particle_col now
+      particle_colorize(params, particle_data, amap, emap);///things goes to array particle_col now
       times[6] += myTime() - last_time;
       last_time = myTime();
 #endif
@@ -497,7 +496,7 @@ int main (int argc, char **argv)
 // ----------- Rendering ------------
 // ----------------------------------
       int res = params.find<int>("resolution",200);
-      long nsplotch=particle_col.size();
+      long nsplotch=particle_data.size();
       long nsplotch_all=nsplotch;
       mpiMgr.allreduce_sum (nsplotch_all);
       if (master)
@@ -506,7 +505,7 @@ int main (int argc, char **argv)
       float64 grayabsorb = params.find<float>("gray_absorption",0.2);
       bool a_eq_e = params.find<bool>("a_eq_e",true);
 #ifndef NO_HOST_RENDER
-      render(particle_col,pic,a_eq_e,grayabsorb);
+      render(particle_data,pic,a_eq_e,grayabsorb);
       times[7] += myTime() - last_time;
       last_time = myTime();
 #endif//NO_HOST_RENDER
