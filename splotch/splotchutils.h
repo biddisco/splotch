@@ -74,7 +74,9 @@ class COLOUR8
 struct particle_sim
   {
   float32 x,y,z,r,ro,I,C1,C2,C3;
-  int type;
+  int type,active;
+  COLOUR e;
+
 #ifdef INTERPOLATE
   unsigned int id;
 #ifdef HIGH_ORDER_INTERPOLATION
@@ -82,14 +84,15 @@ struct particle_sim
 #endif
 #endif
   particle_sim (float32 x_, float32 y_, float32 z_, float32 r_, float32 ro_, 
-                float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_
+                float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_,
+                int active_, const COLOUR &e_
 #ifdef INTERPOLATE
                 , unsigned int id_
 #ifdef HIGH_ORDER_INTERPOLATION
                 , float32 vx_, float32 vy_, float32 vz_
 #endif
 #endif
-                ): x(x_), y(y_), z(z_), r(r_), ro(ro_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_)
+                ): x(x_), y(y_), z(z_), r(r_), ro(ro_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_), active(active_), e(e_)
 #ifdef INTERPOLATE
                 , id(id_)
 #ifdef HIGH_ORDER_INTERPOLATION
@@ -101,17 +104,17 @@ struct particle_sim
 
   };
 
-
+/*
 struct particle_splotch
   {
   float32 x,y,r,ro;
-  COLOUR a,e;
+  COLOUR e;
 
-  particle_splotch (float32 x_, float32 y_, float32 r_, float32 ro_, const COLOUR &a_,
-             const COLOUR &e_)
-    : x(x_), y(y_), r(r_), ro(ro_), a(a_), e(e_) {}
+  particle_splotch (float32 x_, float32 y_, float32 r_, float32 ro_, const COLOUR &e_)
+    : x(x_), y(y_), r(r_), ro(ro_), e(e_) {}
   particle_splotch () {}
   };
+*/
 
 struct zcmp
   {
@@ -222,7 +225,7 @@ class work_distributor
       }
   };
 
-void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic, 
+void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, 
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
@@ -255,6 +258,7 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
 
 
         for (unsigned int m=0; m<p.size(); ++m)
+	if(p[m].active==1)
           {
           float64 r=p[m].r;
           float64 posx=p[m].x, posy=p[m].y;
@@ -277,7 +281,7 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
 
-		  COLOUR8 a=p[m].a, e, q;
+	  COLOUR8 a=p[m].e, e, q;
           if (!a_eq_e)
             {
             e=p[m].e;
@@ -317,6 +321,10 @@ void render (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
             pic[ix+x0s][iy+y0s]=lpic[ix][iy];
         }//for this chunk
 }//#pragma omp parallel
+
+#ifdef USE_MPI
+      MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
       mpiMgr.allreduce_sum_raw
         (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
@@ -393,7 +401,7 @@ DWORD WINAPI render_thread (param_render_thread *param)
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
 
-		  cu_color a=p[m].a, e, q;
+	  cu_color a=p[m].e, e, q;
           if (!a_eq_e)
             {
             e=p[m].e;
@@ -502,7 +510,7 @@ void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic,
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
 
-		  cu_color a=p[m].a, e, q;
+	  cu_color a=p[m].e, e, q;
           if (!a_eq_e)
             {
             e=p[m].e;
@@ -623,7 +631,7 @@ long	fragments=0;
 //to count valid particles with one chunk, debug only
 //PValid++; 
 //continue;
-          COLOUR8 a(p[m].a.r, p[m].a.g, p[m].a.b) , e, q;
+          COLOUR8 a(p[m].e.r, p[m].e.g, p[m].e.b) , e, q;
           if (!a_eq_e)
             {
             e.r=p[m].e.r; e.g=p[m].e.g; e.b=p[m].e.b;
@@ -975,7 +983,7 @@ paramfile &params, double c[3], double l[3], double s[3])
 
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p, 
-                       vector<particle_splotch> &p2, 
+//                       vector<particle_splotch> &p2, 
                        vector<COLOURMAP> &amap, vector<COLOURMAP> &emap)
 {
   int res = params.find<int>("resolution",200);
@@ -991,7 +999,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   brightness.resize(ptypes);
   grayabsorb.resize(ptypes);
 
-  p2.resize(0);
+//  p2.resize(0);
   for(int itype=0;itype<ptypes;itype++)
     {
       brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
@@ -1003,6 +1011,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   
   for (int m=0; m<npart; ++m)
     {
+      p[m].active = 0;
       if (p[m].z<=0) continue;
       if (p[m].z<=zminval) continue;
       if (p[m].z>=zmaxval) continue;
@@ -1059,8 +1068,9 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
 //CUDA test over
 #endif
       COLOUR a=e;
-
-      p2.push_back(particle_splotch(p[m].x, p[m].y,p[m].r,p[m].ro,a,e));
+      p[m].active = 1;
+      p[m].e = e;
+//      p2.push_back(particle_splotch(p[m].x, p[m].y,p[m].r,p[m].ro,e));
     }
 }
 
