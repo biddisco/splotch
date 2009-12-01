@@ -332,7 +332,7 @@ extern "C"	void	cu_prepare_render(cu_particle_splotch *p,
     int n, cu_gpu_vars* pgv)
 {
     //to free some memory that will not be needed
-    printf("\nPrepare device rendering...\n");
+//    printf("\nPrepare device rendering...\n");
     //init exp table
     cu_init_exptab(MAX_EXP, pgv);
 
