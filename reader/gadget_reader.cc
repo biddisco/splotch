@@ -272,7 +272,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	{
 	  int npartthis[6];
 	  int present=1+2+4+8+16+32;
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
           cout << " Task: " << ThisTask << " reading file " << filename << endl;
@@ -361,7 +361,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	{
 	  int npartthis[6];
 	  int present=1+2+4+8+16+32;
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
@@ -443,7 +443,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	{
 	  int npartthis[6];
 	  int present=1+2+4+8+16+32;
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
@@ -522,7 +522,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
       for(int f=0;f<NFilePerRead;f++)
 	{
           int npartthis[6];
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
@@ -616,7 +616,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
       for(int f=0;f<NFilePerRead;f++)
 	{
           int npartthis[6];
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
@@ -744,7 +744,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
       for(int f=0;f<NFilePerRead;f++)
 	{
           int npartthis[6];
-	  int LastType=0;
+	  int LastType=-1;
 	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
 	  else           filename=infilename;
 	  infile.open(filename.c_str(),doswap);
