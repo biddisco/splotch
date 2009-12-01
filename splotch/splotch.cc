@@ -417,7 +417,7 @@ int main (int argc, char **argv)
 	      bin_reader_block_mpi(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 #else
 	      cout << "MPI reader not supported\n";
-	      exit
+	      exit;
 #endif
               break;
 	    default:
