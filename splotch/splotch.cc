@@ -371,10 +371,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_tab(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	            bin_reader_block(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
@@ -411,6 +411,14 @@ int main (int argc, char **argv)
 	      break;
             case 4:
               gadget_millenium_reader(params,particle_data,0,&time);
+              break;
+            case 5:
+#ifdef USE_MPI
+	      bin_reader_block_mpi(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+#else
+	      cout << "MPI reader not supported\n";
+	      exit
+#endif
               break;
 	    default:
 	      planck_fail("No valid file type given ...");
