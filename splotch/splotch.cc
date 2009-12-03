@@ -53,7 +53,7 @@
 #define NO_HOST_COLORING
 #define NO_HOST_RENDER
 #define	CUDA_THREADS
-#define	NO_WIN_THEAD
+#define	NO_WIN_THREAD
 //#define	CUDA_DEVICE_COMBINE
 //include head files
 #include "cuda/splotch_cuda.h"
@@ -574,7 +574,7 @@ int main (int argc, char **argv)
 	//decide how to devide task by another function
 	DevideThreadsTasks(tInfo, nThread, bHostThread);
 
-#ifndef NO_WIN_THEAD //to let it compiled in Linux, just for now, 2 Dec 2009.
+#ifndef NO_WIN_THREAD //to let it compiled in Linux, just for now, 2 Dec 2009.
 	//issue the threads
 	for (int i=0; i<nDev; i++)
 		tHandle[i] =CreateThread( NULL, 0, 
@@ -588,7 +588,7 @@ int main (int argc, char **argv)
 #else //do not use thread which is now Windows code
 	cu_thread_func (&(tInfo[0])); //just call it as normal function
 //	host_thread_func ( &(tInfo[nDev]) );
-#endif	//if not NO_WIN_THEAD
+#endif	//if not NO_WIN_THREAD
 
 	//post-process
 //	VTimer	timer;
