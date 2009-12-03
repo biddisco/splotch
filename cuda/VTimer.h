@@ -1,3 +1,7 @@
+<<<<<<< .mine
+/*
+Copyright things go here.
+*/
 #pragma once
 #include <windows.h>
 #if !defined(_M_IX86)
