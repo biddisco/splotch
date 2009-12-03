@@ -2,6 +2,7 @@
 #define SPLOTCH_KERNEL_H
 /*
 Try accelating splotch with CUDA. July 2009. 
+Copyright things go here.
 */
 
 #include "splotch_cuda.h"

@@ -1,3 +1,7 @@
+/*
+Copyright things go here.
+*/
+
 #include ".\cupolicy.h"
 #include <math.h>
 //#using <mscorlib.dll>
