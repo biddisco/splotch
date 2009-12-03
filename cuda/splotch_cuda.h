@@ -1,3 +1,7 @@
+/*
+Copyright things go here.
+*/
+
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
