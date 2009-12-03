@@ -53,6 +53,7 @@
 #define NO_HOST_COLORING
 #define NO_HOST_RENDER
 #define	CUDA_THREADS
+#define	NO_WIN_THEAD
 //#define	CUDA_DEVICE_COMBINE
 //include head files
 #include "cuda/splotch_cuda.h"
@@ -371,10 +372,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-	            bin_reader_tab(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+//	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-	            bin_reader_block(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+//	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
@@ -410,15 +411,7 @@ int main (int argc, char **argv)
 	    case 3: //enzo_reader(params,particle_data);
 	      break;
             case 4:
-              gadget_millenium_reader(params,particle_data,0,&time);
-              break;
-            case 5:
-#ifdef USE_MPI
-	      bin_reader_block_mpi(params, particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-#else
-	      cout << "MPI reader not supported\n";
-	      exit;
-#endif
+//              gadget_millenium_reader(params,particle_data,0,&time);
               break;
 	    default:
 	      planck_fail("No valid file type given ...");
@@ -495,7 +488,7 @@ int main (int argc, char **argv)
 // ------------------------------------
       if (master)                        
         cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
-      particle_colorize(params, particle_data, amap, emap);///things goes to array particle_col now
+      particle_colorize(params, particle_data, amap, emap);
       times[6] += myTime() - last_time;
       last_time = myTime();
 #endif
@@ -526,7 +519,7 @@ int main (int argc, char **argv)
 // -----------------------------------
 // After reading, ranging with device
 #ifdef CUDA
-	//test assign
+	//test assign, should remove later
     vector<particle_sim>	tmp;
 	int	n1,n2,n3;
 	n1 =particle_data.size();
@@ -581,6 +574,7 @@ int main (int argc, char **argv)
 	//decide how to devide task by another function
 	DevideThreadsTasks(tInfo, nThread, bHostThread);
 
+#ifndef NO_WIN_THEAD //to let it compiled in Linux, just for now, 2 Dec 2009.
 	//issue the threads
 	for (int i=0; i<nDev; i++)
 		tHandle[i] =CreateThread( NULL, 0, 
@@ -591,6 +585,10 @@ int main (int argc, char **argv)
 			(LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
 	//and wait for them to finish
 	WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
+#else //do not use thread which is now Windows code
+	cu_thread_func (&(tInfo[0])); //just call it as normal function
+//	host_thread_func ( &(tInfo[nDev]) );
+#endif	//if not NO_WIN_THEAD
 
 	//post-process
 //	VTimer	timer;
@@ -807,7 +805,7 @@ DWORD	WINAPI host_thread_func(void *p)
 
 	t.reset();
 	t.start();
-	vector<particle_splotch> particle_col;
+//	vector<particle_splotch> particle_col; not used anymore since Dec 09.
     particle_project(params, particles, campos, lookat, sky);
 	t.stop();
 	tInfo->times[TRANSFORMATION] =t.getTime();
@@ -819,7 +817,8 @@ DWORD	WINAPI host_thread_func(void *p)
 
 	t.reset();
 	t.start();
-	particle_colorize(params, particles, particle_col, amap, emap);
+//	particle_colorize(params, particles, particle_col, amap, emap);
+	particle_colorize(params, particles, amap, emap); //new calling
 	t.stop();
 	tInfo->times[COLORIZE]=t.getTime();
 
@@ -828,7 +827,8 @@ DWORD	WINAPI host_thread_func(void *p)
 	int res = params.find<int>("resolution",200);
 	float64 grayabsorb = params.find<float>("gray_absorption",0.2);
 	bool a_eq_e = params.find<bool>("a_eq_e",true);
-	render_as_thread(particle_col,*(tInfo->pPic),a_eq_e,grayabsorb);
+//	render_as_thread(particle_col,*(tInfo->pPic),a_eq_e,grayabsorb);
+	render_as_thread1(particles,*(tInfo->pPic),a_eq_e,grayabsorb);
 	t.stop();
 	tInfo->times[RENDER] =t.getTime();
 	
@@ -934,34 +934,34 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 	memset(&gv, 0, sizeof(cu_gpu_vars) );
 
 	//CUDA Init 
-timer.reset();
-timer.start();
+	timer.reset();
+	timer.start();
 	cu_init(params, tInfo->devID, &gv);
-timer.stop();
-time =timer.getTime();
+	timer.stop();
+	time =timer.getTime();
 //	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
 	tInfo->times[CUDA_INIT]=time;
 
 	//Copy particle sim into C-style object d_particle_data
-timer.reset();
-timer.start();
+	timer.reset();
+	timer.start();
 	//copy data to local C-like array d_particle_data, in mid of developing only
-//	for (int i=0; i<particle_data.size(); i++)
 	for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
 		memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
-timer.stop();
-time =timer.getTime();
+	timer.stop();
+	time =timer.getTime();
 //	cout << endl << "Copying particles to device cost time:" << time << "s" <<endl;
 	tInfo->times[COPY2C_LIKE]=time;
 
+	//here we analysis how to divide the whole task for large data handling
+
 	//CUDA Ranging
-timer.reset();
-timer.start();
+	timer.reset();
+	timer.start();
 	//call cuda range
-//	cu_range(params, d_particle_data, particle_data.size());
 	cu_range(params, d_particle_data, nParticle, &gv);
-timer.stop();
-time =timer.getTime();
+	timer.stop();
+	time =timer.getTime();
 //	cout << endl << "Ranging with device cost time:" << time << "s" <<endl;
 	tInfo->times[RANGE]=time;
 
@@ -969,15 +969,14 @@ time =timer.getTime();
 	//CUDA RANGING DONE!
 
 	//CUDA Transformation
-timer.reset();
-timer.start();
+	timer.reset();
+	timer.start();
 	double	c[3]={campos.x, campos.y, campos.z}, 
 			l[3]={lookat.x, lookat.y, lookat.z}, 
 			s[3]={sky.x, sky.y,	sky.z};
-//	cu_transform(params, particle_data.size(),c, l, s,d_particle_data);
 	cu_transform(params, nParticle,c, l, s,d_particle_data, &gv);
-timer.stop();
-time =timer.getTime();
+	timer.stop();
+	time =timer.getTime();
 //	cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
 	tInfo->times[TRANSFORMATION]=time;
 
@@ -1008,8 +1007,8 @@ PROBLEM HERE!
 */
 
 	  //CUDA Coloring
-timer.reset();
-timer.start();
+	timer.reset();
+	timer.start();
 	//init C style colormap 
 	cu_color_map_entry	*amapD;//amap for Device. emap is not used currently
 	int	*amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
@@ -1618,20 +1617,3 @@ cu_color	C_get_color(int ptype, float val, cu_color_map_entry *map, //will move 
 
 #endif
 //////////////////////////////////////////////////////////////////////
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
