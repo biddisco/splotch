@@ -1,3 +1,6 @@
+/*
+Copyright things go here.
+*/
 #include "VTimer.h"
 //#include "windows.h"
 
