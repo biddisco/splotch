@@ -1,0 +1,177 @@
+\input{splotch_include.tex}
+
+\title{High Performance Visualization of astrophyisical data using Splotch}
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{<author name>}
+%% \address[label1]{<address>}
+%% \address[label2]{<address>}
+
+\author{Marzia Rivi}
+\ead{m.rivi@cineca.it}
+\address{CINECA, Via Magnanelli 6/3, Casalecchio di Reno, Italy}
+
+\author{Zhefan Jin}
+\ead{Zhefan.Jin@port.ac.uk}
+\address{...}
+
+\author{Klaus Dolag}
+\ead{kdolag@MPA-Garching.MPG.DE}
+\address{...}
+
+\author{Claudio Gheller }
+\ead{c.gheller@cineca.it}
+\address{CINECA, Via Magnanelli 6/3, Casalecchio di Reno, Italy}
+
+\author{Mel Krokos }
+\ead{mel.krokos@port.ac.uk}
+\address{...}
+
+\begin{abstract}
+
+.........
+
+\end{abstract}
+
+\begin{keyword}
+%% keywords here, in the form: keyword \sep keyword
+
+
+Visualization \sep High Performance Computing \sep Astrophysics
+
+%% PACS codes here, in the form: \PACS code \sep code
+
+%% MSC codes here, in the form: \MSC code \sep code
+%% or \MSC[2008] code \sep code (2000 is the default)
+
+\end{keyword}
+
+\end{frontmatter}
+
+%%
+%% Start line numbering here if you want
+%%
+% \linenumbers
+
+\section{Introduction}
+\label{intro}
+
+Data represents a critical issue for scientists and, in particular, astronomers. 
+Observational instruments (telescopes, satellites...) produce enormous quantities of images and information. 
+Computers and numerical simulations generate huge amount of data. All these data must be stored, 
+managed and analyzed. These steps require great human effort, large scale facilities and efficient, powerful tools.  
+Knowledge-discovery and data mining software often offer an efficient
+instrument for automatically exploring large volumes of data. However, the most immediate,
+intuitive and effective way to discover and understand the properties of data
+is provided by {\it visualization}. Visualization leads the user to quickly
+focus on the interesting characteristics of a system. It allows
+ different properties of the data to be shown simultaneously, and it can allow the user 
+to navigate inside the data. Visualization is the most natural way of finding correlations, 
+similarities and patterns. It is an effective method for
+selecting special regions or features, on which the researcher can concentrate his/her
+efforts and the subsequent quantitative analysis. Finally, visualization is 
+useful to get a quick look at an ongoing processes, e.g. a numerical simulation, 
+in order, for instance, to monitor it and to understand if its behavior is as expected or if
+something is going wrong and, in that case, to correct it saving time and resources.\\
+For these reasons, the astronomical community has always dedicated special
+attention to the growth of graphical and visualization tools, driving their evolution or even being
+directly involved in the development of many of them.
+At present, the most popular software for astronomers can be subdivided
+into two main categories: tools for image display and processing and tools for
+plotting data. Notable among the former are IRAF, by NOAO; ESO-MIDAS, by the 
+European Southern Observatory; SaoImage, by the Smithsonian Astrophysical Observatory and
+GAIA, by ESO. Many other tools are available, but we refer to dedicated surveys
+for a complete list. Gnuplot and SuperMongo are 
+popular applications adopted for 2D data plots. A more sophisticated solution 
+is represented by IDL, by ITT Visual Information, which is characterized
+by a large library of functions specifically developed for astrophysics. 
+
+The last generation 
+of tools, like ParaView (cite), VisIVO (cite), VisIT (cite), Aladin
+\cite{Aladin} have been developed to overcome the limits
+and the barriers of traditional software by exploiting the latest technological 
+opportunities. Again, for a complete list, we refer to specific surveys. 
+
+In this paper we present the High Performance Computing implementation of
+Splotch, a ray-tracing software designed to visualize data coming from particle 
+based computer simulations. Cosmological N-Body simulations represents a paradigmatic
+example of such applications. They account for some of the largest simulations in astrophysics, 
+as, for instance, the MillenniumII simulation (cite), which describe the evolution 
+of a meaningful fraction of the universe by means of 10 billions of fluid elements
+(particles) interacting via gravitational forces. Each output of the MillenniumII simulation
+is about 200 Gbyte of data representing the 3D position and the velocity of the particles.
+The manipulation of this dataset is feasibile only if high performance computing (HPC)
+resources are adopted. 
+
+The sequential version of Splotch (cite) has  been re-designed and extended in order
+to exploit both multiprocessor and multi-GPUs architectures currently available. 
+A Single Instruction Multiple Data (SIMD) approach has been adopted for the parallelization
+of the Splotch core algorithms, adopting the MPI library to support distributed multicore systems, 
+OpenMP for shared memory nodes and CUDA for exploiting NVIDIA GPU systems. The different 
+solutions can be used jointly on hybrid architectures. The details and
+the benchmarks of such high performance implementation will be presented in the following sections.  
+
+
+\section{The Splotch Algorithm}
+\label{splotch}
+
+
+\section{Parallel Implementation}
+\label{parallel}
+
+The parallelization strategy of the Splotch code is based on a SIMD approach. This consists in 
+distributing the data in a balanced way between the different computing elements.
+Each computing element performs the same operations on its subset of data contributing 
+to the final (unique) image. The details of the parallelization are given in the next sections.
+
+\subsection{MPI-OpenMP Implementation}
+\label{mpi}
+
+\subsection{CUDA Implementation}
+\label{cuda}
+
+\section{Benchmarks}
+\label{bench}
+
+
+
+
+%% The Appendices part is started with the command \appendix;
+%% appendix sections are then done as normal sections
+%% \appendix
+
+%% \section{}
+%% \label{}
+
+%% References
+%%
+%% Following citation commands can be used in the body text:
+%% Usage of \cite is as follows:
+%%   \cite{key}         ==>>  [#]
+%%   \cite[chap. 2]{key} ==>> [#, chap. 2]
+%%
+
+%% References with BibTeX database:
+
+\bibliographystyle{elsarticle-num}
+\bibliography{<your-bib-database>}
+
+%% Authors are advised to use a BibTeX database file for their reference list.
+%% The provided style file elsarticle-num.bst formats references in the required Procedia style
+
+%% For references without a BibTeX database:
+
+% \begin{thebibliography}{00}
+
+%% \bibitem must have the following form:
+%%   \bibitem{key}...
+%%
+
+% \bibitem{}
+
+% \end{thebibliography}
+
+\end{document}
+
+%%
+%% End of file `procs-template.tex'. 
