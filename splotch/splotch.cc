@@ -372,10 +372,10 @@ int main (int argc, char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-//	            bin_reader_tab(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      bin_reader_tab(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 1: 
-//	            bin_reader_block(particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      bin_reader_block(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
@@ -411,7 +411,7 @@ int main (int argc, char **argv)
 	    case 3: //enzo_reader(params,particle_data);
 	      break;
             case 4:
-//              gadget_millenium_reader(params,particle_data,0,&time);
+              gadget_millenium_reader(params,particle_data,0,&time);
               break;
 	    default:
 	      planck_fail("No valid file type given ...");
