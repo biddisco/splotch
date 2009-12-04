@@ -600,14 +600,12 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 			      p[ncount].C2 = fdummy[nread++] * col_fac;
 			      p[ncount].C3 = fdummy[nread++] * col_fac;
 			    }
-			  p[ncount].I = 1;
 			}
 		      else
 			{
 			  p[ncount].C1 = 1;
 			  p[ncount].C2 = 1;
 			  p[ncount].C3 = 1;
-                          p[ncount].I = 1;
 			}
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -665,14 +663,118 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
 	  p[m].C1=v1_tmp[m];
 	  p[m].C2=v2_tmp[m];
 	  p[m].C3=v3_tmp[m];
-          p[m].I=1.0;
 	}
 #else
       planck_assert(false,"Should not be executed without MPI support !!!");
 #endif
     }
 
-  cout << "   -> " << p[0].C1 << "," << p[0].C2 << "," << p[0].C3 << "," << p[0].I << endl;
-  cout << "   -> " << p[npart-1].C1 << "," << p[npart-1].C2 << "," << p[npart-1].C3 << "," << p[npart-1].I << endl;
+  cout << "   -> " << p[0].C1 << "," << p[0].C2 << "," << p[0].C3 << endl;
+  cout << "   -> " << p[npart-1].C1 << "," << p[npart-1].C2 << "," << p[npart-1].C3 << endl;
+
+ if(mpiMgr.master())
+    cout << " Reading intensity ..." << endl;
+  if(ThisTaskReads[ThisTask] >= 0)
+    {
+      int ToTask=ThisTask;
+      int NPartThis=NPartThisTask[ThisTask];
+      long ncount=0;
+
+      for(int f=0;f<NFilePerRead;f++)
+	{
+          int npartthis[6];
+	  int LastType=0;
+	  if(numfiles>1) filename=infilename+"."+dataToString(ThisTaskReads[ThisTask]+f);
+	  else           filename=infilename;
+	  infile.open(filename.c_str(),doswap);
+	  planck_assert (infile,"could not open input file! <" + filename + ">");
+	  for(int itype=0;itype<ptypes;itype++)
+	    {
+	      int type = params.find<int>("ptype"+dataToString(itype),1);
+              int intensity = params.find<int>("intensity_field"+dataToString(itype),0);
+	      float intensity_fac = params.find<float>("intensity_fac"+dataToString(itype),1.0);
+	      int read_intensity = 1;
+
+	      switch(intensity)
+		{
+		case 0:
+                  read_intensity = 0;
+		  break;
+		case 1:
+		  gadget_find_density(infile,npartthis);
+		  break;
+		case 2:
+		  gadget_find_veldisp(infile,npartthis);
+		  break;
+		default:
+		  planck_assert(false,"Intensity type "+dataToString(intensity)+" not known !!!");
+		  break;
+		}
+	      infile.skip(4);
+              int present = params.find<int>("intensity_present"+dataToString(itype),0);
+	      for(int s=LastType+1; s<type; s++)
+		if(npartthis[s]>0 && (1<<s & present))
+		  {
+		    int nskip=npartthis[s];
+		    infile.skip(4*nskip);
+		  }
+	      if (read_intensity > 0)
+		{
+		  fdummy.resize(npartthis[type]);
+		  infile.get(&fdummy[0],npartthis[type]);
+		}
+	      for (int nread=0,m=0; m<npartthis[type]; ++m)
+		{
+		  if(ThisTask == ToTask)
+		    {
+		      if (read_intensity > 0)
+			p[ncount].I = fdummy[nread++] * intensity_fac;
+		      else
+			p[ncount].I = 1;
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  ToTask++;
+			  ncount=0;
+			}
+		    }
+		  else
+		    {
+#ifdef USE_MPI
+		      if (read_intensity > 0)
+			v1_tmp[ncount] = fdummy[nread++] * intensity_fac;
+		      else
+			v1_tmp[ncount] = 1;
+		      ncount++;
+		      if(ncount == NPartThisTask[ToTask])
+			{
+			  MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_INT, MPI_COMM_WORLD); 
+			  ToTask++;
+			  ncount=0;
+			}
+#else
+		      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+		    }
+		}
+	      LastType=type;
+	    }
+	  infile.close();
+	}
+      planck_assert(ncount == 0,"Some Particles where left when reading Intensities ...");
+    }
+  else
+    {
+#ifdef USE_MPI
+      MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_INT, MPI_COMM_WORLD, &status);
+      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+	p[m].I=v1_tmp[m];
+#else
+      planck_assert(false,"Should not be executed without MPI support !!!");
+#endif
+    }
+
+  cout << "   -> " << p[0].I << endl;
+  cout << "   -> " << p[npart-1].I << endl;
 
 }
