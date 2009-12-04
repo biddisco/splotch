@@ -17,7 +17,7 @@
 
 \author{Klaus Dolag}
 \ead{kdolag@MPA-Garching.MPG.DE}
-\address{...}
+\address{Max-Planck-Institut f\"ur Astrophysik, Karl-Schwarzschild Strasse 1, Garching bei M\"unchen, Germany}
 
 \author{Claudio Gheller }
 \ead{c.gheller@cineca.it}
@@ -88,22 +88,24 @@ by a large library of functions specifically developed for astrophysics.
 
 The last generation 
 of tools, like ParaView (cite), VisIVO (cite), VisIT (cite), Aladin
-\cite{Aladin} have been developed to overcome the limits
+(cite) have been developed to overcome the limits
 and the barriers of traditional software by exploiting the latest technological 
 opportunities. Again, for a complete list, we refer to specific surveys. 
 
 In this paper we present the High Performance Computing implementation of
-Splotch, a ray-tracing software designed to visualize data coming from particle 
+Splotch \citep{2008NJPh...10l5006D}, a ray-tracing software designed to visualize data coming from particle 
 based computer simulations. Cosmological N-Body simulations represents a paradigmatic
 example of such applications. They account for some of the largest simulations in astrophysics, 
 as, for instance, the MillenniumII simulation (cite), which describe the evolution 
 of a meaningful fraction of the universe by means of 10 billions of fluid elements
-(particles) interacting via gravitational forces. Each output of the MillenniumII simulation
-is about 200 Gbyte of data representing the 3D position and the velocity of the particles.
-The manipulation of this dataset is feasibile only if high performance computing (HPC)
-resources are adopted. 
+(particles) interacting via gravitational forces. Each output of the MillenniumII 
+\citep{2009MNRAS.398.1150B} simulation is about 400 Gbyte of data representing the 
+3D position and the velocity of the particles, their ID and some additional, calculated
+properties like the local smoothing length (e.g. distance wich contains 32 neighbours),
+local density or local velocity dispersion. The manipulation of this dataset is feasibile 
+only if high performance computing (HPC) resources are adopted. 
 
-The sequential version of Splotch (cite) has  been re-designed and extended in order
+The sequential version of Splotch \citep{2008NJPh...10l5006D} has been re-designed and extended in order
 to exploit both multiprocessor and multi-GPUs architectures currently available. 
 A Single Instruction Multiple Data (SIMD) approach has been adopted for the parallelization
 of the Splotch core algorithms, adopting the MPI library to support distributed multicore systems, 
@@ -115,6 +117,90 @@ the benchmarks of such high performance implementation will be presented in the 
 \section{The Splotch Algorithm}
 \label{splotch}
 
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.49\textwidth]{millenium2_veldisp.pdf}
+\includegraphics[width=0.49\textwidth]{millenium2_vel.pdf}
+\end{center}
+\caption{Shown are vizualisation of the MilleniumII simulation \citep{2009MNRAS.398.1150B} using
+the velocity dispersion (left panel) and the three dimensional velocity (right panel) of the
+particles for the color transfere function. The inlay shows a zoom on one the most rich structure
+inside the simulation.}\label{mil2}
+\end{figure}
+
+The rendering algorithm of {\tt Splotch} is generally designed to handle
+point-like particle distributions. Such tracer particles can be smoothed
+to obtain a contineous field, most commonly the $B_2$-Spline \citep{1985A&A...149..135M}
+\begin{equation}
+   W(x,h)=\frac{8}{\pi h^3}\left\{\begin{array}{ll}
+      1 - 6 \left(\frac{x}{h}\right)^2 + 6 \left(\frac{x}{h}\right)^3 \;\;& 0 \le \frac{x}{h} < 0.5 \\
+      2 \left(1 - \frac{x}{h}\right)^3                              & 0.5 \le \frac{x}{h} < 1 \\
+      0                                                             & 1 \le \frac{x}{h} \\
+   \end{array} \right. , \label{SPH:kern}
+\end{equation}
+where $h$ is the local smoothing length, which is typically defined in a way
+that every particle overlaps with $\approx 32$ neighbors. Therefore, the rendering is
+based on the following assumptions:
+
+\begin{itemize}
+\item The contribution to the matter density by every particle can
+be described as a Gaussian distribution of the form 
+$\rho_p(\vec r)=\rho_{0,p}\exp(-r^2/\sigma_p^2)$.\footnote{Note that the
+$b_2$-Spline kernel used in SPH has a shape very similar to the Gaussian distribution.} In
+practice, it is much more handy to have a compact support of the
+distribution, and therefore the distribution is set to zero at a given
+distance of $f\cdot\sigma_p$. Following the approach often used to vizualice 
+cosmological simulation we choose $f$ in such a way that
+$f\cdot\sigma_p$ is related to the smoothing length $h$, i.e.
+to fulfill $h \approx f\cdot\sigma_p$. Therefore rays passing
+the particle at a distance larger than $f\cdot\sigma_p$ will be practically
+unaffected by the particle's density distribution.
+\item We use three ``frequencies'' to describe the red, green and blue
+components of the radiation, respectively. These are treated independently.
+\item The radiation intensity $\bf{I}$\footnote{Here we treat all
+intensities as vectors with r,g and b components.} along a ray through the simulation
+volume is modeled by the well known radiative transfer equation
+\begin{equation}
+\frac{d\bf{I}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I}(x))\rho_p(x),
+\end{equation}
+which can be found in standard textbooks like \citet{1991par..book.....S}.
+Here, $\bf{E}_p$ and $\bf{A}_p$ describe the strength of radiation emission and absorption
+for a given particle for the three rgb-colour components. In general it is recommended to
+set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images; for special
+effects, however, independent emission and absorption coefficients can be used. Specially typically
+a small gray component (e.g. a small, constant addition to the rgb-components) can be added 
+to the absortpion of each particle ($\bf{A}_p$) to improve the three dimensional impression.
+In general the coefficients can vary between particles, and are typically chosen as a function 
+of a characteristic particle property. If a scalar quantity is choosen (e.g. the particle temperature, 
+density, velocity dispersion, etc.), the mapping to the three components of $\bf{E}$ and $\bf{A}$ (for red, green and blue)
+is typically achieved via a transfere function, realized by a colour look-up table or palette, which can
+be provided to the ray-tracer as an external file to allow a maximum of flexibility. If a
+vector quantity is chosen (r.g. velocity, magnetic field, etc.), the three components of the vectors
+can be maped to the three components of $\bf{E}$ and $\bf{A}$ (for red, green and blue). Additional 
+to the color, the intensity of each particle can be aditional modulated proportional to another
+scalar property (e.g. density, etc.).
+\end{itemize}
+
+Assuming that absorption and emission are homogeneously mixed it
+can be shown that, whenever a ray traverses a particle, its intensity
+change is given by
+\begin{equation}
+\label{i_change}
+\bf{I}_{\mbox{after}}=(\bf{I}_{\mbox{before}}-\bf{E}_p/\bf{A}_p)\exp(-\bf{A}_p\int_{-\infty}^\infty\rho_p(x)dx) + \bf{E}_p/\bf{A}_p
+\end{equation}
+The integral in this equation is given by
+$\rho_{0,p}\sigma_p\exp{(-d_0^2/\sigma_p^2)}\sqrt{\pi}$, where $d_0$
+is the minimum distance between the ray and the particle center.
+
+Under the assumption that the particles do not overlap, the intensity
+reaching the observer could simply be calculated by applying this formula to
+all particles intersecting with the ray, in the order of decreasing distance
+to the observer. In reality, of course, the particles do overlap, but since
+the relative intensity changes due to a single particle can be assumed to be
+very small, this approach can nevertheless be used in good approximation.
+
+Figure \ref{mil2} shows a vizualisation example of a large simulation 
+containing 10 billion particles.
 
 \section{Parallel Implementation}
 \label{parallel}
@@ -133,8 +219,37 @@ to the final (unique) image. The details of the parallelization are given in the
 \section{Benchmarks}
 \label{bench}
 
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.5\textwidth]{t_cpu.pdf}
+\end{center}
+\caption{Shown is the scaling of the CPU time (total wallclock time substracting the time needed for 
+readind and writing) with the number of MPI threads used for vizualisng 10 billion particles with an final
+image size of 3200x3200 pixels. The dashed line indicates the expectation for an ideal scaling.}\label{cpu_scaling}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.5\textwidth]{t_read.pdf}
+\end{center}
+\caption{Shown is the scaling of the allclock time needed to read the needed data 
+(position, velocity and smoothing length) for the 10 billion particles of the simulation
+as function of parallel reading tasks. The dashed line indicates the expectation for an 
+ideal scaling. The horizontal lines indicate time expected for and IO throughput of 300 Mbype/sec,
+1 Gbyte/sec and 3 Gbyte/sec. The read datapoint indicate the reading speed obtained if naively 
+individual data elements are streamed instead of reading large blocks in juncks.}\label{read_scaling}
+\end{figure}
 
 
+\section{Conclusions}
+\label{conclusions}
+
+\section*{Acknowledgments}
+We would like to thank Mike for providing the data of the MilleniumII simulations 
+on which we conducted our perfgomance tests. K.~D.~acknowledges the
+supported by the DFG Priority Programme 117.
+
+\section*{References}
 
 %% The Appendices part is started with the command \appendix;
 %% appendix sections are then done as normal sections
@@ -154,7 +269,7 @@ to the final (unique) image. The details of the parallelization are given in the
 %% References with BibTeX database:
 
 \bibliographystyle{elsarticle-num}
-\bibliography{<your-bib-database>}
+\bibliography{master.bib}
 
 %% Authors are advised to use a BibTeX database file for their reference list.
 %% The provided style file elsarticle-num.bst formats references in the required Procedia style
