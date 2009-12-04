@@ -413,6 +413,9 @@ int main (int argc, char **argv)
             case 4:
               gadget_millenium_reader(params,particle_data,0,&time);
               break;
+            case 5:
+              bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+              break;
 	    default:
 	      planck_fail("No valid file type given ...");
 	      break;
