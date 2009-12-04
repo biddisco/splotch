@@ -1392,7 +1392,7 @@ void particle_interpolate(paramfile &params,
                                          (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
                                          (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
                                          (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
-                                         p1[i1].type,p1[i1].id
+                                         p1[i1].type,p1[i1].active,p1[i1].e,p1[i1].id
 #ifdef HIGH_ORDER_INTERPOLATION
                                         ,(1-frac) * p1[i1].vx  + frac*p2[i2].vx,
                                          (1-frac) * p1[i1].vy  + frac*p2[i2].vy,
