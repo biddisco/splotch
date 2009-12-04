@@ -29,7 +29,7 @@
 using namespace std;
 using namespace RAYPP;
 
-#include "splotch/splotchutils.h"
+//#include "splotch/splotchutils.h"
 
 long bin_reader_tab (paramfile &params, vector<particle_sim> &points, 
                      float *maxr, float *minr, 
