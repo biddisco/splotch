@@ -7,7 +7,7 @@
 #include "reader/millenium_reader.cc"
 //#include "reader/enzo_reader.cc"
 #include "reader/bin_reader.cc"
-#ifdef USE_MPI
+#if defined(USE_MPI) && defined(USE_MPIIO)
 #include "reader/bin_reader_mpi.cc"
 #endif
 #include "writer/write_tga.cc"
