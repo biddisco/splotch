@@ -225,7 +225,10 @@ to the final (unique) image. The details of the parallelization are given in the
 \end{center}
 \caption{Shown is the scaling of the CPU time (total wallclock time substracting the time needed for 
 readind and writing) with the number of MPI threads used for vizualisng 10 billion particles with an final
-image size of 3200x3200 pixels. The dashed line indicates the expectation for an ideal scaling.}\label{cpu_scaling}
+image size of 3200x3200 pixels. The dashed line indicates the expectation for an ideal scaling. The test was 
+performed on a {\it Power6} architecture. The diamonds are runs using one task per core, the triangles indicate
+using two tasks per core (a special feature of the {\it Power 6} architecture), where we measure a speedup of 
+a factor of 1.4.}\label{cpu_scaling}
 \end{figure}
 
 \begin{figure}
