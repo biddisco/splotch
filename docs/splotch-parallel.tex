@@ -205,13 +205,59 @@ containing 10 billion particles.
 \section{Parallel Implementation}
 \label{parallel}
 
-The parallelization strategy of the Splotch code is based on a SIMD approach. This consists in 
+The Splotch code workflow consists in a number of steps which can be summarized as follows:
+
+\noindent 1. Read data from one or more files;
+
+\noindent 2. process data for rescaling, normalization etc.;
+
+\noindent 3. render data;
+
+\noindent 4. save the final image.
+
+All these steps can be parallelized according to the same strategy, based on a SIMD approach. 
+This consists in 
 distributing the data in a balanced way between the different computing elements.
 Each computing element performs the same operations on its subset of data contributing 
-to the final (unique) image. The details of the parallelization are given in the next sections.
+to the final (unique) image. 
 
-\subsection{MPI-OpenMP Implementation}
+The parallel implementation has been accomplished using different approaches, suitable 
+for different hardware architectures and software environments. The MPI library (cite) 
+has been used to define the overall data and work distribution characterization. Data are
+read in chuncks of the same (or similar) size from each processor in the MPI pool. Then 
+the same work is performed for steps 2 and 3 on the chuncks by each processor. Finally,
+the final image is generated and saved only in the master processor, since this is a 
+light task, which does not require any kind of parallel implementation. The work accomplished
+in steps 2 and 3 can be further split, exploiting multicore shared memory processors or Graphic Cards.
+In the first case, an OpenMP (cite) based approach provides the necessary parallelization tools. 
+In the second case, the CUDA programming language has been adopted. The different approaches
+can be used separately, if the available computing system fits only one of the available 
+configurations, or jointly. For instance, on a single core PC with an NVIDIA graphic card, 
+only the CUDA based parallelization strategy can be activated and exploited. On a multicore
+RVN (cite) node both MPI and CUDA can be used. This makes the parallel Splotch code extremely 
+flexible, portable, efficient and scalable.
+
+
+\subsection{MPI Implementation}
 \label{mpi}
+
+Once the data is properly distributed among the processors, all the remaining operations 
+are performed locally and further communiction is not needed, until the generation
+of the final result. Each MPI process uses the assigned 
+data to produce its own partial image. At the end, all the partial contributes are merged by means of a 
+collective reduction operation producing the final image. 
+
+The data load stage represents the crucial step for balancing the workload and for fast reading 
+data from the disk. In fact, from the results presented in section x.x, it is clear how,
+as the data size grows,
+the data load process tends to be the most demanding section of the code. For this reason,
+we have paied specific attention to the effective implementations of this functionality.
+
+The adoption of MPI I/O (cite) based functions, represents the ideal solution for obtaining 
+a high-performance and scalable read utility. However, an alternative solution is required, in
+order to support high performance computing environments where MPI I/O is not available. 
+
+
 
 \subsection{CUDA Implementation}
 \label{cuda}
