@@ -2,12 +2,12 @@
 #include "mpi.h"
 #endif
 #include "hdf5.h"
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <string>
-#include <math.h>
-#include <assert.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cassert>
+#include <cstdlib>
 #ifdef VS
 #include <kernel/vector.h>
 #else

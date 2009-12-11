@@ -1,21 +1,20 @@
 #ifdef USE_MPI
 #include "mpi.h"
 #endif
-#include <stdio.h>
+#include <cstdio>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <math.h>
-#include <assert.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cassert>
+#include <cstdlib>
+#include <vector>
 
 #ifdef VS
-#include <kernel/vector.h>
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #else
-#include <vector.h>
 #include "arr.h"
 #include "cxxutils.h"
 #include "paramfile.h"
