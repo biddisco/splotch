@@ -10,12 +10,10 @@
 #include <stdlib.h>
 
 #ifdef VS
-#include <kernel/vector.h>
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #else
-#include <vector.h>
 #include "arr.h"
 #include "cxxutils.h"
 #include "paramfile.h"
