@@ -43,81 +43,9 @@ class COLOUR
       : r (rv), g (gv), b (bv) {}
 
     /*! */
-    float32 maxcomp () const
-      {
-      return max (max(r,g),b);
-      }
-
-    /*! */
-    float32 Intensity () const
-      {
-      return (0.11*b + 0.59*g + 0.30*r);
-      }
-
-    /*! */
-    float32 AbsoluteSum () const
-      {
-      return (abs(r) + abs(g) + abs(b));
-      }
-
-    /*! */
-    void Clip ()
-      {
-      if (g<0.0) g=0.0; else if (g>1.0) g=1.0;
-      if (r<0.0) r=0.0; else if (r>1.0) r=1.0;
-      if (b<0.0) b=0.0; else if (b>1.0) b=1.0;
-      }
-
-    /*! */
-    bool AllSmaller (float32 thresh) const
-      {
-      return ((r < thresh) && (g < thresh) && (b < thresh));
-      }
-    /*! */
-    bool AllSmaller (const COLOUR &thresh) const
-      {
-      return ((r < thresh.r) && (g < thresh.g) && (b < thresh.b));
-      }
-    /*! */
-    bool TooSmall () const
-      {
-      return ((r < Small_float32) && (g < Small_float32) && (b < Small_float32));
-      }
-
-    /*! */
-    COLOUR operator- () const
-      {
-      return COLOUR (-r, -g, -b);
-      }
-
-    /*! */
-    COLOUR &operator*= (const COLOUR &Col)
-      {
-      r *= Col.r; g *= Col.g; b *= Col.b;
-      return *this;
-      }
-    /*! */
-    COLOUR &operator*= (float32 factor)
-      {
-      r *= factor; g *= factor; b *= factor;
-      return *this;
-      }
-    /*! */
-    COLOUR &operator+= (const COLOUR &Col)
-      {
-      r += Col.r; g += Col.g; b += Col.b;
-      return *this;
-      }
-    /*! */
     COLOUR operator+ (const COLOUR &Col2) const
       {
       return COLOUR (r+Col2.r, g+Col2.g, b+Col2.b);
-      }
-    /*! */
-    COLOUR &operator-= (const COLOUR &Col)
-      {
-      r -= Col.r; g -= Col.g; b -= Col.b;
-      return *this;
       }
     /*! */
     COLOUR operator- (const COLOUR &Col2) const
@@ -125,32 +53,14 @@ class COLOUR
       return COLOUR (r-Col2.r, g-Col2.g, b-Col2.b);
       }
     /*! */
-    COLOUR operator* (const COLOUR &Col2) const
-      {
-      return COLOUR (r*Col2.r, g*Col2.g, b*Col2.b);
-      }
-    /*! */
     COLOUR operator* (float32 factor) const
       {
       return COLOUR (r*factor, g*factor, b*factor);
       }
     /*! */
-    COLOUR operator/ (float32 div) const
-      {
-      float32 mult = 1.0/div;
-      return COLOUR (r*mult, g*mult, b*mult);
-      }
-
-    /*! */
     friend inline COLOUR operator* (float32 factor, const COLOUR &Col)
       {
       return COLOUR (Col.r*factor, Col.g*factor, Col.b*factor);
-      }
-
-    /*! */
-    COLOUR exp () const
-      {
-      return COLOUR (::std::exp(r), ::std::exp(g), ::std::exp(b));
       }
 
     /*! */
