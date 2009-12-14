@@ -194,7 +194,7 @@ class exptable
 
     float64 operator() (float64 arg) const
       {
-      int iarg= (int)(arg*expfac);
+      int iarg= int(arg*expfac);
       if (iarg&mask3)
         return (iarg<0) ? 1. : 0.;
       return tab1[iarg>>nbits]*tab2[iarg&mask1];

@@ -35,7 +35,7 @@ CC       = g++        # sets the C-compiler (default)
 endif
 OMP      = -fopenmp
 
-OPTIMIZE = -Wall  -g    # optimization and warning flags (default)
+OPTIMIZE = -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport
 
 ifeq ($(SYSTYPE),"SP6")
