@@ -23,9 +23,7 @@
 #ifndef RAYPP_BYTESWAP_H
 #define RAYPP_BYTESWAP_H
 
-#ifdef VS
-#include "config/config.h"
-#endif
+#include <algorithm>
 
 namespace RAYPP {
 
@@ -34,14 +32,17 @@ template<> inline void byteswap_helper<1> (char *)
   {}
 template<> inline void byteswap_helper<2> (char *val)
   {
+  using namespace std;
   swap (val[0],val[1]);
   }
 template<> inline void byteswap_helper<4> (char *val)
   {
+  using namespace std;
   swap (val[0],val[3]); swap (val[1],val[2]);
   }
 template<> inline void byteswap_helper<8> (char *val)
   {
+  using namespace std;
   swap (val[0],val[7]); swap (val[1],val[6]);
   swap (val[2],val[5]); swap (val[3],val[4]);
   }
