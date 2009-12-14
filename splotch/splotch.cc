@@ -23,24 +23,25 @@
 #include <fstream>
 #include <algorithm>
 
+#ifdef USE_MPI
+#include "mpi.h"
+#else
+#ifdef VS
+#include "cuda/VTimer.h"
+#else
+#include <sys/time.h>
+#endif
+#endif
+
+#include "splotch/splotchutils.h"
+#include "writer/writer.h"
+#include "reader/reader.h"
+
 #ifdef VS
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
-#else
-#include "mpi_support.h"
-#include "arr.h"
-#include "cxxutils.h"
-#include "paramfile.h"
-#endif
-#include "kernel/bstream.h"
-#include "kernel/colour.h"
-#include "config/config.h"
-#include "utils/colourmap.h"
-//#include "reader/bin_reader.h"
-
-#ifdef VS	//Jin: for compiling under Windows/Visual Studio
 #include "windows.h"
 #include "reader/gadget_reader.cc"
 #include "writer/write_tga.cc"
@@ -133,15 +134,7 @@ struct region_cmp
 */
 #endif //ifdef CUDA
 
-#ifdef USE_MPI
-#include "mpi.h"
-#else
-	#ifdef VS
-	#include "cuda/VTimer.h"
-	#else
-	#include <sys/time.h>
-	#endif
-#endif
+
 
 using namespace std;
 using namespace RAYPP;
