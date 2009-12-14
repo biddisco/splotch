@@ -11,21 +11,14 @@
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
-#else
-#include "arr.h"
-#include "cxxutils.h"
-#include "mpi_support.h"
-#include "paramfile.h"
 #endif
+
 #include "kernel/bstream.h"
-#include "kernel/colour.h"
-#include "config/config.h"
-#include "utils/colourmap.h"
 
 using namespace std;
 using namespace RAYPP;
 
-//#include "splotch/splotchutils.h"
+#include "splotch/splotchutils.h"
 
 #define TAG_POSX        11
 #define TAG_POSY        12
@@ -66,7 +59,6 @@ void gadget_plain_read_header(bifstream &file, int *npart, double *time)
 void gadget_find_pos(bifstream &file, int* npart)
 {
   double time;
-  int length1,length2;
 
   // Skipping Header
   gadget_plain_read_header(file, npart, &time);
@@ -74,7 +66,6 @@ void gadget_find_pos(bifstream &file, int* npart)
 
 void gadget_find_vel(bifstream &file, int* npart)
 {
-  double time;
   int length1,length2,ntot=0;
 
   // Jump to Positions
@@ -95,7 +86,6 @@ void gadget_find_vel(bifstream &file, int* npart)
 
 void gadget_find_id(bifstream &file, int* npart)
 {
-  double time;
   int length1,length2,ntot=0;
 
   // Jump to Velocities
@@ -116,7 +106,6 @@ void gadget_find_id(bifstream &file, int* npart)
 
 void gadget_find_mass(bifstream &file, int* npart)
 {
-  double time;
   int length1,length2,ntot=0,lid=4;
 
   // Jump to IDs
@@ -139,8 +128,6 @@ void gadget_find_mass(bifstream &file, int* npart)
 
 void gadget_find_hsml(bifstream &file, int* npart)
 {
-  double time;
-  int length1,length2,ntot=0;
 
   // Jump to Mass
   gadget_find_mass(file, npart);
@@ -149,7 +136,6 @@ void gadget_find_hsml(bifstream &file, int* npart)
 
 void gadget_find_density(bifstream &file, int* npart)
 {
-  double time;
   int length1,length2,ntot=0;
 
   // Jump to HSML
@@ -170,7 +156,6 @@ void gadget_find_density(bifstream &file, int* npart)
 
 void gadget_find_veldisp(bifstream &file, int* npart)
 {
-  double time;
   int length1,length2,ntot=0;
 
   // Jump to Density
@@ -334,7 +319,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      //int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -435,9 +420,9 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      //int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
-      int nhsml;
+      //int nhsml;
 
       for(int f=0;f<NFilePerRead;f++)
 	{
@@ -528,7 +513,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      //int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -677,7 +662,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int snr
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      //int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)

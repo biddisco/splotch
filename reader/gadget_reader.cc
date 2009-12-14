@@ -11,16 +11,9 @@
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
-#else
-#include "arr.h"
-#include "cxxutils.h"
-#include "mpi_support.h"
-#include "paramfile.h"
 #endif
+
 #include "kernel/bstream.h"
-#include "kernel/colour.h"
-#include "config/config.h"
-#include "utils/colourmap.h"
 
 using namespace std;
 using namespace RAYPP;
@@ -259,13 +252,15 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   v2_tmp=new float[nmax];
   v3_tmp=new float[nmax];
   i1_tmp=new int[nmax];
-
+#ifdef READTEST
+float rtmp[3];
+#endif
   if(mpiMgr.master())
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -293,7 +288,12 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		{
 		  if(ThisTask == ToTask)
 		    {
+#ifdef READTEST
+infile.get(rtmp,3);
+p[ncount].x=rtmp[0];p[ncount].y=rtmp[1];p[ncount].z=rtmp[2];
+#else
 		      infile >> p[ncount].x >> p[ncount].y >> p[ncount].z;
+#endif
 		      p[ncount].type=itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -305,7 +305,12 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		  else
 		    {
 #ifdef USE_MPI
+#ifdef READTEST
+infile.get(rtmp,3);
+v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
+#else
 		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
+#endif
 		      i1_tmp[ncount] = itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -354,7 +359,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -436,7 +441,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -516,7 +521,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -610,7 +615,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -738,7 +743,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   if(ThisTaskReads[ThisTask] >= 0)
     {
       int ToTask=ThisTask;
-      int NPartThis=NPartThisTask[ThisTask];
+      // int NPartThis=NPartThisTask[ThisTask];
       long ncount=0;
 
       for(int f=0;f<NFilePerRead;f++)
@@ -833,3 +838,4 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 #endif
 
 }
+

@@ -13,21 +13,14 @@
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
-#else
-#include "arr.h"
-#include "cxxutils.h"
-#include "paramfile.h"
 #endif
 
 #include "kernel/bstream.h"
-#include "kernel/colour.h"
-#include "config/config.h"
-#include "utils/colourmap.h"
 
 using namespace std;
 using namespace RAYPP;
 
-//#include "splotch/splotchutils.h"
+#include "splotch/splotchutils.h"
 
 long bin_reader_tab (paramfile &params, vector<particle_sim> &points, 
                      float *maxr, float *minr, 

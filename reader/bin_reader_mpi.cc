@@ -1,3 +1,4 @@
+#if defined(USE_MPI) && defined(USE_MPIIO)
 #ifdef USE_MPI
 #include "mpi.h"
 #endif
@@ -236,3 +237,4 @@ which_fields[7] = color 3 (B)
 }
 
 
+#endif // USE_MPI,USE_MPIIO
