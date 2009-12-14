@@ -3,9 +3,9 @@
 #######################################################################
 
 #--------------------------------------- Basic operation mode of code
-OPT	+=  -DGEOMETRY_FILE
-OPT	+=  -DINTERPOLATE
-OPT	+=  -DHIGH_ORDER_INTERPOLATION
+#OPT	+=  -DGEOMETRY_FILE
+#OPT	+=  -DINTERPOLATE
+#OPT	+=  -DHIGH_ORDER_INTERPOLATION
 
 
 #--------------------------------------- Switch on MPI
@@ -52,7 +52,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.0
+EXEC   = Splotch4.0$(SYSTYPE)
 
 OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
