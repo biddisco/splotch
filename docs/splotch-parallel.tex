@@ -283,21 +283,8 @@ There are of course cost for doing the splitting. The number of particles is inc
 
 The output of render for the particles is stored in a 1 dimension fragment buffer. After filled by the device-render step, fragment buffer is copied to host and combined to the final image by CPU. Here we found that the asynchronism of device calling can be used to let device and host work in parallel. Say, when rendering particle chunk N, combine the result of chunk N-1, the algorithm is listed below,
 
-while  ( not all particles rendered )
-{
-         find the ith subset Si in particle array that just uses up fragment buffer;
-A:	call device to render Si;
- 	if  ( Si is not the first subset starting from index 0 )
- 	{ 
-         	combine Fi-1, Si-1's output in fragment buffer;
- 	}
-C:	copy fragment buffer from device to host;
- 	if  ( Si is the last subset ending with index N, last index of particle array)
- 	{
- 		combine Fi;
- 	}
- 	i++;
-}
+\includegraphics[width=1.2\textwidth]{cuda_code.pdf}
+
 
 Instruction A is actually executed on device, which runs in parallel with instruction B, and the two paths merge at instruction C where they all have finished. From table xxx we can see that the combine time is mostly hidden by render time. 
 
