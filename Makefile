@@ -1,22 +1,83 @@
-# type 'make ARCH=xxx'
-# this is the basic makefile to compile splotch
-# before using it, you have to create your Makefile.ARCH file in the makefiles directory
-# where ARCH is a indentifier of your system. In Makefile.ARCH you have to define:
-# SPLOTCH_DIR = splotch installation directory
-# CXX = the compiler/loader
-# OPT = optimization flags
-# HDF5 = path to HDF5 library
-# ZLIB = path to ZLIB library
-# MPILIBS =  path to MPI libraries
+#######################################################################
+#  Splotch V4                                                         #
+#######################################################################
 
-include ./makefiles/Makefile.$(ARCH)
+#--------------------------------------- Basic operation mode of code
+OPT	+=  -DGEOMETRY_FILE
+OPT	+=  -DINTERPOLATE
+OPT	+=  -DHIGH_ORDER_INTERPOLATION
 
-SPLOTCH_DIR = /sfs/sanfs/home/usercin/agh0/ParallelSplotch/splotch
-INCLUDE = -I. -I$(SPLOTCH_DIR)/cxxsupport -I$(SPLOTCH_DIR)/kernel -I$(HDF5)/include
-LIBS = -L$(HDF5)/lib -lhdf5 -L$(ZLIB)/lib -lz 
-DEFINE = -D USE_MPI -D SPLOTCH -DVAR_BRIGHT -D BCX -D DEBUG
 
-EXEC = splotch$(ARCH)
+#--------------------------------------- Switch on MPI
+#OPT	+=  -DUSE_MPI
+#OPT	+=  -DUSE_MPIIO
 
-$(EXEC) :
-	$(CXX) $(OPT) $(DEFINE) $(INCLUDE) -o $(EXEC) fullsplotch.cc $(MPILIBS) $(LIBS)
+#--------------------------------------- Visual Studio Option
+#OPT	+=  -DVS
+
+#--------------------------------------- CUDA options
+#OPT	+=  -DCUDA
+#OPT	+=  -DHOST_THREAD_RENDER
+#OPT	+=  -DCUDA_DEVICE_COMBINE
+#OPT	+=  -DCUDA_THREADS
+#OPT	+=  -DCUDA_TEST_COLORMAP
+#OPT	+=  -DCUDA_TEST_FRAGMENT
+
+
+#--------------------------------------- Select target Computer
+
+#SYSTYPE="SP6"
+
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       = mpic++        # sets the C-compiler (default)
+else
+CC       = g++        # sets the C-compiler (default)
+endif
+OMP      = -fopenmp
+
+OPTIMIZE = -Wall  -g    # optimization and warning flags (default)
+SUP_INCL = -I. -Icxxsupport
+
+ifeq ($(SYSTYPE),"SP6")
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       =  mpCC_r
+else
+CC       =  xlc++        
+endif
+OPTIMIZE =  -q64 -O3 -qarch=auto -qtune=auto -qinline
+LIB_OPT	 =  -bstackpsize:64k -bdatapsize:64k -btextpsize:64k
+endif
+
+#--------------------------------------- Here we go
+
+OPTIONS = $(OPTIMIZE) $(OPT)
+
+EXEC   = Splotch4.0
+
+OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
+	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
+	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
+	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o
+
+INCL   = splotch/splotchutils.h writer/writer.h reader/reader.h	Makefile
+
+CPPFLAGS = $(OPTIONS) $(SUP_INCL) $(OMP)
+
+LIBS   = $(LIB_OPT) $(OPTIONS) $(OMP)
+
+.SUFFIXES: .o .cc .cxx
+
+.cc.o:
+	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
+
+.cxx.o:
+	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
+
+$(EXEC): $(OBJS)
+	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC)
+
+$(OBJS): $(INCL)
+
+clean:
+	rm -f $(OBJS) $(EXEC)
+
