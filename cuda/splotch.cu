@@ -12,10 +12,11 @@ Copyright things go here.
 // includes, project
 #include "cuda.h"
 #include <cutil_inline.h>
-
 // includes, kernels
-#include <splotch_kernel.cu> 
-#include "vtimer.h"
+#include "splotch_kernel.cu"
+#ifdef VS 
+#include "cuda/VTimer.h"
+#endif
 #include "splotch_cuda.h"
 #include "CuPolicy.h"
 

@@ -5,7 +5,7 @@ Copyright things go here.
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
-#include "cxxsupport\paramfile.h"
+#include "cxxsupport/paramfile.h"
 //#include "CuPolicy.h"
 class CuPolicy;
 
@@ -68,7 +68,8 @@ struct	cu_particle_splotch
 	float		x,y,r,ro;
 	cu_color	a,e;
 	bool		isValid;
-	unsigned short		minx, miny, maxx, maxy;
+//	unsigned short		minx, miny, maxx, maxy;
+	int		minx, miny, maxx, maxy;
 //	short		startx,starty, endx,endy;
 	unsigned long		posInFragBuf;
 };
@@ -158,6 +159,6 @@ extern "C"	void	cu_init_exptab(double maxexp);
 extern "C"	float	cu_get_exp(float arg);
 extern "C"	void	cu_render
 (cu_particle_splotch *p, unsigned int size,
-/* int xres, int yres, *-/bool a_eq_e,double grayabsorb);
+ int xres, int yres, *-/bool a_eq_e,double grayabsorb);
 */
 #endif
