@@ -29,7 +29,7 @@
 
 \begin{abstract}
 
-.........
+......... 
 
 \end{abstract}
 
@@ -261,11 +261,33 @@ order to support high performance computing environments where MPI I/O is not av
 
 \subsection{CUDA Implementation}
 \label{cuda}
-Nowadays GPUs have significantly benefitted scientific applications by its fast ALU capability and stream data-parallel organization. With the introduction of the Computer Unified Device Architecture (CUDA), the graphics high-performance ability can be accessed by a C language interface, allowing developers to bypass the difficulty of fitting a general algorithm onto fixed graphics primitives. To obtain the computing horsepower of GPUs, CUDA technology has been applied to Splotch.
+Nowadays GPUs have significantly benefitted scientific applications by its fast ALU 
+capability and stream data-parallel organization. With the introduction of
+ the Computer Unified Device Architecture (CUDA), the graphics high-performance 
+ ability can be accessed by a C language interface, allowing developers to bypa
+ss the difficulty of fitting a general algorithm onto fixed graphics primitives. 
+To obtain the computing horsepower of GPUs, CUDA technology has been applied
+to Splotch.
 
-CUDA programs runs on GPUs with a Single Instruction Multiple Thread (SIMT)[programming guide] mode. Every instruction issue time, a multiprocessor will execute one common instruction for multiple threads. If threads diverge via a data-dependent conditional branch, they will be executed serially which will of course slow down the execution. In the worst case for a warp[programming guide] there could be only one thread running at each time which causes the multiprocessor actually degenerating to a single-processor. For this reason the parallel strategy of the MPI implementation in section 3.1 is not suitable here as threads tends to diverge widely after running through multiple particles. And the graphics memory requirement for image buffer in MPI implementation will limit the number of threads which makes a full horsepower from CUDA unavailable.
+CUDA programs runs on GPUs with a Single Instruction Multiple Thread (SIMT)[programming guide] 
+mode. Every instruction issue time, a multiprocessor will execu
+te one common instruction for multiple threads. If threads diverge via a data-dependent 
+conditional branch, they will be executed serially which will of cours
+e slow down the execution. In the worst case for a warp[programming guide] there could 
+be only one thread running at each time which causes the multiprocessor
+ actually degenerating to a single-processor. For this reason the parallel strategy of 
+ the MPI implementation in section 3.1 is not suitable here as threads t
+ends to diverge widely after running through multiple particles. And the graphics memory 
+requirement for image buffer in MPI implementation will limit the num
+ber of threads which makes a full horsepower from CUDA unavailable.
 
-With those considerations we set the granularity of parallel task to one particle, which means that each CUDA thread will take care of one particle's drawing , going through all the steps including ranging, transformation, colorization and rendering. As the number of particles for cosmological dataset is often large, say millions of, the multiprocessors will be fully fed. And in most of the steps the granularity of the tasks are stable among particles which is good for parallel computing until the rendering step, where some specially treatment will be applied.
+With those considerations we set the granularity of parallel task to one particle, which 
+means that each CUDA thread will take care of one particle's drawing
+, going through all the steps including ranging, transformation, colorization and 
+rendering. As the number of particles for cosmological dataset is often larg
+e, say millions of, the multiprocessors will be fully fed. And in most of the steps the 
+granularity of the tasks are stable among particles which is good for
+parallel computing until the rendering step, where some specially treatment will be applied.
 
 The overall process is illustrated in Figure XX,
 \begin{figure}
@@ -274,29 +296,99 @@ The overall process is illustrated in Figure XX,
 \end{center}
 \end{figure}
 
-The red arrows show the execution of the processing steps. On the device side there are many arrows going together as CUDA threads running in parallel. In the Range step particle data are normalized and some global information is calculated, like the maximum and minimum value of certain attributes. We let CPU handle the calculation of this as well as particle sorting after transformation.
+The red arrows show the execution of the processing steps. On the device side there are 
+many arrows going together as CUDA threads running in parallel. In the
+ Range step particle data are normalized and some global information is calculated, 
+ like the maximum and minimum value of certain attributes. We let CPU handl
+e the calculation of this as well as particle sorting after transformation.
 
-After geometry transformation the area, or the location of the sub-image that each particle will influence is determined, and the sub-images will later be filled in the render step. Depending on the smoothing length of the particles and the camera settings the sizes of the sub-images range from 1*1 to the size of the final image, say 1000*1000, so the granularity of computing tasks in render step could be quite unbalanced.  We found this unbalancing compromises speed badly, as shown in table XXX.
+After geometry transformation the area, or the location of the sub-image that each 
+particle will influence is determined, and the sub-images will later be fil
+led in the render step. Depending on the smoothing length of the particles and the 
+camera settings the sizes of the sub-images range from 1*1 to the size of t
+he final image, say 1000*1000, so the granularity of computing tasks in render step could be quite unbalanced.  We found this unbalancing compromises speed ba
+dly, as shown in table XXX.
 
-To solve that problem we imposed a new step on host, showing as 'Split Particles' in figure XXX, to divide big tasks into smaller, average ones. Any particle carrying a sub-image whose pixel number is larger than a barrier value will be splitted into multiple ones, each carrying a part of the pixels. The barrier value can be configured outside. In practical we found a number around the width or height of the final image, say 1024 usually works well.
+To solve that problem we imposed a new step on host, showing as 'Split Particles' 
+in figure XXX, to divide big tasks into smaller, average ones. Any particle
+carrying a sub-image whose pixel number is larger than a barrier value will be 
+splitted into multiple ones, each carrying a part of the pixels. The barrier va
+lue can be configured outside. In practical we found a number around the width 
+or height of the final image, say 1024 usually works well.
 
-There are of course cost for doing the splitting. The number of particles is increased which need more thread issuing. Running the splitting algorithm itself as well as the memory copying between host and device will also cost some time. Besides all these costs test results show that splitting brings great speed increasing, as show in table XXX.
+There are of course cost for doing the splitting. The number of particles is 
+increased which need more thread issuing. Running the splitting algorithm itself
+as well as the memory copying between host and device will also cost some time. 
+Besides all these costs test results show that splitting brings great speed in
+creasing, as show in table XXX.
 
-The output of render for the particles is stored in a one-dimension fragment buffer. After filled by the device-render step, fragment buffer is copied to host and combined to the final image by CPU. Here we found that the asynchronism of device calling can be used to let device and host work in parallel. Say, when rendering particle chunk N, combine the result of chunk N-1, the algorithm is listed below,
+The output of render for the particles is stored in a one-dimension fragment buffer. 
+After filled by the device-render step, fragment buffer is copied to host
+ and combined to the final image by CPU. Here we found that the asynchronism of 
+ device calling can be used to let device and host work in parallel. Say, when
+rendering particle chunk N, combine the result of chunk N-1, the algorithm is listed below,
 
 \includegraphics[width=1.2\textwidth]{cuda_code.pdf}
 
 
-Instruction A is actually executed on device, which runs in parallel with instruction B, and the two paths merge at instruction C where they all have finished. From table XXX we can see that the combine time is mostly hidden by render time. 
+Instruction A is actually executed on device, which runs in parallel with 
+instruction B, and the two paths merge at instruction C where they all have finished
+. From table XXX we can see that the combine time is mostly hidden by render time.
 
 Table xxx shows the test result of CUDA implementation of Splotch, (talk about the numbers)
 
-In the future there are ways that worth trying to optimize CUDA Splotch. 
+In the future there are ways that worth trying to optimize CUDA Splotch.
 
 - (list future works)
 
 
 \section{Benchmarks}
+
+The parallel Splotch code has been tested on different architectures and datasets, in order to 
+exploit the various parallel approaches and to emphasize different characteristics of the software.
+
+Taking advantage of the high portability of the code, we could perform our tests on a 5000 cores UNIX-AIX 
+IBM Power 6 system (we will refer to this platform as SP6), a Windows XP Machine (indicated as Win)
+and a 16 cores-8 GPUs Linux cluster (indicated as PLX). The details of the different platforms are given 
+in table XXX. In this way, we can test the usage of Splotch on computing systems 
+of different sizes and different target applications, from a standard PC (Win), where small-medium
+data files can be used, up to 
+a High Performance Computing platform where the huge and complex datasets can be processed.
+
+Five different dataset have been used for the benchmarks. The first four are derived from 
+the final output of a cosmological N-Body simulation, run using 870 millions of particles 
+(fluid elements), characterized by their 3D coordinates and velocities, their mass density 
+and the smoothing length, which defines the size of the region influenced by the properties
+of each particle (see equation \ref{SPH:kern}). Subsets of 1, 10, 100 millions particles have been
+randomly extracted from the whole dataset, producing three files of increasing size, indicated as
+block1M, block10M and block100M. A fourth file, block870M contains the entire data product. 
+Such variety of data sizes is necessary to match the memory requirements of the different available 
+computing systems used used for the tests.
+
+A further test has been performed using the final output of the MillenniumII simulation. 
+This is our final reference benchmark, which consists in the visualization of a 10 billion
+particle dataset.
+
+All the data files are pure binaries, organized so that different quantitites are stored one after
+the other in the file (e.g. $x$ coordinates of all particles are stored first, followed by $y$ 
+coordinates and so on). In this way, we can easily adopt our MPI-IO based
+reader. Only in the case of the MillenniumII data, we test also the native 
+Gadget2 (CITE) file format, using a integrated parallel version of the Gadget2 reader.
+
+A summmary of the benchmarks is presented in table XXX. 
+
+\subsection{MPI Benchmarks}
+
+MARZIA   
+   
+\subsection{CUDA Benchmarks}
+
+ZHEFAN
+
+\subsection{Hybrid, MPI+CUDA, Benchmarks}
+   
+CLAUDIO
+
 \label{bench}
 
 \begin{figure}
