@@ -24,6 +24,7 @@
 #define RAYPP_BYTESWAP_H
 
 #include <algorithm>
+#include <algorithm>
 
 namespace RAYPP {
 
@@ -32,7 +33,7 @@ template<> inline void byteswap_helper<1> (char *)
   {}
 template<> inline void byteswap_helper<2> (char *val)
   {
-  using namespace std;
+  using namespace std; 
   swap (val[0],val[1]);
   }
 template<> inline void byteswap_helper<4> (char *val)
