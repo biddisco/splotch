@@ -44,6 +44,7 @@
 #include "cxxsupport/paramfile.h"
 #include "windows.h"
 #include "reader/gadget_reader.cc"
+#include "reader/bin_reader.cc"
 #include "writer/write_tga.cc"
 #endif
 
@@ -114,8 +115,11 @@ enum TimeRecords{
 //	arr2<COLOUR> *g_ppic;	//for testing only
 
 	void	DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
+	DWORD	WINAPI	cu_draw_chunk(void *p);
 	DWORD	WINAPI cu_thread_func(void *p);
 	DWORD	WINAPI host_thread_func(void *p);
+
+
 #endif //if CUDA_THREADS defined 
 
 /*for temp testing
@@ -404,7 +408,7 @@ int main (int argc, char **argv)
 	    case 3: //enzo_reader(params,particle_data);
 	      break;
             case 4:
-              gadget_millenium_reader(params,particle_data,0,&time);
+//              gadget_millenium_reader(params,particle_data,0,&time);
               break;
             case 5:
 #if defined(USE_MPI) && defined(USE_MPIIO)
@@ -907,6 +911,60 @@ DWORD WINAPI combine(void	*param1)
 
 DWORD WINAPI cu_thread_func(void *pinfo)
 {
+	//a new thread info object that will carry each chunk's drawing
+	thread_info	ti, *pInfoOutput;
+	pInfoOutput =(thread_info*) pinfo;
+	ti =*pInfoOutput;
+
+	//do some cleaning for final thread_info
+	pInfoOutput->pPic->fill(COLOUR(0.0, 0.0, 0.0));
+	memset(pInfoOutput->times, 0, sizeof(float)*TIME_RECORDS);
+
+	//a new pic object residing in ti that will carry the result
+	arr2<COLOUR> pic(pInfoOutput->pPic->size1(), pInfoOutput->pPic->size2());
+	ti.pPic =&pic;
+
+	//set startP and end P of ti
+	int len =cu_get_chunk_particle_count(*g_params);
+	if ( len==-1)
+	{
+		printf("\nGraphics memory setting error\n");
+		return -1;
+	}
+
+	int	curEnd=0;
+	int endP =ti.endP;
+	ti.endP =ti.startP;
+
+	while( ti.endP<endP )	
+	{
+		//set range
+		ti.endP =ti.startP +len -1;
+		if (ti.endP >endP)
+			ti.endP =endP;
+
+		//draw chunks one by one
+		cu_draw_chunk(&ti);
+		//collect image to result
+		for (int x=0; x<pic.size1(); x++)
+			for (int y=0; y<pic.size2(); y++)
+				(*(pInfoOutput->pPic))[x][y] += pic[x][y];
+		//collect times to output
+		for (int i=0; i<TIME_RECORDS; i++)
+			pInfoOutput->times[i] +=ti.times[i];
+
+		//set range
+		ti.startP =ti.endP +1;
+	}
+
+	//test 2-goes pased...
+
+
+	return 1;
+}
+
+DWORD WINAPI cu_draw_chunk(void *pinfo)
+{
 	VTimer	timer, timer1;
 	float	time;
 	timer1.reset(); //for the whole thread
@@ -1132,7 +1190,9 @@ timer.start();
 		p =(*i);
 		h = p.maxy - p.miny;
 		w = p.maxx - p.minx;
-		if ( h*w <maxRegion)
+
+		if (h*w <maxRegion)
+//		if ( 1)//no splicting test 
 		{
 			v_ps1.push_back(p);
 			continue;
