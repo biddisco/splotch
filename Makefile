@@ -16,7 +16,8 @@
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-#OPT	+=  -DCUDA
+OPT	+=  -DCUDA
+OPT	+=  -DCUDA_THREADS
 #OPT	+=  -DHOST_THREAD_RENDER
 #OPT	+=  -DCUDA_DEVICE_COMBINE
 #OPT	+=  -DCUDA_THREADS
@@ -27,6 +28,7 @@
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
+SYSTYPE="GP"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -46,6 +48,19 @@ CC       =  xlc++
 endif
 OPTIMIZE =  -q64 -O3 -qarch=auto -qtune=auto -qinline
 LIB_OPT	 =  -bstackpsize:64k -bdatapsize:64k -btextpsize:64k
+OMP =
+endif
+
+ifeq ($(SYSTYPE),"GP")
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       =  /opt/cuda/bin/nvcc
+else
+CC       =  /opt/cuda/bin/nvcc
+endif
+OPTIMIZE = -O2
+LIB_OPT  = -Xlinker -L -Xlinker /opt/cuda/lib
+OMP =  -Xcompiler -openmp
+SUP_INCL += -I/opt/cuda/sdk/common/inc -I/opt/cuda/include
 endif
 
 #--------------------------------------- Here we go
@@ -59,19 +74,28 @@ OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o
 
+ifeq (CUDA,$(findstring CUDA,$(OPT)))
+OBJS += cuda/splotch.o 
+endif
+
 INCL   = splotch/splotchutils.h writer/writer.h reader/reader.h	Makefile
 
 CPPFLAGS = $(OPTIONS) $(SUP_INCL) $(OMP)
 
-LIBS   = $(LIB_OPT) $(OPTIONS) $(OMP)
+CUFLAGS = $(OPTIONS) $(SUP_INCL)
 
-.SUFFIXES: .o .cc .cxx
+LIBS   = $(LIB_OPT) $(OMP)
+
+.SUFFIXES: .o .cc .cxx .cu
 
 .cc.o:
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cxx.o:
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
+
+.cu.o:
+	$(CC) -c $(CUFLAGS) -o "$@" "$<"
 
 $(EXEC): $(OBJS)
 	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC)
