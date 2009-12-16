@@ -12,11 +12,10 @@ Copyright things go here.
 // includes, project
 #include "cuda.h"
 #include <cutil_inline.h>
+
 // includes, kernels
-#include "splotch_kernel.cu"
-#ifdef VS 
-#include "cuda/VTimer.h"
-#endif
+#include <splotch_kernel.cu> 
+#include "vtimer.h"
 #include "splotch_cuda.h"
 #include "CuPolicy.h"
 
@@ -276,6 +275,7 @@ extern "C"	void	cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
     CLEAR_MEM((d_param_colorize));
 
     //device particle_sim memory can be freed now!
+    CLEAR_MEM(pgv->d_pd);    
 
     //particle_splotch memory on device will be freed in cu_end
 }
@@ -418,6 +418,24 @@ template<typename T> T findParamWithoutChange
     else
         return deflt;
 }
+
+extern "C"  int		cu_get_chunk_particle_count(paramfile &params)
+{
+    int gMemSize, fBufSize;
+    float   factor;
+    int	    M =int( pow(2.0, 20) );
+    gMemSize =params.find<int>("graphics_memory_size", 256) *M;
+    fBufSize =params.find<int>("fragment_buffer_size", 128) *M;
+    factor   =params.find<float>("particle_mem_factor", 4.0);
+    int spareMem =1 *M;
+
+    if (gMemSize <= fBufSize)
+        return -1;
+
+    return ( gMemSize -fBufSize -spareMem)/sizeof(cu_particle_sim) /factor;
+    
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////

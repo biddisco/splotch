@@ -1,4 +1,3 @@
-<<<<<<< .mine
 /*
 Copyright things go here.
 */
