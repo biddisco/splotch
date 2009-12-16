@@ -1,7 +1,0 @@
-SPLOTCH_DIR = /sfs/sanfs/home/usercin/agh0/ParallelSplotch/splotch/
-CXX = mpiCC
-OPT = -O3
-HDF5 = /cineca/prod/libraries/hdf5/1.6.7/openmpi--1.2.5--intel--10.1/
-ZLIB = /cineca/prod/libraries/zlib/1.2.1/openmpi--1.2.5--intel--10.1/
-MPILIBS =  
-
