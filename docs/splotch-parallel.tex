@@ -261,85 +261,104 @@ order to support high performance computing environments where MPI I/O is not av
 
 \subsection{CUDA Implementation}
 \label{cuda}
-Nowadays GPUs have significantly benefitted scientific applications by its fast ALU 
+Nowadays GPUs have significantly benefited scientific applications by its fast ALU 
 capability and stream data-parallel organization. With the introduction of
- the Computer Unified Device Architecture (CUDA), the graphics high-performance 
- ability can be accessed by a C language interface, allowing developers to bypa
-ss the difficulty of fitting a general algorithm onto fixed graphics primitives. 
+ Computer Unified Device Architecture (CUDA), graphics high-performance 
+ ability can be accessed by a C language interface, allowing developers to bypass 
+ the difficulty of fitting a general algorithm onto fixed graphics primitives. 
 To obtain the computing horsepower of GPUs, CUDA technology has been applied
 to Splotch.
 
 CUDA programs runs on GPUs with a Single Instruction Multiple Thread (SIMT)[programming guide] 
-mode. Every instruction issue time, a multiprocessor will execu
-te one common instruction for multiple threads. If threads diverge via a data-dependent 
-conditional branch, they will be executed serially which will of cours
-e slow down the execution. In the worst case for a warp[programming guide] there could 
+mode. Every instruction issue time, a multiprocessor will execute one common instruction 
+for multiple threads. But if threads diverge via a data-dependent 
+conditional branch, they will be executed serially which will cause a 
+slow-down in the execution. In the worst case for a warp[programming guide] there could 
 be only one thread running at each time which causes the multiprocessor
  actually degenerating to a single-processor. For this reason the parallel strategy of 
- the MPI implementation in section 3.1 is not suitable here as threads t
-ends to diverge widely after running through multiple particles. And the graphics memory 
-requirement for image buffer in MPI implementation will limit the num
-ber of threads which makes a full horsepower from CUDA unavailable.
+ the MPI implementation in section 3.1 is not suitable here as CUDA threads tends to 
+ diverge wildly after running through multiple particles. And the graphics memory 
+required for image buffer in MPI implementation will limit the scale 
+of parallel threads which makes a full horsepower from CUDA unavailable.
 
 With those considerations we set the granularity of parallel task to one particle, which 
-means that each CUDA thread will take care of one particle's drawing
-, going through all the steps including ranging, transformation, colorization and 
-rendering. As the number of particles for cosmological dataset is often larg
-e, say millions of, the multiprocessors will be fully fed. And in most of the steps the 
+means that each CUDA thread will take care of one particle's drawing, 
+going through all the steps including ranging, transformation, colorization and 
+rendering. As the number of particles for cosmological dataset is often large, 
+say millions of, the multiprocessors will be fully fed. And in most of the steps the 
 granularity of the tasks are stable among particles which is good for
 parallel computing until the rendering step, where some specially treatment will be applied.
 
-The overall process is illustrated in Figure XX,
+
 \begin{figure}
 \begin{center}
-\includegraphics[width=1.3\textwidth]{cu_splotch_process.pdf}
+\includegraphics[width=0.75\textwidth]{cu_splotch_process.png}
 \end{center}
+\caption{Process of CUDA Splotch.}
 \end{figure}
 
-The red arrows show the execution of the processing steps. On the device side there are 
+The overall process is illustrated in Figure XX. The red arrows show the execution of the processing steps. On the device side there are 
 many arrows going together as CUDA threads running in parallel. In the
  Range step particle data are normalized and some global information is calculated, 
- like the maximum and minimum value of certain attributes. We let CPU handl
-e the calculation of this as well as particle sorting after transformation.
+ like the maximum and minimum value of certain attributes. We let CPU handle
+  the calculation of this as well as particle sorting after transformation.
 
 After geometry transformation the area, or the location of the sub-image that each 
-particle will influence is determined, and the sub-images will later be fil
-led in the render step. Depending on the smoothing length of the particles and the 
-camera settings the sizes of the sub-images range from 1*1 to the size of t
-he final image, say 1000*1000, so the granularity of computing tasks in render step could be quite unbalanced.  We found this unbalancing compromises speed ba
-dly, as shown in table XXX.
+particle will influence is determined, and the empty sub-images will later be filled 
+in the render step. Depending on the smoothing length of the particles and the 
+camera settings the sizes of the sub-images range from 1*1 to the size of the 
+final image, say 1000*1000, so the granularity of computing tasks in render step 
+could be quite unbalanced. We found this unbalancing compromises speed, as shown in table XXX.
 
 To solve that problem we imposed a new step on host, showing as 'Split Particles' 
 in figure XXX, to divide big tasks into smaller, average ones. Any particle
 carrying a sub-image whose pixel number is larger than a barrier value will be 
-splitted into multiple ones, each carrying a part of the pixels. The barrier va
-lue can be configured outside. In practical we found a number around the width 
+splitted into multiple ones, each carrying a part of the pixels. The barrier value 
+can be configured outside. In practical we found a number around the width 
 or height of the final image, say 1024 usually works well.
 
 There are of course cost for doing the splitting. The number of particles is 
-increased which need more thread issuing. Running the splitting algorithm itself
+increased which demands more thread issuing. Running the splitting algorithm itself
 as well as the memory copying between host and device will also cost some time. 
-Besides all these costs test results show that splitting brings great speed in
-creasing, as show in table XXX.
+Besides all these costs test results show that splitting brings speed increasing, as show in table XXX.
 
 The output of render for the particles is stored in a one-dimension fragment buffer. 
-After filled by the device-render step, fragment buffer is copied to host
+After filled at the device-render step, fragment buffer is copied to host
  and combined to the final image by CPU. Here we found that the asynchronism of 
  device calling can be used to let device and host work in parallel. Say, when
-rendering particle chunk N, combine the result of chunk N-1, the algorithm is listed below,
+rendering particle chunk N, combine the result of chunk N-1, the algorithm is listed below.
 
-\includegraphics[width=1.2\textwidth]{cuda_code.pdf}
+\begin{verbatim}
+while  ( not all particles rendered )
+{
+       find the i-th subset S(i) in particle array that just uses up 
+       fragment buffer;
+A:     call device to render S(i);
+       if  ( S(i) is not the first subset starting from index 0 )
+       { 
+B:          combine F(i-1), the output of S(i-1) in fragment buffer;
+       }
+C:     copy fragment buffer from device to host;
+       if  ( S(i) is the last subset ending with index N, last index of
+             particle array)
+       {
+             combine F(i);
+       }
+       i++;
+}
+\end{verbatim}
 
 
 Instruction A is actually executed on device, which runs in parallel with 
 instruction B, and the two paths merge at instruction C where they all have finished
-. From table XXX we can see that the combine time is mostly hidden by render time.
+. From test result we found that the combine time is mostly hidden by the render time.
 
-Table xxx shows the test result of CUDA implementation of Splotch, (talk about the numbers)
+In the future there are ways that worth trying to optimize CUDA Splotch. There are suggested, standard approaches
+that can be tried to optimize CUDA Splotch, like unrolling short loops to optimize the control flow, using 
+local/shared memory to accelerate data fetching and so on. As a parallel approach load-balancing is always an issue
+which needs taking care of. For a system running CUDA, the load balance between CPU and GPU, and that between GPUs
+should all be considered in order to obtain the full power of the hardware.
 
-In the future there are ways that worth trying to optimize CUDA Splotch.
-
-- (list future works)
 
 
 \section{Benchmarks}
@@ -381,9 +400,84 @@ A summmary of the benchmarks is presented in table XXX.
 
 MARZIA   
    
+
 \subsection{CUDA Benchmarks}
 
-ZHEFAN
+\begin{table}
+\caption{Result of CUDA Splotch for benchmark 1M and 10M.}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+	& setup/read(s) & 	drawing(s) & 	write(s) & 	total(s) \\
+\hline
+block 1M without CUDA & 	1.1259 & 	0.6982 & 	0.1860 & 	2.0103 \\
+\hline
+block 1M with CUDA & 	1.0916 & 	0.8411 & 	0.1840 & 	2.1170 \\
+\hline
+block 10M without CUDA & 	10.7064 & 	6.1376 & 	0.1842 & 	17.0284 \\
+\hline
+blocm 10M with CUDA & 	10.1411 & 	4.8261 & 	0.1865 & 	15.1537 \\
+\hline
+\end{tabular}
+\end{table}
+
+Tablx XX shows the test result on Win for dataset block 1M and block 10M. For the
+smaller dataset block 1M we can see that the speed with CUDA is slower than that without
+it, because for small tasks the cost for applying CUDA can not be ignored, 
+such as initialize CUDA runtime, data copying between host and device and so on. For block
+10M we can see using CUDA gained us 21.3\% of speedup, here we define speedup as
+
+speedup = (TimeWithoutCUDA - TimeWithCUDA)/TimeWithoutCUDA
+
+Rather than the benchmark, CUDA(GPU) Splotch works better when handling the datasets
+that generate visually appealing images like Figure X, where drawing especially rendering
+is a major work load. Table xxx shows some test result of such datasets, 
+and table xxx lists the dataset we use . The machines we use has a CPU of Intel Xeon X5482 3.2 GHz and
+2 GPUs of NVIDIA Quadro FX 5600. From the result we can see that CUDA provides a speedup to Splotch, and 
+particle dividing helped improving the performance.
+
+\begin{table}
+\caption{Dataset used for CUDA testing.}
+\begin{tabular}{|l|l|l|}
+\hline
+	size	& particles & file length \\
+\hline
+	small	& 370,852	& 48,441 kb \\
+\hline
+	middle	& 2,646,991	& 280,960 kb \\
+\hline
+	big	& 16,202,527& 	1,813,480 kb \\
+\hline
+\end{tabular}
+\end{table}
+
+%%%%%%%%%%%%%%%%%
+\begin{table}
+\caption{Result of CUDA Splotch for small, middle and big datasets.}
+\begin{center}
+\begin{tabular}{ | l || l | l || l | l | l |}
+\hline  
+   &	CPU	& CPU	& GPU	& GPU	& GPU \\
+\hline
+  data & drawing time(s) & total time(s) & drawing time(s) & total time(s) & drawing time without splitting(s) \\
+\hline  
+  small &	12.6419	& 13.0144	& 7.3885	& 7.7668	& 12.4894 \\
+\hline
+  middle &	18.5443 &	19.7190 &	11.3855 &	12.7118 &	16.6905 \\
+\hline
+  big	& 31.8976 &	39.3234 &	19.7792 &	27.0321	& 24.6305\\
+\hline
+\end{tabular}
+\end{center}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{figure}
+\begin{center}
+\includegraphics[width=1.0\textwidth]{cu_images.png}
+\end{center}
+\caption{Rendering result for small, middle and big datasets.}
+\end{figure}
+
 
 \subsection{Hybrid, MPI+CUDA, Benchmarks}
    
