@@ -19,18 +19,21 @@
 OPT	+=  -DCUDA
 OPT	+=  -DCUDA_THREADS
 OPT     +=  -DNO_WIN_THREAD
-#OPT	+=  -DHOST_THREAD_RENDER
-#OPT	+=  -DCUDA_DEVICE_COMBINE
-#OPT	+=  -DCUDA_THREADS
-#OPT	+=  -DCUDA_TEST_COLORMAP
-#OPT	+=  -DCUDA_TEST_FRAGMENT
+OPT     +=  -DNO_HOST_RANGING
+OPT     +=  -DNO_HOST_TRANSFORM
+OPT     +=  -DNO_HOST_COLORING
+OPT     +=  -DNO_HOST_RENDER
+#OPT	 +=  -DHOST_THREAD_RENDER
+#OPT	 +=  -DCUDA_DEVICE_COMBINE
+#OPT	 +=  -DCUDA_TEST_COLORMAP
+#OPT	 +=  -DCUDA_TEST_FRAGMENT
 
 
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
-#SYSTYPE="GP"
-SYSTYPE="PLX"
+SYSTYPE="GP"
+#SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -59,10 +62,11 @@ CC       =  /opt/cuda/bin/nvcc
 else
 CC       =  /opt/cuda/bin/nvcc
 endif
-OPTIMIZE = -O2
+OPTIMIZE = -O2 
 LIB_OPT  = -Xlinker -L -Xlinker /opt/cuda/lib
-OMP =  -Xcompiler -openmp
-SUP_INCL += -I/opt/cuda/sdk/common/inc -I/opt/cuda/include
+OMP =  
+#-Xcompiler -openmp
+SUP_INCL += -I/opt/cuda/sdk/common/inc -I/opt/cuda/include -Icuda
 endif
 
 ifeq ($(SYSTYPE),"PLX")
@@ -81,8 +85,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-#EXEC   = Splotch4.0$(SYSTYPE)
-EXEC   = Splotch4.0
+EXEC   = Splotch4.0$(SYSTYPE)
 
 OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
@@ -104,12 +107,15 @@ CUFLAGS = $(OPTIONS) $(SUP_INCL)
 
 LIBS   = $(LIB_OPT) $(OMP)
 
-.SUFFIXES: .o .cc .cxx .cu
+.SUFFIXES: .o .cc .cxx .cpp .cu
 
 .cc.o:
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cxx.o:
+	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
+
+.cpp.o:
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cu.o:
