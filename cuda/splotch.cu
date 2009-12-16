@@ -13,6 +13,8 @@ Copyright things go here.
 #include <cuda.h>
 #include <cutil_inline.h>
 
+#include "splotch/splotchutils.h"
+
 // includes, kernels
 #include "splotch_kernel.cu" 
 //#include "vtimer.h"
@@ -28,7 +30,7 @@ template<typename T> T findParamWithoutChange
 extern "C" void getCuTransformParams(cu_param_transform &p,
     paramfile &params, double campos[3], double lookat[3], double sky[3]);
 //usefule functions from splotchutils.h
-template<typename T> void get_minmax (T &minv, T &maxv, T val);
+//template<typename T> void get_minmax (T &minv, T &maxv, T val);
 ////////////////////////////////////////////////////////////////////
 
 //////////////////////////////
