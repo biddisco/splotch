@@ -49,15 +49,6 @@
 #endif
 
 #ifdef CUDA
-//switch off host operations. may turn them on sometime for testing.
-#define NO_HOST_RANGING
-#define NO_HOST_TRANSFORM
-#define NO_HOST_COLORING
-#define NO_HOST_RENDER
-#define	NO_CUDA_THREADS
-#define	NO_WIN_THREAD
-//#define	CUDA_DEVICE_COMBINE
-//include head files
 #include "cuda/splotch_cuda.h"
 #include <string.h>
 #endif
