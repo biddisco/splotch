@@ -96,6 +96,7 @@ DWORD WINAPI combine(void	*param);
 DWORD WINAPI TestThreadCombineTime(void	*p);
 #else
 DWORD WINAPI cu_thread_func(void *pinfo);
+DWORD WINAPI cu_draw_chunk(void *pinfo);
 #endif
 
 //for record times
@@ -945,7 +946,7 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 	ti.pPic =&pic;
 
 	//set startP and end P of ti
-	int len =cu_get_chunk_particle_count(*g_params);
+	int len = cu_get_chunk_particle_count(*g_params);
 	if ( len==-1)
 	{
 		printf("\nGraphics memory setting error\n");
@@ -967,8 +968,8 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 		cu_draw_chunk(&ti);
 		//collect image to result
 		for (int x=0; x<pic.size1(); x++)
-			for (int y=0; y<pic.size2(); y++)
-				(*(pInfoOutput->pPic))[x][y] += pic[x][y];
+		  for (int y=0; y<pic.size2(); y++)
+		    (*(pInfoOutput->pPic))[x][y] =  (*(pInfoOutput->pPic))[x][y] + pic[x][y];
 		//collect times to output
 		for (int i=0; i<TIME_RECORDS; i++)
 			pInfoOutput->times[i] +=ti.times[i];
