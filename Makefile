@@ -9,15 +9,15 @@
 
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
-#OPT	+=  -DUSE_MPIIO
+OPT	+=  -DUSE_MPI
+OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT	+=  -DCUDA
-OPT	+=  -DCUDA_THREADS
+#OPT	+=  -DCUDA
+#OPT	+=  -DCUDA_THREADS
 #OPT	+=  -DHOST_THREAD_RENDER
 #OPT	+=  -DCUDA_DEVICE_COMBINE
 #OPT	+=  -DCUDA_THREADS
@@ -27,8 +27,8 @@ OPT	+=  -DCUDA_THREADS
 
 #--------------------------------------- Select target Computer
 
-#SYSTYPE="SP6"
-SYSTYPE="GP"
+SYSTYPE="SP6"
+#SYSTYPE="GP"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -38,7 +38,7 @@ endif
 OMP      = -fopenmp
 
 OPTIMIZE = -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
-SUP_INCL = -I. -Icxxsupport
+SUP_INCL = -I. -Icxxsupport -Impiio-0.01/include/
 
 ifeq ($(SYSTYPE),"SP6")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
@@ -67,7 +67,8 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.0$(SYSTYPE)
+#EXEC   = Splotch4.0$(SYSTYPE)
+EXEC   = Splotch4.0
 
 OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
@@ -76,6 +77,9 @@ OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
 OBJS += cuda/splotch.o 
+endif
+ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
+LIB_MPIIO = -Lmpiio-0.01/lib -lpartition
 endif
 
 INCL   = splotch/splotchutils.h writer/writer.h reader/reader.h	Makefile
@@ -98,7 +102,7 @@ LIBS   = $(LIB_OPT) $(OMP)
 	$(CC) -c $(CUFLAGS) -o "$@" "$<"
 
 $(EXEC): $(OBJS)
-	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC)
+	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC) $(LIB_MPIIO)
 
 $(OBJS): $(INCL)
 
