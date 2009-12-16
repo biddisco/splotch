@@ -12,7 +12,7 @@ All 'magic nunbers' are out of this class.
 
 #include "cxxsupport/paramfile.h"
 #include "cuda/splotch_cuda.h"
-#include "cuda/cuda.h"
+#include <cuda.h>
 #include <cutil_inline.h>
 
 class CuPolicy

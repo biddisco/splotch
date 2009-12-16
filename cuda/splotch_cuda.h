@@ -5,7 +5,7 @@ Copyright things go here.
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
-#include "cxxsupport\paramfile.h"
+#include "cxxsupport/paramfile.h"
 //#include "CuPolicy.h"
 class CuPolicy;
 

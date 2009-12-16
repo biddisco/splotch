@@ -605,6 +605,7 @@ int main (int argc, char **argv)
 			(LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
 	//and wait for them to finish
 	WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
+
 #else //do not use thread which is now Windows code
 	cu_thread_func (&(tInfo[0])); //just call it as normal function
 //	host_thread_func ( &(tInfo[nDev]) );
@@ -957,6 +958,9 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 	int endP =ti.endP;
 	ti.endP =ti.startP;
 
+#ifdef DEBUG
+   cout << "cu_thread_func1\n";
+#endif
 	while( ti.endP<endP )	
 	{
 		//set range
@@ -967,6 +971,11 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 		//draw chunks one by one
 		cu_draw_chunk(&ti);
 		//collect image to result
+#ifdef DEBUG
+   cout << "ti.endP " << ti.endP<< "\n";
+   cout << "pic.size1() " << pic.size1()<< "\n";
+   cout << "pic.size2() " << pic.size2()<< "\n";
+#endif
 		for (int x=0; x<pic.size1(); x++)
 		  for (int y=0; y<pic.size2(); y++)
 		    (*(pInfoOutput->pPic))[x][y] =  (*(pInfoOutput->pPic))[x][y] + pic[x][y];
@@ -980,7 +989,9 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 
 	//test 2-goes pased...
 
-
+#ifdef DEBUG
+   cout << "cu_thread_func2\n";
+#endif
 	return 1;
 }
 
@@ -1186,10 +1197,10 @@ PROBLEM HERE!
 			v_ps.push_back(p);
 			pFiltered++;
 
-			minx=min(minx,cu_ps[i].minx);
-			miny=min(miny,cu_ps[i].miny);
-			maxx=max(maxx,cu_ps[i].maxx);
-			maxy=max(maxy,cu_ps[i].maxy);
+			minx=min(minx,(int)cu_ps[i].minx);
+			miny=min(miny,(int)cu_ps[i].miny);
+			maxx=max(maxx,(int)cu_ps[i].maxx);
+			maxy=max(maxy,(int)cu_ps[i].maxy);
 //old code observ size
 		}
 	}

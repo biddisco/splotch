@@ -9,15 +9,16 @@
 
 
 #--------------------------------------- Switch on MPI
-OPT	+=  -DUSE_MPI
-OPT	+=  -DUSE_MPIIO
+#OPT	+=  -DUSE_MPI
+#OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-#OPT	+=  -DCUDA
-#OPT	+=  -DCUDA_THREADS
+OPT	+=  -DCUDA
+OPT	+=  -DCUDA_THREADS
+OPT     +=  -DNO_WIN_THREAD
 #OPT	+=  -DHOST_THREAD_RENDER
 #OPT	+=  -DCUDA_DEVICE_COMBINE
 #OPT	+=  -DCUDA_THREADS
@@ -27,8 +28,9 @@ OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Select target Computer
 
-SYSTYPE="SP6"
+#SYSTYPE="SP6"
 #SYSTYPE="GP"
+SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -63,6 +65,18 @@ OMP =  -Xcompiler -openmp
 SUP_INCL += -I/opt/cuda/sdk/common/inc -I/opt/cuda/include
 endif
 
+ifeq ($(SYSTYPE),"PLX")
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       =  nvcc
+else
+CC       =  nvcc
+endif
+OPTIMIZE = -O2 -DDEBUG
+LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
+OMP =
+SUP_INCL += -I$(CUDASDK_HOME)/common/inc -I$(NVCC_HOME)/include -Icuda
+endif
+
 #--------------------------------------- Here we go
 
 OPTIONS = $(OPTIMIZE) $(OPT)
@@ -76,7 +90,7 @@ OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o
 
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-OBJS += cuda/splotch.o 
+OBJS += cuda/splotch.o cuda/CuPolicy.o
 endif
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 LIB_MPIIO = -Lmpiio-0.01/lib -lpartition

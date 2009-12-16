@@ -10,12 +10,12 @@ Copyright things go here.
 #include <math.h>
 
 // includes, project
-#include "cuda.h"
+#include <cuda.h>
 #include <cutil_inline.h>
 
 // includes, kernels
-#include <splotch_kernel.cu> 
-#include "vtimer.h"
+#include "splotch_kernel.cu" 
+//#include "vtimer.h"
 #include "splotch_cuda.h"
 #include "CuPolicy.h"
 
@@ -150,17 +150,21 @@ void	cu_range(paramfile &params ,cu_particle_sim* h_pd,
     // call device for stage 2 ptypes times
     // prepare parameters1 first
     float minval_int, maxval_int, minval_col, maxval_col;
-    
+    std::string tmp;
     for(int itype=0;itype<ptypes;itype++)
     {
+        tmp = "intensity_min"+dataToString(itype);
         minval_int =findParamWithoutChange<float>(&params,  //in mid of developing only
-            "intensity_min"+dataToString(itype),pr.minint[itype]);
+            tmp, pr.minint[itype]);
+        tmp = "intensity_max"+dataToString(itype);
         maxval_int = findParamWithoutChange<float>(&params, 
-            "intensity_max"+dataToString(itype),pr.maxint[itype]);
+            tmp, pr.maxint[itype]);
+        tmp = "color_min"+dataToString(itype);
         minval_col = findParamWithoutChange<float>(&params, 
-            "color_min"+dataToString(itype),pr.mincol[itype]);
+            tmp, pr.mincol[itype]);
+        tmp = "color_max"+dataToString(itype);
         maxval_col = findParamWithoutChange<float>(&params, 
-            "color_max"+dataToString(itype),pr.maxcol[itype]);
+            tmp, pr.maxcol[itype]);
     //for debug: printf("\n%f, %f, %f, %f\n", minval_int, maxval_int, minval_col, maxval_col);
 
         k_range2<<<dimGrid, dimBlock>>>(d_pr, pgv->d_pd, n, itype,
