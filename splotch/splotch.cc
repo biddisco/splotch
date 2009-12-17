@@ -1018,7 +1018,7 @@ DWORD WINAPI cu_draw_chunk(void *pinfo)
 	//CUDA Init 
 //	timer.reset();
 //	timer.start();
-//	cu_init(params, tInfo->devID, &gv);
+	cu_init(params, tInfo->devID, &gv);
 //	timer.stop();
 //	time =timer.getTime();
 //	cout << endl << "cu_init() cost time:" << time << "s" <<endl;
@@ -1113,21 +1113,35 @@ PROBLEM HERE!
 	    vector<HANDLE_RAYPP<CMAP_ENTRY> > e;
 		e = amap[i].Entry;
 		int j;
+        cout << "E.SIZE ..... " << e.size() << "\n";
 		for (j=0; j<e.size(); j++)
 		{
 			HANDLE_RAYPP<CMAP_ENTRY> h;
+                        cout << "--->><< e[j]      " << e[j]->minval << "\n";
+                        cout << "--->><< e[j]      " << e[j]->maxval << "\n";
 			h =e[j];
 			COLOUR	clr1, clr2;
 			amapD[index].min =h->minval; 
 			amapD[index].max =h->maxval;
-			clr1 =h->Get_Colour(h->minval);
-			clr2 =h->Get_Colour(h->maxval);
+			//clr1 =h->Get_Colour(h->minval);
+			//clr2 =h->Get_Colour(h->maxval);
+                        cout <<  clr1.r <<"<<<<<<----\n";
+                        cout << h->Get_Colour(0.5).r  <<"<<<<<<----\n";
+                        cout << h->Get_Colour(1).g << " " << clr1.g <<"<<<<<<----\n";
+                        cout << h->Get_Colour(1).b << " " << clr1.b <<"<<<<<<----\n";
+                        clr1.r =h->Get_Colour(h->minval).r;
+                        clr1.g =h->Get_Colour(h->minval).g;
+                        clr1.b =h->Get_Colour(h->minval).b;
+                        clr2.r =h->Get_Colour(h->maxval).r;
+                        clr2.g =h->Get_Colour(h->maxval).g;
+                        clr2.b =h->Get_Colour(h->maxval).b;
 			amapD[index].color1.r =clr1.r;
 			amapD[index].color1.g =clr1.g;
 			amapD[index].color1.b =clr1.b;
 			amapD[index].color2.r =clr2.r;
 			amapD[index].color2.g =clr2.g;
 			amapD[index].color2.b =clr2.b;
+                        cout << "pippo\n";
 			index++;
 		}
 		amapDTypeStartPos[i] =curPtypeStartPos;

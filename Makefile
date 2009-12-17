@@ -32,8 +32,8 @@ OPT     +=  -DNO_HOST_RENDER
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
-SYSTYPE="GP"
-#SYSTYPE="PLX"
+#SYSTYPE="GP"
+SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -71,9 +71,9 @@ endif
 
 ifeq ($(SYSTYPE),"PLX")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       =  nvcc
+CC       =  nvcc -g
 else
-CC       =  nvcc
+CC       =  nvcc -g
 endif
 OPTIMIZE = -O2 -DDEBUG
 LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
