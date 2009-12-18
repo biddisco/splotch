@@ -22,6 +22,13 @@ using namespace RAYPP;
 
 #include "splotch/splotchutils.h"
 
+#define SWAP_4(x) ( ((x) << 24) | \
+                (((x) << 8) & 0x00ff0000) | \
+                (((x) >> 8) & 0x0000ff00) | \
+                ((x) >> 24) )
+#define SWAP_FLOAT(x) (*(unsigned int *)&(x)=SWAP_4(*(unsigned int *)&(x)))
+
+
 long bin_reader_tab (paramfile &params, vector<particle_sim> &points, 
                      float *maxr, float *minr, 
                      int mype, int npes)
@@ -116,24 +123,25 @@ which_fields[7] = color 3 (B)
 #ifdef DEBUG
    if(mype == 0)  cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
 #endif
-   long long stride=pe_size_orig*sizeof(float)*num_of_fields*mype+offset;
+   long stride=pe_size_orig*sizeof(float)*num_of_fields*mype+offset;
 
    float * readarray;
    readarray = new float [num_of_fields];
-   bifstream infile;
-   infile.open(datafile.c_str(), doswap);
-   infile.rewind();
-   
+   pFile=fopen(datafile.c_str(), "rb");
 #ifdef DEBUG
    cout << "Reading " << num_of_fields << " fields for " << pe_size << " particles\n";
+   cout << mype << " -----> " << stride << "\n";
 #endif
 
-   infile.skip(stride);
-   cout << mype << " -----> " << stride << "\n";
+   fseek(pFile, stride, SEEK_SET);
+
    for(long index=0; index<pe_size; index++)
    {
 
-      for(int ifield=0; ifield<num_of_fields; ifield++) infile >> readarray[ifield];
+     fread(readarray, sizeof(float), num_of_fields, pFile); 
+     if(doswap)
+       for(int ii=0; ii<num_of_fields; ii++) 
+            SWAP_FLOAT(readarray[ii]);
 
       points.at(index).x=readarray[which_fields[0]];
       points.at(index).y=readarray[which_fields[1]];
@@ -171,7 +179,7 @@ which_fields[7] = color 3 (B)
       maxradius = (maxradius >= smooth ? maxradius : smooth);
  
    }
-   infile.close();
+   fclose(pFile);
 
    //if(mype == npes-1){for (int ii=0; ii<100000; ii+=1000)cout << mype << " " << points.at(ii).x << " " << points.at(ii).y << " " << points.at(ii).C1 << "\n";};
    //maxradius = 1.0;
@@ -277,12 +285,11 @@ which_fields[7] = color 3 (B)
    points.resize(pe_size);
    float * readarray;
    readarray = new float [pe_size];
-
+#ifdef DEBUG
    cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
-
+#endif
    
-   bifstream infile;
-   infile.open(datafile.c_str(), doswap);
+   pFile=fopen(datafile.c_str(), "rb");
 
 #ifdef DEBUG
    cout << "Reading " << n_load_fields << " fields for " << pe_size << " particles\n";
@@ -293,10 +300,11 @@ which_fields[7] = color 3 (B)
      if(which_fields[n_fields] < 0)continue;
 
      stride=sizeof(float)*(n_fields_eff*field_size+pe_size_orig*mype)+offset;
-
-     infile.rewind();
-     infile.skip(stride);
-     for(long index=0; index<pe_size; index++)infile >> readarray[index];
+     fseek(pFile, stride, SEEK_SET);
+     fread(readarray, sizeof(float), pe_size, pFile); 
+     if(doswap)
+       for(long index=0; index<pe_size; index++) 
+            SWAP_FLOAT(readarray[index]);
 
      switch(n_fields)
      {
@@ -336,7 +344,7 @@ which_fields[7] = color 3 (B)
      }
 
    }
-   infile.close();
+   fclose(pFile);
 
 
    if(which_fields[4] < 0)
