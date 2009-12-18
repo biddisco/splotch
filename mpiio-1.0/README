@@ -1,0 +1,64 @@
+/*
+ ============================================================================
+ Name        : partition.c
+ Author      : Gian Franco Marras
+ Version     : 1.0
+ Copyright   : free
+ Description : A simple MPI Library I/O for access file in parallel system
+ ============================================================================
+ */
+
+index:
+1)Examples for write in the file
+2)Examples for read in the file
+#######################################
+1)
+#######################################
+Example to use the new library in C:(Write in the file)
+#######################################
+...;
+ierr = MPI_Init ( &argc, &argv );
+ierr = MPI_Comm_rank ( MPI_COMM_WORLD, &my_rank );
+ierr = MPI_Comm_size ( MPI_COMM_WORLD, &nprocs );
+...;
+ndim_array=2;
+psize[0]=4;  psize[1]=6;
+nsize_global[0]=100; nsize_global[1]=110;
+ntot_byte=nsize_global[0]*nsize_global[1]*sizeof(float);
+...;
+ierr = MPI_Ajo_partition ( MPI_COMM_WORLD, my_rank, ndim_array, nsize_global, psize, nsize, start_global_array);
+...;
+for(i=0,i<ntime;++i){
+   offset=i*ntot_byte;
+   ...;
+   ierr = MPI_Ajo_write ( MPI_COMM_WORLD, my_rank, “filename.bin”, 
+   ndim_array, nsize_global, nsize, start_global_array, MPI_FLOAT, array, offset );  
+}
+#######################################
+2)
+#######################################
+Example to use the new library in C:(Read from file)
+#######################################
+...;
+ierr = MPI_Init ( &argc, &argv );
+ierr = MPI_Comm_rank ( MPI_COMM_WORLD, &my_rank );
+ierr = MPI_Comm_size ( MPI_COMM_WORLD, &nprocs );
+...;
+ndim_array=2;
+psize[0]=4;  psize[1]=6;
+nsize_global[0]=100; nsize_global[1]=110;
+ntot_byte=nsize_global[0]*nsize_global[1]*sizeof(float);
+...;
+ierr = MPI_Ajo_partition ( MPI_COMM_WORLD, my_rank, ndim_array, nsize_global, psize, nsize, start_global_array);
+...;
+for(i=0,i<ntime;++i){
+   offset=i*ntot_byte;
+   ...;
+   ierr = MPI_Ajo_read ( MPI_COMM_WORLD, my_rank, “filename.bin”, 
+   ndim_array, nsize_global, nsize, start_global_array, MPI_FLOAT, array, offset );  
+}
+#######################################
+
+
+
+

@@ -1,0 +1,68 @@
+.\"Copyright
+.\" Copyright
+.TH MPI_Ajo_read 1 "1.0" "mpiio"
+.SH NAME
+\fBMPI_Ajo_read\fP \- Reads a un file starting at the location specified by the individual file pointer (collective).
+
+.SH SYNTAX
+.ft R
+.nf
+C Syntax
+    #include <mpi.h>
+    int MPI_Ajo_read ( MPI_Comm \fIcomm\fP, int \fImy_rank\fP, const char \fI*filename\fP, int \fIndim_array\fP, 
+    int \fInsize_global\fP[], int \fInsize\fP[], int \fIstart_global_array\fP[], MPI_Datatype \fIetype\fP, void \fI*array\fP, 
+    MPI_Offset \fIdisp\fP );
+
+.SH INPUT PARAMETERS
+.ft R
+.TP 1i
+comm
+Communicator (handle).
+.TP 1i
+my_rank
+Rank of a process within group of comm (integer).
+.TP 1i
+filename
+Name of file to read (character).
+.TP 1i
+ndim_array
+Number of array dimensions (positive integer).
+.TP 1i
+nsize_global
+Number of elements of type \fIetype\fP in each dimension of the full array (array of positive integers).
+.TP 1i
+nsize
+Number of elements of type \fIetype\fP in each dimension of the subarray (array of positive integers).
+.TP 1i
+start_global_array
+Starting coordinates of the subarray in each dimension (array of nonnegative integers).
+.TP 1i
+etype
+Array element data type (handle).
+.TP 1i
+array
+Initial address of buffer (choice).
+.TP 1i
+disp  
+Displacement (integer).
+
+
+.SH DESCRIPTION
+.ft R
+MPI_Ajo_read attempts to read from the file 
+.I filename
+an 
+.I ndim_array 
+dimensional subarray 
+data items having 
+.I etype
+type into the user's buffer 
+.I buf. 
+
+
+.SH ERRORS
+Almost all MPI routines return an error value; C routines as the value of the function.
+.sp
+Before the error value is returned, the current MPI error handler is
+called. For MPI I/O function errors, the default error handler is set to MPI_ERRORS_RETURN. The error handler may be changed with MPI_File_set_errhandler; the predefined error handler MPI_ERRORS_ARE_FATAL may be used to make I/O errors fatal. Note that MPI does not guarantee that an MPI program can continue past an error.  
+
