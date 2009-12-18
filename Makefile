@@ -9,20 +9,20 @@
 
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
-#OPT	+=  -DUSE_MPIIO
+OPT	+=  -DUSE_MPI
+OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT	+=  -DCUDA
-OPT	+=  -DCUDA_THREADS
-OPT     +=  -DNO_WIN_THREAD
-OPT     +=  -DNO_HOST_RANGING
-OPT     +=  -DNO_HOST_TRANSFORM
-OPT     +=  -DNO_HOST_COLORING
-OPT     +=  -DNO_HOST_RENDER
+#OPT	+=  -DCUDA
+#OPT	+=  -DCUDA_THREADS
+#OPT     +=  -DNO_WIN_THREAD
+#OPT     +=  -DNO_HOST_RANGING
+#OPT     +=  -DNO_HOST_TRANSFORM
+#OPT     +=  -DNO_HOST_COLORING
+#OPT     +=  -DNO_HOST_RENDER
 #OPT	 +=  -DHOST_THREAD_RENDER
 #OPT	 +=  -DCUDA_DEVICE_COMBINE
 #OPT	 +=  -DCUDA_TEST_COLORMAP
@@ -31,9 +31,9 @@ OPT     +=  -DNO_HOST_RENDER
 
 #--------------------------------------- Select target Computer
 
-#SYSTYPE="SP6"
+SYSTYPE="SP6"
 #SYSTYPE="GP"
-SYSTYPE="PLX"
+#SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -43,7 +43,7 @@ endif
 OMP      = -fopenmp
 
 OPTIMIZE = -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
-SUP_INCL = -I. -Icxxsupport -Impiio-0.01/include/
+SUP_INCL = -I. -Icxxsupport -Impiio-1.0/include/
 
 ifeq ($(SYSTYPE),"SP6")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
@@ -96,7 +96,7 @@ ifeq (CUDA,$(findstring CUDA,$(OPT)))
 OBJS += cuda/splotch.o cuda/CuPolicy.o
 endif
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
-LIB_MPIIO = -Lmpiio-0.01/lib -lpartition
+LIB_MPIIO = -Lmpiio-1.0/lib -lpartition
 endif
 
 INCL   = splotch/splotchutils.h writer/writer.h reader/reader.h	Makefile
