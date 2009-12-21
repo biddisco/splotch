@@ -78,17 +78,17 @@ attention to the growth of graphical and visualization tools, driving their evol
 directly involved in the development of many of them.
 At present, the most popular software for astronomers can be subdivided
 into two main categories: tools for image display and processing and tools for
-plotting data. Notable among the former are IRAF, by NOAO; ESO-MIDAS, by the 
-European Southern Observatory; SaoImage, by the Smithsonian Astrophysical Observatory and
+plotting data. Notable among the former are IRAF \cite{iraf}, by NOAO; ESO-MIDAS \cite{midas}, by the 
+European Southern Observatory; SaoImage \cite{sao}, by the Smithsonian Astrophysical Observatory and
 GAIA, by ESO. Many other tools are available, but we refer to dedicated surveys
 for a complete list. Gnuplot and SuperMongo are 
 popular applications adopted for 2D data plots. A more sophisticated solution 
-is represented by IDL, by ITT Visual Information, which is characterized
+is represented by IDL, by ITT Visual Information \cite{idl}, which is characterized
 by a large library of functions specifically developed for astrophysics. 
 
 The last generation 
-of tools, like ParaView (cite), VisIVO (cite), VisIT (cite), Aladin
-(cite) have been developed to overcome the limits
+of tools, like ParaView \cite{paraview}, VisIVO \cite{visivo}, VisIT \cite{visit}, Aladin
+\cite{aladin}, have been developed to overcome the limits
 and the barriers of traditional software by exploiting the latest technological 
 opportunities. Again, for a complete list, we refer to specific surveys. 
 
@@ -96,16 +96,16 @@ In this paper we present the High Performance Computing implementation of
 Splotch \citep{2008NJPh...10l5006D}, a ray-tracing software designed to visualize data coming from particle 
 based computer simulations. Cosmological N-Body simulations represents a paradigmatic
 example of such applications. They account for some of the largest simulations in astrophysics, 
-as, for instance, the MillenniumII simulation (cite), which describe the evolution 
+as, for instance, the MillenniumII simulation \citep{2009MNRAS.398.1150B}, which describe the evolution 
 of a meaningful fraction of the universe by means of 10 billions of fluid elements
 (particles) interacting via gravitational forces. Each output of the MillenniumII 
-\citep{2009MNRAS.398.1150B} simulation is about 400 Gbyte of data representing the 
+simulation is about 400 Gbyte of data representing the 
 3D position and the velocity of the particles, their ID and some additional, calculated
 properties like the local smoothing length (e.g. distance wich contains 32 neighbours),
 local density or local velocity dispersion. The manipulation of this dataset is feasibile 
 only if high performance computing (HPC) resources are adopted. 
 
-The sequential version of Splotch \citep{2008NJPh...10l5006D} has been re-designed and extended in order
+The sequential version of Splotch \cite{2008NJPh...10l5006D} has been re-designed and extended in order
 to exploit both multiprocessor and multi-GPUs architectures currently available. 
 A Single Instruction Multiple Data (SIMD) approach has been adopted for the parallelization
 of the Splotch core algorithms, adopting the MPI library to support distributed multicore systems, 
@@ -186,7 +186,8 @@ can be shown that, whenever a ray traverses a particle, its intensity
 change is given by
 \begin{equation}
 \label{i_change}
-\bf{I}_{\mbox{after}}=(\bf{I}_{\mbox{before}}-\bf{E}_p/\bf{A}_p)\exp(-\bf{A}_p\int_{-\infty}^\infty\rho_p(x)dx) + \bf{E}_p/\bf{A}_p
+\bf{I}_{\mbox{after}}=(\bf{I}_{\mbox{before}}-\bf{E}_p/\bf{A}_p)
+\exp(-\bf{A}_p\int_{-\infty}^\infty\rho_p(x)dx) + \bf{E}_p/\bf{A}_p
 \end{equation}
 The integral in this equation is given by
 $\rho_{0,p}\sigma_p\exp{(-d_0^2/\sigma_p^2)}\sqrt{\pi}$, where $d_0$
@@ -222,19 +223,19 @@ Each computing element performs the same operations on its subset of data contri
 to the final (unique) image. 
 
 The parallel implementation has been accomplished using different approaches, suitable 
-for different hardware architectures and software environments. The MPI library (cite) 
+for different hardware architectures and software environments. The MPI library \cite{mpi} 
 has been used to define the overall data and work distribution characterization. Data are
 read in chuncks of the same (or similar) size from each processor in the MPI pool. Then 
 the same work is performed for steps 2 and 3 on the chuncks by each processor. Finally,
 the final image is generated and saved only in the master processor, since this is a 
 light task, which does not require any kind of parallel implementation. The work accomplished
 in steps 2 and 3 can be further split, exploiting multicore shared memory processors or Graphic Cards.
-In the first case, an OpenMP (cite) based approach provides the necessary parallelization tools. 
-In the second case, the CUDA programming language has been adopted. The different approaches
+In the first case, an OpenMP \cite{openmp} based approach provides the necessary parallelization tools. 
+In the second case, the CUDA \cite{cuda} programming language has been adopted. The different approaches
 can be used separately, if the available computing system fits only one of the available 
 configurations, or jointly. For instance, on a single core PC with an NVIDIA graphic card, 
 only the CUDA based parallelization strategy can be activated and exploited. On a multicore
-RVN (cite) node both MPI and CUDA can be used. This makes the parallel Splotch code extremely 
+RVN \cite{rvn} node both MPI and CUDA can be used. This makes the parallel Splotch code extremely 
 flexible, portable, efficient and scalable.
 
 
@@ -242,7 +243,7 @@ flexible, portable, efficient and scalable.
 \label{mpi}
 
 Once the data is properly distributed among the processors, all the remaining operations 
-are performed locally and further communiction is not needed, until the generation
+are performed locally and further communication is not needed, until the generation
 of the final result. Each MPI process uses the assigned 
 data to produce its own partial image. At the end, all the partial contributes are merged by means of a 
 collective reduction operation producing the final image. 
@@ -253,9 +254,32 @@ as the data size grows,
 the data load process tends to be the most demanding section of the code. For this reason,
 we have paied specific attention to the effective implementations of this functionality.
 
-The adoption of MPI I/O (cite) based functions, represents the ideal solution for obtaining 
-a high-performance and scalable read utility. However, an alternative solution is required, in
-order to support high performance computing environments where MPI I/O is not available. 
+The adoption of MPI I/O based functions, represents the ideal solution for obtaining 
+a high-performance and scalable read utility. 
+With this approach each process has a different fileview of a single file that allows simultaneous and collective
+writing/reading of noncontiguous interleaved data. A view defines what data are visible to each process and 
+consists of: an offset, measured in bytes from the beginning of the file; an elementary type (etype) that 
+defines the unit of data access and positioning within the file; and a template for accessing the file (filetype)
+consisting in a number of etypes and holes (which must be a multiple of the etype size). 
+The basic filetype is repeated again and again, tiling the file, and creating regions of allowed access 
+(where etypes are defined), and no access (where holes are defined).
+
+Our implementation assumes that data are organized in the input file according to a block structure, 
+where each block contains a single information for all $N$ particles. Therefore we have as many contiguous blocks
+as the number $n$ of properties given for each particle, and we can see them as a 2-dimensional array $A$ 
+of $n \times N$ float elements. 
+Then we have defined the MPI I/O filetype as a simple 2-dimensional subarray of $A$ 
+of size $n \times N/nprocs$.  
+ 
+In order to support high performance computing environments where MPI I/O is not available, 
+we have also provided two standard MPI binary readers that can respectively 
+read binary data files written both in table and block formats. 
+In both cases data to read are equally distributed among processes and simultaneously each one reads  
+their own portion of data by a direct access operation. 
+The block reader executes one single read of size $N/nprocs$ for each block of data, 
+while the tabular one reads $N/nprocs$ rows containing all $n$ quantities related to a single particle.
+
+In all readers an endianism swap is also managed when required.   
 
 
 
@@ -269,11 +293,11 @@ capability and stream data-parallel organization. With the introduction of
 To obtain the computing horsepower of GPUs, CUDA technology has been applied
 to Splotch.
 
-CUDA programs runs on GPUs with a Single Instruction Multiple Thread (SIMT)[programming guide] 
+CUDA programs runs on GPUs with a Single Instruction Multiple Thread (SIMT)
 mode. Every instruction issue time, a multiprocessor will execute one common instruction 
 for multiple threads. But if threads diverge via a data-dependent 
 conditional branch, they will be executed serially which will cause a 
-slow-down in the execution. In the worst case for a warp[programming guide] there could 
+slow-down in the execution. In the worst case for a warp \cite{cuda} there could 
 be only one thread running at each time which causes the multiprocessor
  actually degenerating to a single-processor. For this reason the parallel strategy of 
  the MPI implementation in section 3.1 is not suitable here as CUDA threads tends to 
@@ -292,12 +316,13 @@ parallel computing until the rendering step, where some specially treatment will
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.75\textwidth]{cu_splotch_process.png}
+\includegraphics[width=0.50\textwidth]{cu_splotch_process.png}
 \end{center}
 \caption{Process of CUDA Splotch.}
 \end{figure}
 
-The overall process is illustrated in Figure XX. The red arrows show the execution of the processing steps. On the device side there are 
+The overall process is illustrated in Figure 2. The red arrows show the 
+execution of the processing steps. On the device side there are 
 many arrows going together as CUDA threads running in parallel. In the
  Range step particle data are normalized and some global information is calculated, 
  like the maximum and minimum value of certain attributes. We let CPU handle
@@ -308,10 +333,10 @@ particle will influence is determined, and the empty sub-images will later be fi
 in the render step. Depending on the smoothing length of the particles and the 
 camera settings the sizes of the sub-images range from 1*1 to the size of the 
 final image, say 1000*1000, so the granularity of computing tasks in render step 
-could be quite unbalanced. We found this unbalancing compromises speed, as shown in table XXX.
+could be quite unbalanced. We found this unbalancing compromises speed, as shown in Table 3.
 
 To solve that problem we imposed a new step on host, showing as 'Split Particles' 
-in figure XXX, to divide big tasks into smaller, average ones. Any particle
+in figure 2, to divide big tasks into smaller, average ones. Any particle
 carrying a sub-image whose pixel number is larger than a barrier value will be 
 splitted into multiple ones, each carrying a part of the pixels. The barrier value 
 can be configured outside. In practical we found a number around the width 
@@ -320,9 +345,9 @@ or height of the final image, say 1024 usually works well.
 There are of course cost for doing the splitting. The number of particles is 
 increased which demands more thread issuing. Running the splitting algorithm itself
 as well as the memory copying between host and device will also cost some time. 
-Besides all these costs test results show that splitting brings speed increasing, as show in table XXX.
+Besides all these costs test results show that splitting brings speed increasing, as show in Table 3.
 
-The output of render for the particles is stored in a one-dimension fragment buffer. 
+The output of rendering for the particles is stored in a one-dimension fragment buffer. 
 After filled at the device-render step, fragment buffer is copied to host
  and combined to the final image by CPU. Here we found that the asynchronism of 
  device calling can be used to let device and host work in parallel. Say, when
@@ -367,9 +392,10 @@ The parallel Splotch code has been tested on different architectures and dataset
 exploit the various parallel approaches and to emphasize different characteristics of the software.
 
 Taking advantage of the high portability of the code, we could perform our tests on a 5000 cores UNIX-AIX 
-IBM Power 6 system (we will refer to this platform as SP6), a Windows XP Machine (indicated as Win)
-and a 16 cores-8 GPUs Linux cluster (indicated as PLX). The details of the different platforms are given 
-in table XXX. In this way, we can test the usage of Splotch on computing systems 
+SP6 system, a cluster of 168 Power6 575 compute nodes with 32 cores per node and a memory of 128GB/node
+(we will refer to this platform as SP6) and a Windows XP Machine with a CPU of Intel Xeon X5482 3.2 GHz and
+2 GPUs of NVIDIA Quadro FX 5600 (indicated as Win). 
+In this way, we can test the usage of Splotch on computing systems 
 of different sizes and different target applications, from a standard PC (Win), where small-medium
 data files can be used, up to 
 a High Performance Computing platform where the huge and complex datasets can be processed.
@@ -392,13 +418,42 @@ All the data files are pure binaries, organized so that different quantitites ar
 the other in the file (e.g. $x$ coordinates of all particles are stored first, followed by $y$ 
 coordinates and so on). In this way, we can easily adopt our MPI-IO based
 reader. Only in the case of the MillenniumII data, we test also the native 
-Gadget2 (CITE) file format, using a integrated parallel version of the Gadget2 reader.
+Gadget2 \cite{gadget} file format, using a integrated parallel version of the Gadget2 reader.
 
 A summmary of the benchmarks is presented in table XXX. 
 
+\begin{table}
+\caption{Features of the datasets used in the benchmarks}
+\begin{tabular}{|l|l|l|}
+\hline
+Label & 	N. particles & 	File size (Bytes)  \\
+\hline
+1M   & 	1000000   & 24000000 \\
+\hline
+10M  & 	10000000  & 240000000 \\
+\hline
+100M & 	100000000 & 2400000000 \\
+\hline
+850M & 	882739509 & 21185748216 \\
+\hline
+M-II & 	10000000000 & 	443456159744 \\
+\hline
+\end{tabular}
+\end{table}
+
+
 \subsection{MPI Benchmarks}
 
-MARZIA   
+Table XX shows the test results on SP6 for dataset block 100M and block 870M.
+Power6 cores can schedule two processes or threads in the same clock cycle, 
+and it is possible to use a single core as two virtual CPUs. This mode of Power6 
+is called Simultaneous Multi Threading (SMT).  This mode notably improves performance 
+of process and rendering phases, reducing the execution time by 30%, but in I/O operations 
+this reduction is lower and decreases as the chuncks of data to read grows.
+
+Comparing MPI I/O reader with standard block reader, we see that improvements due to MPI2 functions 
+appears when processes read large chunks of data. So good performances are expected as size of data increases.
+Moreover when number of processes is high MPI I/O reader seems to perform and scale better than the other one.
    
 
 \subsection{CUDA Benchmarks}
@@ -420,7 +475,7 @@ blocm 10M with CUDA & 	10.1411 & 	4.8261 & 	0.1865 & 	15.1537 \\
 \end{tabular}
 \end{table}
 
-Tablx XX shows the test result on Win for dataset block 1M and block 10M. For the
+Table 2 shows the test result on Win for dataset block 1M and block 10M. For the
 smaller dataset block 1M we can see that the speed with CUDA is slower than that without
 it, because for small tasks the cost for applying CUDA can not be ignored, 
 such as initialize CUDA runtime, data copying between host and device and so on. For block
@@ -428,33 +483,18 @@ such as initialize CUDA runtime, data copying between host and device and so on.
 
 speedup = (TimeWithoutCUDA - TimeWithCUDA)/TimeWithoutCUDA
 
-Rather than the benchmark, CUDA(GPU) Splotch works better when handling the datasets
-that generate visually appealing images like Figure X, where drawing especially rendering
-is a major work load. Table xxx shows some test result of such datasets, 
-and table xxx lists the dataset we use . The machines we use has a CPU of Intel Xeon X5482 3.2 GHz and
-2 GPUs of NVIDIA Quadro FX 5600. From the result we can see that CUDA provides a speedup to Splotch, and 
+CUDA(GPU) Splotch usually works better when handling the datasets
+that generate visually appealing images like Figure 3, where drawing especially rendering
+is a major work load. Table 3 shows some test result of such datasets. 
+From the result we can see that CUDA provides a speedup to Splotch, and 
 particle dividing helped improving the performance.
 
-\begin{table}
-\caption{Dataset used for CUDA testing.}
-\begin{tabular}{|l|l|l|}
-\hline
-	size	& particles & file length \\
-\hline
-	small	& 370,852	& 48,441 kb \\
-\hline
-	middle	& 2,646,991	& 280,960 kb \\
-\hline
-	big	& 16,202,527& 	1,813,480 kb \\
-\hline
-\end{tabular}
-\end{table}
 
-%%%%%%%%%%%%%%%%%
 \begin{table}
-\caption{Result of CUDA Splotch for small, middle and big datasets.}
+\caption{Result of CUDA Splotch for small, middle and big datasets. The number of particle for the 
+datasets, small=370,852, middle=2,646,991, big=16,202,527}
 \begin{center}
-\begin{tabular}{ | l || l | l || l | l | l |}
+\begin{tabular}{ | l || l | l || l | l | p{2cm} |}
 \hline  
    &	CPU	& CPU	& GPU	& GPU	& GPU \\
 \hline
@@ -470,7 +510,6 @@ particle dividing helped improving the performance.
 \end{center}
 \end{table}
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{figure}
 \begin{center}
 \includegraphics[width=1.0\textwidth]{cu_images.png}
@@ -478,12 +517,6 @@ particle dividing helped improving the performance.
 \caption{Rendering result for small, middle and big datasets.}
 \end{figure}
 
-
-\subsection{Hybrid, MPI+CUDA, Benchmarks}
-   
-CLAUDIO
-
-\label{bench}
 
 \begin{figure}
 \begin{center}
@@ -509,33 +542,57 @@ ideal scaling. The horizontal lines indicate time expected for and IO throughput
 individual data elements are streamed instead of reading large blocks in juncks.}\label{read_scaling}
 \end{figure}
 
+\subsection{Visualization of the MillenniumII run}
+\label{mII}
+
+
 
 \section{Conclusions}
 \label{conclusions}
 
+Visualization is a powrful tool to explore in an immediate and 
+effective way data, expecially large data, focusing on interesting or special features
+which would be much harder to identify with a blind, systematic approach. 
+Obviously, visualization cannot supersede quantitative analysis, however it helps in
+understending the meaning and the content of complex digital information.
+
+The continuously increasing data size and complexity requires more and more 
+sophisticated visualization tools, able to appropriately render the information 
+hidden in the files, which can process enormous data volumes, such those produced 
+by ultimate scientific experiments or computer simulations.
+
+Splotch matches both requirements. It produces high quality image output,
+based on a ray tracing algorithm specifically designed to exploit at best the 
+properties of point-like data distributions. Furthermore, it can run on a large 
+variety of high performance computing architectures, thanks to its hybrid
+parallel implementation, which can take advantage of multi-processors system, adopting
+an MPI based approach, multi-core shared memory processors, exploiting OpenMP,
+GPUs, relying on CUDA. This allows to achieve high performance overcoming the typical
+memory barriers posed by small personal systems, commonly adopted for visualization.
+Finally, Splotch is written in ANSI C++ and is compeltely self-contained (it does not
+require any complementary library, apart from MPI, OpenMP and CUDA stuff). 
+This make the code easily portable and compilable over a large number of different 
+architectures and operating systems. The next steps will be that of porting and 
+running Splotch on hybrid system, multiprocessor computers with GPUs, exploiting 
+both MPI and CUDA on the same dataset.
+
+We have tested Splotch on datasets of different sizes. In particular we manage to 
+visualize the largest cosmological simulation currently available, the MillenniumII run, 
+processing 10 billions particle in a single shot.
+
 \section*{Acknowledgments}
 We would like to thank Mike for providing the data of the MilleniumII simulations 
 on which we conducted our perfgomance tests. K.~D.~acknowledges the
-supported by the DFG Priority Programme 117.
+supported by the DFG Priority Programme 117. Finally, we acknowledge 
+HPC Europa 2 project, funded by the European Commission - 
+DG Research in the Seventh Framework Programme under grant agreement n� 228398, 
+for the committed resources.
 
 \section*{References}
 
-%% The Appendices part is started with the command \appendix;
-%% appendix sections are then done as normal sections
-%% \appendix
-
-%% \section{}
-%% \label{}
-
-%% References
-%%
-%% Following citation commands can be used in the body text:
-%% Usage of \cite is as follows:
-%%   \cite{key}         ==>>  [#]
-%%   \cite[chap. 2]{key} ==>> [#, chap. 2]
-%%
 
 %% References with BibTeX database:
+\begin{thebibliography}{00}
 
 \bibliographystyle{elsarticle-num}
 \bibliography{master.bib}
@@ -545,15 +602,41 @@ supported by the DFG Priority Programme 117.
 
 %% For references without a BibTeX database:
 
-% \begin{thebibliography}{00}
 
-%% \bibitem must have the following form:
-%%   \bibitem{key}...
-%%
 
-% \bibitem{}
+\bibitem{iraf} http://iraf.noao.edu/
 
-% \end{thebibliography}
+\bibitem{midas} http://www.eso.org/sci/data-processing/software/esomidas/
+
+\bibitem{sao} http://tdc-www.harvard.edu/software/saoimage.html
+
+\bibitem{idl} http://www.ittvis.com/
+
+\bibitem{paraview} http://www.paraview.org/
+
+\bibitem{visivo}Visualization, Exploration and Data Analysis of Complex Astrophysical Data,
+M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson, J. Taylor, 2007, 
+The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913.
+
+\bibitem{visit} https://wci.llnl.gov/codes/visit/
+
+\bibitem{aladin} http://aladin.u-strasbg.fr/
+
+\bibitem{2008NJPh...10l5006D}Splotch: Visualizing Cosmological Simulations. K.Dolag, 
+M. Reinecke, C.Gheller, S. Imboden, 2008, New Journal of Physics, Volume 10, Issue 12, pp. 125006
+
+\bibitem{mpi} http://www.mpi-forum.org/
+
+\bibitem{openmp} http://openmp.org/
+
+\bibitem{cuda} http://www.nvidia.com/object/cuda\_home.html
+
+\bibitem{rvn} http://ibm-deep-computing-visualization-rvn-end.software.informer.com/
+
+\bibitem{gadget} Springel V 2005 Monthly Notices of the Royal Astronomical Society 364, 1105-1134
+
+
+\end{thebibliography}
 
 \end{document}
 
