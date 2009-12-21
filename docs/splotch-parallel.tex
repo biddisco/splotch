@@ -27,9 +27,28 @@
 \ead{mel.krokos@port.ac.uk}
 \address{...}
 
+\author{Martin Reinecke}
+\ead{martin@MPA-Garching.MPG.DE}
+\address{Max-Planck-Institut f\"ur Astrophysik, Karl-Schwarzschild Strasse 1, Garching bei M\"unchen, Germany}
+
 \begin{abstract}
 
-......... 
+Current technological advances impact profoundly on the unprecedented
+growth in the quality and quantity of astrophysical datasets. The main
+characteristic is extremely large sizes (many GBs) while forthcoming
+next-generation astrophysical datasets are expected to exhibit
+massively large sizes (many TBs). Visual data exploration and
+discovery tools are robust instruments to rapidly and intuitively
+inspecting very large-scale datasets to identify regions of interest
+within which to apply time-consuming algorithms.  This paper reports
+on recent developments for a high performance implementation of
+Splotch, our previously developed ray-tracing algorithm for effective
+visualization of large-scale astrophysical datasets coming from
+particle-based simulations.  We discuss several approaches for
+paralellizing Splotch to suit multicore CPUs and CUDA-enabled GPUs. We
+present benchmarks of our implementations, specifically discussing the
+MilleniumII simulation. Finally we summarise the work concluding with
+pointers to future developments.
 
 \end{abstract}
 
@@ -37,7 +56,10 @@
 %% keywords here, in the form: keyword \sep keyword
 
 
-Visualization \sep High Performance Computing \sep Astrophysics
+Visual Discovery \sep Splotch \sep Large-Scale Particle-Based
+Numerical Simulations\sep High-Performance Visualization \sep
+OpenMP \sep CUDA-enabled GPUs\sep MilleniumII Simulation 
+
 
 %% PACS codes here, in the form: \PACS code \sep code
 
@@ -56,62 +78,117 @@ Visualization \sep High Performance Computing \sep Astrophysics
 \section{Introduction}
 \label{intro}
 
-Data represents a critical issue for scientists and, in particular, astronomers. 
-Observational instruments (telescopes, satellites...) produce enormous quantities of images and information. 
-Computers and numerical simulations generate huge amount of data. All these data must be stored, 
-managed and analyzed. These steps require great human effort, large scale facilities and efficient, powerful tools.  
-Knowledge-discovery and data mining software often offer an efficient
-instrument for automatically exploring large volumes of data. However, the most immediate,
-intuitive and effective way to discover and understand the properties of data
-is provided by {\it visualization}. Visualization leads the user to quickly
-focus on the interesting characteristics of a system. It allows
- different properties of the data to be shown simultaneously, and it can allow the user 
-to navigate inside the data. Visualization is the most natural way of finding correlations, 
-similarities and patterns. It is an effective method for
-selecting special regions or features, on which the researcher can concentrate his/her
-efforts and the subsequent quantitative analysis. Finally, visualization is 
-useful to get a quick look at an ongoing processes, e.g. a numerical simulation, 
-in order, for instance, to monitor it and to understand if its behavior is as expected or if
-something is going wrong and, in that case, to correct it saving time and resources.\\
-For these reasons, the astronomical community has always dedicated special
-attention to the growth of graphical and visualization tools, driving their evolution or even being
-directly involved in the development of many of them.
-At present, the most popular software for astronomers can be subdivided
-into two main categories: tools for image display and processing and tools for
-plotting data. Notable among the former are IRAF \cite{iraf}, by NOAO; ESO-MIDAS \cite{midas}, by the 
-European Southern Observatory; SaoImage \cite{sao}, by the Smithsonian Astrophysical Observatory and
-GAIA, by ESO. Many other tools are available, but we refer to dedicated surveys
-for a complete list. Gnuplot and SuperMongo are 
-popular applications adopted for 2D data plots. A more sophisticated solution 
-is represented by IDL, by ITT Visual Information \cite{idl}, which is characterized
-by a large library of functions specifically developed for astrophysics. 
+Nowadays the technological advances in instrumentation and computing
+capability impact profoundly on the dramatic growth in the quality and
+quantity of astrophysical datasets obtained from observational
+instruments, e.g.  sky surveys \cite{sdss}, \cite{lofar}, or
+large-scale numerical simulations, e.g. the MillenniumII
+simulation \cite{2009MNRAS.398.1150B}.The main characteristic of
+modern astrophysical datasets is extremely large sizes (in the order
+of hundreds of GBs) requiring storage in extremely large-scale
+distributed databases. The forthcoming next-generation astrophysical
+datasets are expected to exhibit massively large sizes (in the order
+of hundreds of TBs), e.g. \cite{lsst}.
 
-The last generation 
-of tools, like ParaView \cite{paraview}, VisIVO \cite{visivo}, VisIT \cite{visit}, Aladin
-\cite{aladin}, have been developed to overcome the limits
-and the barriers of traditional software by exploiting the latest technological 
-opportunities. Again, for a complete list, we refer to specific surveys. 
+To obtain a comprehensive insight into modern astrophysical datasets
+astronomers employ sophisticated data mining algorithms often at high
+computational costs. Visual data exploration and discovery tools are
+then exploited in order to rapidly and intuitively inspect very
+large-scale datasets to identify regions of interest within which to
+apply time-consuming algorithms.  Such tools are based on a
+combination of meaningful data {\it visualizations} and user
+interaction with them.  
 
-In this paper we present the High Performance Computing implementation of
-Splotch \citep{2008NJPh...10l5006D}, a ray-tracing software designed to visualize data coming from particle 
-based computer simulations. Cosmological N-Body simulations represents a paradigmatic
-example of such applications. They account for some of the largest simulations in astrophysics, 
-as, for instance, the MillenniumII simulation \citep{2009MNRAS.398.1150B}, which describe the evolution 
-of a meaningful fraction of the universe by means of 10 billions of fluid elements
-(particles) interacting via gravitational forces. Each output of the MillenniumII 
-simulation is about 400 Gbyte of data representing the 
-3D position and the velocity of the particles, their ID and some additional, calculated
-properties like the local smoothing length (e.g. distance wich contains 32 neighbours),
-local density or local velocity dispersion. The manipulation of this dataset is feasibile 
-only if high performance computing (HPC) resources are adopted. 
+For example, meaningful visualizations can be generated through
+display of multiple properties simultaneously together with customized
+look up tables for colouring. This can be a very intuitive and
+effective way of discovering and understanding rapidly brand new
+correlations, similarities and data patterns. For on-going processes,
+e.g. a numerical simulation in progress, advanced visual data
+exploration and discovery allow constant monitoring and - if anomalies
+are discovered - correcting the simulation parameters  thus saving
+valuable time and resources. For such reasons the astronomical
+community always dedicated special attention to graphical and
+visualization tools either driving their evolution or even being
+directly involved in developing them.
 
-The sequential version of Splotch \cite{2008NJPh...10l5006D} has been re-designed and extended in order
-to exploit both multiprocessor and multi-GPUs architectures currently available. 
-A Single Instruction Multiple Data (SIMD) approach has been adopted for the parallelization
-of the Splotch core algorithms, adopting the MPI library to support distributed multicore systems, 
-OpenMP for shared memory nodes and CUDA for exploiting NVIDIA GPU systems. The different 
-solutions can be used jointly on hybrid architectures. The details and
-the benchmarks of such high performance implementation will be presented in the following sections.  
+The data exploration tools traditionally employed by astronomers are
+limited either on processing and displaying of 2D images
+(e.g. IRAF \cite{iraf}, by NOAO; ESO-MIDAS \cite{midas} by the
+European Southern Observatory; SaoImage \cite{sao} by the Smithsonian
+Astrophysical Observatory and GAIA \cite{gaia} by ESO) or on
+generation of meaningful 2D and 3D plots (e.g. Gnuplot \cite{gnuplot};
+SuperMongo \cite{supermongo} and IDL \cite{idl} by ITT Visual
+Information). There is a plethora of other tools, for details the
+reader is referred to dedicated literature surveys,
+e.g. \cite{survey}.
+
+To overcome the shortcomings of traditional tools, a new generation of
+software packages is now emerging providing astronomers with robust
+instruments in the context of large-scale astrophysical datasets,
+e.g. \cite{paraview}, \cite{aladin}, \cite{topcat}, \cite{visivo1}, \cite{3dslicer}, \cite{splash}
+and \cite{visit}. The underlying principles are exploitation of high
+performance architectures (i.e. multicore CPUs and powerful graphics
+boards), interoperability (i.e. allowing different applications, each
+specialized for different purposes, to operate on shared datasets) and
+collaborative workflows (i.e. permitting several users to work
+simultaneously for exchanging information and visualization
+experiences).
+
+ParaView \cite{paraview} was developed specifically for handling
+large-scale datasets efficiently by exploiting distributed
+memories. Aladin \cite{aladin} is an interactive sky atlas for
+visualization of astronomical images supporting access to astronomical
+databases (such as Simbad \cite{simbad} and
+VizieR \cite{vizier}). TopCat \cite{topcat} is an application that
+includes several tools for analysis and visualization of astronomical
+tables. VisIVO \cite{visivo1} is an integrated suite of tools and
+services specifically designed for multidimensional
+visualisation. VisIVO Server is a recent development for visualization
+of large-scale astrophysical datasets \cite{visivo2}.
+
+Other examples of new-generation software packages for astrophysical
+visualization are 3D slicer \cite{3dslicer} capable of displaying
+volumetric datasets and user defined cut throughs,
+SPLASH \cite{splash} specifically designed in the context of
+astrophysical simulations and VisIt \cite{visit} which is a parallel
+visualization and data analysis application supporting a rich set of
+visualisation features, e.g. displaying of scalar and vector fields
+defined on 2D or 3D structured and unstructured meshes. 
+
+This paper describes a high performance implementation of
+Splotch \cite{2008NJPh...10l5006D}, our previously developed
+ray-tracing algorithm for effective visualization of large-scale
+astrophysical datasets coming from particle-based computer
+simulations. N-Body simulations constitute prime examples of
+particle-based simulations, typically associated with very large-scale
+datasets, e.g. the MillenniumII
+simulation \cite{2009MNRAS.398.1150B}. This is a simulation of the
+evolution of a meaningful fraction of the universe by means of 10
+billion fluid elements (or particles) interacting with each other
+through gravitational forces. The typical size of a snapshot of the
+MillenniumII simulation is about 400 GBs representing a particle's ID,
+position, velocity together with additional properties, e.g. local
+smoothing length, density and velocity dispersion. For further details
+on the MillenniumII simulation the reader is referred
+to \cite{2009MNRAS.398.1150B}.
+
+The fundamentals and the traditional sequential operation of
+Splotch \cite{2008NJPh...10l5006D} are reviewed in section 2. Section
+3 discusses our strategy for paralellizing Splotch based on different
+approaches that are suitable for a variety of underlying architecture
+configurations. Our implementations are Single Instruction Multiple
+Data (SIMD) designs founded on the MPI library \cite{mpi} in order to
+support distributed multicore CPUs, the OpenMP \cite{openmp} for
+supporting shared memory nodes and finally CUDA \cite{cuda} for
+exploiting not only currently available but also forthcoming
+next-generation multiple GPUs. The advantage of adopting several
+parallelization solutions is that we can deploy them simultaneously on
+hybrid architectures, e.g. mixed hardware architectures consisting of
+a large number of multicore CPUs and CUDA-enabled GPUs. Benchmarks for
+our paralellization designs and a discussion on the MilleniumII
+visualization are presented in section 4. Finally section 5 outlines a
+summary of our work and includes pointers to future developments. 
 
 
 \section{The Splotch Algorithm}
@@ -122,7 +199,7 @@ the benchmarks of such high performance implementation will be presented in the 
 \includegraphics[width=0.49\textwidth]{millenium2_veldisp.pdf}
 \includegraphics[width=0.49\textwidth]{millenium2_vel.pdf}
 \end{center}
-\caption{Shown are vizualisation of the MilleniumII simulation \citep{2009MNRAS.398.1150B} using
+\caption{Shown are vizualisation of the MilleniumII simulation \cite{2009MNRAS.398.1150B} using
 the velocity dispersion (left panel) and the three dimensional velocity (right panel) of the
 particles for the color transfere function. The inlay shows a zoom on one the most rich structure
 inside the simulation.}\label{mil2}
@@ -130,7 +207,7 @@ inside the simulation.}\label{mil2}
 
 The rendering algorithm of {\tt Splotch} is generally designed to handle
 point-like particle distributions. Such tracer particles can be smoothed
-to obtain a contineous field, most commonly the $B_2$-Spline \citep{1985A&A...149..135M}
+to obtain a contineous field, most commonly the $B_2$-Spline \cite{1985A&A...149..135M}
 \begin{equation}
    W(x,h)=\frac{8}{\pi h^3}\left\{\begin{array}{ll}
       1 - 6 \left(\frac{x}{h}\right)^2 + 6 \left(\frac{x}{h}\right)^3 \;\;& 0 \le \frac{x}{h} < 0.5 \\
@@ -163,7 +240,7 @@ volume is modeled by the well known radiative transfer equation
 \begin{equation}
 \frac{d\bf{I}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I}(x))\rho_p(x),
 \end{equation}
-which can be found in standard textbooks like \citet{1991par..book.....S}.
+which can be found in standard textbooks \cite{1991par..book.....S}.
 Here, $\bf{E}_p$ and $\bf{A}_p$ describe the strength of radiation emission and absorption
 for a given particle for the three rgb-colour components. In general it is recommended to
 set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images; for special
@@ -206,16 +283,15 @@ containing 10 billion particles.
 \section{Parallel Implementation}
 \label{parallel}
 
-The Splotch code workflow consists in a number of steps which can be summarized as follows:
-
-\noindent 1. Read data from one or more files;
-
-\noindent 2. process data for rescaling, normalization etc.;
-
-\noindent 3. render data;
-
-\noindent 4. save the final image.
-
+The Splotch code workflow consists in a number of steps,
+% which can be 
+summarized as follows:
+\begin{enumerate}
+\item Read data from one or more files;
+\item process data for rescaling, normalization etc.;
+\item render data;
+\item save the final image.
+\end{enumerate}
 All these steps can be parallelized according to the same strategy, based on a SIMD approach. 
 This consists in 
 distributing the data in a balanced way between the different computing elements.
@@ -496,9 +572,10 @@ datasets, small=370,852, middle=2,646,991, big=16,202,527}
 \begin{center}
 \begin{tabular}{ | l || l | l || l | l | p{2cm} |}
 \hline  
-   &	CPU	& CPU	& GPU	& GPU	& GPU \\
+   &	CPU	& CPU	& GPU	& GPU	& GPU (no split)\\
 \hline
-  data & drawing time(s) & total time(s) & drawing time(s) & total time(s) & drawing time without splitting(s) \\
+  data & drawing time(s) & total time(s) & drawing time(s) & total time(s) & drawing time(s) \\
+% without splitting(s) \\
 \hline  
   small &	12.6419	& 13.0144	& 7.3885	& 7.7668	& 12.4894 \\
 \hline
@@ -526,7 +603,7 @@ datasets, small=370,852, middle=2,646,991, big=16,202,527}
 readind and writing) with the number of MPI threads used for vizualisng 10 billion particles with an final
 image size of 3200x3200 pixels. The dashed line indicates the expectation for an ideal scaling. The test was 
 performed on a {\it Power6} architecture. The diamonds are runs using one task per core, the triangles indicate
-using two tasks per core (a special feature of the {\it Power 6} architecture), where we measure a speedup of 
+using two tasks per core (a special feature of the {\it Power6} architecture), where we measure a speedup of 
 a factor of 1.4.}\label{cpu_scaling}
 \end{figure}
 
@@ -534,7 +611,7 @@ a factor of 1.4.}\label{cpu_scaling}
 \begin{center}
 \includegraphics[width=0.5\textwidth]{t_read.pdf}
 \end{center}
-\caption{Shown is the scaling of the allclock time needed to read the needed data 
+\caption{Shown is the scaling of the wallclock time needed to read the needed data 
 (position, velocity and smoothing length) for the 10 billion particles of the simulation
 as function of parallel reading tasks. The dashed line indicates the expectation for an 
 ideal scaling. The horizontal lines indicate time expected for and IO throughput of 300 Mbype/sec,
@@ -594,8 +671,8 @@ for the committed resources.
 %% References with BibTeX database:
 \begin{thebibliography}{00}
 
-\bibliographystyle{elsarticle-num}
-\bibliography{master.bib}
+%\bibliographystyle{elsarticle-num}
+%\bibliography{master.bib}
 
 %% Authors are advised to use a BibTeX database file for their reference list.
 %% The provided style file elsarticle-num.bst formats references in the required Procedia style
@@ -604,23 +681,51 @@ for the committed resources.
 
 
 
+\bibitem{sdss} http://www.sdss.org/
+
+\bibitem{lofar} http://www.lofar.org/
+
+\bibitem{2009MNRAS.398.1150B} Resolving cosmic structure formation with the Millennium-II Simulation,
+Boylan-Kolchin M., Springel V., White S.~D.~M., Jenkins A., Lemson G., 2009, Monthly Notices of the Royal Astronomical Society, 398, 1150-1164
+
+\bibitem{lsst}http://www.lsst.org/lsst
+
 \bibitem{iraf} http://iraf.noao.edu/
 
 \bibitem{midas} http://www.eso.org/sci/data-processing/software/esomidas/
 
 \bibitem{sao} http://tdc-www.harvard.edu/software/saoimage.html
 
+\bibitem{gaia} http://astro.dur.ac.uk/~pdraper/gaia/gaia.htx/index.html
+
+\bibitem{gnuplot} http://www.gnuplot.info/
+
+\bibitem{supermongo} http://www.astro.princeton.edu/~rhl/sm/sm.html
+
 \bibitem{idl} http://www.ittvis.com/
+
+\bibitem{survey} XXX
 
 \bibitem{paraview} http://www.paraview.org/
 
-\bibitem{visivo}Visualization, Exploration and Data Analysis of Complex Astrophysical Data,
+\bibitem{aladin} http://aladin.u-strasbg.fr/
+
+\bibitem{topcat} M. B. Taylor, TOPCAT \& STIL: Starlink Table/VOTable Processing Software, ASP, ASPC 347 29T, 2005
+
+\bibitem{visivo1}Visualization, Exploration and Data Analysis of Complex Astrophysical Data,
 M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson, J. Taylor, 2007, 
 The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913.
 
+\bibitem{3dslicer} M. A. Borkin, N. A. Ridge, A. A. Goodman and M. Halle, Demonstration of the Applicability of 3D Slicer to Astronomical Data using 13CO and C18O Observations of IC348, astro-ph/0506604, 2005
+\bibitem{splash} http://users.monash.edu.au/~dprice/splash/index.html
+
 \bibitem{visit} https://wci.llnl.gov/codes/visit/
 
-\bibitem{aladin} http://aladin.u-strasbg.fr/
+\bibitem{visivo2}VisIVO-Integrated Tools and Services for Large-Scale Astrophysical Visualization, U. Becciani, A. Costa, V. Antonnuccio-Delogu, G. Caniglia, M. Comparato, C, Gheller, Z. Jin, M. Krokos, P. Massimino, The Publications of the Astronomical Society of the Pacific, (to appear).
+
+\bibitem{simbad} http://simbad.u-strasbg.fr/simbad/
+
+\bibitem{vizier} http://cdsarc.u-strasbg.fr/viz-bin/VizieR
 
 \bibitem{2008NJPh...10l5006D}Splotch: Visualizing Cosmological Simulations. K.Dolag, 
 M. Reinecke, C.Gheller, S. Imboden, 2008, New Journal of Physics, Volume 10, Issue 12, pp. 125006
@@ -635,10 +740,16 @@ M. Reinecke, C.Gheller, S. Imboden, 2008, New Journal of Physics, Volume 10, Iss
 
 \bibitem{gadget} Springel V 2005 Monthly Notices of the Royal Astronomical Society 364, 1105-1134
 
+\bibitem{1985A&A...149..135M} A refined particle method for astrophysical problems, 
+Monaghan J.~J. \& Lattanzio J.~C., 1985, A\&A, 149, 135
+
+\bibitem{1991par..book.....S} Physics of Astrophysics: Volume I Radiation, Shu F., 1991,
+Published by University Science Books, 648 Broadway, Suite 902, New York, NY 10012
+
 
 \end{thebibliography}
 
 \end{document}
 
 %%
-%% End of file `procs-template.tex'. 
+%% End of file `procs-template.tex'.
