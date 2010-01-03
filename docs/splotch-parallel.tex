@@ -15,7 +15,7 @@
 \ead{m.rivi@cineca.it, c.gheller@cineca.it}
 \address{CINECA, Via Magnanelli 6/3, Casalecchio di Reno, Italy}
 
-\author{Klaus Dolag and Martin Reinecke}
+\author{Klaus Dolag, Martin Reinecke}
 \ead{kdolag@mpa-garching.mpg.de, martin@mpa-garching.mpg.de}
 \address{Max-Planck-Institut f\"ur Astrophysik, Karl-Schwarzschild Strasse 1, Garching bei M\"unchen, Germany}
 
@@ -85,7 +85,6 @@ sizes (in the order of hundreds of GBs) requiring storage in extremely
 large-scale distributed databases. The forthcoming next-generation astrophysical 
 datasets are expected to exhibit massively large sizes (in the order of hundreds 
 of TBs), e.g. \cite{lsst}.
-
 To obtain a comprehensive insight into modern astrophysical datasets, astronomers 
 employ sophisticated data mining algorithms often at high computational costs. 
 Visual data exploration and discovery tools are then exploited in order to rapidly 
@@ -93,15 +92,15 @@ and intuitively inspect very large-scale datasets to identify regions of interes
 within which to apply time-consuming algorithms. Such tools are based on a 
 combination of meaningful data {\it visualizations} and user interaction with them.  
 
-An effective visualizations based apporoach
-can be a very intuitive and ready way of discovering and 
-understanding rapidly brand new correlations, similarities and data patterns. 
-For on-going processes, e.g. a numerical simulation in progress, advanced 
-visual data exploration and discovery allow constant monitoring and - if 
-anomalies are discovered - prompt correction of the run, thus saving valuable 
-time and resources. For such reasons the astronomical community has always 
-dedicated special attention to advanced graphical/visualization tools driving 
-their evolution or even being directly involved in developing them.
+%An effective visualizations based apporoach
+%can be a very intuitive and ready way of discovering and 
+%understanding rapidly brand new correlations, similarities and data patterns. 
+%For on-going processes, e.g. a numerical simulation in progress, advanced 
+%visual data exploration and discovery allow constant monitoring and - if 
+%anomalies are discovered - prompt correction of the run, thus saving valuable 
+%time and resources. For such reasons the astronomical community has always 
+%dedicated special attention to advanced graphical/visualization tools driving 
+%their evolution or even being directly involved in developing them.
 
 The data exploration tools traditionally employed by astronomers 
 are limited either 
@@ -181,7 +180,7 @@ is referred to \citep{2009MNRAS.398.1150B}.
 \includegraphics[width=0.40\textwidth]{millenium2_veldisp.pdf}
 \includegraphics[width=0.40\textwidth]{millenium2_vel.pdf}
 \end{center}
-\caption{A visualization  of the MilleniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right). A close-up of one of the richest structures in the simulation is displayed in the inlay.}\label{mil2}
+\caption{A visualization  of the MilleniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
 \end{figure}
 
 The rendering algorithm of {\tt Splotch} is generally designed to handle
@@ -276,56 +275,38 @@ containing 10 billion particles.
 \label{parallel}
 
 The {\tt Splotch} algorithm operational scenario consists of a number of 
-stages summarized as follows:
-
-\noindent 1. read data from one or more files;
-
-\noindent 2. process data (e.g. for normalization);
-
-\noindent 3. display data;
-
-\noindent 4. save the final image.
-
-All these steps can be parallelized according to the same strategy using a 
+stages summarized as follows: a) read data from one or more files; b) process data (e.g. for normalization); c) display data and d) save the final image. All these steps can be parallelized using a 
 Single Instruction Multiple Data (SIMD) approach. This involves distributing the data 
-in a balanced way between the different computing elements. Each computing element 
-performs the same operations on its subset of data contributing to the final (unique) imaging. 
+in a balanced way between different computing elements (or processing units) and each computing element performing the same operations on its associated subset of data. Our parallelization has been achieved using different approaches suitable for a variety of underlying hardware architectures and software environments.
 
-The parallel implementation has been achieved using different approaches, 
-suitable for different hardware architectures and software environments. 
 The MPI library \cite{mpi} has been used to define the overall data and work 
 distribution. Data are read in chuncks of the same (or similar) size from each processor 
-in the MPI pool. Then the same work is performed for steps 2 and 3 on each chunck by the 
-corresponding processor. Finally, the final image is generated and saved only by the root processor
-This is, in fact, a light task, which does not require any kind of parallel implementation. 
+in the MPI pool. Then the same work is performed for steps 2 and 3 on each data chunck by the 
+corresponding processor. The final display is generated and saved only by the root processor. This is, in fact, a light task, which does not require any kind of parallel implementation. 
 The work accomplished in steps 2 and 3 can be further split, exploiting 
-multicore shared memory processors or modern graphics boards. In the first case, by means of
-an OpenMP \cite{openmp} based approach. In the second case, the CUDA \cite{cuda} programming 
-environment has been adopted. 
+multicore shared memory processors or modern graphics boards, by means of
+an OpenMP \cite{openmp} based approach or exploitation of the CUDA \cite{cuda} programming 
+environment. 
 
-The different parallel approaches can be used separately, 
+These different parallel approaches can be used separately, 
 if the available computing system fits only one of the available configurations, or jointly. 
 For instance, on a single core PC with an NVIDIA graphic card, only the CUDA based 
 parallelization strategy can be activated and exploited. On a multicore RVN \cite{rvn} 
-node both MPI and CUDA can be used. This makes the parallel {\tt Splotch} code 
-extremely flexible, portable, efficient and scalable.
+node both MPI and CUDA can be used. This makes our parallel {\tt Splotch} code 
+extremely flexible, portable, efficient and scalable. More details of our parallel implementations are presented in the rest of this section. Test results are discussed in section 4.
 
 \subsection{MPI Implementation}
 \label{mpi}
 
-Once the data is properly distributed among the processors, all the remaining operations 
+Once the data is distributed among the processors, all the remaining operations 
 are performed locally and further communication is not needed, until the generation
-of the final result. Each MPI process uses the assigned 
+of the final display. Each MPI process uses the assigned 
 data to produce its own partial image. At the end, all the partial contributes are merged by means of a 
-collective reduction operation producing the final image. 
-
-The data load stage represents the crucial step for balancing the workload and for fast reading 
-data from the disk. 
+collective reduction operation producing the final display. As the data load stage is the crucial step for balancing the overall workload and fast reading 
+data from the disk, we paid specific attention to effective implementations of this functionality.
 %In fact, from the results presented in section 4.1, it is clear how,
 %as the data size grows,
 %the data load process tends to be the most demanding section of the code. 
-For this reason,
-we have paied specific attention to the effective implementations of this functionality.
 
 The adoption of MPI I/O based functions, represents the ideal solution for obtaining 
 a high-performance, scalable read--data utility. 
@@ -349,8 +330,8 @@ of $n \times N$ float elements.
 Then, we have defined the MPI I/O filetype as a simple 2-dimensional subarray of $A$ 
 of size $n \times N/nprocs$.
 
-In order to support high performance computing environments where MPI I/O is not available, 
-we have also provided two standard MPI binary readers based on standard cstdio functions.
+To support high performance computing environments where MPI I/O is not available, 
+we have also provided two standard MPI binary readers based on standard {\tt cstdio} functions.
 %that can respectively 
 %read binary data files written both in tab and block formats. 
 %In both cases 
@@ -400,11 +381,11 @@ extensively.
 %scenario may even involve only a single thread, the CUDA multiprocessor effectively 
 %acting then as a single processor.
 
-
-The CUDA approach can combine to the MPI parallelization strategy, outlined in 
-section 3.1, as soon as data are loaded in the memory of each processing unit (CPU+GPU).
-At that point, in fact, units can be regarded as independent from each other, and 
-CUDA can be exploited as follows. 
+As soon as data is loaded in the memory of each processing unit\footnote{For our purposes a processing unit is defined as a multicore CPU together with a bundle of associated GPUs.}, our CUDA approach can be combined with the MPI parallelization strategy outlined in section 3.1. At that point in fact, processing units can be regarded as completely independent of each other, and CUDA can be exploited by determining each parallel task based on a single particle; in other 
+words a single particle is {\it processed} and {\it displayed} by a single CUDA thread. 
+The processing involves normalizing (also called ranging) some particle values. 
+The displaying involves transformation of particles into screen coordinates, colorization 
+for deciding their colours, and rendering for determining screen areas affected by individual particles and combining them together for final imaging. 
 
 %As there typically exists a significant number of data-dependent conditional branches 
 %in the execution of Splotch, the MPI parallelization strategy outlined in section 3.1 
@@ -414,13 +395,6 @@ CUDA can be exploited as follows.
 %thus restricting full usage of the CUDA computational capability. 
 %Based on these 
 %considerations the overall amount of computation ({\it granularity}) involved in 
-
-Each parallel task of our CUDA implementation is determined by a single particle; in other 
-words a single particle is {\it processed} and {\it displayed} by a single CUDA thread. 
-The processing involves normalizing (also called ranging) some particle values. 
-The displaying involves transformation of particles into screen coordinates, colorization 
-for deciding their colours, and finally rendering for determining affected image
-areas and combining them together for final imaging.
 
 As modern particle-based simulations contain very large numbers of particles 
 (in the order of millions) a large number of CUDA threads can be employed, 
@@ -524,11 +498,8 @@ of each particle when deploying Splotch. We randomly extracted datasets containi
 Such variety of dataset sizes is required to match the memory requirements of 
 the different computing systems available for our testing.  
 Our most challenging dataset comes from the Millennium II simulation \cite{2009MNRAS.398.1150B} 
-and consists of 10 billion particles.
-
-The data files employed are pure binaries organized in such a way so that different 
-quantitites are stored consecutively (e.g. $x$ coordinates of all particles, $y$ coordinates 
-of all particles and so on) as expected by the MPI-IO based reader. 
+and consists of 10 billion particles. The data files employed are pure binaries organized in such a way so that different 
+quantitites are stored consecutively (e.g. $x$ coordinates of all particles, then $y$ coordinates and so on) as expected by the MPI-IO based reader. 
 
 \subsection{MPI Benchmarks}
 
@@ -538,12 +509,12 @@ of all particles and so on) as expected by the MPI-IO based reader.
 \includegraphics[width=0.49\textwidth]{bench870M_r.pdf}
 \end{center}
 \caption{Scaling of the CPU time (total wallclock time) with the number of MPI threads 
-used for vizualising 100 million
-and 850 millions particles with an final image size of 800x800 pixels.
+used for vizualizing 100 million
+and 850 millions particles for an 800x800 pixels display.
 Results for binary and MPI readers, in ST and SMT modes are shown}\label{mpi100M}
 \end{figure}
 
-Our test results on the SP6 platform for datasets block100M and block850M 
+Our test results on the SP6 platform for datasets 100M and 850M 
 are presented in Figure \ref{mpi100M}.
 Power6 cores can schedule for execution two processes (or threads) in the same clock cycle, 
 and it is also possible to use a single core as two virtual CPUs. This mode of Power6 
@@ -564,13 +535,13 @@ we can load and process approximatively 1 particle per $10^6$ seconds.
 In all cases the code scales almost linearly up to 8 processors, beginning to lose
 efficiency between 4 and 8 processors due to the reasons previously explained. 
 
-The larger, 850M test (Figure \ref{mpi100M}, right panel), 
+The larger test, 850M (Figure \ref{mpi100M}, right panel), 
 allows us to perform a more extensive scalability test, 
 exploring the range between 16 and 128 processors. This test confirms that the parallel 
 {\tt Splotch} can process about 1 particle per microsecond. For this dataset the scalability 
 is proved up to 128 processors in the ST mode. The SMT configuration, 
 while producing the best absolute performances, seems to have a more limited scalability. 
-This requires more investigation, but the most likely reason for this is processor 
+This requires more investigation, but our anticipation is that the most likely reason for this is processor 
 architectural features rather than our code.
 
 The pure binary and the MPI readers lead to similar performances. This is due to the features 
@@ -578,7 +549,7 @@ of our dataset, which is characterized by one dimensional data arrays. This mean
 that the parallel reading functions can read large chunks of contiguous data 
 in a single operation. However improvements due to MPI2 functions appear when 
 processes read large chunks of data. So good performances are expected as size of data increases. 
-Moreover when the number of processes is high, the MPI I/O reader performs and scale 
+Moreover when the number of processes is high, the MPI I/O reader performs and scales 
 better than the other one. Further improvements should emerge when multidimensional 
 arrays are considered and the access data pattern is more complex. 
 In these cases, collective MPI I/O reading could provide an effective speed-up for data loading.
@@ -586,11 +557,11 @@ In these cases, collective MPI I/O reading could provide an effective speed-up f
 \subsection{CUDA Benchmarks}
 
 \begin{table}
-\caption{The performance timings obtained with our CUDA implementation of Splotch (indicated by yes) compared to timings obtained using the standard sequential implementation of Splotch (indicated by no) for benchmark datasets 1M and 10M.}
+\caption{The performance timings (secs) obtained with our CUDA implementation of Splotch (indicated by yes) compared to timings obtained using the standard sequential implementation of Splotch (indicated by no) for benchmark datasets 1M and 10M.}
 \begin{center}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
-	& setup/read (s) & 	display (s) & 	write (s) & 	total (s) \\
+	& setup/read & 	display & 	write & 	total \\
 \hline
 1M (no) & 	1.1259 & 	0.6982 & 	0.1860 & 	2.0103 \\
 \hline
@@ -605,10 +576,9 @@ In these cases, collective MPI I/O reading could provide an effective speed-up f
 \end{table}
 
 \begin{table}
-\caption{The performance timings obtained with our CUDA implementation of Splotch. 
+\caption{The performance timings (secs) obtained with our CUDA implementation of Splotch. 
 The number of particles in the datasets employed for our experimental results is 
-370,852 (small), 2,646,991 (medium) and 16,202,527 (large) respectively. All timings are 
-expressed in seconds}
+370,852 (small), 2,646,991 (medium) and 16,202,527 (large) respectively.}
 
 \begin{center}
 \begin{tabular}{ | l || l | l || l | l | p{3cm} |}
@@ -627,11 +597,11 @@ expressed in seconds}
 \end{center}
 \end{table}
 
-The performance timings for benchmark datasets block 1M and block 10M using our CUDA 
+The performance timings for benchmark datasets 1M and 10M using our CUDA 
 implementation under the Win configuration described earlier are presented in Table 2. 
-The overall performance for dataset block 1M is somewhat degraded when CUDA is employed. 
+The overall performance for dataset 1M is somewhat degraded when CUDA is employed. 
 The main reason is the fact that for dataset sizes up to this order of magnitude the 
-costs associated with standard CUDA operations (e.g. initialization of CUDA runtime 
+costs associated with standard CUDA operations (e.g. initializing CUDA runtime 
 or data copying from host to device and vice-versa) are non-negligible. 
 As the size of our benchmark dataset becomes an order of magnitude larger, 
 using CUDA results in 21.3\% performance gains\footnote{The performance gains 
@@ -639,11 +609,10 @@ are computed by: Gain = (TimeWithoutCUDA - TimeWithCUDA) / TimeWithoutCUDA}.
 Our anticipation is that further increasing the order of magnitude of a dataset's 
 size would result in further performance gains. Our initial experiences with several 
 other datasets so far indicate that our CUDA implementation offers maximum gains 
-when there is a large display calculation involved, e.g. consider the datasets 
-presented in Figure \ref{cudafig}. Table 3 shows that our CUDA paralellization improves the 
+when there is a large display calculation involved, that is when individual particles influence relatively large areas on the screen. This is indeed the case for typical display scenarios (see Figure \ref{cudafig}). Table 3 shows that our CUDA paralellization improves the 
 performance of Splotch. The 'split particles' strategy (see section 3.2) further 
 improves performance timings.
-
+ 
 %\begin{figure}
 %\begin{center}
 %\includegraphics[width=0.5\textwidth]{t_read.pdf}
@@ -667,19 +636,19 @@ In our performance results we have used the final output of the simulation, prod
 high resolution images of 3200x3200 pixels. A minimum number of 128 processors 
 is necessary to process the entire dataset.
 
-For this benchmark, we could not use our MPI reader, due to a serius limitation related 
-to the MPI I/O API (usage of 32 bits counters which do not allow us to handle the huge datasets of the Millennium).
+For this benchmark, we could not use our MPI reader, due to a serious limitation related 
+to the MPI I/O API (usage of 32 bits counters which do not allow us to handle the large-scale datasets of the Millennium).
 We will work to overcome this problem in the future versions of Splotch. 
 At the moment, we used instead a parallel reader derived by the original Gadget 2 code 
 (used for the simulation - \cite{gadget}), 
-which allows to access directly data files as they where saved by the simulation code, 
+which allows to access directly data files as they where saved by the simulation code. 
 
 Examples of the Millennium II simulation rendered images are shown in Figure \ref{mil2}.
 In figure \ref{cpu_scaling}, we present the results of the benchmarks, in ST and SMT modes.
 The left panel shows the data processing time from 128 to 2048 MPI threads in ST mode and from
 256 to 4096 threads for SMT. The right panel shows instead the data read time, using 
 the Gadget 2 reader. In this case, the read process is performed by a subset of processors,
-belonging to a dedicated MPI sub-communicator, which then scatter the loaded data to the complete
+belonging to a dedicated MPI sub-communicator, which then scatters the loaded data to the complete
 processors pool. The tests confirm the scalability properties of the code even when a large number
 of threads is used. The reader's curve tends to flatten toward 100 processors, achieving 
 the physical bandwidth limit of the underlying GPFS based storage system. 
@@ -715,12 +684,12 @@ barriers posed by small personal computing systems, commonly adopted for visuali
 Finally, as parallel Splotch is implemented in ANSI C++ and is completely self-contained 
 (in other words it does not require any complementary library apart from MPI, OpenMP and CUDA), 
 the code is highly portable and compilable over a large number of different 
-architectures and operating systems. We have shown a range of test results based on 
+architectures and operating systems. We discussed test results based on 
 custom-made benchmark datasets and also the Millennium II simulation, which is the 
 largest cosmological simulation currently available containing 10 billion particles.
 
 Our future work will involve porting and running the parallelized {\tt Splotch} on hybrid 
-architecture computing system containing several multiprocessor computers with CUDA 
+architecture computing systems containing several multiprocessor computers with CUDA 
 enabled graphics boards, thus exploiting MPI and CUDA simultaneously. 
 Several optimizations are also planned for our CUDA implementation, e.g. unrolling 
 short loops for improved control flow or using local/shared memory to accelerate data fetching. 
@@ -730,8 +699,9 @@ investigate possibilities for designing advanced scheduling mechanisms to minimi
 the idle CPU times contained in the current implementation.
 
 \section*{Acknowledgments}
-We would like to thank Mike XXX for providing the MilleniumII simulation datasets 
-on which we conducted our performance tests. Klaus Dolag acknowledges the support 
+%We would like to thank Mike XXX for providing the MilleniumII simulation datasets 
+%on which we conducted our performance tests. 
+Klaus Dolag acknowledges the support 
 by the DFG Priority Programme 117. This work was also supported by the promising 
 researcher's award, University of Portsmouth, and the HPC-EUROPA 2 (project number 228398) 
 under the EC Coordination and Support Action Research Infrastructure Programme in FP7 
@@ -797,13 +767,11 @@ the triangles indicate the SMT configuration
 
 \bibitem{aladin} http://aladin.u-strasbg.fr/
 
-\bibitem{topcat} M. B. Taylor, TOPCAT and STIL: Starlink Table/VOTable Processing Software, ASP, ASPC 347 29T, 2005
+\bibitem{topcat} M. B. Taylor, TOPCAT and STIL: Starlink Table/VOTable Processing Software, ASP, ASPC 347 29T, 2005.
 
-\bibitem{visivo1}Visualization, Exploration and Data Analysis of Complex Astrophysical Data,
-M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson, J. Taylor, 2007, 
-The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913.
+\bibitem{visivo1}M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson and J. Taylor, Visualization, Exploration and Data Analysis of Complex Astrophysical Data,  The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913, 2007.
 
-\bibitem{3dslicer} M. A. Borkin, N. A. Ridge, A. A. Goodman and M. Halle, Demonstration of the Applicability of 3D Slicer to Astronomical Data using 13CO and C18O Observations of IC348, astro-ph/0506604, 2005
+\bibitem{3dslicer} M. A. Borkin, N. A. Ridge, A. A. Goodman and M. Halle, Demonstration of the Applicability of 3D Slicer to Astronomical Data using 13CO and C18O Observations of IC348, astro-ph/0506604, 2005.
 
 \bibitem{splash} http://users.monash.edu.au/~dprice/splash/index.html
 
@@ -813,10 +781,9 @@ The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 8
 
 \bibitem{vizier} http://cdsarc.u-strasbg.fr/viz-bin/VizieR
 
-\bibitem{visivo2}VisIVO-Integrated Tools and Services for Large-Scale Astrophysical Visualization, U. Becciani, A. Costa, V. Antonnuccio-Delogu, G. Caniglia, M. Comparato, C, Gheller, Z. Jin, M. Krokos, P. Massimino, The Publications of the Astronomical Society of the Pacific, (to appear).
+\bibitem{visivo2}U. Becciani, A. Costa, V. Antonnuccio-Delogu, G. Caniglia, M. Comparato, C, Gheller, Z. Jin, M. Krokos, P. Massimino, VisIVO-Integrated Tools and Services for Large-Scale Astrophysical Visualization, The Publications of the Astronomical Society of the Pacific, (to appear).
 
-\bibitem{2008NJPh...10l5006D}Splotch: Visualizing Cosmological Simulations. K.Dolag, 
-M. Reinecke, C.Gheller, S. Imboden, 2008, New Journal of Physics, Volume 10, Issue 12, pp. 125006
+\bibitem{2008NJPh...10l5006D}K.Dolag, M. Reinecke, C.Gheller, S. Imboden, Splotch: Visualizing Cosmological Simulations, New Journal of Physics, Volume 10, Issue 12, pp. 125006, 2008.
 
 \bibitem{mpi} http://www.mpi-forum.org/
 
@@ -824,8 +791,7 @@ M. Reinecke, C.Gheller, S. Imboden, 2008, New Journal of Physics, Volume 10, Iss
 
 \bibitem{cuda} http://www.nvidia.com/object/cuda\_home.html
 
-\bibitem{1985A&A...149..135M} A refined particle method for astrophysical problems, 
-Monaghan J.~J. \& Lattanzio J.~C., 1985, A\&A, 149, 135
+\bibitem{1985A&A...149..135M} J. Monaghan and J. Lattanzio, A Refined Particle Method for Astrophysical Problems, A\&A, 149, 135, 1985
 
 \bibitem{1991par..book.....S} Physics of Astrophysics: Volume I Radiation, Shu F., 1991,
 Published by University Science Books, 648 Broadway, Suite 902, New York, NY 10012
