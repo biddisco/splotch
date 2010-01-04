@@ -36,6 +36,7 @@
 #include "splotch/splotchutils.h"
 #include "writer/writer.h"
 #include "reader/reader.h"
+#include "cxxsupport/walltimer.h"
 
 #ifdef VS
 #include "cxxsupport/mpi_support.h"
@@ -148,44 +149,10 @@ struct region_cmp
 */
 #endif //ifdef CUDA
 
-
-double last_time,times[100];
-
-
-double myTime()
-  {
-#ifdef USE_MPI
-  return MPI_Wtime();
-#else
-
-#ifdef VS
-
-  static	VTimer t;
-  static	bool bFirstTimeRun =true;
-
-  if (bFirstTimeRun)
-  {
-	  bFirstTimeRun =false;
-	  t.start();
-  }
-
-  return t.getTime(); //in seconds
-
-#else
-  using namespace std;
-  struct timeval t;
-  gettimeofday(&t, NULL);
-  return t.tv_sec + 1e-6*t.tv_usec;
-//  return time(0);
-#endif
-#endif
-  }
-
-
 int main (int argc, const char **argv)
 {
-  last_time = myTime();
-  times[0] = last_time;
+  wallTimer.start("full");
+  wallTimer.start("setup");
   bool master = mpiMgr.master(); ///return true
 
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
@@ -289,8 +256,8 @@ int main (int argc, const char **argv)
 
 #endif
 
-  times[1] += myTime() - last_time;
-  last_time = myTime();
+  wallTimer.stop("setup");
+  wallTimer.start("read");
 
 
 #ifdef GEOMETRY_FILE
@@ -332,11 +299,11 @@ int main (int argc, const char **argv)
       if(master)
 	{
 	  cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
-	  cout << " Camera:   " << campos << endl;
-	  cout << " Lookat:   " << lookat << endl;
-	  cout << " Sky:      " << sky << endl;
+	  cout << " Camera:    " << campos << endl;
+	  cout << " Lookat:    " << lookat << endl;
+	  cout << " Sky:       " << sky << endl;
 #ifdef INTERPOLATE
-          cout << " niterpol: " << ninterpol << endl;
+          cout << " ninterpol: " << ninterpol << endl;
 #endif
 	}
 #ifdef INTERPOLATE
@@ -444,35 +411,35 @@ int main (int argc, const char **argv)
       long npart=particle_data.size();
       long npart_all=npart;
       mpiMgr.allreduce_inplace (npart_all,MPI_Manager::Sum); ///does nothing
-      times[2] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("read");
 
 #ifndef CUDA
 #ifndef NO_HOST_RANGING
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
+      wallTimer.start("range");
       if (master)
 		cout << endl << "ranging values (" << npart_all << ") ..." << endl;
 	  particle_normalize(params,particle_data,true); ///does log calculations and clamps data
-      times[3] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("range");
 #endif
 
 #ifndef NO_HOST_TRANSFORM
 // -------------------------------------
 // ----------- Transforming ------------
 // -------------------------------------
+      wallTimer.start("transform");
       if (master)
 		cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
       particle_project(params, particle_data, campos, lookat, sky);
-      times[4] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("transform");
 #endif
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
+      wallTimer.start("sort");
 #ifdef USE_MPI
       if (master)
         cout << endl << "applying local sort ..." << endl;
@@ -481,25 +448,24 @@ int main (int argc, const char **argv)
 #endif
       int sort_type = params.find<int>("sort_type",1);
       particle_sort(particle_data,sort_type,true);
-      times[5] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("sort");
 
 //2009-10-22: sorting is ignored now to simplified things.
 //if sorted, it's needed to copy particle sim back to device
 #ifdef CUDA 
 	  if ( sort_type !=0) //means needing sort
-		  cout<< endl << "CAUSION: SORTING NEEDED!"<<endl;
+		  cout<< endl << "CAUTION: SORTING NEEDED!"<<endl;
 #endif
 
 #ifndef NO_HOST_COLORING
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
+      wallTimer.start("coloring");
       if (master)                        
         cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
       particle_colorize(params, particle_data, amap, emap);
-      times[6] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("coloring");
 #endif
 
 // ----------------------------------
@@ -515,9 +481,9 @@ int main (int argc, const char **argv)
       float64 grayabsorb = params.find<float>("gray_absorption",0.2);
       bool a_eq_e = params.find<bool>("a_eq_e",true);
 #ifndef NO_HOST_RENDER
+      wallTimer.start("render");
       render(particle_data,pic,a_eq_e,grayabsorb);
-      times[7] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("render");
 #endif//NO_HOST_RENDER
 #endif //if not def CUDA
 
@@ -685,10 +651,9 @@ int main (int argc, const char **argv)
 
 /////////////////////////////////////////////////////////////////////
 //Codes merge here whether using CUDA or not
-	
-	//for record the writing time
-	last_time = myTime();
 
+      wallTimer.start("write");
+	
 // ---------------------------------
 // ----------- Colorbar ------------
 // ---------------------------------
@@ -706,7 +671,7 @@ int main (int argc, const char **argv)
 // -------------------------------
 // ----------- Saving ------------
 // -------------------------------
-      if (master)                             
+      if (master)
         cout << endl << "saving file ..." << endl;
 
       int pictype = params.find<int>("pictype",0);
@@ -734,8 +699,7 @@ int main (int argc, const char **argv)
           break;
         }
 
-      times[8] += myTime() - last_time;
-      last_time = myTime();
+      wallTimer.stop("write");
 
 #ifdef GEOMETRY_FILE
       for(int i=1; i<geometry_incr; i++)
@@ -763,20 +727,20 @@ int main (int argc, const char **argv)
 // -------------------------------
 // ----------- Timings -----------
 // -------------------------------
-  times[9] = myTime();
+  wallTimer.stop("full");
   if (master)
     {
       cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
-    cout << "Setup Data (secs)          : " << times[1] << endl;
-    cout << "Read Data (secs)           : " << times[2] << endl;
-    cout << "Ranging Data (secs)        : " << times[3] << endl;
-    cout << "Transforming Data (secs)   : " << times[4] << endl;
-    cout << "Sorting Data (secs)        : " << times[5] << endl;
-    cout << "Coloring Sub-Data (secs)   : " << times[6] << endl;
-    cout << "Rendering Sub-Data (secs)  : " << times[7] << endl;
-    cout << "Write Data (secs)          : " << times[8] << endl;
-    cout << "Total (secs)               : " << times[9]-times[0] << endl;
+    cout << "Setup Data (secs)          : " << wallTimer.acc("setup") << endl;
+    cout << "Read Data (secs)           : " << wallTimer.acc("read") << endl;
+    cout << "Ranging Data (secs)        : " << wallTimer.acc("range") << endl;
+    cout << "Transforming Data (secs)   : " << wallTimer.acc("transform") << endl;
+    cout << "Sorting Data (secs)        : " << wallTimer.acc("sort") << endl;
+    cout << "Coloring Sub-Data (secs)   : " << wallTimer.acc("coloring") << endl;
+    cout << "Rendering Sub-Data (secs)  : " << wallTimer.acc("render") << endl;
+    cout << "Write Data (secs)          : " << wallTimer.acc("write") << endl;
+    cout << "Total (secs)               : " << wallTimer.acc("full") << endl;
     }
 
 #ifdef VS
@@ -1075,8 +1039,6 @@ PROBLEM HERE!
       particle_sort(particle_data,sort_type,true);
 	  //we can sort by size(r) for balancing with cuda
 	  //particle_sort(particle_data,4,true);
-      times[5] += myTime() - last_time;
-      last_time = myTime();
 
 	  //copy sorted data back to device, not a must!
 	  //first to C-style object
@@ -1289,7 +1251,6 @@ PROBLEM HERE!
 	//here is the point that particle sim array on deivce is useless
 
 	//just for rendering time coming next
-	//last_time = myTime();
 
 	//old codecompare to gold result, test only
 
