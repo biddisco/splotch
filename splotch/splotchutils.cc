@@ -1,4 +1,3 @@
-
 #include "splotch/splotchutils.h"
 
 #ifdef VS
@@ -109,12 +108,8 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
         }//for this chunk
 }//#pragma omp parallel
 
-#ifdef USE_MPI
-      MPI_Barrier(MPI_COMM_WORLD);
-#endif
-
-      mpiMgr.allreduce_sum_raw
-        (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
+      mpiMgr.allreduceRaw_inplace
+        (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
       if (mpiMgr.master())
         {
         if (a_eq_e)
@@ -779,7 +774,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   int npart=p.size();
 
-  for (int m=0; m<npart; ++m) ///do log calcultions if demanded
+  for (int m=0; m<npart; ++m) //do log calculations if demanded
     {
       if (log_int[p[m].type])
 	p[m].I = log(p[m].I);
@@ -810,10 +805,10 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   for(int itype=0;itype<ptypes;itype++)
     {
-      mpiMgr.allreduce_min(minint[itype]);
-      mpiMgr.allreduce_min(mincol[itype]);
-      mpiMgr.allreduce_max(maxint[itype]);
-      mpiMgr.allreduce_max(maxcol[itype]);
+      mpiMgr.allreduce_inplace(minint[itype],MPI_Manager::Min);
+      mpiMgr.allreduce_inplace(mincol[itype],MPI_Manager::Min);
+      mpiMgr.allreduce_inplace(maxint[itype],MPI_Manager::Max);
+      mpiMgr.allreduce_inplace(maxcol[itype],MPI_Manager::Max);
 
       float minval_int = params.find<float>("intensity_min"+dataToString(itype),minint[itype]);
       float maxval_int = params.find<float>("intensity_max"+dataToString(itype),maxint[itype]);

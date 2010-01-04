@@ -27,7 +27,7 @@
  *  If any of the requested types is not available, compilation aborts
  *  with an error (unfortunately a rather obscure one).
  *
- *  Copyright (C) 2004, 2008, 2009 Max-Planck-Society
+ *  Copyright (C) 2004, 2008, 2009, 2010 Max-Planck-Society
  *  Author: Martin Reinecke
  */
 
@@ -130,18 +130,18 @@ inline int type2size (PDT type)
   {
   switch (type)
     {
-    case PLANCK_INT8   : return 1;
-    case PLANCK_UINT8  : return 1;
-    case PLANCK_INT16  : return 2;
-    case PLANCK_UINT16 : return 2;
-    case PLANCK_INT32  : return 4;
-    case PLANCK_UINT32 : return 4;
-    case PLANCK_INT64  : return 8;
-    case PLANCK_UINT64 : return 8;
-    case PLANCK_FLOAT32: return 4;
-    case PLANCK_FLOAT64: return 8;
-    case PLANCK_BOOL   : return 1;
+    case PLANCK_INT8   :
+    case PLANCK_UINT8  :
+    case PLANCK_BOOL   :
     case PLANCK_STRING : return 1;
+    case PLANCK_INT16  :
+    case PLANCK_UINT16 : return 2;
+    case PLANCK_INT32  :
+    case PLANCK_UINT32 :
+    case PLANCK_FLOAT32: return 4;
+    case PLANCK_INT64  :
+    case PLANCK_UINT64 :
+    case PLANCK_FLOAT64: return 8;
     default:
       planck_fail ("type2size: unsupported data type");
     }
@@ -214,5 +214,63 @@ template<> inline const char *type2typename<bool> ()
   { return "bool"; }
 template<> inline const char *type2typename<std::string> ()
   { return "std::string"; }
+
+enum NDT { // Native data type
+       NAT_CHAR,
+       NAT_SCHAR,
+       NAT_UCHAR,
+       NAT_SHORT,
+       NAT_USHORT,
+       NAT_INT,
+       NAT_UINT,
+       NAT_LONG,
+       NAT_ULONG,
+       NAT_LONGLONG,
+       NAT_ULONGLONG,
+       NAT_FLOAT,
+       NAT_DOUBLE,
+       NAT_LONGDOUBLE,
+       NAT_BOOL };
+
+template<typename T> inline NDT nativeType();
+template<> inline NDT nativeType<char>              () { return NAT_CHAR;      }
+template<> inline NDT nativeType<signed char>       () { return NAT_SCHAR;     }
+template<> inline NDT nativeType<unsigned char>     () { return NAT_UCHAR;     }
+template<> inline NDT nativeType<short>             () { return NAT_SHORT;     }
+template<> inline NDT nativeType<unsigned short>    () { return NAT_USHORT;    }
+template<> inline NDT nativeType<int>               () { return NAT_INT;       }
+template<> inline NDT nativeType<unsigned int>      () { return NAT_UINT;      }
+template<> inline NDT nativeType<long>              () { return NAT_LONG;      }
+template<> inline NDT nativeType<unsigned long>     () { return NAT_ULONG;     }
+template<> inline NDT nativeType<long long>         () { return NAT_LONGLONG;  }
+template<> inline NDT nativeType<unsigned long long>() { return NAT_ULONGLONG; }
+template<> inline NDT nativeType<float>             () { return NAT_FLOAT;     }
+template<> inline NDT nativeType<double>            () { return NAT_DOUBLE;    }
+template<> inline NDT nativeType<long double>       () { return NAT_LONGDOUBLE;}
+template<> inline NDT nativeType<bool>              () { return NAT_BOOL;      }
+
+inline int ndt2size (NDT type)
+  {
+  switch (type)
+    {
+    case NAT_CHAR      :
+    case NAT_SCHAR     :
+    case NAT_UCHAR     : return sizeof(char);
+    case NAT_SHORT     :
+    case NAT_USHORT    : return sizeof(short);
+    case NAT_INT       :
+    case NAT_UINT      : return sizeof(int);
+    case NAT_LONG      :
+    case NAT_ULONG     : return sizeof(long);
+    case NAT_LONGLONG  :
+    case NAT_ULONGLONG : return sizeof(long long);
+    case NAT_FLOAT     : return sizeof(float);
+    case NAT_DOUBLE    : return sizeof(double);
+    case NAT_LONGDOUBLE: return sizeof(long double);
+    case NAT_BOOL      : return sizeof(bool);
+    default:
+      planck_fail ("ndt2size: unsupported data type");
+    }
+  }
 
 #endif

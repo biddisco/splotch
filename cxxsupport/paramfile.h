@@ -25,10 +25,9 @@
 /*
  *  Class for parsing parameter files
  *
- *  Copyright (C) 2003, 2004, 2005, 2008 Max-Planck-Society
+ *  Copyright (C) 2003, 2004, 2005, 2008, 2009, 2010 Max-Planck-Society
  *  Authors: Martin Reinecke, Reinhard Hell
  */
-
 
 #ifndef PLANCK_PARAMFILE_H
 #define PLANCK_PARAMFILE_H
@@ -106,10 +105,6 @@ class paramfile
 
     const params_type &getParams() const
       { return params; }
-
-    template<typename T> void findParam
-      (const std::string &key, T &value) const
-      { value = find<T>(key); }
   };
 
 #endif

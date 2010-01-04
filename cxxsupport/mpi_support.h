@@ -23,210 +23,132 @@
  */
 
 /*
- *  Copyright (C) 2009 Max-Planck-Society
+ *  Copyright (C) 2009, 2010 Max-Planck-Society
  *  \author Martin Reinecke
  */
 
 #ifndef PLANCK_MPI_SUPPORT_H
 #define PLANCK_MPI_SUPPORT_H
 
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
+#include "datatypes.h"
 #include "arr.h"
-#ifdef USE_MPI
-
-template <typename T> inline MPI_Datatype getMpiType();
-template<> inline MPI_Datatype getMpiType<char>()
-  { return MPI_CHAR; }
-template<> inline MPI_Datatype getMpiType<int>()
-  { return MPI_INT; }
-template<> inline MPI_Datatype getMpiType<unsigned int>()
-  { return MPI_UNSIGNED; }
-template<> inline MPI_Datatype getMpiType<long>()
-  { return MPI_LONG; }
-template<> inline MPI_Datatype getMpiType<unsigned long>()
-  { return MPI_UNSIGNED_LONG; }
-template<> inline MPI_Datatype getMpiType<long long>()
-  { return MPI_LONG_LONG; }
-template<> inline MPI_Datatype getMpiType<unsigned long long>()
-  { return MPI_UNSIGNED_LONG_LONG; }
-template<> inline MPI_Datatype getMpiType<float>()
-  { return MPI_FLOAT; }
-template<> inline MPI_Datatype getMpiType<double>()
-  { return MPI_DOUBLE; }
-template<> inline MPI_Datatype getMpiType<long double>()
-  { return MPI_LONG_DOUBLE; }
 
 class MPI_Manager
   {
+  public:
+    enum redOp { Sum, Min, Max };
+
   private:
     void gatherv_helper1_m (int nval_loc, arr<int> &nval, arr<int> &offset,
-      int &nval_tot)
-      {
-      gather_m (nval_loc, nval);
-      nval_tot=0;
-      for (tsize i=0; i<nval.size(); ++i)
-        nval_tot+=nval[i];
-      offset.alloc(num_ranks());
-      offset[0]=0;
-      for (tsize i=1; i<offset.size(); ++i)
-        offset[i]=offset[i-1]+nval[i-1];
-      }
+      int &nval_tot) const;
+    void gatherRawVoid (const void *in, tsize num, void *out, NDT type) const;
+    void gathervRawVoid (const void *in, tsize num, void *out,
+      const int *nval, const int *offset, NDT type) const;
+    void allreduceRawVoid (const void *in, void *out, NDT type, tsize num,
+      redOp op) const;
 
   public:
-    ~MPI_Manager() {}
+    MPI_Manager();
+    ~MPI_Manager();
 
-    void startup (int &argc, char **&argv)
-      {
-      MPI_Init(&argc,&argv);
-      MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-      }
-    void shutdown ()
-      { MPI_Finalize(); }
-    int num_ranks() const
-      { int res; MPI_Comm_size(MPI_COMM_WORLD, &res); return res; }
-    int rank() const
-      { int res; MPI_Comm_rank(MPI_COMM_WORLD, &res); return res; }
-    bool master() const
-      { return (rank() == 0); }
-    void barrier() const
-      { MPI_Barrier (MPI_COMM_WORLD); }
+    int num_ranks() const;
+    int rank() const;
+    bool master() const;
 
-#if 0
-    void gather_m_rawVoid (const void *in, tsize insize, void *out, PDT type)
+    void calcShare (int64 glo, int64 ghi, int64 &lo, int64 &hi) const
+      { calcShareGeneral(glo,ghi,num_ranks(),rank(),lo,hi); }
+
+    template<typename T> void gather_m (const T &in, arr<T> &out) const
       {
-      MPI_Gather (const_cast<void *>(in),
-        insize,pdt2mpi(type),out,insize,pdt2mpi(type),0,MPI_COMM_WORLD);
-      }
-    void gather_s_rawVoid (const void *in, tsize insize, PDT type)
-      {
-      MPI_Gather (const_cast<void *>(in),
-        insize,pdt2mpi(type),0,insize,pdt2mpi(type),0,MPI_COMM_WORLD);
-      }
-#endif
-    template<typename T> void gather_m (const T &in, arr<T> &out)
-      {
-      MPI_Datatype dtype = getMpiType<T>();
       out.alloc(num_ranks());
-      MPI_Gather(const_cast<T *>(&in),1,dtype,&out[0],1,dtype,0,MPI_COMM_WORLD);
+      gatherRawVoid (&in,1,&out[0],nativeType<T>());
       }
-    template<typename T> void gather_s (const T &in)
-      {
-      MPI_Datatype dtype = getMpiType<T>();
-      MPI_Gather(const_cast<T *>(&in),1,dtype,0,1,dtype,0,MPI_COMM_WORLD);
-      }
+    template<typename T> void gather_s (const T &in) const
+      { gatherRawVoid (&in,1,0,nativeType<T>()); }
 
-    template<typename T> void gatherv_m (const arr<T> &in, arr<T> &out)
+    template<typename T> void gatherv_m (const arr<T> &in, arr<T> &out) const
       {
       int nval_loc = in.size(), nval_tot;
-      MPI_Datatype dtype = getMpiType<T>();
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc,nval,offset,nval_tot);
       out.alloc(nval_tot);
-      MPI_Gatherv(const_cast<T *>(&in[0]),nval_loc,dtype,&out[0],&nval[0],
-        &offset[0],dtype,0,MPI_COMM_WORLD);
+      gathervRawVoid (&in[0],nval_loc,&out[0],&nval[0],&offset[0],nativeType<T>());
       }
-    template<typename T> void gatherv_s (const arr<T> &in)
+    template<typename T> void gatherv_s (const arr<T> &in) const
       {
       int nval_loc = in.size();
-      MPI_Datatype dtype = getMpiType<T>();
       gather_s (nval_loc);
-      MPI_Gatherv(const_cast<T *>(&in[0]),nval_loc,dtype,0,0,0,dtype,0,
-        MPI_COMM_WORLD);
+      gathervRawVoid (&in[0],nval_loc,0,0,0,nativeType<T>());
       }
-    template<typename T> void gatherv (const arr<T> &in, arr<T> &out)
+
+    template<typename T> void gatherv (const arr<T> &in, arr<T> &out) const
       { master() ? gatherv_m(in,out) : gatherv_s(in); }
 
-    template<typename T> void gatherv_m (const arr2<T> &in, arr2<T> &out)
+    template<typename T> void gatherv_m (const arr2<T> &in, arr2<T> &out) const
       {
       int nval_loc = in.size(), nval_tot;
-      MPI_Datatype dtype = getMpiType<T>();
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc, nval, offset, nval_tot);
       out.alloc(nval_tot/in.size2(),in.size2());
-      MPI_Gatherv(const_cast<T *>(&in[0][0]),nval_loc,dtype,&out[0][0],&nval[0],
-        &offset[0],dtype,0,MPI_COMM_WORLD);
+      gathervRawVoid (&in[0][0],nval_loc,&out[0][0],&nval[0],&offset[0],nativeType<T>());
       }
-    template<typename T> void gatherv_s (const arr2<T> &in)
+
+    template<typename T> void gatherv_s (const arr2<T> &in) const
       {
       int nval_loc = in.size();
-      MPI_Datatype dtype = getMpiType<T>();
       gather_s (nval_loc);
-      MPI_Gatherv(const_cast<T *>(&in[0][0]),nval_loc,dtype,0,0,0,dtype,0,
-        MPI_COMM_WORLD);
+      gathervRawVoid (&in[0][0],nval_loc,0,0,0,nativeType<T>());
       }
 
-    template<typename T> void broadcast_raw (T *ptr, tsize nvals)
-      { MPI_Bcast (ptr,nvals,getMpiType<T>(),0,MPI_COMM_WORLD); }
-    template<typename T> void broadcast (T &val)
-      { MPI_Bcast (&val,1,getMpiType<T>(),0,MPI_COMM_WORLD); }
-    template<typename T> void allreduce_sum (T &val)
+    template<typename T> void reduceRaw (const T *in, T *out, tsize num,
+      redOp op, int root) const
+      { reduceRawVoid (in, out, nativeType<T>(), num, op, root); }
+    template<typename T> void reduce (const arr<T> &in, arr<T> &out, redOp op,
+      int root=0) const
       {
-      T val2;
-      MPI_Allreduce (&val,&val2,1,getMpiType<T>(),MPI_SUM,MPI_COMM_WORLD);
-      val=val2;
+      (rank()==root) ? reduce_m (in, out, op) : reduce_s (in, op, root);
       }
-    template<typename T> void allreduce_sum_raw (T *ptr, tsize nvals)
+    template<typename T> void reduce_m (const arr<T> &in, arr<T> &out,
+      redOp op) const
       {
-      arr<T> v2(nvals);
-      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_SUM,MPI_COMM_WORLD);
-      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
+      out.alloc(in.size());
+      reduceRaw (&in[0], &out[0], in.size(), op, rank());
       }
-    template<typename T> void allreduce_min_raw (T *ptr, tsize nvals)
+    template<typename T> void reduce_s (const arr<T> &in, redOp op, int root)
+      const
+      { reduceRaw (&in[0], 0, in.size(), op, root); }
+
+    template<typename T> void allreduceRaw (const T *in, T *out, tsize num,
+      redOp op) const
+      { allreduceRawVoid (in, out, nativeType<T>(), num, op); }
+    template<typename T> void allreduce (const arr<T> &in, arr<T> &out,
+      redOp op) const
       {
-      arr<T> v2(nvals);
-      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_MIN,MPI_COMM_WORLD);
-      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
+      out.alloc(in.size());
+      allreduceRaw (&in[0], &out[0], in.size(), op);
       }
-    template<typename T> void allreduce_min (T &val)
+    template<typename T> void allreduce (const T &in, T &out, redOp op) const
+      { allreduceRaw (&in, &out, 1, op); }
+
+    template<typename T> void allreduceRaw_inplace (T *data, tsize num,
+      redOp op) const
       {
-      T val2;
-      MPI_Allreduce (&val,&val2,1,getMpiType<T>(),MPI_MIN,MPI_COMM_WORLD);
-      val=val2;
+      arr<T> data2(num);
+      allreduceRawVoid (data, &data2[0], nativeType<T>(), num, op);
+      for (tsize i=0; i<num; ++i) data[i]=data2[i];
       }
-    template<typename T> void allreduce_max_raw (T *ptr, tsize nvals)
-      {
-      arr<T> v2(nvals);
-      MPI_Allreduce (ptr,&v2[0],nvals,getMpiType<T>(),MPI_MAX,MPI_COMM_WORLD);
-      for (tsize i=0; i<nvals; ++i) ptr[i]=v2[i];
-      }
-    template<typename T> void allreduce_max (T &val)
-      {
-      T val2;
-      MPI_Allreduce (&val,&val2,1,getMpiType<T>(),MPI_MAX,MPI_COMM_WORLD);
-      val=val2;
-      }
+    template<typename T> void allreduce_inplace (arr<T> &data, redOp op) const
+      { allreduceRaw_inplace (&data[0], data.size(), op); }
+    template<typename T> void allreduce_inplace (T &data, redOp op) const
+      { allreduceRaw_inplace (&data, 1, op); }
+
+    template<typename T> void bcastRaw (T *data, tsize num, int root) const
+      { bcastRawVoid (data, nativeType<T>(), num, root); }
+    template<typename T> void bcast (arr<T> &data, tsize num, int root) const
+      { bcastRaw (&data[0], data.size(), root); }
+    template<typename T> void bcast (T &data, int root) const
+      { bcastRaw (&data, 1, root); }
   };
-
-#else
-
-class MPI_Manager
-  {
-  public:
-    void startup (int &, char **&) {}
-    void shutdown () {}
-    int num_ranks() const { return 1; }
-    int rank() const { return 0; }
-    bool master() const { return true; }
-    void barrier() const {}
-
-    template<typename T> void gatherv (const arr<T> &in, arr<T> &out)
-      { out=in; }
-    template<typename T> void gatherv_m (const arr2<T> &in, arr2<T> &out)
-      { out=in; }
-    template<typename T> void gatherv_s (const arr2<T> &) {}
-    template<typename T> void broadcast_raw (T *, tsize) {}
-    template<typename T> void broadcast (T &) {}
-    template<typename T> void allreduce_sum_raw (T *, tsize) {}
-    template<typename T> void allreduce_sum (T &) {}
-    template<typename T> void allreduce_min_raw (T *, tsize) {}
-    template<typename T> void allreduce_min (T &) {}
-    template<typename T> void allreduce_max_raw (T *, tsize) {}
-    template<typename T> void allreduce_max (T &) {}
-  };
-
-#endif
 
 extern MPI_Manager mpiMgr;
 

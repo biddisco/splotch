@@ -25,7 +25,7 @@
 /*! \file cxxutils.h
  *  Various convenience functions used by the Planck LevelS package.
  *
- *  Copyright (C) 2002 - 2008 Max-Planck-Society
+ *  Copyright (C) 2002 - 2010 Max-Planck-Society
  *  \author Martin Reinecke \author Reinhard Hell
  */
 
@@ -60,15 +60,13 @@ template<typename F> inline bool abs_approx (F a, F b, F epsilon=1e-5)
 //! Returns the largest integer which is smaller than (or equal to) \a arg.
 template<typename I, typename F> inline I ifloor (F arg)
   {
-  return (arg>=0) ? I(arg) : I(arg)-1;
+  using namespace std;
+  return I(floor(arg));
   }
 
 //! Returns the integer which is nearest to \a arg.
 template<typename I, typename F> inline I nearest (F arg)
-  {
-  arg += 0.5;
-  return (arg>=0) ? I(arg) : I(arg)-1;
-  }
+  { return ifloor<I>(arg+0.5); }
 
 //! Returns \a v1+v2 if \a v1<0, \a v1-v2 if \a v1>=v2, else \a v1.
 /*! \a v1 can be positive or negative; \a v2 must be positive. */
@@ -143,63 +141,18 @@ inline double safe_atan2 (double y, double x)
   return ((x==0.) && (y==0.)) ? 0.0 : atan2(y,x);
   }
 
-//! Returns an index to the left of two interpolation values.
-/*! \a begin points to an array containing a sequence of values
-    sorted in ascending order. The length of the array is \a len.
-    If \a val is lower than the first element, 0 is returned.
-    If \a val is higher than the last element, \a len-2
-    is returned. Else, the index of the largest element smaller
-    than \a val is returned. */
-template<typename T> inline int interpol_left
-  (const T *begin, int len, const T &val)
+/*! Helper function for linear interpolation (or extrapolation).
+    The array must be ordered in ascending order; no two values may be equal. */
+template<typename T, typename Iter> inline void interpol_helper
+  (const Iter &begin, const Iter &end, const T &val, tsize &idx, T &frac)
   {
-  const T *end = begin+len;
-  const T *iter = std::lower_bound (begin, end, val);
-  if (iter==begin) return 0;
-  if (iter==end) return len-2;
-  return (iter-begin)-1;
+  using namespace std;
+  planck_assert((end-begin)>1,"sequence too small for interpolation");
+  idx = lower_bound(begin,end,val)-begin;
+  if (idx>0) --idx;
+  idx = min(tsize(end-begin-2),idx);
+  frac = (val-begin[idx])/(begin[idx+1]-begin[idx]);
   }
-
-//! Returns an index to the nearest interpolation value.
-/*! \a begin points to an array containing a sequence of values
-    sorted in ascending order. The length of the array is \a len.
-    If \a val is lower than the first element, 0 is returned.
-    If \a val is higher than the last element, \a len-1 is returned.
-    Else, the index of the nearest element within the sequence of
-    values is returned. */
-template<typename T> inline int interpol_nearest
-  (const T *begin, int len, const T &val)
-  {
-  int left = interpol_left(begin, len, val);
-  T delleft = val-(*(begin+left));
-  T delright = (*(begin+left+1))-val;
-  if (delright<0) return left+1;
-  return (delright<delleft) ? (left+1) : left;
-  }
-
-/*! \} */
-
-/*! \defgroup fileutilsgroup File-handling helper functions */
-/*! \{ */
-
-//! If the file \a filename is present, return \p true, else \p false.
-bool file_present (const std::string &filename);
-
-//! Removes the file \a filename
-void remove_file (const std::string &filename);
-
-/*! \} */
-
-/*! \defgroup assertgroup Assertions */
-/*! \{ */
-
-//! Checks the presence of the file \a filename.
-/*! If the file is not present, a PlanckError is thrown. */
-void assert_present (const std::string &filename);
-
-//! Checks the absence of the file \a filename.
-/*! If the file is present, a PlanckError is thrown. */
-void assert_not_present (const std::string &filename);
 
 /*! \} */
 
@@ -219,7 +172,7 @@ template<> std::string dataToString (const double &x);
 
 /*! Returns a string containing the text representation of \a x, padded
     with leading zeroes to \a width characters. */
-std::string intToString(int x, int width);
+std::string intToString(int64 x, tsize width);
 
 //! Reads a value of a given datatype from a string
 template<typename T> void stringToData (const std::string &x, T &value);
@@ -244,24 +197,39 @@ std::string tolower(const std::string &input);
 
 /*! \} */
 
-//! Indicates progress by printing the percentage of \a now/total.
-/*! A message is only printed if it has changed since \a now-1/total.
-    The output is followed by a carriage return, not a newline. */
-void announce_progress (int now, int total);
-//! Indicates progress by printing the percentage of \a now/total.
-/*! A message is only printed if it has changed since \a last/total.
-    The output is followed by a carriage return, not a newline. */
-void announce_progress (double now, double last, double total);
-/*! This function should be called after a sequence of announce_progress()
-    calls has finished. */
-void end_announce_progress ();
-
-//! Prints a banner containing \a name. Useful for displaying program names.
+/*! Prints a banner containing \a name, as well as some information about the
+    source code and the parallelisation techniques enabled. */
 void announce (const std::string &name);
 
 /*! Prints a banner containing \a name and checks if \a argc==argc_expected.
     If not, a usage description is given and the program is terminated. */
-void module_startup (const std::string &name, int argc,
+void module_startup (const std::string &name, int argc, const char **argv,
   int argc_expected, const std::string &argv_expected, bool verbose=true);
+
+/*! Divides the index range [\a glo; \a ghi) into \a nshares approximately
+    equal parts, and returns the sub-range [\a lo; \a hi) of the
+    part with the number \a myshare (first part has index 0). */
+void calcShareGeneral (int64 glo, int64 ghi, int64 nshares, int64 myshare,
+  int64 &lo, int64 &hi);
+
+class chunkMaker
+  {
+  private:
+    uint64 s_full, s_chunk, offset;
+
+  public:
+    chunkMaker (uint64 s_full_, uint64 s_chunk_)
+      : s_full(s_full_), s_chunk(s_chunk_), offset(0) {}
+
+    bool getNext (uint64 &start, uint64 &size)
+      {
+      using namespace std;
+      if (offset>=s_full) return false;
+      start=offset;
+      size=min(s_chunk,s_full-offset);
+      offset+=s_chunk;
+      return true;
+      }
+  };
 
 #endif

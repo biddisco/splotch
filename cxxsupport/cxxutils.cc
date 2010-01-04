@@ -26,7 +26,7 @@
  *  This file contains the implementation of various convenience functions
  *  used by the Planck LevelS package.
  *
- *  Copyright (C) 2002 - 2009 Max-Planck-Society
+ *  Copyright (C) 2002 - 2010 Max-Planck-Society
  *  Authors: Martin Reinecke, Reinhard Hell
  */
 
@@ -46,31 +46,9 @@
 #include "cxxutils.h"
 #include "datatypes.h"
 #include "openmp_support.h"
+#include "mpi_support.h"
 
 using namespace std;
-
-bool file_present (const string &filename)
-  {
-  ifstream dummy(filename.c_str());
-  return dummy;
-  }
-
-void assert_present (const string &filename)
-  {
-  planck_assert (file_present(filename),
-    "File '" + filename + "' does not exist!");
-  }
-
-void assert_not_present (const string &filename)
-  {
-  planck_assert (!file_present(filename),
-    "File '" + filename + "' already exists!");
-  }
-
-void remove_file (const string &filename)
-  {
-  remove (filename.c_str());
-  }
 
 string trim (const string &orig)
   {
@@ -115,7 +93,7 @@ template string dataToString (const unsigned long &x);
 template string dataToString (const long long &x);
 template string dataToString (const unsigned long long &x);
 
-string intToString(int x, int width)
+string intToString(int64 x, tsize width)
   {
   ostringstream strstrm;
   strstrm << setw(width) << setfill('0') << x;
@@ -187,52 +165,20 @@ string tolower(const string &input)
   return result;
   }
 
-// FIXME: this should be configurable from outside
-#define SILENT
-#ifdef SILENT
-
-void announce_progress (int, int) {}
-void announce_progress (double, double, double) {}
-void end_announce_progress () {}
-
-#else
-
-void announce_progress (int now, int total)
-  {
-  if ((now%(max(total/100,1)))==0)
-    cout << "\r " << setw(3) << planck_nint ((now*100.)/total)
-         << "% done\r" << flush;
-  }
-
-void announce_progress (double now, double last, double total)
-  {
-  int lastpercent = int((last/total)*100),
-      nowpercent  = int(( now/total)*100);
-  if (nowpercent>lastpercent)
-    cout << "\r " << setw(3) << nowpercent << "% done\r" << flush;
-  }
-
-void end_announce_progress ()
-  { cout << endl; }
-
-#endif
-
 namespace {
 
 void openmp_status()
   {
-  if (openmp_enabled())
-    {
-    cout << "Application was compiled with OpenMP support," << endl;
-    if (openmp_max_threads() == 1)
-      cout << "but running with one process only." << endl;
-    else
-      cout << "running with up to " << openmp_max_threads()
-           << " processes." << endl;
-    }
-  else
-    cout << "Application was compiled without OpenMP support;" << endl
-         << "running in scalar mode." << endl;
+  int threads = openmp_max_threads();
+  if (threads>1)
+    cout << "OpenMP active: max. " << threads << " threads. " << endl;
+  }
+
+void MPI_status()
+  {
+  int tasks = mpiMgr.num_ranks();
+  if (tasks>1)
+    cout << "MPI active with " << tasks << " tasks. " << endl;
   }
 
 } //unnamed namespace
@@ -247,10 +193,11 @@ void announce (const string &name)
   for (tsize m=0; m<name.length(); ++m) cout << "-";
   cout << "-+" << endl << endl;
   openmp_status();
+  MPI_status();
   cout << endl;
   }
 
-void module_startup (const string &name, int argc,
+void module_startup (const string &name, int argc, const char **,
   int argc_expected, const string &argv_expected, bool verbose)
   {
   if (verbose) announce (name);
@@ -297,4 +244,14 @@ void parse_file (const string &filename, map<string,string> &dict)
              << lineno << ":\n" << line << endl;
       }
     }
+  }
+
+void calcShareGeneral (int64 glo, int64 ghi, int64 nshares, int64 myshare,
+  int64 &lo, int64 &hi)
+  {
+  int64 nwork = ghi-glo;
+  int64 nbase = nwork/nshares;
+  int64 additional = nwork%nshares;
+  lo = glo+myshare*nbase + ((myshare<additional) ? myshare : additional);
+  hi = lo+nbase+(myshare<additional);
   }

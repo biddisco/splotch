@@ -182,14 +182,13 @@ double myTime()
   }
 
 
-int main (int argc, char **argv)
+int main (int argc, const char **argv)
 {
-  mpiMgr.startup (argc, argv); ///does nothing actually
   last_time = myTime();
   times[0] = last_time;
   bool master = mpiMgr.master(); ///return true
 
-  module_startup ("splotch",argc,2,"splotch <parameter file>",master);
+  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   if (mpiMgr.num_ranks()>1 && master) ///as mpi manager always returns 1
     {
     cout << "Application was compiled with MPI support," << endl;
@@ -444,7 +443,7 @@ int main (int argc, char **argv)
 
       long npart=particle_data.size();
       long npart_all=npart;
-      mpiMgr.allreduce_sum (npart_all); ///does nothing
+      mpiMgr.allreduce_inplace (npart_all,MPI_Manager::Sum); ///does nothing
       times[2] += myTime() - last_time;
       last_time = myTime();
 
@@ -509,7 +508,7 @@ int main (int argc, char **argv)
       int res = params.find<int>("resolution",200);
       long nsplotch=particle_data.size();
       long nsplotch_all=nsplotch;
-      mpiMgr.allreduce_sum (nsplotch_all);
+      mpiMgr.allreduce_inplace (nsplotch_all,MPI_Manager::Sum);
       if (master)
         cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
       arr2<COLOUR> pic(res,res);
@@ -779,8 +778,6 @@ int main (int argc, char **argv)
     cout << "Write Data (secs)          : " << times[8] << endl;
     cout << "Total (secs)               : " << times[9]-times[0] << endl;
     }
-
-  mpiMgr.shutdown();
 
 #ifdef VS
   //Just to hold the screen to read the messages when debuging

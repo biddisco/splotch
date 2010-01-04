@@ -25,15 +25,15 @@
 /*! \file arr.h
  *  Various high-performance array classes used by the Planck LevelS package.
  *
- *  Copyright (C) 2002, 2003, 2004, 2005, 2006, 2007, 2008 Max-Planck-Society
+ *  Copyright (C) 2002 - 2010 Max-Planck-Society
  *  \author Martin Reinecke
  */
 
 #ifndef PLANCK_ARR_H
 #define PLANCK_ARR_H
 
-#include "cxxutils.h"
 #include <algorithm>
+#include "cxxutils.h"
 
 /*! \defgroup arraygroup Array classes */
 /*! \{ */
@@ -145,15 +145,11 @@ template <typename T> class arr
     void sort()
       { std::sort (d,d+s); }
 
+    /*! Helper function for linear interpolation (or extrapolation).
+        The array must be ordered in ascending order; no two values may be
+        equal. */
     void interpol_helper (const T &val, tsize &idx, double &frac) const
-      {
-      using namespace std;
-      planck_assert(s>1,"array too small for interpolation");
-      idx = lower_bound(d,d+s,val)-d;
-      if (idx>0) --idx;
-      idx = min(tsize(s-2),idx);
-      frac = (val-d[idx])/(d[idx+1]-d[idx]);
-      }
+      { ::interpol_helper (d, d+s, val, idx, frac); }
 
     /*! Returns the minimum and maximum entry in \a minv and \a maxv,
         respectively. Throws an exception if the array is zero-sized. */
