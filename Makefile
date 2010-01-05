@@ -90,7 +90,8 @@ EXEC   = Splotch4.0$(SYSTYPE)
 OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o
+	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o \
+	cxxsupport/walltimer.o
 
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
 OBJS += cuda/splotch.o cuda/CuPolicy.o
