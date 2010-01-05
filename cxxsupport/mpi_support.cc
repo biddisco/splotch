@@ -20,9 +20,14 @@ MPI_Datatype ndt2mpi (NDT type)
     {
     case NAT_CHAR: return MPI_CHAR;
     case NAT_INT: return MPI_INT;
+    case NAT_UINT: return MPI_UNSIGNED;
     case NAT_LONG: return MPI_LONG;
+    case NAT_ULONG: return MPI_UNSIGNED_LONG;
+    case NAT_LONGLONG: return MPI_LONG_LONG;
+    case NAT_ULONGLONG: return MPI_UNSIGNED_LONG_LONG;
     case NAT_FLOAT: return MPI_FLOAT;
     case NAT_DOUBLE: return MPI_DOUBLE;
+    case NAT_LONGDOUBLE: return MPI_LONG_DOUBLE;
     default: planck_fail ("Unsupported type");
     }
   }
