@@ -46,6 +46,11 @@ class MPI_Manager
       const int *nval, const int *offset, NDT type) const;
     void allreduceRawVoid (const void *in, void *out, NDT type, tsize num,
       redOp op) const;
+    void allreduceRawVoid_inplace (void *data, NDT type, tsize num, redOp op)
+      const;
+    void reduceRawVoid (const void *in, void *out, NDT type, tsize num,
+      redOp op, int root) const;
+    void bcastRawVoid (void *data, NDT type, tsize num, int root) const;
 
   public:
     MPI_Manager();
@@ -105,9 +110,7 @@ class MPI_Manager
       { reduceRawVoid (in, out, nativeType<T>(), num, op, root); }
     template<typename T> void reduce (const arr<T> &in, arr<T> &out, redOp op,
       int root=0) const
-      {
-      (rank()==root) ? reduce_m (in, out, op) : reduce_s (in, op, root);
-      }
+      { (rank()==root) ? reduce_m (in, out, op) : reduce_s (in, op, root); }
     template<typename T> void reduce_m (const arr<T> &in, arr<T> &out,
       redOp op) const
       {
@@ -132,11 +135,7 @@ class MPI_Manager
 
     template<typename T> void allreduceRaw_inplace (T *data, tsize num,
       redOp op) const
-      {
-      arr<T> data2(num);
-      allreduceRawVoid (data, &data2[0], nativeType<T>(), num, op);
-      for (tsize i=0; i<num; ++i) data[i]=data2[i];
-      }
+      { allreduceRawVoid_inplace (data, nativeType<T>(), num, op); }
     template<typename T> void allreduce_inplace (arr<T> &data, redOp op) const
       { allreduceRaw_inplace (&data[0], data.size(), op); }
     template<typename T> void allreduce_inplace (T &data, redOp op) const

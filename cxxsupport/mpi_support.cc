@@ -124,6 +124,22 @@ void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   MPI_Allreduce (const_cast<void *>(in),out,num,ndt2mpi(type),op2mop(op),
     MPI_COMM_WORLD);
   }
+void MPI_Manager::allreduceRawVoid_inplace (void *data, NDT type, tsize num,
+  redOp op) const
+  {
+  arr<char> tmp(num);
+  MPI_Allreduce (data,&tmp[0],num,ndt2mpi(type),op2mop(op),MPI_COMM_WORLD);
+  memcpy (data,&tmp[0],num*ndt2size(type));
+  }
+void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
+  redOp op, int root) const
+  {
+  MPI_Reduce (const_cast<void *>(in),out,num,ndt2mpi(type),op2mop(op), root,
+    MPI_COMM_WORLD);
+  }
+
+void MPI_Manager::bcastRawVoid (void *data, NDT type, tsize num, int root) const
+  { MPI_Bcast (data,num,ndt2mpi(type),root,MPI_COMM_WORLD); }
 
 #else
 
@@ -137,5 +153,13 @@ void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
 void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   tsize num, redOp) const
   { memcpy (out, in, num*ndt2size(type)); }
+void MPI_Manager::allreduceRawVoid_inplace (void *, NDT, tsize, redOp) const
+  {}
+void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
+  redOp, int) const
+  { memcpy (out, in, num*ndt2size(type)); }
+
+void MPI_Manager::bcastRawVoid (void *, NDT, tsize, int) const
+  {}
 
 #endif
