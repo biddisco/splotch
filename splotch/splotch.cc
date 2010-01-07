@@ -410,7 +410,7 @@ int main (int argc, const char **argv)
 
       long npart=particle_data.size();
       long npart_all=npart;
-      mpiMgr.allreduce_inplace (npart_all,MPI_Manager::Sum); ///does nothing
+      mpiMgr.allreduce (npart_all,MPI_Manager::Sum); ///does nothing
       wallTimer.stop("read");
 
 #ifndef CUDA
@@ -474,7 +474,7 @@ int main (int argc, const char **argv)
       int res = params.find<int>("resolution",200);
       long nsplotch=particle_data.size();
       long nsplotch_all=nsplotch;
-      mpiMgr.allreduce_inplace (nsplotch_all,MPI_Manager::Sum);
+      mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
       if (master)
         cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
       arr2<COLOUR> pic(res,res);
