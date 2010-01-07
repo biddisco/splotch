@@ -44,13 +44,6 @@ class MPI_Manager
     void gatherRawVoid (const void *in, tsize num, void *out, NDT type) const;
     void gathervRawVoid (const void *in, tsize num, void *out,
       const int *nval, const int *offset, NDT type) const;
-    void allreduceRawVoid (const void *in, void *out, NDT type, tsize num,
-      redOp op) const;
-    void allreduceRawVoid_inplace (void *data, NDT type, tsize num, redOp op)
-      const;
-    void reduceRawVoid (const void *in, void *out, NDT type, tsize num,
-      redOp op, int root) const;
-    void bcastRawVoid (void *data, NDT type, tsize num, int root) const;
 
   public:
     MPI_Manager();
@@ -62,6 +55,28 @@ class MPI_Manager
 
     void calcShare (int64 glo, int64 ghi, int64 &lo, int64 &hi) const
       { calcShareGeneral(glo,ghi,num_ranks(),rank(),lo,hi); }
+
+    void sendRawVoid (const void *data, NDT type, tsize num, tsize dest) const;
+    template<typename T> void sendRaw (const T *data, tsize num, tsize dest)
+      const
+      { sendRawVoid(data, nativeType<T>(), num, dest); }
+    template<typename T> void send (const arr<T> &data, tsize dest) const
+      { sendRaw(&data[0], data.size(), dest); }
+
+    void recvRawVoid (void *data, NDT type, tsize num, tsize src) const;
+    template<typename T> void recvRaw (T *data, tsize num, tsize src) const
+      { recvRawVoid(data, nativeType<T>(), num, src); }
+    template<typename T> void recv (arr<T> &data, tsize src) const
+      { recvRaw(&data[0], data.size(), src); }
+
+    void sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
+      tsize src, tsize dest) const;
+    template<typename T> void sendrecv_replaceRaw (T *data, tsize num,
+      tsize src, tsize dest) const
+      { sendrecv_replaceRawVoid(data, nativeType<T>(), num, src, dest); }
+    template<typename T> void sendrecv_replace (arr<T> &data, tsize src,
+      tsize dest) const
+      { sendrecv_replaceRaw(&data[0], data.size(), src, dest); }
 
     template<typename T> void gather_m (const T &in, arr<T> &out) const
       {
@@ -105,6 +120,8 @@ class MPI_Manager
       gathervRawVoid (&in[0][0],nval_loc,0,0,0,nativeType<T>());
       }
 
+    void reduceRawVoid (const void *in, void *out, NDT type, tsize num,
+      redOp op, int root) const;
     template<typename T> void reduceRaw (const T *in, T *out, tsize num,
       redOp op, int root) const
       { reduceRawVoid (in, out, nativeType<T>(), num, op, root); }
@@ -121,6 +138,24 @@ class MPI_Manager
       const
       { reduceRaw (&in[0], 0, in.size(), op, root); }
 
+    void allgatherRawVoid (const void *in, void *out, NDT type, tsize num)
+      const;
+    template<typename T> void allgatherRaw (const T *in, T *out, tsize num)
+      const
+      { allgatherRawVoid (in, out, nativeType<T>(), num); }
+    template<typename T> void allgather (const arr<T> &in, arr<T> &out) const
+      {
+      out.alloc(num_ranks()*in.size());
+      allgatherRaw (&in[0], &out[0], in.size());
+      }
+    template<typename T> void allgather (const T &in, arr<T> &out) const
+      {
+      out.alloc(num_ranks());
+      allgatherRaw (&in, &out[0], 1);
+      }
+
+    void allreduceRawVoid (const void *in, void *out, NDT type, tsize num,
+      redOp op) const;
     template<typename T> void allreduceRaw (const T *in, T *out, tsize num,
       redOp op) const
       { allreduceRawVoid (in, out, nativeType<T>(), num, op); }
@@ -133,14 +168,16 @@ class MPI_Manager
     template<typename T> void allreduce (const T &in, T &out, redOp op) const
       { allreduceRaw (&in, &out, 1, op); }
 
-    template<typename T> void allreduceRaw_inplace (T *data, tsize num,
+    void allreduceRawVoid (void *data, NDT type, tsize num, redOp op) const;
+    template<typename T> void allreduceRaw (T *data, tsize num,
       redOp op) const
-      { allreduceRawVoid_inplace (data, nativeType<T>(), num, op); }
-    template<typename T> void allreduce_inplace (arr<T> &data, redOp op) const
-      { allreduceRaw_inplace (&data[0], data.size(), op); }
-    template<typename T> void allreduce_inplace (T &data, redOp op) const
-      { allreduceRaw_inplace (&data, 1, op); }
+      { allreduceRawVoid (data, nativeType<T>(), num, op); }
+    template<typename T> void allreduce (arr<T> &data, redOp op) const
+      { allreduceRaw (&data[0], data.size(), op); }
+    template<typename T> void allreduce (T &data, redOp op) const
+      { allreduceRaw (&data, 1, op); }
 
+    void bcastRawVoid (void *data, NDT type, tsize num, int root) const;
     template<typename T> void bcastRaw (T *data, tsize num, int root) const
       { bcastRawVoid (data, nativeType<T>(), num, root); }
     template<typename T> void bcast (arr<T> &data, tsize num, int root) const

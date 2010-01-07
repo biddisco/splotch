@@ -108,7 +108,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
         }//for this chunk
 }//#pragma omp parallel
 
-      mpiMgr.allreduceRaw_inplace
+      mpiMgr.allreduceRaw
         (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
       if (mpiMgr.master())
         {
@@ -805,10 +805,10 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   for(int itype=0;itype<ptypes;itype++)
     {
-      mpiMgr.allreduce_inplace(minint[itype],MPI_Manager::Min);
-      mpiMgr.allreduce_inplace(mincol[itype],MPI_Manager::Min);
-      mpiMgr.allreduce_inplace(maxint[itype],MPI_Manager::Max);
-      mpiMgr.allreduce_inplace(maxcol[itype],MPI_Manager::Max);
+      mpiMgr.allreduce(minint[itype],MPI_Manager::Min);
+      mpiMgr.allreduce(mincol[itype],MPI_Manager::Min);
+      mpiMgr.allreduce(maxint[itype],MPI_Manager::Max);
+      mpiMgr.allreduce(maxcol[itype],MPI_Manager::Max);
 
       float minval_int = params.find<float>("intensity_min"+dataToString(itype),minint[itype]);
       float maxval_int = params.find<float>("intensity_max"+dataToString(itype),maxint[itype]);

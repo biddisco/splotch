@@ -103,6 +103,18 @@ bool MPI_Manager::master() const { return true; }
 #endif
 
 #ifdef USE_MPI
+void MPI_Manager::sendRawVoid (const void *data, NDT type, tsize num,
+  tsize dest) const
+  {
+  MPI_Send(const_cast<void *>(data),num,ndt2mpi(type),dest,0,MPI_COMM_WORLD);
+  }
+void MPI_Manager::recvRawVoid (void *data, NDT type, tsize num, tsize src) const
+  { MPI_Recv(data,num,ndt2mpi(type),src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE); }
+void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
+  tsize src, tsize dest) const
+  {
+  MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+  }
 
 void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
   const
@@ -118,18 +130,23 @@ void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
     const_cast<int *>(offset),dtype,0,MPI_COMM_WORLD);
   }
 
+void MPI_Manager::allgatherRawVoid (const void *in, void *out, NDT type,
+  tsize num) const
+  {
+  MPI_Datatype tp = ndt2mpi(type);
+  MPI_Allgather (const_cast<void *>(in),num,tp,out,num,tp,MPI_COMM_WORLD);
+  }
+void MPI_Manager::allreduceRawVoid (void *data, NDT type,
+  tsize num, redOp op) const
+  {
+  MPI_Allreduce (MPI_IN_PLACE,data,num,ndt2mpi(type),op2mop(op),
+    MPI_COMM_WORLD);
+  }
 void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   tsize num, redOp op) const
   {
   MPI_Allreduce (const_cast<void *>(in),out,num,ndt2mpi(type),op2mop(op),
     MPI_COMM_WORLD);
-  }
-void MPI_Manager::allreduceRawVoid_inplace (void *data, NDT type, tsize num,
-  redOp op) const
-  {
-  arr<char> tmp(num);
-  MPI_Allreduce (data,&tmp[0],num,ndt2mpi(type),op2mop(op),MPI_COMM_WORLD);
-  memcpy (data,&tmp[0],num*ndt2size(type));
   }
 void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
   redOp op, int root) const
@@ -143,17 +160,28 @@ void MPI_Manager::bcastRawVoid (void *data, NDT type, tsize num, int root) const
 
 #else
 
+void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
+  { planck_fail("not supported in scalar code"); }
+void MPI_Manager::recvRawVoid (void *, NDT, tsize, tsize) const
+  { planck_fail("not supported in scalar code"); }
+void MPI_Manager::sendrecv_replaceRawVoid (void *, NDT, tsize, tsize src,
+  tsize dest) const
+  { planck_assert ((dest==0) && (src==0), "inconsistent call"); }
+
 void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
   const
   { memcpy (out, in, num*ndt2size(type)); }
 void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
   const int *, const int *, NDT type) const
   { memcpy (out, in, num*ndt2size(type)); }
+void MPI_Manager::allgatherRawVoid (const void *in, void *out, NDT type,
+  tsize num) const
+  { memcpy (out, in, num*ndt2size(type)); }
 
 void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   tsize num, redOp) const
   { memcpy (out, in, num*ndt2size(type)); }
-void MPI_Manager::allreduceRawVoid_inplace (void *, NDT, tsize, redOp) const
+void MPI_Manager::allreduceRawVoid (void *, NDT, tsize, redOp) const
   {}
 void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
   redOp, int) const
