@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <string>
 #include <map>
+#include <vector>
 #include <cmath>
 #include "error_handling.h"
 #include "lsconstants.h"
@@ -152,6 +153,70 @@ template<typename T, typename Iter> inline void interpol_helper
   if (idx>0) --idx;
   idx = min(tsize(end-begin-2),idx);
   frac = (val-begin[idx])/(begin[idx+1]-begin[idx]);
+  }
+
+template<typename T, typename Iter, typename Comp> inline void interpol_helper
+  (const Iter &begin, const Iter &end, const T &val, Comp comp, tsize &idx,
+  T &frac)
+  {
+  using namespace std;
+  planck_assert((end-begin)>1,"sequence too small for interpolation");
+  idx = lower_bound(begin,end,val,comp)-begin;
+  if (idx>0) --idx;
+  idx = min(tsize(end-begin-2),idx);
+  frac = (val-begin[idx])/(begin[idx+1]-begin[idx]);
+  }
+
+template<typename It> class IdxComp__
+  {
+  private:
+    It begin;
+  public:
+    IdxComp__ (It begin_) : begin(begin_) {}
+    bool operator() (std::size_t a, std::size_t b) const
+      { return (*(begin+a)<*(begin+b)); }
+  };
+
+template<typename It> void buildIndex (It begin, It end,
+  std::vector<size_t> &idx)
+  {
+  using namespace std;
+  size_t num=end-begin;
+  idx.resize(num);
+  for (size_t i=0; i<num; ++i) idx[i] = i;
+  sort (idx.begin(),idx.end(),IdxComp__<It>(begin));
+  }
+
+template<typename It, typename Comp> struct IdxComp2__
+  {
+  private:
+    It begin;
+    Comp comp;
+  public:
+    IdxComp2__ (It begin_, Comp comp_): begin(begin_), comp(comp_) {}
+    bool operator() (std::size_t a, std::size_t b) const
+      { return comp(*(begin+a),*(begin+b)); }
+  };
+
+template<typename It, typename Comp> void buildIndex (It begin, It end,
+  std::vector<std::size_t> &idx, Comp comp)
+  {
+  using namespace std;
+  size_t num=end-begin;
+  idx.resize(num);
+  for (size_t i=0; i<num; ++i) idx[i] = i;
+  sort (idx.begin(),idx.end(),IdxComp2__<It,Comp>(begin,comp));
+  }
+
+template<typename T, typename It> void sortByIndex (It begin, It end,
+  const std::vector<std::size_t> &idx)
+  {
+  using namespace std;
+  size_t num=end-begin;
+  T *tmp= new T[num];
+  for (size_t i=0; i<num; ++i) tmp[i]=*(begin+i);
+  for (size_t i=0; i<num; ++i) *(begin+i) = tmp[idx[i]];
+  delete[] tmp;
   }
 
 /*! \} */
