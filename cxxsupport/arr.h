@@ -145,11 +145,33 @@ template <typename T> class arr
     void sort()
       { std::sort (d,d+s); }
 
+    /*! Sorts the elements in the array, such that \a comp(d[i],d[j])==true
+    for \a i<j. */
+    template<typename Comp> void sort(Comp comp)
+      { std::sort (d,d+s,comp); }
+
     /*! Helper function for linear interpolation (or extrapolation).
+        \a idx and \a val are computed such that
+        \a val=d[idx]+frac*(d[idx+1]-d[idx]). If \a val<d[0], \a frac will be
+        negative, if \a val>d[s-1], frac will be larger than 1. In all other
+        cases \a 0<=frac<=1.
+
         The array must be ordered in ascending order; no two values may be
         equal. */
     void interpol_helper (const T &val, tsize &idx, double &frac) const
       { ::interpol_helper (d, d+s, val, idx, frac); }
+
+    /*! Helper function for linear interpolation (or extrapolation).
+        \a idx and \a val are computed such that
+        \a val=d[idx]+frac*(d[idx+1]-d[idx]). If \a comp(val,d[0])==true,
+        \a frac will be negative, if \a comp(val,d[s-1])==false, frac will be
+        larger than 1. In all other cases \a 0<=frac<=1.
+
+        The array must be ordered such that \a comp(d[i],d[j])==true
+        for \a i<j; no two values may be equal. */
+    template<typename Comp> void interpol_helper (const T &val, Comp comp,
+      tsize &idx, double &frac) const
+      { ::interpol_helper (d, d+s, val, comp, idx, frac); }
 
     /*! Returns the minimum and maximum entry in \a minv and \a maxv,
         respectively. Throws an exception if the array is zero-sized. */
