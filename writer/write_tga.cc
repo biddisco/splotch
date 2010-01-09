@@ -1,48 +1,33 @@
-#include<iostream>
-#include<cmath>
-#include<fstream>
-#include<algorithm>
+#include <algorithm>
 
-#include "cxxsupport/arr.h"
-#include "cxxsupport/paramfile.h"
-
+#include "kernel/bstream.h"
 #include "writer/writer.h"
 
 using namespace std;
-using namespace RAYPP;
 
-void write_tga(paramfile params, arr2<COLOUR> &pic, int res, string frame_name)
-{
-  int ycut0 = params.find<int>("ycut0",0);
-  int ycut1 = params.find<int>("ycut1",res);
+void write_tga(paramfile &params, const arr2<COLOUR> &pic, tsize res,
+  const string &frame_name)
+  {
+  tsize ycut0 = params.find<int>("ycut0",0);
+  tsize ycut1 = params.find<int>("ycut1",res);
 
   cout << " writing tga file" << endl;
-  int yres=ycut1-ycut0;
-  const byte_RAYPP header[18] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  tsize yres=ycut1-ycut0;
+  const uint8 header[18] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     res%256, res/256, yres%256, yres/256, 24, 32 };
 
   bofstream file(frame_name.c_str(),file_is_natural);
 
-  for (int m=0; m<18; ++m) file << header[m];
-  for (int y=ycut0; y<ycut1; ++y)
+  file.put(&header[0],18);
+  for (tsize y=ycut0; y<ycut1; ++y)
     {
-    for (int x=0; x<res; ++x)
+    for (tsize x=0; x<res; ++x)
       {
-
-      pic[x][y].b=min(float64(1.), max(float64(0.), float64(pic[x][y].b)));
-	  byte_RAYPP pix = byte_RAYPP(min(255,int(256*pic[x][y].b)));
-      // patch // byte_RAYPP pix = min(byte_RAYPP(255),byte_RAYPP(256*pic[x][y].b));
-      file << pix;
-      pic[x][y].g=min(float64(1.), max(float64(0.), float64(pic[x][y].g)));
-      pix = byte_RAYPP(min(255,int(256*pic[x][y].g)));
-      // patch // pix = min(byte_RAYPP(255),byte_RAYPP(256*pic[x][y].g));
-      file << pix;
-      pic[x][y].r=min(float64(1.), max(float64(0.), float64(pic[x][y].r)));
-      pix = byte_RAYPP(min(255,int(256*pic[x][y].r)));
-      // patch // pix = min(byte_RAYPP(255),byte_RAYPP(256*pic[x][y].r));
-      file << pix;
+      uint8 pix[3];
+      pix[0] = uint8(min(255,int(256*pic[x][y].b)));
+      pix[1] = uint8(min(255,int(256*pic[x][y].g)));
+      pix[2] = uint8(min(255,int(256*pic[x][y].r)));
+      file.put(&pix[0],3);
       }
     }
-
-// END OF FUNCTION
   }

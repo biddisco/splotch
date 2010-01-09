@@ -23,9 +23,8 @@
 #ifndef RAYPP_VECTOR_H
 #define RAYPP_VECTOR_H
 
+#include <cmath>
 #include "config/config.h"
-
-namespace RAYPP {
 
 /**
   \class VECTOR kernel/vector.h
@@ -54,6 +53,7 @@ class VECTOR
       */
     void Normalize ()
       {
+      using namespace std;
       float64 l = 1.0/sqrt (x*x + y*y + z*z);
       x*=l; y*=l; z*=l;
       }
@@ -64,6 +64,7 @@ class VECTOR
       */
     VECTOR Norm () const
       {
+      using namespace std;
       float64 l = 1.0/sqrt (x*x + y*y + z*z);
       return VECTOR (x*l, y*l, z*l);
       }
@@ -73,6 +74,7 @@ class VECTOR
       */
     float64 Length () const
       {
+      using namespace std;
       return sqrt (x*x + y*y + z*z);
       }
     /*!
@@ -198,13 +200,11 @@ class VECTOR
       }
 
     /*! */
-    friend ostream &operator<< (ostream &os, const VECTOR &vec)
+    friend std::ostream &operator<< (std::ostream &os, const VECTOR &vec)
       {
       os << "<" << vec.x << ", " << vec.y << ", " << vec.z << ">";
       return os;
       }
   };
-
-} // namespace RAYPP
 
 #endif

@@ -27,12 +27,10 @@
 #include "kernel/byteswap.h"
 #include "config/config.h"
 
-namespace RAYPP {
-
 const bool file_is_lsb=big_endian, file_is_msb=!big_endian,
            file_is_natural=false;
 
-class bofstream: public ofstream
+class bofstream: public std::ofstream
   {
   private:
     bool doswap;
@@ -40,7 +38,7 @@ class bofstream: public ofstream
   public:
     /*! */
     bofstream (const char *fname, bool doswap_)
-      : ofstream(fname,ios::binary), doswap(doswap_) {}
+      : std::ofstream(fname,std::ios::binary), doswap(doswap_) {}
 
     template<typename T> bofstream &operator<< (const T &data)
       {
@@ -54,24 +52,22 @@ class bofstream: public ofstream
         write (reinterpret_cast<const char *> (&data), sizeof(T));
       return *this;
       }
-    template<typename T> bofstream &put (const T *data, int num)
+    template<typename T> bofstream &put (const T *data, size_t num)
       {
       if (doswap)
-        {
-        for (int m=0; m<num; ++m)
+        for (size_t m=0; m<num; ++m)
           {
-	  T tmp=data[m];
+          T tmp=data[m];
           byteswap (tmp);
           write (reinterpret_cast<const char *> (&tmp), sizeof(T));
           }
-        }
       else
         write (reinterpret_cast<const char *> (data), num*sizeof(T));
       return *this;
       }
   };
 
-class bifstream: public ifstream
+class bifstream: public std::ifstream
   {
   private:
     bool doswap;
@@ -81,36 +77,33 @@ class bifstream: public ifstream
     bifstream ()
       : doswap(false) {}
     bifstream (const char *fname, bool doswap_)
-      : ifstream(fname,ios::binary), doswap(doswap_) {}
+      : std::ifstream(fname,std::ios::binary), doswap(doswap_) {}
 
     void open (const char *fname, bool doswap_)
       {
       doswap=doswap_;
-      ifstream::open(fname,ios::binary);
+      std::ifstream::open(fname,std::ios::binary);
       }
 
     template<typename T> bifstream &operator>> (T &data)
       {
       read (reinterpret_cast<char *> (&data), sizeof(T));
-      if (doswap)
-        byteswap (data);
+      if (doswap) byteswap (data);
       return *this;
       }
-    template<typename T> bifstream &get (T *data, int num)
+    template<typename T> bifstream &get (T *data, size_t num)
       {
       read (reinterpret_cast<char *> (data), num*sizeof(T));
       if (doswap)
-        for (int m=0; m<num; ++m)
+        for (size_t m=0; m<num; ++m)
           byteswap (data[m]);
       return *this;
       }
 
     void rewind()
-      { seekg(0,ios::beg); }
+      { seekg(0,std::ios::beg); }
     void skip(streamoff nbytes)
-      { seekg(nbytes,ios::cur); }
+      { seekg(nbytes,std::ios::cur); }
   };
-
-} // namespace RAYPP
 
 #endif

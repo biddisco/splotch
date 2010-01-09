@@ -25,8 +25,6 @@
 
 #include "config/config.h"
 
-namespace RAYPP {
-
 const float64 Pi = float64 (3.14159265358979323846264338327950288);
       /*!< is 3.14159265358979323846264338327950288 */
 
@@ -40,7 +38,5 @@ const float64  Huge_float64 = float64 (1.0e+20);  /*!< is 1e+20 */
 
 const float64 Small_dist   = float64 (1.0e-7);  /*!< is 1e-7 */
 const float64 Large_dist   = float64 (1.0e+7);  /*!< is 1e+7 */
-
-} // namespace RAYPP
 
 #endif

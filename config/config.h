@@ -23,40 +23,23 @@
 #ifndef RAYPP_CONFIG_H
 #define RAYPP_CONFIG_H
 
-#include <cmath>
-#include <vector>
-#include <cstdlib>
-#ifdef VS
 #include "cxxsupport/datatypes.h"
-#else
-#include "datatypes.h"
-#endif
 
-
-/** The namespace enclosing the whole Ray++ library 
- */ 
-namespace RAYPP {
-
-using namespace ::std;
-
-typedef unsigned char byte_RAYPP;
-
-class ENDIAN_TEST
+class EndianTest__
   {
   private:
     bool big_end;
 
   public:
-    ENDIAN_TEST()
+    EndianTest__()
       {
-      const uint16 a=1;
-      big_end = (reinterpret_cast<const byte_RAYPP *>(&a))[0] == 0;
+      union { uint16 i16; uint8 i8; } tmp;
+      tmp.i16 = 1;
+      big_end = (tmp.i8==0);
       }
     operator bool() const { return big_end; }
   };
 
-const ENDIAN_TEST big_endian;
-
-} // namespace RAYPP
+const EndianTest__ big_endian;
 
 #endif

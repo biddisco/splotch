@@ -23,10 +23,9 @@
 #ifndef RAYPP_COLOURMAP_H
 #define RAYPP_COLOURMAP_H
 
+#include <vector>
 #include "kernel/colour.h"
 #include "kernel/handle.h"
-
-namespace RAYPP {
 
 class CMAP_ENTRY
   {
@@ -65,7 +64,7 @@ class COLOURMAP
 #else
   private:
 #endif
-    vector<HANDLE_RAYPP<CMAP_ENTRY> > Entry;
+    std::vector<HANDLE_RAYPP<CMAP_ENTRY> > Entry;
 
   public:
     COLOURMAP() {}
@@ -111,7 +110,5 @@ class LINEAR_CMAP_ENTRY: public CMAP_ENTRY
       return Colour1 + fract(value) * (Colour2 - Colour1);
       }
   };
-
-} // namespace RAYPP
 
 #endif

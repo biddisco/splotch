@@ -23,7 +23,7 @@
 #include "kernel/transform.h"
 #include "kernel/constants.h"
 
-namespace RAYPP {
+using namespace std;
 
 TRANSMAT:: TRANSMAT (float32 a00, float32 a01, float32 a02,
                      float32 a10, float32 a11, float32 a12,
@@ -50,9 +50,8 @@ TRANSMAT:: TRANSMAT (float32 a00, float32 a01, float32 a02,
 TRANSMAT &TRANSMAT::operator*= (const TRANSMAT &b)
   {
   TRANSMAT a(*this);
-  int i,j;
-  for (i = 0 ; i < 4 ; ++i)
-    for (j = 0 ; j < 3 ; ++j) 
+  for (int i=0 ; i<4 ; ++i)
+    for (int j=0 ; j<3 ; ++j)
       entry[j][i] = a.entry[0][i] * b.entry[j][0]
                   + a.entry[1][i] * b.entry[j][1]
                   + a.entry[2][i] * b.entry[j][2];
@@ -60,30 +59,11 @@ TRANSMAT &TRANSMAT::operator*= (const TRANSMAT &b)
   entry[1][3] += b.entry[1][3];
   entry[2][3] += b.entry[2][3];
   return *this;
-  }  
-
-TRANSMAT &TRANSMAT::operator+= (const TRANSMAT &b)
-  {
-  for (int i = 0 ; i < 12 ; ++i) p[i] += b.p[i];
-  return *this;
-  }
-
-TRANSMAT &TRANSMAT::operator-= (const TRANSMAT &b)
-  {
-  for (int i = 0 ; i < 12 ; ++i) p[i] -= b.p[i];
-  return *this;
-  }
-
-TRANSMAT &TRANSMAT::operator*= (float64 factor)
-  {
-  for (int i = 0 ; i < 12 ; ++i) p[i] *= factor;
-  return *this;
   }
 
 TRANSMAT TRANSMAT::Inverse () const
   {
   TRANSMAT tmp;
-  float64 d;
 
   tmp.entry[0][0] = entry[1][1]*entry[2][2] - entry[2][1]*entry[1][2];
   tmp.entry[0][1] = entry[0][1]*entry[2][2] - entry[2][1]*entry[0][2];
@@ -97,15 +77,11 @@ TRANSMAT TRANSMAT::Inverse () const
   tmp.entry[2][1] = entry[0][0]*entry[2][1] - entry[2][0]*entry[0][1];
   tmp.entry[2][2] = entry[0][0]*entry[1][1] - entry[1][0]*entry[0][1];
 
-  d = 1.0 / (entry[0][0]*tmp.entry[0][0] -
-             entry[1][0]*tmp.entry[0][1] +
-             entry[2][0]*tmp.entry[0][2]);
+  float64 d = 1.0 / (entry[0][0]*tmp.entry[0][0] -
+                     entry[1][0]*tmp.entry[0][1] +
+                     entry[2][0]*tmp.entry[0][2]);
 
-  if (abs(d) > Huge_float32)
-    {
-    cerr << "degenerate matrix in TRANSMAT::Inverse()" << endl;
-    exit(1);
-    }
+  planck_assert(abs(d)<Huge_float32,"degenerate matrix in TRANSMAT::Inverse()");
 
   tmp.entry[0][0] *= d;
   tmp.entry[2][0] *= d;
@@ -133,11 +109,6 @@ TRANSMAT TRANSMAT::Inverse () const
   return tmp;
   }
 
-void TRANSMAT::Invert ()
-  {
-  *this = Inverse();
-  }
-
 void TRANSMAT::SetToIdentity ()
   {
   for (int m=0; m<12; ++m) p[m]=0;
@@ -145,9 +116,7 @@ void TRANSMAT::SetToIdentity ()
   }
 
 void TRANSMAT::SetToZero ()
-  {
-  for (int m=0; m<12; ++m) p[m]=0;
-  }
+  { for (int m=0; m<12; ++m) p[m]=0; }
 
 void TRANSMAT::Transpose ()
   {
@@ -226,11 +195,8 @@ ostream &operator<< (ostream &os, const TRANSMAT &mat)
 
 void TRANSFORM::Make_Scaling_Transform (const VECTOR &vec)
   {
-  if ((vec.x<Small_float32) || (vec.y<Small_float32) || (vec.z<Small_float32))
-    {
-    cerr << "TRANSFORM: invalid scaling transformation" << endl;
-    exit(1);
-    }
+  planck_assert((vec.x>=Small_float32) && (vec.y>=Small_float32) &&
+                (vec.z>=Small_float32), "invalid scaling transformation");
 
   matrix.SetToIdentity();
   matrix.entry[0][0]=vec.x;
@@ -340,46 +306,9 @@ void TRANSFORM::Add_Transform (const TRANSFORM &trans)
   inverse = tmp;
   }
 
-bool TRANSFORM::Orthogonal () const
-  {
-  return matrix.Orthogonal();
-  }
-
-bool TRANSFORM::Orthonormal () const
-  {
-  return matrix.Orthonormal();
-  }
-
-bool TRANSFORM::Scaled_Orthonormal (float64 &factor) const
-  {
-  return matrix.Scaled_Orthonormal (factor);
-  }
-
-bool TRANSFORM::Diagonal () const
-  {
-  return matrix.Diagonal();
-  }
-
 VECTOR TRANSFORM::TransPoint (const VECTOR &vec) const
   {
   const float32 *p = matrix.p;
-
-#ifdef CUDA //21102009, only for debug now, should remove later.
-  if (0)
-  {
-  cout <<endl << vec.x <<", "<<vec.y<<", "<<vec.z<<endl;
-  for (int i=0; i<12; i++)
-	  cout << p[i] <<", ";
-  cout<<endl;
-  VECTOR v
-    (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
-     vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
-     vec.x*p[8] + vec.y*p[9] + vec.z*p[10]+ p[11]);
-  cout<<"result:"<<endl;
-  cout<<v.x <<", "<<v.y<<", "<<v.z<<endl;
-  }
-#endif
-
   return VECTOR
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
@@ -434,7 +363,6 @@ VECTOR TRANSFORM::InvTransNormal (const VECTOR &vec) const
 TRANSFORM Scaling_Transform (const VECTOR &vec)
   {
   TRANSFORM trans;
-  
   trans.Make_Scaling_Transform (vec);
   return trans;
   }
@@ -442,7 +370,6 @@ TRANSFORM Scaling_Transform (const VECTOR &vec)
 TRANSFORM Translation_Transform (const VECTOR &vec)
   {
   TRANSFORM trans;
-  
   trans.Make_Translation_Transform (vec);
   return trans;
   }
@@ -450,7 +377,6 @@ TRANSFORM Translation_Transform (const VECTOR &vec)
 TRANSFORM Rotation_Transform (const VECTOR &vec)
   {
   TRANSFORM trans;
-  
   trans.Make_Rotation_Transform (vec);
   return trans;
   }
@@ -458,7 +384,6 @@ TRANSFORM Rotation_Transform (const VECTOR &vec)
 TRANSFORM Axis_Rotation_Transform (const VECTOR &axis, float64 angle)
   {
   TRANSFORM trans;
-  
   trans.Make_Axis_Rotation_Transform (axis, angle);
   return trans;
   }
@@ -467,7 +392,6 @@ TRANSFORM Shearing_Transform
   (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy)
   {
   TRANSFORM trans;
-  
   trans.Make_Shearing_Transform (xy, xz, yx, yz, zx, zy);
   return trans;
   }
@@ -477,5 +401,3 @@ ostream &operator<< (ostream &os, const TRANSFORM &t)
   os << "Transform\n{\n" << t.matrix << t.inverse << "}" << endl;
   return os;
   }
-
-} // namespace RAYPP

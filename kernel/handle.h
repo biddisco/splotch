@@ -25,8 +25,6 @@
 
 #include "config/config.h"
 
-namespace RAYPP {
-
 /**
   \class HANDLE_RAYPP kernel/handle.h kernel/handle.h
   Pointer with reference counting.
@@ -171,7 +169,5 @@ template <typename T> class HANDLE_RAYPP
     void swap(HANDLE_RAYPP<T>& other)
       { ::std::swap(HandlePtr,other.HandlePtr); }
   };
-
-} // namespace RAYPP
 
 #endif

@@ -22,7 +22,7 @@
 
 #include "utils/colourmap.h"
 
-namespace RAYPP {
+using namespace std;
 
 COLOURMAP::COLOURMAP(COLOUR Col1, COLOUR Col2)
   {
@@ -45,5 +45,3 @@ void COLOURMAP::Add_Entry (const HANDLE_RAYPP<CMAP_ENTRY> &newentry)
   {
   Entry.push_back (newentry);
   }
-
-} // namespace RAYPP

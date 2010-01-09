@@ -26,10 +26,8 @@
 #include "config/config.h"
 #include "kernel/constants.h"
 
-namespace RAYPP {
-
-      /** \class COLOUR kernel/colour.h kernel/colour.h
-      A class for storing RGB colour information. */
+/** \class COLOUR kernel/colour.h kernel/colour.h
+    A class for storing RGB colour information. */
 class COLOUR
   {
   public:
@@ -44,33 +42,23 @@ class COLOUR
 
     /*! */
     COLOUR operator+ (const COLOUR &Col2) const
-      {
-      return COLOUR (r+Col2.r, g+Col2.g, b+Col2.b);
-      }
+      { return COLOUR (r+Col2.r, g+Col2.g, b+Col2.b); }
     /*! */
     COLOUR operator- (const COLOUR &Col2) const
-      {
-      return COLOUR (r-Col2.r, g-Col2.g, b-Col2.b);
-      }
+      { return COLOUR (r-Col2.r, g-Col2.g, b-Col2.b); }
     /*! */
     COLOUR operator* (float32 factor) const
-      {
-      return COLOUR (r*factor, g*factor, b*factor);
-      }
+      { return COLOUR (r*factor, g*factor, b*factor); }
     /*! */
     friend inline COLOUR operator* (float32 factor, const COLOUR &Col)
-      {
-      return COLOUR (Col.r*factor, Col.g*factor, Col.b*factor);
-      }
+      { return COLOUR (Col.r*factor, Col.g*factor, Col.b*factor); }
 
     /*! */
-    friend ostream &operator<< (ostream &os, const COLOUR &c)
+    friend std::ostream &operator<< (std::ostream &os, const COLOUR &c)
       {
       os << "(" << c.r << ", " << c.g << ", " << c.b << ")";
       return os;
       }
   };
-
-} // namespace RAYPP
 
 #endif

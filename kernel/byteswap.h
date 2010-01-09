@@ -24,24 +24,21 @@
 #define RAYPP_BYTESWAP_H
 
 #include <algorithm>
-#include <algorithm>
 
-namespace RAYPP {
-
-template<int size> inline void byteswap_helper (char *);
-template<> inline void byteswap_helper<1> (char *)
+template<size_t size> inline void byteswap_helper__ (char *);
+template<> inline void byteswap_helper__<1> (char *)
   {}
-template<> inline void byteswap_helper<2> (char *val)
+template<> inline void byteswap_helper__<2> (char *val)
   {
   using namespace std; 
   swap (val[0],val[1]);
   }
-template<> inline void byteswap_helper<4> (char *val)
+template<> inline void byteswap_helper__<4> (char *val)
   {
   using namespace std;
   swap (val[0],val[3]); swap (val[1],val[2]);
   }
-template<> inline void byteswap_helper<8> (char *val)
+template<> inline void byteswap_helper__<8> (char *val)
   {
   using namespace std;
   swap (val[0],val[7]); swap (val[1],val[6]);
@@ -49,10 +46,6 @@ template<> inline void byteswap_helper<8> (char *val)
   }
 
 template<typename T> inline void byteswap (T& val)
-  {
-  byteswap_helper<sizeof(T)> (reinterpret_cast<char *> (&val));
-  }
-
-} // namespace RAYPP
+  { byteswap_helper__<sizeof(T)> (reinterpret_cast<char *> (&val)); }
 
 #endif

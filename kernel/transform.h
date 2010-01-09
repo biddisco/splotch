@@ -26,8 +26,6 @@
 #include "config/config.h"
 #include "kernel/vector.h"
 
-namespace RAYPP {
-
 /**
   \class TRANSMAT kernel/transform.h kernel/transform.h
   Helper class for TRANSFORM and STRANSFORM.
@@ -51,18 +49,12 @@ class TRANSMAT
 
     /*! */
     TRANSMAT &operator*= (const TRANSMAT &b);
-    /*! */
-    TRANSMAT &operator+= (const TRANSMAT &b);
-    /*! */
-    TRANSMAT &operator-= (const TRANSMAT &b);
-
-    /*! */
-    TRANSMAT &operator*= (float64 factor);
 
     /*! */
     TRANSMAT Inverse () const;
     /*! */
-    void Invert ();
+    void Invert ()
+      { *this = Inverse(); }
     /*! */
     void SetToIdentity ();
     /*! */
@@ -80,7 +72,7 @@ class TRANSMAT
     bool Diagonal () const;
 
     /*! */
-    friend ostream &operator<< (ostream &os, const TRANSMAT &mat);
+    friend std::ostream &operator<< (std::ostream &os, const TRANSMAT &mat);
   };
 
 /**
@@ -110,9 +102,7 @@ class TRANSFORM
 
     /*! */
     void Invert()
-      {
-      swap(matrix,inverse);
-      }
+      { std::swap(matrix,inverse); }
     /*! */
     void Make_Scaling_Transform (const VECTOR &vec);
     /*! */
@@ -133,13 +123,17 @@ class TRANSFORM
     void Add_Transform (const TRANSFORM &trans);  
 
     /*! */
-    bool Orthogonal () const;
+    bool Orthogonal () const
+      { return matrix.Orthogonal(); }
     /*! */
-    bool Orthonormal () const;
+    bool Orthonormal () const
+      { return matrix.Orthonormal(); }
     /*! */
-    bool Scaled_Orthonormal (float64 &factor) const;
+    bool Scaled_Orthonormal (float64 &factor) const
+      { return matrix.Scaled_Orthonormal (factor); }
     /*! */
-    bool Diagonal () const;
+    bool Diagonal () const
+      { return matrix.Diagonal(); }
 
     /*! */
     VECTOR TransPoint (const VECTOR &vec) const;
@@ -168,9 +162,7 @@ class TRANSFORM
       (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy);
 
     /*! */
-    friend ostream &operator<< (ostream &os, const TRANSFORM &trans);
-  };  
-
-} // namespace RAYPP
+    friend std::ostream &operator<< (std::ostream &os, const TRANSFORM &trans);
+  };
 
 #endif
