@@ -9,7 +9,6 @@
 #include "kernel/transform.h"
 
 using namespace std;
-using namespace RAYPP;
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, 
       bool a_eq_e,double grayabsorb)

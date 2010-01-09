@@ -14,11 +14,9 @@
 #endif
 
 #include "kernel/bstream.h"
+#include "splotch/splotchutils.h"
 
 using namespace std;
-using namespace RAYPP;
-
-#include "splotch/splotchutils.h"
 
 #define TAG_POSX        11
 #define TAG_POSY        12

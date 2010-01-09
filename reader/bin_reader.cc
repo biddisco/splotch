@@ -16,11 +16,9 @@
 #endif
 
 #include "kernel/bstream.h"
+#include "splotch/splotchutils.h"
 
 using namespace std;
-using namespace RAYPP;
-
-#include "splotch/splotchutils.h"
 
 #define SWAP_4(x) ( ((x) << 24) | \
                 (((x) << 8) & 0x00ff0000) | \

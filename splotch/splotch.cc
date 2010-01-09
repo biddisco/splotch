@@ -55,7 +55,6 @@
 #endif
 
 using namespace std;
-using namespace RAYPP;
 
 #ifdef CUDA
 #ifndef VS
