@@ -23,11 +23,9 @@
 
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
-#include "config/config.h"
 #include "utils/colourmap.h"
 
 using namespace std;
-using namespace RAYPP;
 
 #include "splotch/splotchutils.h"
 #include "partition.h"
