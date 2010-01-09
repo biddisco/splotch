@@ -15,7 +15,6 @@
 #endif
 
 using namespace std;
-using namespace RAYPP;
 
 #ifdef CUDA
 	//just for now that its still needed for cuda codes 2 Dec 2009
