@@ -22,15 +22,8 @@
 #include <cmath>
 #include <fstream>
 #include <algorithm>
-#ifdef USE_MPI
-#include "mpi.h"
-#else
 #ifdef VS
 #include "cuda/VTimer.h"
-#else
-
-#include <sys/time.h>
-#endif
 #endif
 
 #include "splotch/splotchutils.h"
@@ -340,10 +333,10 @@ int main (int argc, const char **argv)
 	  switch(simtype)
 	    {
 	    case 0:
-	      bin_reader_tab(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      bin_reader_tab(params,particle_data, maxr, minr);
 	      break;
 	    case 1: 
-	      bin_reader_block(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+	      bin_reader_block(params,particle_data, maxr, minr);
 	      break;
 	    case 2: 
 #ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
@@ -382,7 +375,7 @@ int main (int argc, const char **argv)
               gadget_millenium_reader(params,particle_data,0,&time);
               break;
             case 5:
-#if defined(USE_MPI) && defined(USE_MPIIO)
+#if defined(USE_MPIIO)
               bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
 #else
 	      planck_fail("mpi reader not available in non MPI compiled version !");
@@ -439,12 +432,10 @@ int main (int argc, const char **argv)
 // ----------- Sorting ------------
 // --------------------------------
       wallTimer.start("sort");
-#ifdef USE_MPI
       if (master)
-        cout << endl << "applying local sort ..." << endl;
-#else
-      cout << endl << "applying sort (" << npart << ") ..." << endl;
-#endif
+        (mpiMgr.num_ranks()>1) ?
+          cout << endl << "applying local sort ..." << endl :
+          cout << endl << "applying sort (" << npart << ") ..." << endl;
       int sort_type = params.find<int>("sort_type",1);
       particle_sort(particle_data,sort_type,true);
       wallTimer.stop("sort");
