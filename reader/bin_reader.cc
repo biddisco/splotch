@@ -1,364 +1,167 @@
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
-#include <cstdio>
 #include <iostream>
-#include <fstream>
+#include <vector>
 #include <string>
-#include <cmath>
-#include <cassert>
-#include <cstdlib>
 
-#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
-#endif
-
+#include "cxxsupport/mpi_support.h"
 #include "kernel/bstream.h"
 #include "splotch/splotchutils.h"
 
 using namespace std;
 
-#define SWAP_4(x) ( ((x) << 24) | \
-                (((x) << 8) & 0x00ff0000) | \
-                (((x) >> 8) & 0x0000ff00) | \
-                ((x) >> 24) )
-#define SWAP_FLOAT(x) (*(unsigned int *)&(x)=SWAP_4(*(unsigned int *)&(x)))
+namespace {
 
+void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
+  int &nfields, int64 &mybegin, int64 &npart)
+  {
+  /* qty_idx represents the index for the various quantities according
+     to the following standard:
+     qty_idx[0] = x coord
+     qty_idx[1] = y coord
+     qty_idx[2] = z coord
+     qty_idx[3] = r coord
+     qty_idx[4] = intensity
+     qty_idx[5] = color 1 (R)
+     qty_idx[6] = color 2 (G)
+     qty_idx[7] = color 3 (B) */
 
-long bin_reader_tab (paramfile &params, vector<particle_sim> &points, 
-                     float *maxr, float *minr, 
-                     int mype, int npes)
-{
-/*
-In this case we expect the file to be written as a binary table
-xyzrabcde
-xyzrabcde
-xyzrabcde
-...
-xyzrabcde
+  bool doswap = params.find<bool>("swap_endian",true);
+  string datafile = params.find<string>("infile");
+  inp.open (datafile.c_str(),doswap);
+  nfields = params.find<int>("num_blocks");
 
-which_fields represents the column for the various quantity according
-to the following standard:
-which_fields[0] = x coord
-which_fields[1] = y coord
-which_fields[2] = z coord
-which_fields[3] = r coord
-which_fields[4] = intensity
-which_fields[5] = color 1 (R)
-which_fields[6] = color 2 (G)
-which_fields[7] = color 3 (B)
-*/
+  qty_idx.alloc(8);
+  qty_idx[0] = params.find<int>("x")-1;
+  qty_idx[1] = params.find<int>("y")-1;
+  qty_idx[2] = params.find<int>("z")-1;
+  qty_idx[3] = params.find<int>("r",-1)-1;
+  qty_idx[4] = params.find<int>("I",-1)-1;
+  qty_idx[5] = params.find<int>("C1")-1;
+  qty_idx[6] = params.find<int>("C2",-1)-1;
+  qty_idx[7] = params.find<int>("C3",-1)-1;
 
+  if (mpiMgr.master())
+    {
+    cout << "Input data file name: " << datafile << endl;
+    cout << "Number of columns " << nfields << endl;
+    cout << "x  value in column " << qty_idx[0] << endl;
+    cout << "y  value in column " << qty_idx[1] << endl;
+    cout << "z  value in column " << qty_idx[2] << endl;
+    cout << "r  value in column " << qty_idx[3] << endl;
+    cout << "I  value in column " << qty_idx[4] << endl;
+    cout << "C1 value in column " << qty_idx[5] << endl;
+    cout << "C2 value in column " << qty_idx[6] << endl;
+    cout << "C3 value in column " << qty_idx[7] << endl;
+    }
+  inp.seekg(0,ios::end);
+  int64 npart_total = inp.tellg()/(sizeof(float)*nfields);
+  inp.seekg(0,ios::beg);
+  int64 myend;
+  mpiMgr.calcShare (0, npart_total, mybegin, myend);
+  npart = myend-mybegin;
+  }
 
-   FILE * pFile;
-   FILE * auxFile;
-   float * dataarray;
-   float * destarray;
-   
-   long total_size=0;
-   long pe_size;
-   long last_pe_adding;
-   float minradius=1e30;
-   float maxradius=-1e30;
-// offset could be a input parameter
-   long offset = 0;
+void bin_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)
+  {
+  minr=1e30;
+  maxr=-1e30;
+  for (tsize i=0; i<points.size(); ++i)
+    {
+    points[i].ro=points[i].r;
+    points[i].type=0;
+    minr = min(minr,points[i].r);
+    maxr = max(maxr,points[i].r);
+    }
+  mpiMgr.allreduce(maxr,MPI_Manager::Max);
+  mpiMgr.allreduce(minr,MPI_Manager::Min);
+  }
 
-   int n_load_fields = 8;
-   int * which_fields = new int [n_load_fields];
-   long totalsize;
-   long totalsize_f;
-   int num_of_fields;
+} // unnamed namespace
 
-   bool doswap = params.find<bool>("swap_endian",true);   
-   string datafile = params.find<string>("infile");
-   
-   if(mype == 0)
-   {
-     num_of_fields = params.find<int>("num_columns");
+/* In this case we expect the file to be written as a binary table
+   xyzrabcdexyzrabcdexyzrabcde...xyzrabcde */
+void bin_reader_tab (paramfile &params, vector<particle_sim> &points,
+                     float &maxr, float &minr)
+  {
+  bifstream inp;
+  int nfields;
+  int64 mybegin, npart;
+  arr<int> qty_idx;
+  if (mpiMgr.master())
+    cout << "TABULAR BINARY FILE" << endl;
+  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart);
 
-     which_fields[0] = params.find<int>("x",-1);
-     which_fields[1] = params.find<int>("y",-1);
-     which_fields[2] = params.find<int>("z",-1);
-     which_fields[3] = params.find<int>("r",-1);
-     which_fields[4] = params.find<int>("I",-1);
-     which_fields[5] = params.find<int>("C1",-1);
-     which_fields[6] = params.find<int>("C2",-1);
-     which_fields[7] = params.find<int>("C3",-1); 
+  inp.skip(mybegin*sizeof(float)*nfields);
 
-     cout << "TABULAR BINARY FILE\n";
-     cout << "Input data file name: " << datafile << endl;
-     cout << "Number of columns " << num_of_fields << endl;
-     cout << "x column (1 - " << num_of_fields << "), " << which_fields[0] << endl;
-     cout << "y column (2 - " << num_of_fields << "), " << which_fields[1] << endl;
-     cout << "z column (3 - " << num_of_fields << "), " << which_fields[2] << endl;
-     cout << "r column (4 - " << num_of_fields << "), " << which_fields[3] << endl;
-     cout << "I column (5 - " << num_of_fields << "), " << which_fields[4] << endl;
-     cout << "C1 column (6 - " << num_of_fields << "), " << which_fields[5] << endl;
-     cout << "C2 column (7 - " << num_of_fields << "), " << which_fields[6] << endl;
-     cout << "C3 column (8 - " << num_of_fields << "), " << which_fields[7] << endl;
+  arr<float> buffer(nfields);
+  points.resize(npart);
 
-     for (int ii=0; ii<8; ii++)which_fields[ii]--;
+  bool have_c2c3 = (qty_idx[6]>=0) && (qty_idx[7]>=0);
+  for(int64 i=0; i<npart; ++i)
+    {
+    inp.get(&buffer[0],nfields);
 
-     pFile = fopen(datafile.c_str(), "rb");
-     fseek (pFile, 0, SEEK_END);
-     totalsize = ftell (pFile);
-     fclose(pFile);
-   }
-#ifdef USE_MPI
-   MPI_Bcast(&num_of_fields, 1, MPI_INT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(which_fields, n_load_fields, MPI_INT, 0, MPI_COMM_WORLD);
-   MPI_Bcast(&totalsize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-#endif
-   // number of elements (of each variable) for a processor
-   totalsize_f = (totalsize-offset)/(sizeof(float)*num_of_fields);
-   pe_size = totalsize_f/npes;
-   last_pe_adding = totalsize_f-pe_size*npes;
-   if(mype == npes-1)pe_size += last_pe_adding;
-   points.resize(pe_size);
-   long pe_size_orig = pe_size;
-#ifdef DEBUG
-   if(mype == 0)  cout << "-----------------> " << pe_size << " " << last_pe_adding << "\n";
-#endif
-   long stride=pe_size_orig*sizeof(float)*num_of_fields*mype+offset;
+    points[i].x = buffer[qty_idx[0]];
+    points[i].y = buffer[qty_idx[1]];
+    points[i].z = buffer[qty_idx[2]];
+    points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : 1.0;
+    points[i].I = (qty_idx[4]>=0) ? buffer[qty_idx[4]] : 0.5;
+    points[i].C1= buffer[qty_idx[5]];
+    points[i].C2= have_c2c3 ? buffer[qty_idx[6]] : 0.0;
+    points[i].C3= have_c2c3 ? buffer[qty_idx[7]] : 0.0;
+    }
 
-   float * readarray;
-   readarray = new float [num_of_fields];
-   pFile=fopen(datafile.c_str(), "rb");
-#ifdef DEBUG
-   cout << "Reading " << num_of_fields << " fields for " << pe_size << " particles\n";
-   cout << mype << " -----> " << stride << "\n";
-#endif
+  bin_reader_finish (points, maxr, minr);
+  }
 
-   fseek(pFile, stride, SEEK_SET);
+/* In this case we expect the file to be written as
+   xxxxxxxxxxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyy...TTTTTTTTTTTTTTTTTTTT */
+void bin_reader_block (paramfile &params, vector<particle_sim> &points,
+                       float &maxr, float &minr)
+  {
+  bifstream inp;
+  int nfields;
+  int64 mybegin, npart;
+  arr<int> qty_idx;
+  if (mpiMgr.master())
+    cout << "BLOCK BINARY FILE" << endl;
+  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart);
 
-   for(long index=0; index<pe_size; index++)
-   {
+  points.resize(npart);
+  arr<float> buffer(npart);
 
-     fread(readarray, sizeof(float), num_of_fields, pFile); 
-     if(doswap)
-       for(int ii=0; ii<num_of_fields; ii++) 
-            SWAP_FLOAT(readarray[ii]);
+  for (tsize qty=0; qty<qty_idx.size(); ++qty)
+    {
+    if(qty_idx[qty]<0) continue;
 
-      points.at(index).x=readarray[which_fields[0]];
-      points.at(index).y=readarray[which_fields[1]];
-      points.at(index).z=readarray[which_fields[2]];
-      if(which_fields[3] >= 0)
+    inp.seekg(sizeof(float)*(qty_idx[qty]*npart+mybegin),ios::beg);
+    inp.get(&buffer[0],npart);
+
+#define CASEMACRO__(num,str) \
+      case num: \
+        for (int64 i=0; i<npart; ++i) \
+          points[i].str = buffer[i]; \
+        break;
+
+    switch(qty)
       {
-        points.at(index).r=readarray[which_fields[3]];
-      } else {
-        points.at(index).r=1.0;
+      CASEMACRO__(0,x)
+      CASEMACRO__(1,y)
+      CASEMACRO__(2,z)
+      CASEMACRO__(3,r)
+      CASEMACRO__(4,I)
+      CASEMACRO__(5,C1)
+      CASEMACRO__(6,C2)
+      CASEMACRO__(7,C3)
       }
-      if(which_fields[4] >= 0)
-      {
-        points.at(index).I=readarray[which_fields[4]];
-      } else {
-        points.at(index).I=0.5;
-      }
+    }
 
-      points.at(index).C1=readarray[which_fields[5]];
+#undef CASEMACRO__
 
-      if(which_fields[6] >= 0 && which_fields[7] >= 0)
-      {
-        points.at(index).C2=readarray[which_fields[6]];
-        points.at(index).C3=readarray[which_fields[7]];
-      } else {
-        points.at(index).C2 = 0.0;
-        points.at(index).C3 = 0.0;
-      }
-      points.at(index).ro=points.at(index).r;
-      points.at(index).type=0;
+  if (qty_idx[4]<0)
+    for (int64 i=0; i<npart; ++i) points[i].I=0.5;
 
-      float smooth = points.at(index).r;      
-
-      //stride += sizeof(float)*num_of_fields;
-      minradius = (minradius <= smooth ? minradius : smooth);
-      maxradius = (maxradius >= smooth ? maxradius : smooth);
- 
-   }
-   fclose(pFile);
-
-   //if(mype == npes-1){for (int ii=0; ii<100000; ii+=1000)cout << mype << " " << points.at(ii).x << " " << points.at(ii).y << " " << points.at(ii).C1 << "\n";};
-   //maxradius = 1.0;
-   *maxr=maxradius;
-   *minr=minradius;
-
-#ifdef USE_MPI
-   MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
-   MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
-#endif
-   delete [] which_fields;
-   delete [] readarray;
-   return pe_size;
-}
-
-long bin_reader_block (paramfile &params, vector<particle_sim> &points, 
-                       float *maxr, float *minr, 
-                       int mype, int npes)
-{
-/*
-In this case we expect the file to be written as 
-xxxxxxxxxx 
-xxxxxxxxxx 
-yyyyyyyyyy
-yyyyyyyyyy
-...
-TTTTTTTTTT
-TTTTTTTTTT
-
-which_fields represents the block position inside the file according
-to the following standard:
-which_fields[0] = x coord
-which_fields[1] = y coord
-which_fields[2] = z coord
-which_fields[3] = r coord
-which_fields[4] = intensity
-which_fields[5] = color 1 (R)
-which_fields[6] = color 2 (G)
-which_fields[7] = color 3 (B)
-*/
-
-   FILE * pFile;
-   FILE * auxFile;
-   float * dataarray;
-   float * destarray;
-   
-   long total_size=0;
-   long pe_size;
-   long field_size;
-   float minradius=1e30;
-   float maxradius=-1e30;
-// offset could be a input parameter
-   long offset = 0;
-   long stride;
-
-   int n_load_fields = 8;
-   int * which_fields = new int [n_load_fields];
-   long totalsize;
-   long totalsize_f;
-   long last_pe_adding;
-
-   bool doswap = params.find<bool>("swap_endian",true);   
-   string datafile = params.find<string>("infile");
-   int num_of_fields = params.find<int>("num_blocks",1);
-
-   which_fields[0] = params.find<int>("x",-1);
-   which_fields[1] = params.find<int>("y",-1);
-   which_fields[2] = params.find<int>("z",-1);
-   which_fields[3] = params.find<int>("r",-1);
-   which_fields[4] = params.find<int>("I",-1);
-   which_fields[5] = params.find<int>("C1",-1);
-   which_fields[6] = params.find<int>("C2",-1);
-   which_fields[7] = params.find<int>("C3",-1);
-
-   if(mype == 0)
-   {
-     cout << "BLOCK BINARY FILE\n";
-     cout << "Input data file name: " << datafile << endl;
-     cout << "Number of blocks " << num_of_fields << endl;
-     cout << "x block (1 - " << num_of_fields << "), " << which_fields[0] << endl;
-     cout << "y block (2 - " << num_of_fields << "), " << which_fields[1] << endl;
-     cout << "z block (3 - " << num_of_fields << "), " << which_fields[2] << endl;
-     cout << "r block (4 - " << num_of_fields << "), " << which_fields[3] << endl;
-     cout << "I block (5 - " << num_of_fields << "), " << which_fields[4] << endl;
-     cout << "C1 block (6 - " << num_of_fields << "), " << which_fields[5] << endl;
-     cout << "C2 block (7 - " << num_of_fields << "), " << which_fields[6] << endl;
-     cout << "C3 block (8 - " << num_of_fields << "), " << which_fields[7] << endl;
-     pFile = fopen(datafile.c_str(), "rb");
-     fseek (pFile, 0, SEEK_END);
-     totalsize = ftell (pFile);
-     fclose(pFile);
-     field_size = totalsize/(sizeof(float)*num_of_fields);
-   }
-#ifdef USE_MPI
-   MPI_Bcast(&field_size, 1, MPI_LONG, 0, MPI_COMM_WORLD);
-#endif
-
-// number of elements (of each variable) for a processor
-   pe_size = (long)(field_size / npes);
-   last_pe_adding = field_size-pe_size*npes;
-   long pe_size_orig = pe_size;
-   if(mype == npes-1)pe_size += last_pe_adding;
-   points.resize(pe_size);
-   float * readarray;
-   readarray = new float [pe_size];
-#ifdef DEBUG
-   cout << "DATAFILE INSIDE " << datafile << "     " << mype << "\n";
-#endif
-   
-   pFile=fopen(datafile.c_str(), "rb");
-
-#ifdef DEBUG
-   cout << "Reading " << n_load_fields << " fields for " << pe_size << " particles\n";
-#endif
-   for(int n_fields=0; n_fields<n_load_fields; n_fields++)
-   {
-     int n_fields_eff = which_fields[n_fields]-1;
-     if(which_fields[n_fields] < 0)continue;
-
-     stride=sizeof(float)*(n_fields_eff*field_size+pe_size_orig*mype)+offset;
-     fseek(pFile, stride, SEEK_SET);
-     fread(readarray, sizeof(float), pe_size, pFile); 
-     if(doswap)
-       for(long index=0; index<pe_size; index++) 
-            SWAP_FLOAT(readarray[index]);
-
-     switch(n_fields)
-     {
-     case 0:
-       for(long index=0; index<pe_size; index++)points.at(index).x=readarray[index];
-       break;
-     case 1:
-       for(long index=0; index<pe_size; index++)points.at(index).y=readarray[index];
-       break;
-     case 2:
-       for(long index=0; index<pe_size; index++)points.at(index).z=readarray[index];
-       break;
-     case 3:
-       for(long index=0; index<pe_size; index++)points.at(index).r=readarray[index];
-       break;
-     case 4:
-       for(long index=0; index<pe_size; index++)points.at(index).I=readarray[index];
-       break;
-     case 5:
-       for(long index=0; index<pe_size; index++)points.at(index).C1=readarray[index];
-       break;
-     case 6:
-       for(long index=0; index<pe_size; index++)points.at(index).C2=readarray[index];
-       break;
-     case 7:
-       for(long index=0; index<pe_size; index++)points.at(index).C3=readarray[index];
-       break;
-     }
-     for(long index=0; index<pe_size; index++)
-     {
-       points.at(index).ro=points.at(index).r;
-       points.at(index).type=0;
-       float smooth = points.at(index).r;      
-
-       minradius = (minradius <= smooth ? minradius : smooth);
-       maxradius = (maxradius >= smooth ? maxradius : smooth);
-     }
-
-   }
-   fclose(pFile);
-
-
-   if(which_fields[4] < 0)
-       for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
-
-   //maxradius = 1.0;
-   *maxr=maxradius;
-   *minr=minradius;
-
-#ifdef USE_MPI
-   MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
-   MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
-#endif
-   delete [] which_fields;
-   delete [] readarray;
-   return pe_size;
-}
-
-
+  bin_reader_finish (points, maxr, minr);
+  }
