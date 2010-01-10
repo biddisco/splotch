@@ -63,15 +63,6 @@ class TRANSMAT
     void Transpose ();
 
     /*! */
-    bool Orthogonal () const;
-    /*! */
-    bool Orthonormal () const;
-    /*! */
-    bool Scaled_Orthonormal (float64 &factor) const;
-    /*! */
-    bool Diagonal () const;
-
-    /*! */
     friend std::ostream &operator<< (std::ostream &os, const TRANSMAT &mat);
   };
 
@@ -108,8 +99,6 @@ class TRANSFORM
     /*! */
     void Make_Translation_Transform (const VECTOR &vec);
     /*! */
-    void Make_Rotation_Transform (const VECTOR &vec);
-    /*! */
     void Make_Axis_Rotation_Transform (const VECTOR &axis, float64 angle);
     /*! */
     void Make_Shearing_Transform
@@ -121,19 +110,6 @@ class TRANSFORM
 
     /*! */
     void Add_Transform (const TRANSFORM &trans);  
-
-    /*! */
-    bool Orthogonal () const
-      { return matrix.Orthogonal(); }
-    /*! */
-    bool Orthonormal () const
-      { return matrix.Orthonormal(); }
-    /*! */
-    bool Scaled_Orthonormal (float64 &factor) const
-      { return matrix.Scaled_Orthonormal (factor); }
-    /*! */
-    bool Diagonal () const
-      { return matrix.Diagonal(); }
 
     /*! */
     VECTOR TransPoint (const VECTOR &vec) const;
@@ -152,8 +128,6 @@ class TRANSFORM
     friend TRANSFORM Scaling_Transform (const VECTOR &vec);
     /*! */
     friend TRANSFORM Translation_Transform (const VECTOR &vec);
-    /*! */
-    friend TRANSFORM Rotation_Transform (const VECTOR &vec);
     /*! */
     friend TRANSFORM Axis_Rotation_Transform
       (const VECTOR &axis, float64 angle);

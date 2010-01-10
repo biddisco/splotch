@@ -21,7 +21,7 @@
  */
 
 #include "kernel/transform.h"
-#include "kernel/constants.h"
+#include "cxxsupport/lsconstants.h"
 
 using namespace std;
 
@@ -77,11 +77,13 @@ TRANSMAT TRANSMAT::Inverse () const
   tmp.entry[2][1] = entry[0][0]*entry[2][1] - entry[2][0]*entry[0][1];
   tmp.entry[2][2] = entry[0][0]*entry[1][1] - entry[1][0]*entry[0][1];
 
-  float64 d = 1.0 / (entry[0][0]*tmp.entry[0][0] -
-                     entry[1][0]*tmp.entry[0][1] +
-                     entry[2][0]*tmp.entry[0][2]);
+  float64 d = (entry[0][0]*tmp.entry[0][0] -
+               entry[1][0]*tmp.entry[0][1] +
+               entry[2][0]*tmp.entry[0][2]);
 
-  planck_assert(abs(d)<Huge_float32,"degenerate matrix in TRANSMAT::Inverse()");
+  planck_assert(abs(d)>1e-10,"degenerate matrix in TRANSMAT::Inverse()");
+
+  d = 1./d;
 
   tmp.entry[0][0] *= d;
   tmp.entry[2][0] *= d;
@@ -126,65 +128,6 @@ void TRANSMAT::Transpose ()
   entry[0][3] = entry [1][3] = entry[2][3] = 0.0;
   }
 
-bool TRANSMAT::Orthogonal () const
-  {
-  if (abs (entry[0][0]*entry[1][0] +
-           entry[0][1]*entry[1][1] +
-           entry[0][2]*entry[1][2]) > Small_float32) return false;
-  if (abs (entry[0][0]*entry[2][0] +
-           entry[0][1]*entry[2][1] +
-           entry[0][2]*entry[2][2]) > Small_float32) return false;
-  if (abs (entry[2][0]*entry[1][0] +
-           entry[2][1]*entry[1][1] +
-           entry[2][2]*entry[1][2]) > Small_float32) return false;
-  return true;
-  }
-
-bool TRANSMAT::Orthonormal () const
-  {
-  if (!Orthogonal()) return false;
-  if (abs (entry[0][0]*entry[0][0] +
-           entry[0][1]*entry[0][1] +
-           entry[0][2]*entry[0][2] - 1.0) > Small_float32) return false;
-  if (abs (entry[1][0]*entry[1][0] +
-           entry[1][1]*entry[1][1] +
-           entry[1][2]*entry[1][2] - 1.0) > Small_float32) return false;
-  if (abs (entry[2][0]*entry[2][0] +
-           entry[2][1]*entry[2][1] +
-           entry[2][2]*entry[2][2] - 1.0) > Small_float32) return false;
-  return true;
-  }
-
-bool TRANSMAT::Scaled_Orthonormal (float64 &factor) const
-  {
-  if (!Orthogonal()) return false;
-  factor = entry[0][0]*entry[0][0] +
-           entry[0][1]*entry[0][1] +
-           entry[0][2]*entry[0][2];
-  if (abs (entry[1][0]*entry[1][0] +
-           entry[1][1]*entry[1][1] +
-           entry[1][2]*entry[1][2] - factor) > Small_float32)
-    return false;
-  if (abs (entry[2][0]*entry[2][0] +
-           entry[2][1]*entry[2][1] +
-           entry[2][2]*entry[2][2] - factor) > Small_float32)
-    return false;
-  factor = sqrt (factor);
-  return true;
-  }
-
-bool TRANSMAT::Diagonal () const
-  {
-  if ((abs (entry[1][0]) > Small_float32) ||
-      (abs (entry[2][0]) > Small_float32) ||
-      (abs (entry[2][1]) > Small_float32) ||
-      (abs (entry[0][1]) > Small_float32) ||
-      (abs (entry[0][2]) > Small_float32) ||
-      (abs (entry[1][2]) > Small_float32)) return false;
-
-  return true;
-  }
-
 ostream &operator<< (ostream &os, const TRANSMAT &mat)
   {
   for (int i=0;i<4;++i)
@@ -195,8 +138,8 @@ ostream &operator<< (ostream &os, const TRANSMAT &mat)
 
 void TRANSFORM::Make_Scaling_Transform (const VECTOR &vec)
   {
-  planck_assert((vec.x>=Small_float32) && (vec.y>=Small_float32) &&
-                (vec.z>=Small_float32), "invalid scaling transformation");
+  planck_assert((vec.x>0) && (vec.y>0) && (vec.z>0),
+    "invalid scaling transformation");
 
   matrix.SetToIdentity();
   matrix.entry[0][0]=vec.x;
@@ -222,51 +165,11 @@ void TRANSFORM::Make_Translation_Transform (const VECTOR &vec)
   inverse.entry[2][3]=-vec.z;
   }
 
-void TRANSFORM::Make_Rotation_Transform (const VECTOR &vec)
-  {
-  TRANSMAT tmp;
-  VECTOR Radian_Vector = vec*Pi/180.0;
-  float64 cosx, cosy, cosz, sinx, siny, sinz;
-
-  matrix.SetToIdentity();
-  cosx = cos (Radian_Vector.x);
-  sinx = sin (Radian_Vector.x);
-  cosy = cos (Radian_Vector.y);
-  siny = sin (Radian_Vector.y);
-  cosz = cos (Radian_Vector.z);
-  sinz = sin (Radian_Vector.z);
-
-  matrix.entry[1][1] =  cosx;
-  matrix.entry[2][2] =  cosx;
-  matrix.entry[2][1] =  sinx;
-  matrix.entry[1][2] = -sinx;
-  inverse = matrix;
-  inverse.Transpose();
-
-  tmp.SetToIdentity();
-  tmp.entry[0][0] =  cosy;
-  tmp.entry[2][2] =  cosy;
-  tmp.entry[2][0] = -siny;
-  tmp.entry[0][2] =  siny;
-  matrix *= tmp;
-  tmp.Transpose();
-  inverse *= tmp;
-
-  tmp.SetToIdentity();
-  tmp.entry[0][0] =  cosz;
-  tmp.entry[1][1] =  cosz;
-  tmp.entry[1][0] =  sinz;
-  tmp.entry[0][1] = -sinz;
-  matrix *= tmp;
-  tmp.Transpose();
-  inverse *= tmp;
-  }
-
 void TRANSFORM::Make_Axis_Rotation_Transform
   (const VECTOR &axis, float64 angle)
   {
   VECTOR V = axis.Norm();
-  angle *= Pi/180.0;
+  angle *= degr2rad;
   float64 cosx = cos (angle), sinx = sin (angle);
 
   matrix.SetToZero();
@@ -371,13 +274,6 @@ TRANSFORM Translation_Transform (const VECTOR &vec)
   {
   TRANSFORM trans;
   trans.Make_Translation_Transform (vec);
-  return trans;
-  }
-
-TRANSFORM Rotation_Transform (const VECTOR &vec)
-  {
-  TRANSFORM trans;
-  trans.Make_Rotation_Transform (vec);
   return trans;
   }
 
