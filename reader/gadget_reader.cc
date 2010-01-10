@@ -6,13 +6,10 @@
 #include "mpi.h"
 #endif
 
-#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
-#endif
-
 #include "kernel/bstream.h"
 #include "splotch/splotchutils.h"
 
@@ -31,25 +28,10 @@ using namespace std;
 
 #ifdef INTERPOLATE
 
-/*
-int io_compare_P_ID(const void *a, const void *b)
-{
-  if(((struct particle_data *) a)->ID < (((struct particle_data *) b)->ID))
-    return -1;
-
-  if(((struct particle_data *) a)->ID > (((struct particle_data *) b)->ID))
-    return +1;
-
-  return 0;
-}
-*/
-
 struct idcmp
   {
-  int operator()(const particle_sim &p1, const particle_sim &p2)
-    {
-    return p1.id<p2.id;
-    }
+  bool operator()(const particle_sim &p1, const particle_sim &p2)
+    { return p1.id<p2.id; }
   };
 
 #endif

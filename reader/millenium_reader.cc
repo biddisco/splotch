@@ -6,13 +6,10 @@
 #include <fstream>
 #include <algorithm>
 
-#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
-#endif
-
 #include "kernel/bstream.h"
 #include "splotch/splotchutils.h"
 

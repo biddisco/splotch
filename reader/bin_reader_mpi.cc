@@ -11,16 +11,9 @@
 #include <cstdlib>
 #include <vector>
 
-#ifdef VS
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
-#else
-#include "arr.h"
-#include "cxxutils.h"
-#include "paramfile.h"
-#endif
-
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
 #include "utils/colourmap.h"

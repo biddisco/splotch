@@ -1,18 +1,14 @@
-#ifdef USEMPI
-#include "mpi.h"
-#endif
-#include "hdf5.h"
 #include <cstdio>
 #include <iostream>
 #include <string>
 #include <cmath>
 #include <cassert>
 #include <cstdlib>
-#ifdef VS
-#include <kernel/vector.h>
-#else
-#include <vector.h>
+#include <vector>
+#ifdef USE_MPI
+#include "mpi.h"
 #endif
+#include "hdf5.h"
 
 using namespace std;
 
