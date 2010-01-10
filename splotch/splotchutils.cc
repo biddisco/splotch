@@ -1,11 +1,5 @@
 #include "splotch/splotchutils.h"
-
-#ifdef VS
 #include "cxxsupport/mpi_support.h"
-#else
-#include "cxxsupport/mpi_support.h"
-#endif
-
 #include "kernel/transform.h"
 
 using namespace std;
@@ -14,9 +8,9 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
-      const float64 powtmp = pow(Pi,1./3.);
-      const float64 sigma0=powtmp/sqrt(2*Pi);
-      const float64 bfak=1./(2*sqrt(Pi)*powtmp);
+      const float64 powtmp = pow(pi,1./3.);
+      const float64 sigma0=powtmp/sqrt(2*pi);
+      const float64 bfak=1./(2*sqrt(pi)*powtmp);
 	  exptable xexp(-20.);
 
       int xres = pic.size1(), yres=pic.size2();
