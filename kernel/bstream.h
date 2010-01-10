@@ -102,7 +102,7 @@ class bifstream: public std::ifstream
 
     void rewind()
       { seekg(0,std::ios::beg); }
-    void skip(streamoff nbytes)
+    void skip(std::streamoff nbytes)
       { seekg(nbytes,std::ios::cur); }
   };
 
