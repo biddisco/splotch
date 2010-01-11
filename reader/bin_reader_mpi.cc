@@ -16,7 +16,6 @@
 #include "cxxsupport/paramfile.h"
 #include "kernel/bstream.h"
 #include "kernel/colour.h"
-#include "utils/colourmap.h"
 
 using namespace std;
 

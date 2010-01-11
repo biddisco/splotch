@@ -8,7 +8,7 @@
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
 #include "kernel/vector.h"
-#include "utils/colourmap.h"
+#include "kernel/colourmap.h"
 
 #ifdef CUDA
 #include "cuda/splotch_cuda.h"
