@@ -20,8 +20,8 @@
  *  See the README file for more information.
  */
 
-#ifndef RAYPP_CONFIG_H
-#define RAYPP_CONFIG_H
+#ifndef RAYPP_ENDIANNESS_H
+#define RAYPP_ENDIANNESS_H
 
 #include "cxxsupport/datatypes.h"
 

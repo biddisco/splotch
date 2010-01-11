@@ -25,7 +25,7 @@
 
 #include <fstream>
 #include "kernel/byteswap.h"
-#include "config/config.h"
+#include "kernel/endianness.h"
 
 const bool file_is_lsb=big_endian, file_is_msb=!big_endian,
            file_is_natural=false;

@@ -24,7 +24,7 @@
 #define RAYPP_VECTOR_H
 
 #include <cmath>
-#include "config/config.h"
+#include "cxxsupport/datatypes.h"
 
 /**
   \class VECTOR kernel/vector.h

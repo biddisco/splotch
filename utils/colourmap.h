@@ -25,90 +25,41 @@
 
 #include <vector>
 #include "kernel/colour.h"
-#include "kernel/handle.h"
 
-class CMAP_ENTRY
+template<typename T> class anythingMap
   {
-#ifdef CUDA //need to copy to C-style color map
-  public:
-#else
-  protected:
-#endif
-    float32 minval, maxval;
-    float32 fract (float32 value) const
-      { return (value-minval)/(maxval-minval); }
-
-  public:
-    CMAP_ENTRY () {}
-    CMAP_ENTRY (float32 min, float32 max)
-      : minval (min), maxval (max) {}
-    virtual ~CMAP_ENTRY () {}
-
-    virtual COLOUR Get_Colour (float64) const = 0;
-
-    bool Is_Inside (float64 value) const
-      {
-      return ((value >= minval) && (value <= maxval));
-      }
-
-    void Set_Values (float64 min, float64 max)
-      {
-      minval = min; maxval = max;
-      }
-  };
-
-class COLOURMAP
-  {
-#ifdef CUDA //need to copy to a C-style colormap when using CUDA
-  public:
-#else
   private:
-#endif
-    std::vector<HANDLE_RAYPP<CMAP_ENTRY> > Entry;
+    bool sorted;
+    std::vector<double> x;
+    std::vector<T> y;
 
   public:
-    COLOURMAP() {}
-    COLOURMAP(COLOUR Col1, COLOUR Col2);
-
-    COLOUR Get_Colour (float64) const;
-
-    void Add_Entry (const HANDLE_RAYPP<CMAP_ENTRY> &);
-  };
-
-class UNIFORM_CMAP_ENTRY : public CMAP_ENTRY
-  {
-  protected:
-    COLOUR Colour;
-
-  public:
-    UNIFORM_CMAP_ENTRY () {};
-    UNIFORM_CMAP_ENTRY (float64 Start, float64 End, const COLOUR& Col)
-      : CMAP_ENTRY (Start, End), Colour (Col) {}
-
-    virtual COLOUR Get_Colour (float64) const
-      { return Colour; }
-  };
-
-class LINEAR_CMAP_ENTRY: public CMAP_ENTRY
-  {
-#ifdef CUDA //need to copy to a C-style colormap when using CUDA
-  public:
-#else
-  protected:
-#endif    
-	  COLOUR Colour1, Colour2;
-
-  public:
-    LINEAR_CMAP_ENTRY ()
-      : Colour1 (0,0,0), Colour2 (0,0,0) {}
-    LINEAR_CMAP_ENTRY (float64 Start, float64 End,
-      const COLOUR &c1, const COLOUR &c2)
-      : CMAP_ENTRY (Start, End), Colour1 (c1), Colour2 (c2) {}
-
-    virtual COLOUR Get_Colour (float64 value) const
+    void addVal (double x_, const T &val)
       {
-      return Colour1 + fract(value) * (Colour2 - Colour1);
+      sorted=false;
+      x.push_back(x_);
+      y.push_back(val);
+      }
+    T getVal (double x_)
+      {
+      using namespace std;
+      planck_assert(x.size()>0,"trying to access an empty map");
+      if (x.size()==1) return y[0];
+      if (!sorted)
+        {
+        vector<size_t> idx;
+        buildIndex(x.begin(),x.end(),idx);
+        sortByIndex<double>(x.begin(),x.end(),idx);
+        sortByIndex<T>(y.begin(),y.end(),idx);
+        sorted = true;
+        }
+      tsize index;
+      double frac;
+      interpol_helper (x.begin(), x.end(), x_, index, frac);
+      return (1.-frac)*y[index]+frac*y[index+1];
       }
   };
+
+typedef anythingMap<COLOUR> COLOURMAP;
 
 #endif

@@ -23,7 +23,7 @@
 #ifndef RAYPP_TRANSFORM_H
 #define RAYPP_TRANSFORM_H
 
-#include "config/config.h"
+#include "cxxsupport/datatypes.h"
 #include "kernel/vector.h"
 
 /**

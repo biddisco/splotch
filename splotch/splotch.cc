@@ -202,7 +202,6 @@ int main (int argc, const char **argv)
 	}
       else
 	{
-	  float rrr,ggg,bbb,rrr_old,ggg_old,bbb_old;
 	  ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
           planck_assert (infile,"could not open palette file  <" + 
                                 params.find<string>("palette"+dataToString(itype)) + ">");
@@ -211,15 +210,12 @@ int main (int argc, const char **argv)
 	  infile >> dummy >> dummy >> nColours;
 	  if(master) 
 	    cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
-	  infile >> rrr_old >> ggg_old >> bbb_old;
 	  double step = 1./(nColours-1);
-	  for (int i=1; i<nColours; i++)
+	  for (int i=0; i<nColours; i++)
 	    {
+	      float rrr,ggg,bbb;
 	      infile >> rrr >> ggg >> bbb;
-	      amap[itype].Add_Entry(new LINEAR_CMAP_ENTRY((i-1)*step,i*step,
-							  COLOUR(rrr_old/255,ggg_old/255,bbb_old/255),
-							  COLOUR(rrr/255,ggg/255,bbb/255)));
-	      rrr_old=rrr; ggg_old=ggg; bbb_old=bbb;
+	      amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
 	    }
 	}
     }
@@ -241,9 +237,10 @@ int main (int argc, const char **argv)
   COLOUR c1,c2,c3
   c1=COLOUR(1,0,0);           // red
   c2=COLOUR(0.66,0.66,0.66);  // light gray
-  c1=COLOUR(0,0,1);           // blue
-  amap.Add_Entry(new LINEAR_CMAP_ENTRY( 0,.5,c1,c2));
-  amap.Add_Entry(new LINEAR_CMAP_ENTRY(.5,1.,c2,c1));
+  c3=COLOUR(0,0,1);           // blue
+  amap.addVal(0,c1);
+  amap.addVal(0.5,c2));
+  amap.addVal(1.,c3));
   emap=amap;
 
 #endif

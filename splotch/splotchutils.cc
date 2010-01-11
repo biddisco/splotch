@@ -73,7 +73,13 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           for (int x=minx; x<maxx; ++x)
             {
             float64 xsq=(x-posx)*(x-posx);
+#if 0
+double dy=sqrt(max(radsq-xsq,0.));
+int miny2=max(miny,int(posy-dy)), maxy2=min(maxy,1+int(posy+dy));
+for (int y=miny2; y<maxy2; ++y)
+#else
             for (int y=miny; y<maxy; ++y)
+#endif
               {
               float64 dsq = (y-posy)*(y-posy) + xsq;
               if (dsq<radsq)
@@ -220,7 +226,7 @@ void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
 It is no longer used since Dec 09. New one is render_as_thead1().
 particle_splotch is not used any more.
 
-void render_as_thread (const vector<particle_splotch> &p, arr2<COLOUR> &pic, 
+void render_as_thread (const vector<particle_splotch> &p, arr2<COLOUR> &pic,
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
@@ -421,7 +427,7 @@ DWORD WINAPI render_thread (param_render_thread *param)
 }
 #endif //ifdef HOST_THREAD_RENDER
 
-void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic, 
+void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic,
       bool a_eq_e,double grayabsorb, void* buf)
       {
 		cu_fragment_AeqE        *fbuf;
@@ -534,13 +540,13 @@ void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic,
 			  fpos++;
               }//y
             }//x
-          }//for particle[m] 
+          }//for particle[m]
         }//for this chunk
 }//#pragma omp parallel
 
 }
 
-void render_cu_test (cu_particle_splotch *p, unsigned int size, arr2<COLOUR> &pic, 
+void render_cu_test (cu_particle_splotch *p, unsigned int size, arr2<COLOUR> &pic,
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
@@ -604,7 +610,7 @@ long	fragments=0;
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
 //to count valid particles with one chunk, debug only
-//PValid++; 
+//PValid++;
 //continue;
           COLOUR8 a(p[m].e.r, p[m].e.g, p[m].e.b) , e, q;
           if (!a_eq_e)
@@ -667,7 +673,7 @@ fragments++;
                   }//if a_eq_e
                 }// if dsq<radsq
 #ifdef CUDA_TEST_FRAGMENT
-				posFragBufH ++;				  	
+				posFragBufH ++;
 #endif //CUDA_TEST_FRAGMENT
               }//y
             }//x
@@ -681,7 +687,7 @@ fragments++;
 }//#pragma omp parallel
 
 #ifdef CUDA_TEST_FRAGMENT
-		return;				  	
+		return;
 #endif //CUDA_TEST_FRAGMENT
 
       mpiMgr.allreduce_sum_raw
@@ -725,7 +731,7 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
           for (int x=0; x<xres; x++)
             {  
                float64 temp=x/float64(xres);
-               COLOUR e=amap[itype].Get_Colour(temp);
+               COLOUR e=amap[itype].getVal(temp);
                for (int y=0; y<10; y++)
                  {
                    pic[x][yres-offset-1-y].r = e.r;
@@ -899,14 +905,14 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
         }
       p[m].ro = p[m].r;
       p[m].r = p[m].r *res*.5*xfac;
-      if(minhsmlpixel)
-         if ((p[m].r <= 0.5) && (p[m].r >= 0.0))
+      if (minhsmlpixel)
+         if (p[m].r>=0.0)
 	   {
-             p[m].r = 0.5;
-             p[m].ro = p[m].r/(res*.5*xfac);
+           p[m].r = sqrt(p[m].r*p[m].r + .5*.5);
+           p[m].ro = p[m].r/(res*.5*xfac);
 	   }
     }
-};
+}
 
 #ifdef CUDA
 extern "C" 
@@ -1036,7 +1042,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
           e.b=col3*intensity;
 	}
       else
-	e=amap[p[m].type].Get_Colour(col1)*intensity;
+	e=amap[p[m].type].getVal(col1)*intensity;
 
 #ifdef CUDA_TEST_COLORMAP
 //for CUDA TEST ONLY

@@ -190,7 +190,7 @@ class exptable
         {
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
-		}
+        }
       }
 
     float64 operator() (float64 arg) const
@@ -249,12 +249,6 @@ void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
 //      bool a_eq_e,double grayabsorb)
 DWORD WINAPI render_thread (param_render_thread *param);
 #endif //ifdef HOST_THREAD_RENDER
-
-void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic, 
-		      bool a_eq_e,double grayabsorb, void* buf);
-
-void render_cu_test (cu_particle_splotch *p, unsigned int size, arr2<COLOUR> &pic, 
-		     bool a_eq_e,double grayabsorb);
 
 extern "C" void getCuTransformParams(cu_param_transform &para_trans,
 			  paramfile &params, double c[3], double l[3], double s[3]);

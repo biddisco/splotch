@@ -10,7 +10,7 @@
 
 #--------------------------------------- Switch on MPI
 OPT	+=  -DUSE_MPI
-OPT	+=  -DUSE_MPIIO
+#OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
@@ -31,7 +31,7 @@ OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Select target Computer
 
-SYSTYPE="SP6"
+#SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 
@@ -42,7 +42,7 @@ CC       = g++        # sets the C-compiler (default)
 endif
 OMP      = -fopenmp
 
-OPTIMIZE = -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
+OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport -Impiio-1.0/include/
 
 ifeq ($(SYSTYPE),"SP6")
@@ -87,7 +87,7 @@ OPTIONS = $(OPTIMIZE) $(OPT)
 
 EXEC   = Splotch4.0$(SYSTYPE)
 
-OBJS  =	kernel/transform.o utils/colourmap.o cxxsupport/error_handling.o \
+OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o \

@@ -23,7 +23,7 @@
 #ifndef RAYPP_COLOUR_H
 #define RAYPP_COLOUR_H
 
-#include "config/config.h"
+#include "cxxsupport/datatypes.h"
 
 /** \class COLOUR kernel/colour.h kernel/colour.h
     A class for storing RGB colour information. */
