@@ -104,24 +104,30 @@ combination of meaningful data {\it visualizations} and user interaction with th
 
 The data exploration tools traditionally employed by astronomers 
 are limited either 
-on processing and displaying of 2D images (e.g. IRAF \cite{iraf}, by NOAO; 
-ESO-MIDAS \cite{midas} by the European Southern Observatory; SaoImage \cite{sao} 
-by the Smithsonian Astrophysical Observatory and GAIA \cite{gaia} by ESO) or on 
-generation of meaningful 2D and 3D plots (e.g. Gnuplot \cite{gnuplot}; 
-SuperMongo \cite{supermongo} and IDL \cite{idl} by ITT Visual Information). 
-There is a plethora of other tools, for details the reader is referred to 
-dedicated literature surveys.
+on processing and displaying of 2D images (see e.g. \cite{iraf}, 
+\cite{midas}, \cite{sao},
+\cite{gaia}) or on
+generation of meaningful 2D and 3D plots (e.g. \cite{gnuplot},
+\cite{supermongo}, \cite{idl}).
+ 
+%(e.g. IRAF \cite{iraf}, by NOAO; 
+%ESO-MIDAS \cite{midas} by the European Southern Observatory; SaoImage \cite{sao} 
+%by the Smithsonian Astrophysical Observatory and GAIA \cite{gaia} by ESO) or on 
+%generation of meaningful 2D and 3D plots (e.g. Gnuplot \cite{gnuplot}; 
+%SuperMongo \cite{supermongo} and IDL \cite{idl} by ITT Visual Information). 
+%There is a plethora of other tools, for details the reader is referred to 
+%dedicated literature surveys.
 %, e.g. \cite{survey}.
 
 To overcome the shortcomings of traditional tools, a new generation of software 
 packages is now emerging providing astronomers with robust instruments in the context 
-of large-scale astrophysical datasets, e.g. Paraview \cite{paraview}, Aladin \cite{aladin}, 
-Topcat \cite{topcat}, VisIVO \cite{visivo1} and VisIVO Server \cite{visivo2}, 
-3D Slicer\cite{3dslicer}, Splash \cite{splash} and VisIT \cite{visit}. 
+of large-scale astrophysical datasets (e.g. \cite{paraview}, \cite{aladin}, 
+\cite{topcat}, \cite{visivo1} and \cite{visivo2}, 
+\cite{3dslicer}, \cite{splash} and \cite{visit}). 
 The underlying principles are exploitation of high performance architectures 
-(i.e. multicore CPUs and powerful graphics boards), interoperability (i.e. allowing 
-different applications, each specialized for different purposes, to operate on 
-shared datasets) and collaborative workflows (i.e. permitting several users to 
+(i.e. multicore CPUs and powerful graphics boards), interoperability ( 
+different applications can operate simultaneously on 
+shared datasets) and collaborative workflows (permitting several users to 
 work simultaneously for exchanging information and visualization experiences).
 
 %ParaView \cite{paraview} was developed specifically for handling large-scale 
@@ -153,8 +159,9 @@ by means of 10 billion fluid elements ({\it particles}) interacting with each ot
 through gravitational forces. The typical size of a snapshot of the Millennium II 
 simulation is about 400 GBs representing a particle's ID, position, velocity 
 together with additional properties, e.g. local smoothing length, density and 
-velocity dispersion. For further details on the Millennium II simulation the reader 
-is referred to \citep{2009MNRAS.398.1150B}.
+velocity dispersion. For further details on the Millennium II simulation and
+other works about the visualization of its datasets, the reader 
+is referred to \citep{2009MNRAS.398.1150B}, \cite{fraedrich2009} and \cite{Szalay2008}.
 
 %The fundamentals and the traditional sequential operation of {\tt Splotch} 
 %\cite{2008NJPh...10l5006D} are reviewed in section 2. Section 3 discusses 
@@ -452,26 +459,26 @@ improves execution times as illustrated in Table 3.
 
 %The instruction A is the render computation executed on the graphics board in parallel with execution of instruction B, the combination operation carried out by the CPU. The results of A and B are merged by instruction C. Our test results indicate that overall times required for performing combination operations are mostly contained within the times demanded by render computations.
 
-\begin{table}
-\caption{The datasets used in the benchmarks for our parallel implementations of {\tt Splotch}}
-\begin{center}
-\begin{tabular}{|l|l|l|}
-\hline
-Label & 	Particles& 	Size (Bytes)  \\
-\hline
-1M   & 	1000000   & 24000000 \\
-\hline
-10M  & 	10000000  & 240000000 \\
-\hline
-100M & 	100000000 & 2400000000 \\
-\hline
-850M & 	882739509 & 21185748216 \\
-\hline
-M-II & 	10000000000 & 	280000000000 \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
+%\begin{table}
+%\caption{The datasets used in the benchmarks for our parallel implementations of {\tt Splotch}}
+%\begin{center}
+%\begin{tabular}{|l|l|l|}
+%\hline
+%Label & 	Particles& 	Size (Bytes)  \\
+%\hline
+%1M   & 	1000000   & 24000000 \\
+%\hline
+%10M  & 	10000000  & 240000000 \\
+%\hline
+%100M & 	100000000 & 2400000000 \\
+%\hline
+%850M & 	882739509 & 21185748216 \\
+%\hline
+%M-II & 	10000000000 & 	280000000000 \\
+%\hline
+%\end{tabular}
+%\end{center}
+%\end{table}
 
 \section{Benchmarks}
 
@@ -488,12 +495,12 @@ versions of Splotch on computing systems of different sizes and target applicati
 from a standard PC, where small to medium datasets can be used, up to high 
 performance platforms for handling highly complex large-scale datasets.
 
-We used several benchmark datasets for our testing as shown in Table 1. The first 
+We used several benchmark datasets for our testing. The first 
 few datasets are derived from a cosmological N-Body simulation of more than 850 millions 
 particles characterized by spatial information together with velocities, mass density 
 and smoothing length, for defining the size of the region influenced by the properties 
 of each particle when deploying Splotch. We randomly extracted datasets containing 
-1, 10 and 100 million particles. These are indicated in Table 1 as 1M, 
+1, 10 and 100 million particles. These are indicated as 1M, 
 10M and 100M tests. We also employed the dataset 850M containing the entire simulation. 
 Such variety of dataset sizes is required to match the memory requirements of 
 the different computing systems available for our testing.  
@@ -639,7 +646,7 @@ is necessary to process the entire dataset.
 For this benchmark, we could not use our MPI reader, due to a serious limitation related 
 to the MPI I/O API (usage of 32 bits counters which do not allow us to handle the large-scale datasets of the Millennium).
 We will work to overcome this problem in the future versions of Splotch. 
-At the moment, we used instead a parallel reader derived by the original Gadget 2 code 
+At the moment, we used instead the built-in parallel reader derived by the original Gadget 2 code 
 (used for the simulation - \cite{gadget}), 
 which allows to access directly data files as they where saved by the simulation code. 
 
@@ -699,8 +706,8 @@ investigate possibilities for designing advanced scheduling mechanisms to minimi
 the idle CPU times contained in the current implementation.
 
 \section*{Acknowledgments}
-%We would like to thank Mike XXX for providing the MilleniumII simulation datasets 
-%on which we conducted our performance tests. 
+We would like to thank Mike Boylan-Kolchin for providing the MilleniumII simulation datasets 
+on which we conducted our performance tests. 
 Klaus Dolag acknowledges the support 
 by the DFG Priority Programme 117. This work was also supported by the promising 
 researcher's award, University of Portsmouth, and the HPC-EUROPA 2 (project number 228398) 
@@ -718,8 +725,8 @@ final output of the Millennium II simulation.
 The left panel shows the total wallclock time substracting the time needed for 
 reading and writing, the right panel the read-data time. 
 The dashed line indicates the expectation for an ideal scaling. The test was 
-performed on a {\it Power6} architecture. The diamonds are runs using one task per core, 
-the triangles indicate the SMT configuration
+performed on a {\it Power6} architecture. The diamonds represent runs in ST mode, 
+the triangles indicate the SMT configuration.
 }\label{cpu_scaling}
 \end{figure}
 
@@ -744,6 +751,12 @@ the triangles indicate the SMT configuration
 \bibitem{lofar} http://www.lofar.org/
 
 \bibitem{2009MNRAS.398.1150B}http://www.mpa-garching.mpg.de/galform/millennium-II/index.html
+
+\bibitem{fraedrich2009}R. Fraedrich, J. Schneider, R. Westermann, 
+IEEE Transactions on Visualization and Computer Graphics, vol. 15, no. 6, pp. 1251-1258, 
+Nov./Dec. 2009, doi:10.1109/TVCG.2009.142
+
+\bibitem{Szalay2008}T. Szalay, V. Springel and G. Lemson, http://arxiv.org/abs/0811.2055, 2008
 
 \bibitem{lsst}http://www.lsst.org/lsst
 
