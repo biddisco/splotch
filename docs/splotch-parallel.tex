@@ -225,7 +225,7 @@ e.g.\ sky surveys \cite{sdss}, \cite{lofar}, or large-scale numerical
 simulations, e.g.\ the Millennium II simulation \cite{2009MNRAS.398.1150B}.
 
 The main characteristic of modern astrophysical data sets is extremely large
-sizes (in the order of hundreds of GB) requiring storage in extremely
+sizes (on the order of hundreds of GB) requiring storage in extremely
 large-scale distributed databases. The forthcoming next-generation astrophysical 
 data sets are expected to exhibit massively large sizes (in the order of hundreds
 of TB), e.g.\ \cite{lsst}.
@@ -264,13 +264,13 @@ generation of meaningful 2D and 3D plots (e.g.\ \cite{gnuplot},
 %, e.g.\ \cite{survey}.
 
 To overcome the shortcomings of traditional tools, a new generation of software 
-packages is now emerging providing astronomers with robust instruments in the context 
+packages is now emerging, providing astronomers with robust instruments in the context 
 of large-scale astrophysical data sets (e.g.\ \cite{paraview}, \cite{aladin},
 \cite{topcat}, \cite{visivo1} and \cite{visivo2}, 
 \cite{3dslicer}, \cite{splash} and \cite{visit}). 
 The underlying principles are exploitation of high performance architectures 
-(i.e.\ multicore CPUs and powerful graphics boards), interoperability ( 
-different applications can operate simultaneously on 
+(i.e.\ multicore CPUs and powerful graphics boards), interoperability
+(different applications can operate simultaneously on
 shared data sets) and collaborative workflows (permitting several users to
 work simultaneously for exchanging information and visualization experiences).
 
@@ -301,7 +301,7 @@ large-scale data sets, e.g.\ the Millennium II simulation \citep{2009MNRAS.398.1
 This is a simulation of the evolution of a meaningful fraction of the universe 
 by means of 10 billion fluid elements ({\it particles}) interacting with each other 
 through gravitational forces. The typical size of a snapshot of the Millennium II 
-simulation is about 400 GB representing a particle's ID, position, velocity
+simulation is about 400 GB representing a particle's ID, position and velocity
 together with additional properties, e.g.\ local smoothing length, density and 
 velocity dispersion. For further details on the Millennium II simulation and
 other works about the visualization of its data sets, the reader
@@ -331,7 +331,7 @@ is referred to \citep{2009MNRAS.398.1150B}, \cite{fraedrich2009} and \cite{Szala
 \includegraphics[width=0.40\textwidth]{millenium2_veldisp.pdf}
 \includegraphics[width=0.40\textwidth]{millenium2_vel.pdf}
 \end{center}
-\caption{A visualization  of the MilleniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
+\caption{A visualization  of the MillenniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
 \end{figure}
 
 The rendering algorithm of {\tt Splotch} is generally designed to handle
@@ -364,7 +364,7 @@ distance $f\cdot\sigma_p$, where $f$ is a proper multiplicative factor.
 %$f\cdot\sigma_p$ is related to the smoothing length $h$, i.e.
 %to fulfill $h \approx f\cdot\sigma_p$. 
 Therefore rays passing
-the particle at a distance larger than $f\cdot\sigma_p$ will be practically
+the particle at a distance larger than $f\cdot\sigma_p$ will be
 unaffected by the particle's density distribution.
 
 \item 
@@ -388,7 +388,7 @@ set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images.
 %to the absortpion of each particle ($\bf{A}_p$) to improve the three dimensional impression.
 %In general the coefficients can vary between particles, and are typically chosen as a function 
 %of a characteristic particle property. 
-If a scalar quantity is choosen (e.g.\ the particle temperature, 
+If a scalar quantity is chosen (e.g.\ the particle temperature,
 density, velocity dispersion, etc.), the mapping to the three components of $\bf{E}$ and $\bf{A}$ (for red, green and blue)
 is typically achieved via a transfer function, realized by a colour look-up table or palette, which can
 be provided to the ray-tracer as an external file to allow a maximum of flexibility. If a
@@ -453,8 +453,8 @@ Once the data is distributed among the processors, all the remaining operations
 are performed locally and further communication is not needed, until the generation
 of the final display. Each MPI process uses the assigned 
 data to produce its own partial image. At the end, all the partial contributions are merged by means of a
-collective reduction operation producing the final display. As the data load stage is the crucial step for balancing the overall workload and fast reading 
-data from the disk, we paid specific attention to effective implementation of this functionality.
+collective reduction operation producing the final image. As the data load stage is the crucial step for balancing the overall workload and fast reading
+data from the disk, we paid specific attention to efficient implementation of this functionality.
 %In fact, from the results presented in section 4.1, it is clear how,
 %as the data size grows,
 %the data load process tends to be the most demanding section of the code. 
@@ -500,25 +500,16 @@ In all readers an endianness conversion is also performed if required.
 Nowadays Graphics Processing Units (GPUs) can offer a means of increased performance 
 (often substantially) in the context of computationally intensive scientific applications, 
 e.g.\ by exploiting high speed underlying ALUs and stream data-parallel organization. 
-The Compute Unified Device Architecture (CUDA) introduced by Nvidia allows software
-developers full access to highly parallellized modern GPU architectures via a 
-simplified C language interface and without demanding previous knowledge of the 
-GPU operational scenario details \cite{cuda}. This section presents our experiences 
-in developing a CUDA implementation for accelerating the Splotch operation.
+The Compute Unified Device Architecture (CUDA) introduced by Nvidia offers access to highly parallelized modern GPU architectures via a
+simplified C language interface without demanding previous knowledge of the 
+GPU operational details \cite{cuda}.
+%This section presents our experiences 
+%in developing a CUDA implementation for accelerating Splotch's operation.
 
-A thread on the GPU is extremely lightweight compared to CPU threads; in other
-words changing context among threads is not a costly operation. The minimum 
-data chunks processed by a CUDA {\it multiprocessor} are groups of threads called 
-{\it warps}. Typically developers handle {\it blocks} containing a large number 
-of warps while blocks can be further organized together in {\it grids}. This 
-offers the advantage of calling (from the CPU) a function executed on the GPU 
-(called {\it kernel}) applied to a large quantity of threads, without worrying about 
-the limitations of fixed hardware resources. CUDA will execute the blocks sequentially
-in case of limited resources, but revert to parallel execution for large numbers 
-of processing units.  The result is code that can target simultaneously
-entry-level, high-end or even forthcoming next generation GPUs. The CUDA software 
-development guidelines are discussed in the programming guide \cite{cudaprogguide} 
-extensively.
+A thread on the GPU is extremely lightweight compared to CPU threads, so changing context among threads is not a costly operation. The minimum 
+data chunks processed by a CUDA {\it multiprocessor} are numbers of threads ({\it warps}) handled as {\it blocks} (i.e. a number of warps) and {\it grids} (i.e. a number of blocks) so that GPU-executed functions can exploit large numbers of threads. CUDA executes blocks sequentially
+in case of limited hardware resources, but reverts to parallel execution for large numbers 
+of processing units.  The resulting code can thus target simultaneously entry-level, high-end or even next-generation GPUs. Further details on CUDA can be found on \cite{cudaprogguide}.
 
 %Although CUDA threads are scheduled for execution in terms of groups of warps, 
 %threads in individual warps are executed in a Single Instruction Multiple Thread 
@@ -646,8 +637,8 @@ and smoothing length, for defining the size of the region influenced by the prop
 of each particle when deploying Splotch. We randomly extracted data sets containing
 1, 10 and 100 million particles. These are indicated as 1M, 
 10M and 100M tests. We also employed the data set 850M containing the entire simulation.
-Such variety of data set sizes is required to match the memory requirements of
-the different computing systems available for our testing.  
+Such variety of data set sizes is required to match the memory available on
+the different computing systems used for our testing.
 Our most challenging data set comes from the Millennium II simulation \cite{2009MNRAS.398.1150B}
 and consists of 10 billion particles. The data files employed are pure binaries organized in such a way so that different 
 quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, then $y$ coordinates and so on) as expected by the MPI-IO based reader. 
@@ -661,7 +652,7 @@ quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, th
 \end{center}
 \caption{Scaling of the CPU time (total wallclock time) with the number of MPI threads 
 used for vizualizing 100 million
-and 850 millions particles for an 800x800 pixels display.
+and 850 million particles for an 800x800 pixel display.
 Results for binary and MPI readers, in ST and SMT modes are shown}\label{mpi100M}
 \end{figure}
 
@@ -690,7 +681,7 @@ The larger test, 850M (Figure \ref{mpi100M}, right panel),
 allows us to perform a more extensive scalability test, 
 exploring the range between 16 and 128 processors. This test confirms that parallel
 {\tt Splotch} can process about 1 particle per microsecond per process. For this data set the scalability
-is proved up to 128 processors in the ST mode. The SMT configuration, 
+is demonstrated up to 128 processors in the ST mode. The SMT configuration,
 while producing the best absolute performances, seems to have a more limited scalability. 
 This requires more investigation, but our anticipation is that the most likely reason for this is processor 
 architectural features rather than our code.
@@ -856,7 +847,10 @@ Klaus Dolag acknowledges the support
 by the DFG Priority Programme 117. This work was also supported by the promising 
 researcher's award, University of Portsmouth, and the HPC-EUROPA 2 (project number 228398) 
 under the EC Coordination and Support Action Research Infrastructure Programme in FP7 
-for the committed resources.
+for the committed resources. Martin Reinecke is supported by the
+German Aeronautics Center and Space Agency (DLR), under program 50-OP-0901, funded by the
+Federal Ministry of Economics and Technology.
+
 
 \begin{figure}
 \begin{center}
