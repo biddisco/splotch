@@ -501,7 +501,7 @@ Nowadays Graphics Processing Units (GPUs) can offer a means of increased perform
 (often substantially) in the context of computationally intensive scientific applications, 
 e.g.\ by exploiting high speed underlying ALUs and stream data-parallel organization. 
 The Compute Unified Device Architecture (CUDA) introduced by Nvidia offers access to highly parallelized modern GPU architectures via a
-simplified C language interface without demanding previous knowledge of the 
+simplified C language interface without requiring previous knowledge of the
 GPU operational details \cite{cuda}.
 %This section presents our experiences 
 %in developing a CUDA implementation for accelerating Splotch's operation.
@@ -640,7 +640,7 @@ of each particle when deploying Splotch. We randomly extracted data sets contain
 Such variety of data set sizes is required to match the memory available on
 the different computing systems used for our testing.
 Our most challenging data set comes from the Millennium II simulation \cite{2009MNRAS.398.1150B}
-and consists of 10 billion particles. The data files employed are pure binaries organized in such a way so that different 
+and consists of 10 billion particles. The data files employed are pure binaries organized in such a way that different
 quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, then $y$ coordinates and so on) as expected by the MPI-IO based reader. 
 
 \subsection{MPI Benchmarks}
