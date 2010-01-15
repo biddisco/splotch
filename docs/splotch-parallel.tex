@@ -381,7 +381,9 @@ volume is modeled by the well known radiative transfer equation
 which can be found in standard textbooks \cite{1991par..book.....S}.
 Here, $\bf{E}_p$ and $\bf{A}_p$ describe the strength of radiation emission and absorption
 for a given particle for the three rgb-colour components. In general it is recommended to
-set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images.
+set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images. This is presently a 
+necessary setting for Splotch, in order to reduce the complexity of some aspects of its parallel
+implementation. This constain will be eliminated in the next releases of the code.
 %; for special
 %effects, however, independent emission and absorption coefficients can be used. Specially typically
 %a small gray component (e.g.\ a small, constant addition to the rgb-components) can be added 
@@ -836,9 +838,12 @@ enabled graphics boards, thus exploiting MPI and CUDA simultaneously.
 Several optimizations are also planned for our CUDA implementation, e.g.\ unrolling 
 short loops for improved control flow or using local/shared memory to accelerate data fetching. 
 Mechanisms for optimal load balance between CPU and the graphics processor and between several 
-graphics processors when these are available should also be considered. Finally we will 
+graphics processors when these are available should also be considered. We will 
 investigate possibilities for designing advanced scheduling mechanisms to minimize 
-the idle CPU times contained in the current implementation.
+the idle CPU times contained in the current implementation. Finally, we will explore the 
+opportuinities offered by the OpenCL library, in order to exploit a wider range of 
+computing architectures. 
+
 
 \section*{Acknowledgments}
 We would like to thank Mike Boylan-Kolchin for providing the MilleniumII simulation data sets 
@@ -920,9 +925,10 @@ Nov./Dec. 2009, doi:10.1109/TVCG.2009.142
 
 \bibitem{topcat} M. B. Taylor, TOPCAT and STIL: Starlink Table/VOTable Processing Software, ASP, ASPC 347 29T, 2005.
 
-\bibitem{visivo1}M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson and J. Taylor, Visualization, Exploration and Data Analysis of Complex Astrophysical Data,  The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913, 2007.
+\bibitem{visivo1}M. Comparato, U. Becciani, A. Costa, B. Garilli, C. Gheller, B. Larsson and J. Taylor, 
+The Publications of the Astronomical Society of the Pacific, Volume 119, Issue 858, pp. 898-913, 2007.
 
-\bibitem{3dslicer} M. A. Borkin, N. A. Ridge, A. A. Goodman and M. Halle, Demonstration of the Applicability of 3D Slicer to Astronomical Data using 13CO and C18O Observations of IC348, astro-ph/0506604, 2005.
+\bibitem{3dslicer} M. A. Borkin, N. A. Ridge, A. A. Goodman and M. Halle, astro-ph/0506604, 2005.
 
 \bibitem{splash} http://users.monash.edu.au/~dprice/splash/index.html
 
@@ -932,9 +938,12 @@ Nov./Dec. 2009, doi:10.1109/TVCG.2009.142
 
 \bibitem{vizier} http://cdsarc.u-strasbg.fr/viz-bin/VizieR
 
-\bibitem{visivo2}U. Becciani, A. Costa, V. Antonnuccio-Delogu, G. Caniglia, M. Comparato, C, Gheller, Z. Jin, M. Krokos, P. Massimino, VisIVO-Integrated Tools and Services for Large-Scale Astrophysical Visualization, The Publications of the Astronomical Society of the Pacific, (to appear).
+\bibitem{visivo2}U. Becciani, A. Costa, V. Antonnuccio-Delogu, G. Caniglia, M. Comparato, 
+C, Gheller, Z. Jin, M. Krokos, P. Massimino, 
+The Publications of the Astronomical Society of the Pacific, (in press).
 
-\bibitem{2008NJPh...10l5006D}K.Dolag, M. Reinecke, C.Gheller, S. Imboden, Splotch: Visualizing Cosmological Simulations, New Journal of Physics, Volume 10, Issue 12, pp. 125006, 2008.
+\bibitem{2008NJPh...10l5006D}K.Dolag, M. Reinecke, C.Gheller, S. Imboden, 
+New Journal of Physics, Volume 10, Issue 12, pp. 125006, 2008.
 
 \bibitem{mpi} http://www.mpi-forum.org/
 
@@ -942,7 +951,7 @@ Nov./Dec. 2009, doi:10.1109/TVCG.2009.142
 
 \bibitem{cuda} http://www.Nvidia.com/object/cuda\_home.html
 
-\bibitem{1985A&A...149..135M} J. Monaghan and J. Lattanzio, A Refined Particle Method for Astrophysical Problems, A\&A, 149, 135, 1985
+\bibitem{1985A&A...149..135M} J. Monaghan and J. Lattanzio, A\&A, 149, 135, 1985
 
 \bibitem{1991par..book.....S} Physics of Astrophysics: Volume I Radiation, Shu F., 1991,
 Published by University Science Books, 648 Broadway, Suite 902, New York, NY 10012
