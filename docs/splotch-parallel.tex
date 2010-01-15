@@ -184,7 +184,7 @@ data sets are expected to exhibit massively large sizes (many TB). Visual data
 exploration and discovery tools are robust instruments for rapidly and intuitively 
 inspecting very large-scale data sets to identify regions of interest within
 which to apply time-consuming algorithms.  This paper reports on recent developments 
-for a high performance implementation of {\tt Splotch}, our previously developed 
+for a high performance implementation of Splotch, our previously developed 
 ray-tracing algorithm for effective visualization of large-scale astrophysical 
 data sets coming from particle-based simulations. We discuss several approaches for
 parallelizing Splotch to suit multicore CPUs and CUDA-enabled GPUs. 
@@ -293,7 +293,7 @@ work simultaneously for exchanging information and visualization experiences).
 %and unstructured meshes. 
 
 This paper describes a high performance implementation of 
-{\tt Splotch} \citep{2008NJPh...10l5006D}, our previously developed ray-tracing 
+Splotch \citep{2008NJPh...10l5006D}, our previously developed ray-tracing 
 algorithm for effective visualization of large-scale astrophysical data sets coming 
 from particle-based computer simulations. N-Body simulations constitute 
 prime examples of particle-based simulations, typically associated with very 
@@ -307,7 +307,7 @@ velocity dispersion. For further details on the Millennium II simulation and
 other works about the visualization of its data sets, the reader
 is referred to \citep{2009MNRAS.398.1150B}, \cite{fraedrich2009} and \cite{Szalay2008}.
 
-%The fundamentals and the traditional sequential operation of {\tt Splotch} 
+%The fundamentals and the traditional sequential operation of Splotch 
 %\cite{2008NJPh...10l5006D} are reviewed in section 2. Section 3 discusses 
 %our strategy for parallelizing Splotch based on different approaches that 
 %are suitable for a variety of underlying architecture configurations. 
@@ -334,7 +334,7 @@ is referred to \citep{2009MNRAS.398.1150B}, \cite{fraedrich2009} and \cite{Szala
 \caption{A visualization  of the MillenniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
 \end{figure}
 
-The rendering algorithm of {\tt Splotch} is generally designed to handle
+The rendering algorithm of Splotch is generally designed to handle
 point-like particle distributions. Such tracer particles can be smoothed
 to obtain a continuous field, which is rendered
 %, most commonly the $B_2$-Spline \cite{1985A&A...149..135M}
@@ -427,7 +427,7 @@ containing 10 billion particles.
 \section{Parallel Implementation}
 \label{parallel}
 
-The {\tt Splotch} algorithm operational scenario consists of a number of 
+The Splotch algorithm operational scenario consists of a number of 
 stages summarized as follows: a) read data from one or more files; b) process data (e.g.\ for normalization); c) render data and d) save the final image. All these steps can be parallelized using a
 Single Instruction Multiple Data (SIMD) approach. This involves distributing the data 
 in a balanced way between different computing elements (or processing units) and each computing element performing the same operations on its associated subset of data. Our parallelization has been achieved using different approaches suitable for a variety of underlying hardware architectures and software environments.
@@ -445,7 +445,7 @@ These different parallel approaches can be used separately,
 if the available computing system fits only one of the available configurations, or jointly. 
 For instance, on a single core PC with an Nvidia graphics card, only the CUDA based
 parallelization strategy can be activated and exploited. On a multicore RVN \cite{rvn} 
-node both MPI and CUDA can be used. This makes our parallel {\tt Splotch} code 
+node both MPI and CUDA can be used. This makes our parallel Splotch code 
 extremely flexible, portable, efficient and scalable. More details of our parallel implementations are presented in the rest of this section. Test results are discussed in section 4.
 
 \subsection{MPI Implementation}
@@ -558,7 +558,7 @@ dividing large computational tasks into smaller average ones.  For any particle
 influencing a number of pixels that is larger than a threshold value, the relevant 
 computational task is sub-divided into multiple ones, each associated with a subset 
 of the original number of pixels. The threshold value 
-can be determined in advance and given as input to {\tt Splotch}. To our experience a threshold close to 
+can be determined in advance and given as input to Splotch. To our experience a threshold close to 
 the average of the width and height of the display window works satisfactorily. 
 A shortcoming of this is the computational cost when doing the splitting; for an increased number of particles 
 more threads are required. Execution of the splitting algorithm 
@@ -588,7 +588,7 @@ Nevertheless our results demonstrate improved timings (see Table 3).
 %The instruction A is the render computation executed on the graphics board in parallel with execution of instruction B, the combination operation carried out by the CPU. The results of A and B are merged by instruction C. Our test results indicate that overall times required for performing combination operations are mostly contained within the times demanded by render computations.
 
 %\begin{table}
-%\caption{The data sets used in the benchmarks for our parallel implementations of {\tt Splotch}}
+%\caption{The data sets used in the benchmarks for our parallel implementations of Splotch}
 %\begin{center}
 %\begin{tabular}{|l|l|l|}
 %\hline
@@ -610,7 +610,7 @@ Nevertheless our results demonstrate improved timings (see Table 3).
 
 \section{Benchmarks}
 
-The parallelized {\tt Splotch} code has been tested on low-end and high-end hardware 
+The parallelized Splotch code has been tested on low-end and high-end hardware 
 architectures using several test data sets in order to investigate applicability of
 different parallelization approaches.
 
@@ -644,8 +644,8 @@ quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, th
 \includegraphics[width=0.49\textwidth]{bench870M_r.pdf}
 \end{center}
 \caption{Scaling of the CPU time (total wallclock time) with the number of MPI threads 
-used for vizualizing 100 million
-and 850 million particles for an 800x800 pixel display.
+used for vizualizing 100 million (left panel)
+and 850 million particles (right panel) for an 800x800 pixel display.
 Results for binary and MPI readers, in ST and SMT modes are shown}\label{mpi100M}
 \end{figure}
 
@@ -656,7 +656,7 @@ and it is also possible to use a single core as two virtual CPUs. This mode of P
 is called Simultaneous Multi-Threading (SMT), to distinguish it from 
 the standard Single Thread mode (ST).
 Deploying SMT notably improves the performance 
-of processing and displaying in {\tt Splotch} by reducing the execution time up to  
+of processing and displaying in Splotch by reducing the execution time up to  
 $30\%$.
 
 The 100M test (Figure \ref{mpi100M}, left panel), allows us 
@@ -673,7 +673,7 @@ efficiency between 4 and 8 processors due to the reasons previously explained.
 The larger test, 850M (Figure \ref{mpi100M}, right panel), 
 allows us to perform a more extensive scalability test, 
 exploring the range between 16 and 128 processors. This test confirms that parallel
-{\tt Splotch} can process about 1 particle per microsecond per process. For this data set the scalability
+Splotch can process about 1 particle per microsecond per process. For this data set the scalability
 is demonstrated up to 128 processors in the ST mode. The SMT configuration,
 while producing the best absolute performances, seems to have a more limited scalability. 
 This requires more investigation, but our anticipation is that the most likely reason for this is processor 
@@ -804,13 +804,13 @@ the physical bandwidth limit of the underlying GPFS based storage system.
 %of traditional exploration and discovery tools a new generation of software packages 
 %is gradually emerging giving the astronomical community robust instruments in the context 
 %of massively-large data sets founded on high performance architectures, interoperability
-%and collaborative workflows. Our previously developed {\tt Splotch} algorithm 
+%and collaborative workflows. Our previously developed Splotch algorithm 
 %can generate effective visualizations of large-scale astrophysical data sets coming from
 %particle-based computer simulations. N-Body simulations constitute prime examples 
 %of particle-based simulations typically producing large-scale data sets, e.g.\ the
 %Millennium II \citep{2009MNRAS.398.1150B}. 
 
-In this paper we have described a high performance parallel implementation of {\tt Splotch} 
+In this paper we have described a high performance parallel implementation of Splotch 
 able to execute on a variety of high performance computing architectures. This is due 
 to its hybrid nature exploiting multi-processor systems adopting an MPI based approach,
 multi-core shared memory processors exploiting OpenMP, and modern CUDA enabled graphics 
@@ -823,7 +823,7 @@ architectures and operating systems. We discussed test results based on
 custom-made benchmark data sets and also the Millennium II simulation, which is the
 largest cosmological simulation currently available containing 10 billion particles.
 
-Our future work will involve porting and running the parallelized {\tt Splotch} on hybrid 
+Our future work will involve porting and running the parallelized Splotch on hybrid 
 architecture computing systems containing several multiprocessor computers with CUDA 
 enabled graphics boards, thus exploiting MPI and CUDA simultaneously. 
 Several optimizations are also planned for our CUDA implementation, e.g.\ unrolling 
@@ -832,7 +832,7 @@ Mechanisms for optimal load balance between CPU and the graphics processor and b
 graphics processors when these are available should also be considered. We will 
 investigate possibilities for designing advanced scheduling mechanisms to minimize 
 the idle CPU times contained in the current implementation. Finally, we will explore the 
-opportuinities offered by the OpenCL library, in order to exploit a wider range of 
+opportunities offered by the OpenCL library, in order to exploit a wider range of 
 computing architectures. 
 
 
