@@ -24,7 +24,7 @@
 #define RAYPP_TRANSFORM_H
 
 #include "cxxsupport/datatypes.h"
-#include "kernel/vector.h"
+#include "cxxsupport/vec3.h"
 
 /**
   \class TRANSMAT kernel/transform.h kernel/transform.h
@@ -95,11 +95,11 @@ class TRANSFORM
     void Invert()
       { std::swap(matrix,inverse); }
     /*! */
-    void Make_Scaling_Transform (const VECTOR &vec);
+    void Make_Scaling_Transform (const vec3 &vec);
     /*! */
-    void Make_Translation_Transform (const VECTOR &vec);
+    void Make_Translation_Transform (const vec3 &vec);
     /*! */
-    void Make_Axis_Rotation_Transform (const VECTOR &axis, float64 angle);
+    void Make_Axis_Rotation_Transform (const vec3 &axis, float64 angle);
     /*! */
     void Make_Shearing_Transform
       (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy);
@@ -112,25 +112,25 @@ class TRANSFORM
     void Add_Transform (const TRANSFORM &trans);  
 
     /*! */
-    VECTOR TransPoint (const VECTOR &vec) const;
+    vec3 TransPoint (const vec3 &vec) const;
     /*! */
-    VECTOR InvTransPoint (const VECTOR &vec) const;
+    vec3 InvTransPoint (const vec3 &vec) const;
     /*! */
-    VECTOR TransDirection (const VECTOR &vec) const;
+    vec3 TransDirection (const vec3 &vec) const;
     /*! */
-    VECTOR InvTransDirection (const VECTOR &vec) const;
+    vec3 InvTransDirection (const vec3 &vec) const;
     /*! */
-    VECTOR TransNormal (const VECTOR &vec) const;
+    vec3 TransNormal (const vec3 &vec) const;
     /*! */
-    VECTOR InvTransNormal (const VECTOR &vec) const;
+    vec3 InvTransNormal (const vec3 &vec) const;
 
     /*! */
-    friend TRANSFORM Scaling_Transform (const VECTOR &vec);
+    friend TRANSFORM Scaling_Transform (const vec3 &vec);
     /*! */
-    friend TRANSFORM Translation_Transform (const VECTOR &vec);
+    friend TRANSFORM Translation_Transform (const vec3 &vec);
     /*! */
     friend TRANSFORM Axis_Rotation_Transform
-      (const VECTOR &axis, float64 angle);
+      (const vec3 &axis, float64 angle);
     /*! */
     friend TRANSFORM Shearing_Transform
       (float32 xy, float32 xz, float32 yx, float32 yz, float32 zx, float32 zy);

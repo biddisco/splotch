@@ -110,7 +110,7 @@ enum TimeRecords{
 	//some global info shared by all threads
 	paramfile	*g_params;
 	vector<particle_sim> particle_data; ///row data from file
-	VECTOR campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
+	vec3 campos, lookat, sky;
 	vector<COLOURMAP> amap,emap;
 	int ptypes = 0;
 //	arr2<COLOUR> *g_ppic;	//for testing only
@@ -169,7 +169,7 @@ int main (int argc, const char **argv)
   paramfile params (argv[1],false);
 #ifndef CUDA_THREADS
   vector<particle_sim> particle_data; ///row data from file
-  VECTOR campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
+  vec3 campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
   vector<COLOURMAP> amap,emap;
   int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
 #else //if CUDA_THREADS defined 

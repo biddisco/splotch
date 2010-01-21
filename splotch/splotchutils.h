@@ -1,13 +1,10 @@
 #ifndef SPLOTCHUTILS_H
 #define SPLOTCHUTILS_H
 
-#ifdef VS
-#include "cxxsupport/mpi_support.h"
-#endif
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
-#include "kernel/vector.h"
+#include "cxxsupport/vec3.h"
 #include "kernel/colourmap.h"
 
 #ifdef CUDA
@@ -227,7 +224,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
       bool a_eq_e,double grayabsorb);
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap);
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose);
-void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, VECTOR lookat, VECTOR sky);
+void particle_project(paramfile &params, vector<particle_sim> &p, vec3 campos, vec3 lookat, vec3 sky);
 void particle_colorize(paramfile &params, vector<particle_sim> &p, vector<COLOURMAP> &amap, vector<COLOURMAP> &emap);
 void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose);
 #ifdef INTERPOLATE

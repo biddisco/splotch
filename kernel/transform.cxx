@@ -136,7 +136,7 @@ ostream &operator<< (ostream &os, const TRANSMAT &mat)
   return os;
   }
 
-void TRANSFORM::Make_Scaling_Transform (const VECTOR &vec)
+void TRANSFORM::Make_Scaling_Transform (const vec3 &vec)
   {
   planck_assert((vec.x>0) && (vec.y>0) && (vec.z>0),
     "invalid scaling transformation");
@@ -152,7 +152,7 @@ void TRANSFORM::Make_Scaling_Transform (const VECTOR &vec)
   inverse.entry[2][2]=1.0/vec.z;
   }
 
-void TRANSFORM::Make_Translation_Transform (const VECTOR &vec)
+void TRANSFORM::Make_Translation_Transform (const vec3 &vec)
   {
   matrix.SetToIdentity();
   matrix.entry[0][3]=vec.x;
@@ -166,9 +166,9 @@ void TRANSFORM::Make_Translation_Transform (const VECTOR &vec)
   }
 
 void TRANSFORM::Make_Axis_Rotation_Transform
-  (const VECTOR &axis, float64 angle)
+  (const vec3 &axis, float64 angle)
   {
-  VECTOR V = axis.Norm();
+  vec3 V = axis.Norm();
   angle *= degr2rad;
   float64 cosx = cos (angle), sinx = sin (angle);
 
@@ -209,75 +209,75 @@ void TRANSFORM::Add_Transform (const TRANSFORM &trans)
   inverse = tmp;
   }
 
-VECTOR TRANSFORM::TransPoint (const VECTOR &vec) const
+vec3 TRANSFORM::TransPoint (const vec3 &vec) const
   {
   const float32 *p = matrix.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
      vec.x*p[8] + vec.y*p[9] + vec.z*p[10]+ p[11]);
    }
 
-VECTOR TRANSFORM::InvTransPoint (const VECTOR &vec) const
+vec3 TRANSFORM::InvTransPoint (const vec3 &vec) const
   {
   const float32 *p = inverse.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2] + p[3],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6] + p[7],
      vec.x*p[8] + vec.y*p[9] + vec.z*p[10]+ p[11]);
   }
 
-VECTOR TRANSFORM::TransDirection (const VECTOR &vec) const
+vec3 TRANSFORM::TransDirection (const vec3 &vec) const
   {
   const float32 *p = matrix.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6],
      vec.x*p[8] + vec.y*p[9] + vec.z*p[10]);
   }
 
-VECTOR TRANSFORM::InvTransDirection (const VECTOR &vec) const
+vec3 TRANSFORM::InvTransDirection (const vec3 &vec) const
   {
   const float32 *p = inverse.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[1] + vec.z*p[2],
      vec.x*p[4] + vec.y*p[5] + vec.z*p[6],
      vec.x*p[8] + vec.y*p[9] + vec.z*p[10]);
   }
 
-VECTOR TRANSFORM::TransNormal (const VECTOR &vec) const
+vec3 TRANSFORM::TransNormal (const vec3 &vec) const
   {
   const float32 *p = inverse.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[4] + vec.z*p[8],
      vec.x*p[1] + vec.y*p[5] + vec.z*p[9],
      vec.x*p[2] + vec.y*p[6] + vec.z*p[10]);
   }
 
-VECTOR TRANSFORM::InvTransNormal (const VECTOR &vec) const
+vec3 TRANSFORM::InvTransNormal (const vec3 &vec) const
   {
   const float32 *p = matrix.p;
-  return VECTOR
+  return vec3
     (vec.x*p[0] + vec.y*p[4] + vec.z*p[8],
      vec.x*p[1] + vec.y*p[5] + vec.z*p[9],
      vec.x*p[2] + vec.y*p[6] + vec.z*p[10]);
   }
 
-TRANSFORM Scaling_Transform (const VECTOR &vec)
+TRANSFORM Scaling_Transform (const vec3 &vec)
   {
   TRANSFORM trans;
   trans.Make_Scaling_Transform (vec);
   return trans;
   }
 
-TRANSFORM Translation_Transform (const VECTOR &vec)
+TRANSFORM Translation_Transform (const vec3 &vec)
   {
   TRANSFORM trans;
   trans.Make_Translation_Transform (vec);
   return trans;
   }
 
-TRANSFORM Axis_Rotation_Transform (const VECTOR &axis, float64 angle)
+TRANSFORM Axis_Rotation_Transform (const vec3 &axis, float64 angle)
   {
   TRANSFORM trans;
   trans.Make_Axis_Rotation_Transform (axis, angle);

@@ -846,7 +846,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 }
 
 
-void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos, VECTOR lookat, VECTOR sky)
+void particle_project(paramfile &params, vector<particle_sim> &p, vec3 campos, vec3 lookat, vec3 sky)
 {
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
@@ -855,9 +855,9 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
   int npart=p.size();
 
   sky.Normalize();
-  VECTOR zaxis = (lookat-campos).Norm();
-  VECTOR xaxis = Cross (sky,zaxis).Norm();
-  VECTOR yaxis = Cross (zaxis,xaxis);
+  vec3 zaxis = (lookat-campos).Norm();
+  vec3 xaxis = crossprod (sky,zaxis).Norm();
+  vec3 yaxis = crossprod (zaxis,xaxis);
   TRANSFORM trans;
   trans.Make_General_Transform
     (TRANSMAT(xaxis.x,xaxis.y,xaxis.z,
@@ -874,7 +874,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p, VECTOR campos,
 
   for (long m=0; m<npart; ++m) ///now do the calculation
     {
-      VECTOR v(p[m].x,p[m].y,p[m].z);
+      vec3 v(p[m].x,p[m].y,p[m].z);
       v=trans.TransPoint(v);
       p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
     }
@@ -921,7 +921,7 @@ paramfile &params, double c[3], double l[3], double s[3])
 {
 //	cout<<endl<<"\nRetrieve parameters for device transformation\n"<<endl;
 
-	VECTOR	campos(c[0], c[1], c[2]), 
+	vec3	campos(c[0], c[1], c[2]),
 			lookat(l[0], l[1], l[2]), 
 			sky(s[0], s[1], s[2]);
 	
@@ -931,9 +931,9 @@ paramfile &params, double c[3], double l[3], double s[3])
 	float64 xfac=0.0, dist=0.0;
 
 	sky.Normalize();
-	VECTOR zaxis = (lookat-campos).Norm();
-	VECTOR xaxis = Cross (sky,zaxis).Norm();
-	VECTOR yaxis = Cross (zaxis,xaxis);
+	vec3 zaxis = (lookat-campos).Norm();
+	vec3 xaxis = crossprod (sky,zaxis).Norm();
+	vec3 yaxis = crossprod (zaxis,xaxis);
 	TRANSFORM trans;
 	trans.Make_General_Transform
 	(TRANSMAT(xaxis.x,xaxis.y,xaxis.z,
