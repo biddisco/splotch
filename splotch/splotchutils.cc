@@ -31,10 +31,10 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
         int x0, x1, y0, y1;
         wd.chunk_info(chunk,x0,x1,y0,y1);
         arr2<COLOUR> lpic(x1-x0,y1-y0);
+        arr<double> pre1(yres);
         lpic.fill(COLOUR(0,0,0));
         int x0s=x0, y0s=y0;
         x1-=x0; x0=0; y1-=y0; y0=0;
-
 
         for (unsigned int m=0; m<p.size(); ++m)
 	if(p[m].active==1)
@@ -70,21 +70,20 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           float64 radsq = rfacr*rfacr;
           float64 prefac1 = -0.5/(r*r*sigma0*sigma0);
           float64 prefac2 = -0.5*bfak/p[m].ro;
+          for (int y=miny; y<maxy; ++y)
+            pre1[y]=prefac2*xexp(prefac1*(y-posy)*(y-posy));
+
           for (int x=minx; x<maxx; ++x)
             {
             float64 xsq=(x-posx)*(x-posx);
-#if 0
-double dy=sqrt(max(radsq-xsq,0.));
-int miny2=max(miny,int(posy-dy)), maxy2=min(maxy,1+int(posy+dy));
-for (int y=miny2; y<maxy2; ++y)
-#else
+            double pre2 = xexp(prefac1*xsq);
+
             for (int y=miny; y<maxy; ++y)
-#endif
               {
               float64 dsq = (y-posy)*(y-posy) + xsq;
               if (dsq<radsq)
                 {
-                float64 fac = prefac2*xexp(prefac1*dsq);
+                float64 fac = pre1[y]*pre2;
                 if (a_eq_e)
                   {
                   lpic[x][y].r += (fac*a.r);
