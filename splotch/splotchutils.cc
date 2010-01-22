@@ -48,14 +48,14 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           int minx=int(posx-rfacr+1);
           if (minx>=x1) continue;
           minx=max(minx,x0);
-          int maxx=int(posx+rfacr+1);
+          int maxx=int(posx+rfacr);
           if (maxx<=x0) continue;
           maxx=min(maxx,x1);
           if (minx>=maxx) continue;
           int miny=int(posy-rfacr+1);
           if (miny>=y1) continue;
           miny=max(miny,y0);
-          int maxy=int(posy+rfacr+1);
+          int maxy=int(posy+rfacr);
           if (maxy<=y0) continue;
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
@@ -92,9 +92,9 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
                   }
                 else
                   {
-                  lpic[x][y].r = q.r+(lpic[x][y].r-q.r)*xexp(fac*a.r);
-                  lpic[x][y].g = q.g+(lpic[x][y].g-q.g)*xexp(fac*a.g);
-                  lpic[x][y].b = q.b+(lpic[x][y].b-q.b)*xexp(fac*a.b);
+                  lpic[x][y].r += xexp.expm1(fac*a.r)*(lpic[x][y].r-q.r);
+                  lpic[x][y].g += xexp.expm1(fac*a.g)*(lpic[x][y].g-q.g);
+                  lpic[x][y].b += xexp.expm1(fac*a.b)*(lpic[x][y].b-q.b);
                   }//if a_eq_e
                 }// if dsq<radsq
               }//y

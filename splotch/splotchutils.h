@@ -168,7 +168,7 @@ template<typename T> void clamp (T minv, T maxv, T &val)
 class exptable
   {
   private:
-    float64 expfac;
+    float64 expfac, taylorlimit;
     arr<float64> tab1, tab2;
     enum {
       nbits=10,
@@ -183,11 +183,13 @@ class exptable
     exptable (float64 maxexp)
       : expfac(dim2/maxexp), tab1(dim1), tab2(dim1)
       {
+      using namespace std;
       for (int m=0; m<dim1; ++m)
         {
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
         }
+      taylorlimit = sqrt(2.*abs(maxexp)/dim2);
       }
 
     float64 operator() (float64 arg) const
@@ -196,6 +198,11 @@ class exptable
       if (iarg&mask3)
         return (iarg<0) ? 1. : 0.;
       return tab1[iarg>>nbits]*tab2[iarg&mask1];
+      }
+    float64 expm1(float64 arg) const
+      {
+      if (abs(arg)<taylorlimit) return arg;
+      return operator()(arg)-1.;
       }
   };
 
