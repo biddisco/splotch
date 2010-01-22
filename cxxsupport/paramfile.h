@@ -75,6 +75,12 @@ class paramfile
                       << loc->first << std::endl;
       }
 
+    void reopen (const std::string &filename)
+      {
+      parse_file (filename, params);
+      read_params.clear();
+      }
+
     void setVerbosity (bool verbose_)
       { verbose = verbose_; }
 
