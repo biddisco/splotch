@@ -7,7 +7,6 @@ using namespace std;
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, 
       bool a_eq_e,double grayabsorb)
       {
-      const float64 rfac=1.5;
       const float64 powtmp = pow(pi,1./3.);
       const float64 sigma0=powtmp/sqrt(2*pi);
       const float64 bfak=1./(2*sqrt(pi)*powtmp);
@@ -31,57 +30,58 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
         int x0, x1, y0, y1;
         wd.chunk_info(chunk,x0,x1,y0,y1);
         arr2<COLOUR> lpic(x1-x0,y1-y0);
-        arr<double> pre1(yres);
+        arr<float64> pre1(yres);
         lpic.fill(COLOUR(0,0,0));
         int x0s=x0, y0s=y0;
         x1-=x0; x0=0; y1-=y0; y0=0;
 
         for (unsigned int m=0; m<p.size(); ++m)
-	if(p[m].active==1)
+        if(p[m].active==1)
           {
           float64 r=p[m].r;
           float64 posx=p[m].x, posy=p[m].y;
           posx-=x0s; posy-=y0s;
-          float64 rfacr=rfac*r;
-
-		  //in one chunk this culling is not necessary as it was done in coloring
-          int minx=int(posx-rfacr+1);
-          if (minx>=x1) continue;
-          minx=max(minx,x0);
-          int maxx=int(posx+rfacr+1);
-          if (maxx<=x0) continue;
-          maxx=min(maxx,x1);
-          if (minx>=maxx) continue;
-          int miny=int(posy-rfacr+1);
-          if (miny>=y1) continue;
-          miny=max(miny,y0);
-          int maxy=int(posy+rfacr+1);
-          if (maxy<=y0) continue;
-          maxy=min(maxy,y1);
-          if (miny>=maxy) continue;
-
-	  COLOUR8 a=p[m].e, e, q;
+          COLOUR8 a=p[m].e, e, q;
           if (!a_eq_e)
             {
             e=p[m].e;
             q=COLOUR8(e.r/(a.r+grayabsorb),e.g/(a.g+grayabsorb),e.b/(a.b+grayabsorb));
             }
-
-          float64 radsq = rfacr*rfacr;
+const float64 min_change=1e-4;
           float64 prefac1 = -0.5/(r*r*sigma0*sigma0);
           float64 prefac2 = -0.5*bfak/p[m].ro;
+          float64 amax=max(a.r,max(a.g,a.b));
+          float64 rmax=log(min_change/(amax*abs(prefac2)))/prefac1;
+          rmax = (rmax<=0.) ? 0 : sqrt(rmax);
+          float64 rmaxsq=rmax*rmax;
+
+          int minx=int(posx-rmax+1);
+          if (minx>=x1) continue;
+          minx=max(minx,x0);
+          int maxx=int(posx+rmax+1);
+          if (maxx<=x0) continue;
+          maxx=min(maxx,x1);
+          if (minx>=maxx) continue;
+          int miny=int(posy-rmax+1);
+          if (miny>=y1) continue;
+          miny=max(miny,y0);
+          int maxy=int(posy+rmax+1);
+          if (maxy<=y0) continue;
+          maxy=min(maxy,y1);
+          if (miny>=maxy) continue;
+
           for (int y=miny; y<maxy; ++y)
             pre1[y]=prefac2*xexp(prefac1*(y-posy)*(y-posy));
 
           for (int x=minx; x<maxx; ++x)
             {
             float64 xsq=(x-posx)*(x-posx);
-            double pre2 = xexp(prefac1*xsq);
+            float64 pre2 = xexp(prefac1*xsq);
 
             for (int y=miny; y<maxy; ++y)
               {
               float64 dsq = (y-posy)*(y-posy) + xsq;
-              if (dsq<radsq)
+              if (dsq<rmaxsq)
                 {
                 float64 fac = pre1[y]*pre2;
                 if (a_eq_e)
