@@ -48,14 +48,14 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           int minx=int(posx-rfacr+1);
           if (minx>=x1) continue;
           minx=max(minx,x0);
-          int maxx=int(posx+rfacr);
+          int maxx=int(posx+rfacr+1);
           if (maxx<=x0) continue;
           maxx=min(maxx,x1);
           if (minx>=maxx) continue;
           int miny=int(posy-rfacr+1);
           if (miny>=y1) continue;
           miny=max(miny,y0);
-          int maxy=int(posy+rfacr);
+          int maxy=int(posy+rfacr+1);
           if (maxy<=y0) continue;
           maxy=min(maxy,y1);
           if (miny>=maxy) continue;
