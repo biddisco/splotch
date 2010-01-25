@@ -85,7 +85,8 @@ class COLOUR8
 struct particle_sim
   {
   float32 x,y,z,r,ro,I,C1,C2,C3;
-  int type,active;
+  unsigned int type:4;
+  bool active:1;
   COLOUR e;
 
 #ifdef INTERPOLATE
@@ -189,7 +190,7 @@ class exptable
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
         }
-      taylorlimit = sqrt(2.*abs(maxexp)/dim2);
+      taylorlimit = 0; //sqrt(2.*abs(maxexp)/dim2);
       }
 
     float64 operator() (float64 arg) const
