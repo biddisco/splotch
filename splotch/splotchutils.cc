@@ -4,122 +4,121 @@
 
 using namespace std;
 
-void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, 
-      bool a_eq_e,double grayabsorb)
-      {
-      const float64 rfac=1.5;
-      const float64 powtmp = pow(pi,1./3.);
-      const float64 sigma0=powtmp/sqrt(2*pi);
-      const float64 bfak=1./(2*sqrt(pi)*powtmp);
-	  exptable xexp(-20.);
+void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
+  double grayabsorb)
+  {
+  const float64 rfac=1.5;
+  const float64 powtmp = pow(pi,1./3.);
+  const float64 sigma0=powtmp/sqrt(2*pi);
+  const float64 bfak=1./(2*sqrt(pi)*powtmp);
+  exptable xexp(-20.);
 
-      int xres = pic.size1(), yres=pic.size2();
-      pic.fill(COLOUR(0,0,0));
+  int xres = pic.size1(), yres=pic.size2();
+  pic.fill(COLOUR(0,0,0));
 
 #ifdef VS
-      work_distributor wd (xres,yres,xres,yres);
+  work_distributor wd (xres,yres,xres,yres);
 #else
-      work_distributor wd (xres,yres,200,200);
+  work_distributor wd (xres,yres,200,200);
 #endif //ifdef VS
 
-    #pragma omp parallel
+#pragma omp parallel
 {
-      int chunk;
-    #pragma omp for schedule(dynamic,1)
-      for (chunk=0; chunk<wd.nchunks(); ++chunk)
-        {
-        int x0, x1, y0, y1;
-        wd.chunk_info(chunk,x0,x1,y0,y1);
-        arr2<COLOUR8> lpic(x1-x0,y1-y0);
-        arr<double> pre1(yres);
-        lpic.fill(COLOUR8(0,0,0));
-        int x0s=x0, y0s=y0;
-        x1-=x0; x0=0; y1-=y0; y0=0;
+  int chunk;
+#pragma omp for schedule(dynamic,1)
+  for (chunk=0; chunk<wd.nchunks(); ++chunk)
+    {
+    int x0, x1, y0, y1;
+    wd.chunk_info(chunk,x0,x1,y0,y1);
+    arr2<COLOUR8> lpic(x1-x0,y1-y0);
+    arr<double> pre1(yres);
+    lpic.fill(COLOUR8(0.,0.,0.));
+    int x0s=x0, y0s=y0;
+    x1-=x0; x0=0; y1-=y0; y0=0;
 
-        for (unsigned int m=0; m<p.size(); ++m)
-	if(p[m].active==1)
+    for (unsigned int m=0; m<p.size(); ++m)
+      if (p[m].active)
+        {
+        float64 r=p[m].r;
+        float64 posx=p[m].x, posy=p[m].y;
+        posx-=x0s; posy-=y0s;
+        float64 rfacr=rfac*r;
+
+        int minx=int(posx-rfacr+1);
+        if (minx>=x1) continue;
+        minx=max(minx,x0);
+        int maxx=int(posx+rfacr+1);
+        if (maxx<=x0) continue;
+        maxx=min(maxx,x1);
+        if (minx>=maxx) continue;
+        int miny=int(posy-rfacr+1);
+        if (miny>=y1) continue;
+        miny=max(miny,y0);
+        int maxy=int(posy+rfacr+1);
+        if (maxy<=y0) continue;
+        maxy=min(maxy,y1);
+        if (miny>=maxy) continue;
+
+        COLOUR8 a=p[m].e, e, q;
+        if (!a_eq_e)
           {
-          float64 r=p[m].r;
-          float64 posx=p[m].x, posy=p[m].y;
-          posx-=x0s; posy-=y0s;
-          float64 rfacr=rfac*r;
+          e=p[m].e;
+          q=COLOUR8(e.r/(a.r+grayabsorb),e.g/(a.g+grayabsorb),e.b/(a.b+grayabsorb));
+          }
 
-		  //in one chunk this culling is not necessary as it was done in coloring
-          int minx=int(posx-rfacr+1);
-          if (minx>=x1) continue;
-          minx=max(minx,x0);
-          int maxx=int(posx+rfacr+1);
-          if (maxx<=x0) continue;
-          maxx=min(maxx,x1);
-          if (minx>=maxx) continue;
-          int miny=int(posy-rfacr+1);
-          if (miny>=y1) continue;
-          miny=max(miny,y0);
-          int maxy=int(posy+rfacr+1);
-          if (maxy<=y0) continue;
-          maxy=min(maxy,y1);
-          if (miny>=maxy) continue;
+        float64 radsq = rfacr*rfacr;
+        float64 prefac1 = -0.5/(r*r*sigma0*sigma0);
+        float64 prefac2 = -0.5*bfak/p[m].ro;
+        for (int y=miny; y<maxy; ++y)
+          pre1[y]=prefac2*xexp(prefac1*(y-posy)*(y-posy));
 
-	  COLOUR8 a=p[m].e, e, q;
-          if (!a_eq_e)
-            {
-            e=p[m].e;
-            q=COLOUR8(e.r/(a.r+grayabsorb),e.g/(a.g+grayabsorb),e.b/(a.b+grayabsorb));
-            }
+        for (int x=minx; x<maxx; ++x)
+          {
+          float64 xsq=(x-posx)*(x-posx);
+          double pre2 = xexp(prefac1*xsq);
 
-          float64 radsq = rfacr*rfacr;
-          float64 prefac1 = -0.5/(r*r*sigma0*sigma0);
-          float64 prefac2 = -0.5*bfak/p[m].ro;
           for (int y=miny; y<maxy; ++y)
-            pre1[y]=prefac2*xexp(prefac1*(y-posy)*(y-posy));
-
-          for (int x=minx; x<maxx; ++x)
             {
-            float64 xsq=(x-posx)*(x-posx);
-            double pre2 = xexp(prefac1*xsq);
-
-            for (int y=miny; y<maxy; ++y)
+            float64 dsq = (y-posy)*(y-posy) + xsq;
+            if (dsq<radsq)
               {
-              float64 dsq = (y-posy)*(y-posy) + xsq;
-              if (dsq<radsq)
+              float64 fac = pre1[y]*pre2;
+              if (a_eq_e)
                 {
-                float64 fac = pre1[y]*pre2;
-                if (a_eq_e)
-                  {
-                  lpic[x][y].r += (fac*a.r);
-                  lpic[x][y].g += (fac*a.g);
-                  lpic[x][y].b += (fac*a.b);
-                  }
-                else
-                  {
-                  lpic[x][y].r += xexp.expm1(fac*a.r)*(lpic[x][y].r-q.r);
-                  lpic[x][y].g += xexp.expm1(fac*a.g)*(lpic[x][y].g-q.g);
-                  lpic[x][y].b += xexp.expm1(fac*a.b)*(lpic[x][y].b-q.b);
-                  }//if a_eq_e
-                }// if dsq<radsq
-              }//y
-            }//x
-          }//for particle[m]
-        for(int ix=0;ix<x1;ix++)
-          for(int iy=0;iy<y1;iy++)
-            pic[ix+x0s][iy+y0s]=lpic[ix][iy];
-        }//for this chunk
-}//#pragma omp parallel
+                lpic[x][y].r += (fac*a.r);
+                lpic[x][y].g += (fac*a.g);
+                lpic[x][y].b += (fac*a.b);
+                }
+              else
+                {
+                lpic[x][y].r += xexp.expm1(fac*a.r)*(lpic[x][y].r-q.r);
+                lpic[x][y].g += xexp.expm1(fac*a.g)*(lpic[x][y].g-q.g);
+                lpic[x][y].b += xexp.expm1(fac*a.b)*(lpic[x][y].b-q.b);
+                } // if a_eq_e
+              } // if dsq<radsq
+            } // y
+          } // x
+        } // for particle[m]
+      for(int ix=0;ix<x1;ix++)
+        for(int iy=0;iy<y1;iy++)
+          pic[ix+x0s][iy+y0s]=lpic[ix][iy];
+      } // for this chunk
+} // #pragma omp parallel
 
-      mpiMgr.allreduceRaw
-        (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
-      if (mpiMgr.master())
-        {
-        if (a_eq_e)
-          for(int ix=0;ix<xres;ix++)
-            for(int iy=0;iy<yres;iy++)
-              {
-              pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-              pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-              pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-              }
-        }
-}
+  mpiMgr.allreduceRaw
+    (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
+  if (mpiMgr.master())
+    {
+    if (a_eq_e)
+      for(int ix=0;ix<xres;ix++)
+        for(int iy=0;iy<yres;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
+    }
+  }
 
 /////////////////////////////CUDA CODE///////////////////////////////////
 #ifdef CUDA
