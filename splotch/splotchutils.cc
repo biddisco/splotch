@@ -30,9 +30,9 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
         {
         int x0, x1, y0, y1;
         wd.chunk_info(chunk,x0,x1,y0,y1);
-        arr2<COLOUR> lpic(x1-x0,y1-y0);
+        arr2<COLOUR8> lpic(x1-x0,y1-y0);
         arr<double> pre1(yres);
-        lpic.fill(COLOUR(0,0,0));
+        lpic.fill(COLOUR8(0,0,0));
         int x0s=x0, y0s=y0;
         x1-=x0; x0=0; y1-=y0; y0=0;
 
@@ -114,9 +114,9 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           for(int ix=0;ix<xres;ix++)
             for(int iy=0;iy<yres;iy++)
               {
-              pic[ix][iy].r=1-xexp(pic[ix][iy].r);
-              pic[ix][iy].g=1-xexp(pic[ix][iy].g);
-              pic[ix][iy].b=1-xexp(pic[ix][iy].b);
+              pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+              pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+              pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
               }
         }
 }
