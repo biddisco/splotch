@@ -35,9 +35,10 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
     lpic.fill(COLOUR8(0.,0.,0.));
     int x0s=x0, y0s=y0;
     x1-=x0; x0=0; y1-=y0; y0=0;
+    
 
     for (unsigned int m=0; m<p.size(); ++m)
-      if (p[m].active)
+      //if (p[m].active)
         {
         float64 r=p[m].r;
         float64 posx=p[m].x, posy=p[m].y;
@@ -88,6 +89,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
                 lpic[x][y].r += (fac*a.r);
                 lpic[x][y].g += (fac*a.g);
                 lpic[x][y].b += (fac*a.b);
+                //cout << lpic[x][y].r << " " << lpic[x][y].g << " " << lpic[x][y].b << endl;
                 }
               else
                 {

@@ -31,7 +31,7 @@ OPT	+=  -DUSE_MPI
 
 #--------------------------------------- Select target Computer
 
-#SYSTYPE="SP6"
+SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 
@@ -88,6 +88,7 @@ OPTIONS = $(OPTIMIZE) $(OPT)
 EXEC   = Splotch4.0$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
+        reader/mesh_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o \

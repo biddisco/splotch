@@ -61,6 +61,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   int64 myend;
   mpiMgr.calcShare (0, npart_total, mybegin, myend);
   npart = myend-mybegin;
+
   }
 
 void bin_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)

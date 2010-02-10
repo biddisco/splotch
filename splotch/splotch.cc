@@ -378,6 +378,10 @@ int main (int argc, const char **argv)
 	      planck_fail("mpi reader not available in non MPI compiled version !");
 #endif
               break;
+	    case 6: 
+	      mesh_reader(params,particle_data, maxr, minr);
+	      break;
+
 	    default:
 	      planck_fail("No valid file type given ...");
 	      break;
