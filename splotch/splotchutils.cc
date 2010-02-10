@@ -38,7 +38,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
     
 
     for (unsigned int m=0; m<p.size(); ++m)
-      //if (p[m].active)
+      if (p[m].active)
         {
         float64 r=p[m].r;
         float64 posx=p[m].x, posy=p[m].y;
