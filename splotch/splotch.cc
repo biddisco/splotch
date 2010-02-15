@@ -1049,42 +1049,22 @@ PROBLEM HERE!
 	int	size =0;
 	//first we need to count all the entries to get colormap size
 	for(int i=0; i<amap.size(); i++)
-	{
-	    vector<HANDLE_RAYPP<CMAP_ENTRY> > e;
-		e = amap[i].Entry;
-		for (int j=0; j<e.size(); j++)
-			size++;
-	}
+	  size += amap[i].size()-1;
 	//then fill up the colormap amapD
 	amapD =new cu_color_map_entry[size];
 	int	index =0;
 	for(int i=0; i<amap.size(); i++)
 	{
-	    vector<HANDLE_RAYPP<CMAP_ENTRY> > e;
-		e = amap[i].Entry;
+	        COLOURMAP &e(amap[i]);
 		int j;
         cout << "E.SIZE ..... " << e.size() << "\n";
-		for (j=0; j<e.size(); j++)
+		for (j=0; j<e.size()-1; j++)
 		{
-			HANDLE_RAYPP<CMAP_ENTRY> h;
-                        cout << "--->><< e[j]      " << e[j]->minval << "\n";
-                        cout << "--->><< e[j]      " << e[j]->maxval << "\n";
-			h =e[j];
-			COLOUR	clr1, clr2;
-			amapD[index].min =h->minval; 
-			amapD[index].max =h->maxval;
-			//clr1 =h->Get_Colour(h->minval);
-			//clr2 =h->Get_Colour(h->maxval);
-                        cout <<  clr1.r <<"<<<<<<----\n";
-                        cout << h->Get_Colour(0.5).r  <<"<<<<<<----\n";
-                        cout << h->Get_Colour(1).g << " " << clr1.g <<"<<<<<<----\n";
-                        cout << h->Get_Colour(1).b << " " << clr1.b <<"<<<<<<----\n";
-                        clr1.r =h->Get_Colour(h->minval).r;
-                        clr1.g =h->Get_Colour(h->minval).g;
-                        clr1.b =h->Get_Colour(h->minval).b;
-                        clr2.r =h->Get_Colour(h->maxval).r;
-                        clr2.g =h->Get_Colour(h->maxval).g;
-                        clr2.b =h->Get_Colour(h->maxval).b;
+                        cout << "--->><< e[j]      " << e.getX(j) << "\n";
+                        cout << "--->><< e[j]      " << e.getX(j+1) << "\n";
+			amapD[index].min =e.getX(j);
+			amapD[index].max =e.getX(j+1);
+                        COLOUR	clr1=e.getY(j), clr2=e.getY(j+1);
 			amapD[index].color1.r =clr1.r;
 			amapD[index].color1.g =clr1.g;
 			amapD[index].color1.b =clr1.b;
