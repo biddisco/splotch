@@ -382,6 +382,10 @@ int main (int argc, const char **argv)
 	      mesh_reader(params,particle_data, maxr, minr);
 	      break;
 
+	    case 7:
+	      hdf5_reader(params,particle_data, maxr, minr);
+	      break;
+
 	    default:
 	      planck_fail("No valid file type given ...");
 	      break;

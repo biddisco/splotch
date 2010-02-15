@@ -776,11 +776,11 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
   for (int m=0; m<npart; ++m) //do log calculations if demanded
     {
       if (log_int[p[m].type])
-	p[m].I = log(p[m].I);
+	p[m].I = log10(p[m].I);
       get_minmax(minint[p[m].type], maxint[p[m].type], p[m].I);
 
       if (log_col[p[m].type])
-	p[m].C1 = log(p[m].C1);
+	p[m].C1 = log10(p[m].C1);
       if(asinh_col[p[m].type])
 	p[m].C1 = my_asinh(p[m].C1);
       get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C1);
@@ -788,8 +788,8 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 	{
 	  if (log_col[p[m].type])
 	    {
-	      p[m].C2 = log(p[m].C2);
-	      p[m].C3 = log(p[m].C3);
+	      p[m].C2 = log10(p[m].C2);
+	      p[m].C3 = log10(p[m].C3);
 	    }   
 	  if (asinh_col[p[m].type])
 	    {
