@@ -1,0 +1,214 @@
+#include <iostream>
+#include <vector>
+#include <string>
+
+#include "cxxsupport/arr.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/paramfile.h"
+#include "cxxsupport/mpi_support.h"
+#include "kernel/bstream.h"
+#include "splotch/splotchutils.h"
+
+using namespace std;
+#ifdef HDF5
+#include <hdf5.h>
+
+namespace {
+
+void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
+  int &nfields, int64 &npart, float * rrr, string * field, int * rank)
+  {
+  /* qty_idx characterize the mesh according 
+     to the following standard:
+     qty_idx[0] = x size (number of cells)
+     qty_idx[1] = y size (number of cells)
+     qty_idx[2] = z size (number of cells)
+     qty_idx[3] = dummy -> substituted by rrr which must be float
+     qty_idx[4] = intensity
+  */
+
+  hid_t       file_id, dataset_id;  /* identifiers */
+  herr_t      status;
+  float raux;
+  string datafile = params.find<string>("infile");
+
+  qty_idx.alloc(5);
+  raux = params.find<float>("r",1.0);
+  qty_idx[4] = params.find<int>("I",-1)-1;
+
+  
+  hid_t dataset_space, nrank;
+
+  file_id = H5Fopen(datafile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
+  *inp = file_id;
+  dataset_id = H5Dopen(file_id,field[0].c_str());
+  dataset_space = H5Dget_space(dataset_id);
+  nrank = H5Sget_simple_extent_ndims(dataset_space);
+  cout << "SPACE DIM = " << nrank << endl;
+  *rank = nrank;
+  hsize_t * s_dims    = new hsize_t [nrank];
+  hsize_t * s_maxdims = new hsize_t [nrank];
+  H5Sget_simple_extent_dims(dataset_space, s_dims, s_maxdims);
+  cout << "DIMENSIONS = " << s_dims[0] << " " << s_dims[1] << " " << s_dims[2]  << endl;
+  H5Dclose(dataset_id);
+
+  qty_idx[0] = (int)s_dims[0];
+  qty_idx[1] = (int)s_dims[1];
+  qty_idx[2] = (int)s_dims[2];
+  int64 npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
+// change for parallel
+  npart = npart_total;
+  *rrr = raux;
+
+  if (mpiMgr.master())
+    {
+    cout << "Input data file name: " << datafile << endl;
+    cout << "Number of mesh cells " << npart_total << endl;
+    }
+
+  }
+
+void hdf5_reader_finish (vector<particle_sim> &points, float &maxr, float &minr, float thresh)
+  {
+  minr=1e30;
+  float minx=1e30;
+  float miny=1e30;
+  float minz=1e30;
+  maxr=-1e30;
+  float maxx=-1e30;
+  float maxy=-1e30;
+  float maxz=-1e30;
+  for (tsize i=0; i<points.size(); ++i)
+    {
+    points[i].ro=points[i].r;
+    points[i].C1=points[i].C1+thresh;
+    //points[i].active = 1;
+    points[i].type=0;
+    minr = min(minr,points[i].r);
+    maxr = max(maxr,points[i].r);
+    minx = min(minx,points[i].x);
+    maxx = max(maxx,points[i].x);
+    miny = min(miny,points[i].y);
+    maxy = max(maxy,points[i].y);
+    minz = min(minz,points[i].z);
+    maxz = max(maxz,points[i].z);
+    }
+  mpiMgr.allreduce(maxr,MPI_Manager::Max);
+  mpiMgr.allreduce(minr,MPI_Manager::Min);
+  mpiMgr.allreduce(maxx,MPI_Manager::Max);
+  mpiMgr.allreduce(minx,MPI_Manager::Min);
+  mpiMgr.allreduce(maxy,MPI_Manager::Max);
+  mpiMgr.allreduce(miny,MPI_Manager::Min);
+  mpiMgr.allreduce(maxz,MPI_Manager::Max);
+  mpiMgr.allreduce(minz,MPI_Manager::Min);
+#ifdef DEBUG
+  cout << "MIN, MAX --> " << minr << " " << maxr << endl;
+  cout << "MIN, MAX --> " << minx << " " << maxx << endl;
+  cout << "MIN, MAX --> " << miny << " " << maxy << endl;
+  cout << "MIN, MAX --> " << minz << " " << maxz << endl;
+#endif
+  }
+
+} // unnamed namespace
+
+void hdf5_reader (paramfile &params, vector<particle_sim> &points,
+                       float &maxr, float &minr)
+  {
+  hid_t file_id, dataset_id;
+  bifstream inp;
+  float rrr;
+  int nfields;
+  string * field;
+  int rank;
+  int64 mybegin, npart;
+  arr<int> qty_idx;
+  if (mpiMgr.master())
+    cout << "HDF5 DATA" << endl;
+
+  field = new string[3];
+  field[0] = params.find<string>("C1");
+  field[1] = params.find<string>("C2", "-1");
+  field[2] = params.find<string>("C3", "-1");
+  float thresh = params.find<float>("thresh", 0.0);
+
+  hdf5_reader_prep (params, &file_id, qty_idx, nfields, npart, &rrr, field, &rank);
+
+  points.resize(npart);
+
+  for (tsize qty=0; qty<3; ++qty)
+    {
+    if(field[qty].compare("-1") == 0) continue;
+    float * buffer = new float [npart];
+    cout << "N....... " << qty << endl;
+    cout << "FIELD NAME" << field[qty].c_str() << endl; 
+
+//NOW HDF READ STUFF
+
+  hid_t dataset_space;
+  hsize_t * s_dims    = new hsize_t [rank];
+  hsize_t * s_maxdims = new hsize_t [rank];
+
+  dataset_id = H5Dopen(file_id,field[qty].c_str());
+  dataset_space = H5Dget_space(dataset_id);
+  H5Sget_simple_extent_dims(dataset_space, s_dims, s_maxdims);
+
+  hid_t memoryspace = H5Scopy(dataset_space);
+  H5Dread(dataset_id, H5T_NATIVE_FLOAT, memoryspace, dataset_space, H5P_DEFAULT, buffer);
+
+  H5Dclose(dataset_id);
+  H5Sclose(memoryspace);
+  H5Sclose(dataset_space);
+    
+#define CASEMACRO__(num,str) \
+      case num: \
+        for (int64 i=0; i<npart; ++i) \
+          points[i].str = buffer[i]; \
+        break;
+
+    switch(qty)
+      {
+      CASEMACRO__(0,C1)
+      CASEMACRO__(1,C2)
+      CASEMACRO__(2,C3)
+      }
+
+    delete [] buffer;
+    }
+
+#undef CASEMACRO__
+//set intensity if not read
+  if (qty_idx[4]<0)
+    for (int64 i=0; i<npart; ++i) points[i].I=0.5;
+
+//set smoothing length: assumed constant for all volume
+    for (int64 i=0; i<npart; ++i) points[i].r=rrr;
+
+//set coordinates: HDF5 files are ALWAYS written in C ordering
+    int dimx = qty_idx[0];
+    int dimy = qty_idx[1];
+    int dimz = qty_idx[2];
+
+    for(int64 i=0; i<npart; ++i)
+      {
+        //int64 iaux = i + mybegin;
+        int64 iaux = i;
+        int i1 = iaux/(dimx*dimy);  
+        int res = iaux%(dimx*dimy);
+        int i2 = res/dimx;
+        int i3 = res%dimx;
+        points[i].x = (float)i3;
+        points[i].y = (float)i2;
+        points[i].z = (float)i1;
+        
+      }
+
+  hdf5_reader_finish (points, maxr, minr, thresh);
+  }
+#else
+
+void hdf5_reader (paramfile &params, vector<particle_sim> &points,
+                       float &maxr, float &minr)
+  {
+    cout << "HDF5 I/O not supported... Exiting... " << endl;
+  }
+#endif

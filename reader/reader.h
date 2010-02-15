@@ -9,4 +9,5 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points, float &max
 void bin_reader_block (paramfile &params, vector<particle_sim> &points, float &maxr, float &minr);
 long bin_reader_block_mpi (paramfile &params, vector<particle_sim> &points, float *maxr, float *minr, int mype, int npes);
 void mesh_reader(paramfile &params, vector<particle_sim> &points, float &maxr, float &minr);
+void hdf5_reader(paramfile &params, vector<particle_sim> &points, float &maxr, float &minr);
 #endif
