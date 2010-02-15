@@ -33,6 +33,16 @@ template<typename T> class anythingMap
     std::vector<double> x;
     std::vector<T> y;
 
+    void sortMap()
+      {
+      using namespace std;
+      vector<size_t> idx;
+      buildIndex(x.begin(),x.end(),idx);
+      sortByIndex<double>(x.begin(),x.end(),idx);
+      sortByIndex<T>(y.begin(),y.end(),idx);
+      sorted = true;
+      }
+
   public:
     void addVal (double x_, const T &val)
       {
@@ -45,19 +55,16 @@ template<typename T> class anythingMap
       using namespace std;
       planck_assert(x.size()>0,"trying to access an empty map");
       if (x.size()==1) return y[0];
-      if (!sorted)
-        {
-        vector<size_t> idx;
-        buildIndex(x.begin(),x.end(),idx);
-        sortByIndex<double>(x.begin(),x.end(),idx);
-        sortByIndex<T>(y.begin(),y.end(),idx);
-        sorted = true;
-        }
+      if (!sorted) sortMap();
       tsize index;
       double frac;
       interpol_helper (x.begin(), x.end(), x_, index, frac);
       return (1.-frac)*y[index]+frac*y[index+1];
       }
+
+    size_t size() const { return x.size(); }
+    double getX (size_t idx) { if (!sorted) sortMap(); return x[idx]; }
+    T getY (size_t idx) { if (!sorted) sortMap(); return y[idx]; }
   };
 
 typedef anythingMap<COLOUR> COLOURMAP;
