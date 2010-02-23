@@ -190,7 +190,7 @@ class exptable
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
         }
-      taylorlimit = 0; //sqrt(2.*abs(maxexp)/dim2);
+      taylorlimit = sqrt(2.*abs(maxexp)/dim2);
       }
 
     float64 operator() (float64 arg) const
