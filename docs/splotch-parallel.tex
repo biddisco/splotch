@@ -1,3 +1,4 @@
+
 % Template for Elsevier CRC journal article
 % version 1.0 dated 13 October 2009
 
@@ -14,8 +15,8 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%% The '1p' and 'times' class options of elsarticle are used for Elsevier CRC
-\documentclass[1p,times]{elsarticle}
+%% The '3p' and 'times' class options of elsarticle are used for Elsevier CRC
+\documentclass[3p,times]{elsarticle}
 
 %% The `ecrc' package must be called to make the CRC functionality available
 \usepackage{ecrc}
@@ -34,11 +35,11 @@
 
 %% Give the author list to appear in the running head
 %% Example \runauth{C.V. Radhakrishnan et al.}
-\runauth{Z. Jin et al.} 
+\runauth{}
 
 %% The choice of journal logo is determined by the \jid and \jnltitlelogo commands.
 %% A user-supplied logo with the name <\jid>logo.pdf will be inserted if present.
-%% e.g.\ if \jid{yspmi} the system will look for a file yspmilogo.pdf
+%% e.g. if \jid{yspmi} the system will look for a file yspmilogo.pdf
 %% Otherwise the content of \jnltitlelogo will be set between horizontal lines as a default logo
 
 %% Give the abbreviation of the Journal.
@@ -89,7 +90,7 @@
 % \biboptions{}
 
 % if you have landscape tables
-%%%\usepackage[figuresright]{rotating}
+%\usepackage[figuresright]{rotating}
 
 % put your own definitions here:
 %   \newcommand{\cZ}{\cal{Z}}
@@ -99,6 +100,7 @@
 % add words to TeX's hyphenation exception list
 %\hyphenation{author another created financial paper re-commend-ed Post-Script}
 
+% declarations for front matter
 % declarations for front matter
 
 \newcommand{\aj}{AJ}
@@ -177,20 +179,24 @@
 
 \begin{abstract}
 
-Current technological advances impact profoundly on the unprecedented growth 
-in the quality and quantity of astrophysical data sets. The main characteristic
-is extremely large sizes (many GB) while forthcoming next-generation astrophysical
-data sets are expected to exhibit massively large sizes (many TB). Visual data
-exploration and discovery tools are robust instruments for rapidly and intuitively 
-inspecting very large-scale data sets to identify regions of interest within
-which to apply time-consuming algorithms.  This paper reports on recent developments 
-for a high performance implementation of Splotch, our previously developed 
+The scientific community is presently witnessing an unprecedented growth in the 
+quality and quantity of data coming from simulations and real-world experiments. 
+This is due to dramatically improved computational power of modern computer 
+systems and quality of new experimental modalities; 
+often datasets are measured in hundreds (or even millions) of gigabytes. 
+In order to access effectively such datasets and extract their scientific
+content, appropirate tools are needed. Visual data
+exploration and discovery is a robust apporoach for rapidly and intuitively 
+inspecting very large-scale data sets to identify regions, features and patterns
+of interest within which to apply time-consuming algorithms. In this paper,
+we present the high performance implementation of Splotch, our previously developed 
 ray-tracing algorithm for effective visualization of large-scale astrophysical 
-data sets coming from particle-based simulations. We discuss several approaches for
-parallelizing Splotch to suit multicore CPUs and CUDA-enabled GPUs. 
-We present benchmarks of our implementations, with a special focus on the 
-Millennium II simulation. Finally we summarise the work concluding with pointers 
-to future developments.
+datasets coming from particle-based simulations. Splotch has been improved
+in order to exploit massive parallel computing and multicore architectures as well as
+the most recent solutions for graphics accelerators, represented by CUDA-enabled GPUs. 
+We present performance and scalability benchmarks on a number of test-cases, showing
+how Splotch can handle efficiently huge datasets, like those represented by
+the outputs of the Millennium II simulation, the largest cosmological simulation ever realized. 
 
 \end{abstract}
 
@@ -198,7 +204,7 @@ to future developments.
 %% keywords here, in the form: keyword \sep keyword
 
 
-Visual Discovery \sep Splotch \sep Large-Scale Particle-Based Numerical Simulations\sep High-Performance Visualization \sep OpenMP \sep CUDA-enabled GPUs\sep Millenium II Simulation 
+Visual Discovery \sep Splotch \sep Numerical Simulations\sep High-Performance Visualization \sep OpenMP \sep CUDA-enabled GPUs\sep Millenium II Simulation 
 
 
 %% PACS codes here, in the form: \PACS code \sep code
@@ -331,7 +337,8 @@ is referred to \citep{2009MNRAS.398.1150B}, \cite{fraedrich2009} and \cite{Szala
 \includegraphics[width=0.40\textwidth]{millenium2_veldisp.pdf}
 \includegraphics[width=0.40\textwidth]{millenium2_vel.pdf}
 \end{center}
-\caption{A visualization  of the MillenniumII simulation \citep{2009MNRAS.398.1150B}. The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
+\caption{A visualization  of the MillenniumII simulation \citep{2009MNRAS.398.1150B}. 
+The color transfer function uses a particle's velocity dispersion (left) and 3D velocity (right).}\label{mil2}
 \end{figure}
 
 The rendering algorithm of Splotch is generally designed to handle
@@ -428,14 +435,19 @@ containing 10 billion particles.
 \label{parallel}
 
 The Splotch algorithm operational scenario consists of a number of 
-stages summarized as follows: a) read data from one or more files; b) process data (e.g.\ for normalization); c) render data and d) save the final image. All these steps can be parallelized using a
+stages summarized as follows: a) read data from one or more files; b) process data (e.g.\ for normalization); 
+c) render data and d) save the final image. All these steps can be parallelized using a
 Single Instruction Multiple Data (SIMD) approach. This involves distributing the data 
-in a balanced way between different computing elements (or processing units) and each computing element performing the same operations on its associated subset of data. Our parallelization has been achieved using different approaches suitable for a variety of underlying hardware architectures and software environments.
+in a balanced way between different computing elements (or processing units) 
+and each computing element performing the same operations on its associated subset of data. 
+Our parallelization has been achieved using different approaches suitable for a variety of 
+underlying hardware architectures and software environments. Figure \ref{flow} sketches the Splotch workflow.
 
-The MPI library \cite{mpi} has been used to define the overall data and work 
+The MPI library has been used to define the overall data and work 
 distribution. Data are read in chunks of the same (or similar) size by each processor
 in the MPI pool. Then the same work is performed for steps 2 and 3 on each data chunk by the
-corresponding processor. The final image is generated and saved only by the root processor. This is, in fact, a light task, which does not require any kind of parallel implementation.
+corresponding processor. The final image is generated and saved only by the root processor. 
+This is, in fact, a light task, which does not require any kind of parallel implementation.
 The work accomplished in steps 2 and 3 can be further split, exploiting 
 multicore shared memory processors or modern graphics boards, by means of
 an OpenMP based approach or exploitation of the CUDA programming 
@@ -446,7 +458,16 @@ if the available computing system fits only one of the available configurations,
 For instance, on a single core PC with an Nvidia graphics card, only the CUDA based
 parallelization strategy can be activated and exploited. On a multicore RVN  
 node both MPI and CUDA can be used. This makes our parallel Splotch code 
-extremely flexible, portable, efficient and scalable. More details of our parallel implementations are presented in the rest of this section. Test results are discussed in section 4.
+extremely flexible, portable, efficient and scalable. 
+More details of our parallel implementations are presented in the rest of this section. 
+Test results are discussed in section 4.
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=0.90\textwidth]{flowchart.png}
+\end{center}
+\caption{Workflow of the Splotch code.}\label{flow}
+\end{figure}
 
 \subsection{MPI Implementation}
 \label{mpi}
@@ -567,27 +588,43 @@ more threads are required. Execution of the splitting algorithm
 and memory copying among host and device involve additional costs. 
 Nevertheless our results demonstrate improved timings (see Table 3).
 
-%The overview of our CUDA implementation for accelerating the operation of Splotch is shown in Figure 2. The red arrows on the graphics board ({\it device}) represent CUDA threads running in parallel, for simplicity 8 threads are shown only. The aforementioned ranging is re-organized in three distinct phases so that global particle information, e.g.\ min/max values of some attributes, is calculated by the main computer ({\it host}) for improving the overall execution times. The host is also responsible for sorting the particles prior to colorization and moreover executing our 'split particles' algorithm. Finally during rendering the affected screen areas for individual particles are stored in a one-dimensional fragment buffer which is filled in through a render computation on the graphics board. The fragment buffer is then copied to the host which accumulatively combines all relevant fragment buffer computations for final imaging. As the device can be called asynchronously it can effectively operate in parallel with the host, so that render GPU computations and combine CPU operations can be performed simultaneously as shown below.
+%The overview of our CUDA implementation for accelerating the operation of Splotch is shown 
+%in Figure 2. The red arrows on the graphics board ({\it device}) represent CUDA threads 
+%running in parallel, for simplicity 8 threads are shown only. The aforementioned ranging 
+%is re-organized in three distinct phases so that global particle information, e.g.\ min/max values 
+%of some attributes, is calculated by the main computer ({\it host}) for improving the overall 
+%execution times. The host is also responsible for sorting the particles prior to colorization 
+%and moreover executing our 'split particles' algorithm. Finally during rendering the affected 
+%screen areas for individual particles are stored in a one-dimensional fragment buffer which 
+%is filled in through a render computation on the graphics board. The fragment buffer is then 
+%copied to the host which accumulatively combines all relevant fragment buffer computations for final imaging. 
+%As the device can be called asynchronously it can effectively operate in parallel with the host, so that 
+%render GPU computations and combine CPU operations can be performed simultaneously as shown below.
 
-%\begin{verbatim}
-%while  ( not all particles are rendered )
-%{
-%       find subset S(i) of particle array;
-%A:     call device to render S(i);
-%       if  ( S(i) is not first subset )
-%       { 
-%B:          combine with F(i-1), the output of S(i-1) in fragment buffer;
-%       }
-%C:     copy fragment buffer from device to host;
-%       if  ( S(i) is the last subset )
-%       {
-%             combine with F(i);
-%       }
-%       i++;
-%}
-%\end{verbatim}
+In the following we summarize as pseudo-code the workflow of the CUDA algorithm
 
-%The instruction A is the render computation executed on the graphics board in parallel with execution of instruction B, the combination operation carried out by the CPU. The results of A and B are merged by instruction C. Our test results indicate that overall times required for performing combination operations are mostly contained within the times demanded by render computations.
+\begin{verbatim}
+while  ( not all particles are rendered )
+{
+       find subset S(i) of particle array;
+A:     call device to render S(i);
+       if  ( S(i) is not first subset )
+       { 
+B:          combine with F(i-1), the output of S(i-1) in fragment buffer;
+       }
+C:     copy fragment buffer from device to host;
+       if  ( S(i) is the last subset )
+       {
+             combine with F(i);
+       }
+       i++;
+}
+\end{verbatim}
+
+The instruction A is the render computation executed on the graphics board in parallel with execution of instruction B, 
+the combination operation carried out by the CPU. The results of A and B are merged by instruction C. 
+Our test results indicate that overall times required for performing combination operations are mostly
+contained within the times demanded by render computations.
 
 %\begin{table}
 %\caption{The data sets used in the benchmarks for our parallel implementations of Splotch}
@@ -638,12 +675,12 @@ Our most challenging data set comes from the Millennium II simulation \cite{2009
 and consists of 10 billion particles. The data files employed are pure binaries organized in such a way that different
 quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, then $y$ coordinates and so on) as expected by the MPI-IO based reader. 
 
-\subsection{MPI Benchmarks}
+%\subsection{MPI Benchmarks}
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.40\textwidth]{bench100M_r.pdf}
-\includegraphics[width=0.40\textwidth]{bench870M_r.pdf}
+\includegraphics[width=0.45\textwidth]{bench100M_r.pdf}
+\includegraphics[width=0.45\textwidth]{bench870M_r.pdf}
 \end{center}
 \caption{Scaling of the CPU time (total wallclock time) with the number of MPI threads 
 used for vizualizing 100 million (left panel)
@@ -691,7 +728,7 @@ better than the other one. Further improvements should emerge when multidimensio
 arrays are considered and the access data pattern is more complex. 
 In these cases, collective MPI I/O reading could provide an effective speed-up for data loading.
 
-\subsection{CUDA Benchmarks}
+%\subsection{CUDA Benchmarks}
 
 \begin{table}
 \caption{The performance timings (secs) obtained with our CUDA implementation of Splotch (indicated by yes) compared to timings obtained using the standard sequential implementation of Splotch (indicated by no) for benchmark data sets 1M and 10M.}
