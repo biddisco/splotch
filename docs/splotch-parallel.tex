@@ -186,7 +186,7 @@ systems and quality of new experimental modalities;
 often datasets are measured in hundreds (or even millions) of gigabytes. 
 In order to access effectively such datasets and extract their scientific
 content, appropirate tools are needed. Visual data
-exploration and discovery is a robust apporoach for rapidly and intuitively 
+exploration and discovery is a robust approach for rapidly and intuitively 
 inspecting very large-scale data sets to identify regions, features and patterns
 of interest within which to apply time-consuming algorithms. In this paper,
 we present the high performance implementation of Splotch, our previously developed 
@@ -445,10 +445,10 @@ underlying hardware architectures and software environments. Figure \ref{flow} s
 
 The MPI library has been used to define the overall data and work 
 distribution. Data are read in chunks of the same (or similar) size by each processor
-in the MPI pool. Then the same work is performed for steps 2 and 3 on each data chunk by the
+in the MPI pool. Then the same work is performed for steps b and c on each data chunk by the
 corresponding processor. The final image is generated and saved only by the root processor. 
 This is, in fact, a light task, which does not require any kind of parallel implementation.
-The work accomplished in steps 2 and 3 can be further split, exploiting 
+The work accomplished in steps b and c can be further split, exploiting 
 multicore shared memory processors or modern graphics boards, by means of
 an OpenMP based approach or exploitation of the CUDA programming 
 environment. 
@@ -460,7 +460,7 @@ parallelization strategy can be activated and exploited. On a multicore RVN
 node both MPI and CUDA can be used. This makes our parallel Splotch code 
 extremely flexible, portable, efficient and scalable. 
 More details of our parallel implementations are presented in the rest of this section. 
-Test results are discussed in section 4.
+Test results are discussed in Section 4.
 
 \begin{figure}
 \begin{center}
@@ -567,11 +567,11 @@ by individual particles. As a worst case scenario consider two particles influen
 all screen pixels and a single screen pixel respectively. 
 Assuming they are handled by the same warp (this is determined by CUDA automatically), 
 they are then scheduled to execute simultaneously. This unbalanced granularity 
-can compromise significantly overall execution times (see Table 3).
+can compromise significantly overall execution times (see Table 2).
 
 %\begin{figure}
 %\begin{center}
-%\includegraphics[width=0.50\textwidth]{cu_splotch_process.png}
+%\includegraphics[width=0.75\textwidth]{cu_splotch_process.png}
 %\end{center}
 %\caption{Overview of our CUDA implementation of Splotch. The GPU runs on the graphics board ({\it device}) while the CPU runs on the main computer ({\it host}). The red arrows represent execution flow of programs on the host and device (8 threads shown) respectively. An empty rectangle indicates a time-slot that a processing unit (device or host) is in idle state.}
 %\end{figure}
@@ -586,7 +586,7 @@ the average of the width and height of the display window works satisfactorily.
 A shortcoming of this is the computational cost when doing the splitting; for an increased number of particles 
 more threads are required. Execution of the splitting algorithm 
 and memory copying among host and device involve additional costs. 
-Nevertheless our results demonstrate improved timings (see Table 3).
+Nevertheless our results demonstrate improved timings (see Table 2).
 
 %The overview of our CUDA implementation for accelerating the operation of Splotch is shown 
 %in Figure 2. The red arrows on the graphics board ({\it device}) represent CUDA threads 
@@ -673,9 +673,20 @@ Such variety of data set sizes is required to match the memory available on
 the different computing systems used for our testing.
 Our most challenging data set comes from the Millennium II simulation \cite{2009MNRAS.398.1150B}
 and consists of 10 billion particles. The data files employed are pure binaries organized in such a way that different
-quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, then $y$ coordinates and so on) as expected by the MPI-IO based reader. 
+quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, 
+then $y$ coordinates and so on) as expected by the MPI-IO based reader.
+ 
+We provide a rough estimate of the errors associated to our measures only for the Millennium Run 
+(the most challenging). The benchmarks, in fact, were performed on production systems, where 
+random fluctuations in the workload can randomly affect the results. This is expecially true 
+for I/O, which is shared between a number of users and jobs. 
+Therefore, we chose to present the best performance obtained in each test, focusing on the 
+scalability of the code, more than on the absolute result. Anyway, the sample 
+error bars presented in Figure \ref{cpu_scaling},
+shows that the performance has negligible fluctuations, slightly larger, as 
+expected, for the I/O operations.
 
-%\subsection{MPI Benchmarks}
+\subsection{MPI Benchmarks}
 
 \begin{figure}
 \begin{center}
@@ -700,7 +711,8 @@ $30\%$.
 
 The 100M test (Figure \ref{mpi100M}, left panel), allows us 
 to run on one processor fitting its memory. 
-This is the estimate of the sequential performance of the code. 
+This can be considered a proper estimate of the sequential performance of the code, since, on a single processor the 
+MPI calls overhead is negligible. 
 The maximum number of processors for this test is set to 8, since the usage of 
 more processors is inefficient, due to the small size 
 of the data chunks assigned to each processor and the increasing overhead of communication.
@@ -728,7 +740,7 @@ better than the other one. Further improvements should emerge when multidimensio
 arrays are considered and the access data pattern is more complex. 
 In these cases, collective MPI I/O reading could provide an effective speed-up for data loading.
 
-%\subsection{CUDA Benchmarks}
+\subsection{CUDA Benchmarks}
 
 \begin{table}
 \caption{The performance timings (secs) obtained with our CUDA implementation of Splotch (indicated by yes) compared to timings obtained using the standard sequential implementation of Splotch (indicated by no) for benchmark data sets 1M and 10M.}
@@ -755,9 +767,10 @@ The number of particles in the data sets employed for our experimental results i
 370,852 (small), 2,646,991 (medium) and 16,202,527 (large) respectively.}
 
 \begin{center}
-\begin{tabular}{ | l || l | l || l | l | p{3cm} |}
+\begin{tabular}{ | l | l | l | l | l | p{3cm} |}
 \hline  
-   &	CPU	& CPU	& GPU	& GPU	& GPU \\
+%   &	CPU	& CPU	& GPU	& GPU	& GPU \\
+  & \multicolumn{2}{|c|}{CPU}	& \multicolumn{3}{|c|}{GPU} \\
 \hline
   data set & disp. t. & tot. t. & disp. t. & tot. t. & disp. t. no split \\
 \hline  
@@ -772,7 +785,7 @@ The number of particles in the data sets employed for our experimental results i
 \end{table}
 
 The performance timings for benchmark data sets 1M and 10M using our CUDA
-implementation under the Win configuration described earlier are presented in Table 2. 
+implementation under the Win configuration described earlier are presented in Table 1. 
 The overall performance for data set 1M is somewhat degraded when CUDA is employed.
 The main reason is the fact that for data set sizes up to this order of magnitude the
 costs associated with standard CUDA operations (e.g.\ initializing CUDA runtime 
@@ -783,7 +796,9 @@ using CUDA results in 21.3\% performance gains (computed as
 Our anticipation is that further increasing the order of magnitude of a data set's 
 size would result in further performance gains. Our initial experiences with several 
 other data sets so far indicate that our CUDA implementation offers maximum gains
-when there is a large display calculation involved, that is when individual particles influence relatively large areas on the screen. This is indeed the case for typical display scenarios (see Figure \ref{cudafig}). Table 3 shows that our CUDA parallelization improves the 
+when there is a large display calculation involved, that is when individual particles i
+nfluence relatively large areas on the screen. This is indeed the case for typical 
+display scenarios (see Figure \ref{cudafig}). Table 2 shows that our CUDA parallelization improves the 
 performance of Splotch. The 'split particles' strategy (see section 3.2) further 
 improves performance timings.
  
@@ -818,7 +833,7 @@ At the moment, we used instead the built-in parallel reader derived by the origi
 which allows to access directly data files as they where saved by the simulation code. 
 
 Examples of the Millennium II simulation rendered images are shown in Figure \ref{mil2}.
-In figure \ref{cpu_scaling}, we present the results of the benchmarks, in ST and SMT modes.
+In Figure \ref{cpu_scaling}, we present the results of the benchmarks, in ST and SMT modes.
 The left panel shows the data processing time from 128 to 2048 MPI threads in ST mode and from
 256 to 4096 threads for SMT. The right panel shows instead the data read time, using 
 the Gadget 2 reader. In this case, the read process is performed by a subset of processors,
@@ -829,7 +844,7 @@ the physical bandwidth limit of the underlying GPFS based storage system.
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=0.8\textwidth]{cu_images.png}
+\includegraphics[width=1.0\textwidth]{cu_images.png}
 \end{center}
 \caption{Sample renderings of small (left), medium (middle) and large (right) data sets.}\label{cudafig}
 \end{figure}
@@ -880,8 +895,8 @@ We would like to thank Mike Boylan-Kolchin for providing the MilleniumII simulat
 Klaus Dolag acknowledges the support 
 by the DFG Priority Programme 117. This work was also supported by the promising 
 researcher's award, University of Portsmouth, and the HPC-EUROPA 2 
-under the EC Coordination and Support Action Research Infrastructure Programme in FP7 
-. Martin Reinecke is supported by the
+under the EC Coordination and Support Action Research Infrastructure Programme in FP7. 
+Martin Reinecke is supported by the
 German Aeronautics Center and Space Agency (DLR), under program 50-OP-0901, funded by the
 Federal Ministry of Economics and Technology.
 
@@ -892,13 +907,11 @@ Federal Ministry of Economics and Technology.
 \includegraphics[width=0.49\textwidth]{t_read.pdf}
 \end{center}
 \caption{Scaling of the CPU time with the number of MPI threads used 
-for the
-Millennium II simulation data. 
+for the Millennium II simulation data. 
 The left panel shows the total wallclock time minus the time needed for 
 reading, the right panel the read-data time. 
 The dashed line indicates the expectation for an ideal scaling.  
-The diamonds represent runs in ST mode, 
-the triangles indicate the SMT configuration.
+The last point shows also the error bar, calculated as the variance of 13 repeated realizations. 
 }\label{cpu_scaling}
 \end{figure}
 
