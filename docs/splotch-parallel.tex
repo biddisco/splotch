@@ -185,7 +185,7 @@ This is due to dramatically improved computational power of modern computer
 systems and quality of new experimental modalities; 
 often datasets are measured in hundreds (or even millions) of gigabytes. 
 In order to access effectively such datasets and extract their scientific
-content, appropirate tools are needed. Visual data
+content, appropriate tools are needed. Visual data
 exploration and discovery is a robust approach for rapidly and intuitively 
 inspecting very large-scale data sets to identify regions, features and patterns
 of interest within which to apply time-consuming algorithms. In this paper,
@@ -445,10 +445,10 @@ underlying hardware architectures and software environments. Figure \ref{flow} s
 
 The MPI library has been used to define the overall data and work 
 distribution. Data are read in chunks of the same (or similar) size by each processor
-in the MPI pool. Then the same work is performed for steps b and c on each data chunk by the
+in the MPI pool. Then the same work is performed for steps (b) and (c) on each data chunk by the
 corresponding processor. The final image is generated and saved only by the root processor. 
 This is, in fact, a light task, which does not require any kind of parallel implementation.
-The work accomplished in steps b and c can be further split, exploiting 
+The work accomplished in steps (b) and (c) can be further split, exploiting 
 multicore shared memory processors or modern graphics boards, by means of
 an OpenMP based approach or exploitation of the CUDA programming 
 environment. 
@@ -545,7 +545,7 @@ of processing units.  The resulting code can thus target simultaneously entry-le
 %scenario may even involve only a single thread, the CUDA multiprocessor effectively 
 %acting then as a single processor.
 
-As soon as data is loaded in the memory of each processing unit (defined as a multicore CPU together with a bundle of associated GPUs), our CUDA approach can be combined with the MPI parallelization strategy outlined in section 3.1. At that point in fact, processing units can be regarded as completely independent of each other, and CUDA can be exploited by determining each parallel task based on a single particle, that is a single particle is {\it processed} and {\it displayed} by a single CUDA thread. 
+As soon as data is loaded in the memory of each processing unit (defined as a multicore CPU together with a bundle of associated GPUs), our CUDA approach can be combined with the MPI parallelization strategy outlined in Section 3.1. At that point in fact, processing units can be regarded as completely independent of each other, and CUDA can be exploited by determining each parallel task based on a single particle, that is a single particle is {\it processed} and {\it displayed} by a single CUDA thread. 
 The processing involves normalizing of some particle values. 
 The displaying involves transformation into screen coordinates, assigning of colours and rendering for determining screen areas affected by individual particles and subsequently combining them for final imaging.
 %As there typically exists a significant number of data-dependent conditional branches 
@@ -567,7 +567,7 @@ by individual particles. As a worst case scenario consider two particles influen
 all screen pixels and a single screen pixel respectively. 
 Assuming they are handled by the same warp (this is determined by CUDA automatically), 
 they are then scheduled to execute simultaneously. This unbalanced granularity 
-can compromise significantly overall execution times (see Table 2).
+can compromise significantly overall execution times.
 
 %\begin{figure}
 %\begin{center}
@@ -674,7 +674,7 @@ the different computing systems used for our testing.
 Our most challenging data set comes from the Millennium II simulation \cite{2009MNRAS.398.1150B}
 and consists of 10 billion particles. The data files employed are pure binaries organized in such a way that different
 quantitites are stored consecutively (e.g.\ $x$ coordinates of all particles, 
-then $y$ coordinates and so on) as expected by the MPI-IO based reader.
+then $y$ coordinates and so on) as expected by the MPII/O based reader.
  
 We provide a rough estimate of the errors associated to our measures only for the Millennium Run 
 (the most challenging). The benchmarks, in fact, were performed on production systems, where 
@@ -796,10 +796,9 @@ using CUDA results in 21.3\% performance gains (computed as
 Our anticipation is that further increasing the order of magnitude of a data set's 
 size would result in further performance gains. Our initial experiences with several 
 other data sets so far indicate that our CUDA implementation offers maximum gains
-when there is a large display calculation involved, that is when individual particles i
-nfluence relatively large areas on the screen. This is indeed the case for typical 
+when there is a large display calculation involved, that is when individual particles influence relatively large areas on the screen. This is indeed the case for typical 
 display scenarios (see Figure \ref{cudafig}). Table 2 shows that our CUDA parallelization improves the 
-performance of Splotch. The 'split particles' strategy (see section 3.2) further 
+performance of Splotch. The 'split particles' strategy (see Section 3.2) further 
 improves performance timings.
  
 %\begin{figure}
@@ -834,7 +833,7 @@ which allows to access directly data files as they where saved by the simulation
 
 Examples of the Millennium II simulation rendered images are shown in Figure \ref{mil2}.
 In Figure \ref{cpu_scaling}, we present the results of the benchmarks, in ST and SMT modes.
-The left panel shows the data processing time from 128 to 2048 MPI threads in ST mode and from
+The left panel shows the data processing time from 128 to 2048 MPI processes in ST mode and from
 256 to 4096 threads for SMT. The right panel shows instead the data read time, using 
 the Gadget 2 reader. In this case, the read process is performed by a subset of processors,
 belonging to a dedicated MPI sub-communicator, which then scatters the loaded data to the complete
