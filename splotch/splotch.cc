@@ -224,7 +224,7 @@ int main (int argc, const char **argv)
 
 #ifdef NEVER_COMPILE
 // ----------------------------------------------
-// ------- How to build Parameter structre ------
+// ------- How to build Parameter structure ------
 // ------- and Color Maps without files ---------
 // ----------------------------------------------
 
@@ -381,11 +381,11 @@ int main (int argc, const char **argv)
 	    case 6: 
 	      mesh_reader(params,particle_data, maxr, minr);
 	      break;
-
+#ifdef HDF5
 	    case 7:
 	      hdf5_reader(params,particle_data, maxr, minr);
 	      break;
-
+#endif
 	    default:
 	      planck_fail("No valid file type given ...");
 	      break;
@@ -914,7 +914,6 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 		ti.endP =ti.startP +len -1;
 		if (ti.endP >endP)
 			ti.endP =endP;
-
 		//draw chunks one by one
 		cu_draw_chunk(&ti);
 		//collect image to result
@@ -1053,29 +1052,29 @@ PROBLEM HERE!
 	int	size =0;
 	//first we need to count all the entries to get colormap size
 	for(int i=0; i<amap.size(); i++)
-	  size += amap[i].size()-1;
+	{
+	    vector<double> e;
+            e = amap[i].x;
+            size += e.size() - 1;
+	}
 	//then fill up the colormap amapD
 	amapD =new cu_color_map_entry[size];
-	int	index =0;
+	int	j,index =0;
 	for(int i=0; i<amap.size(); i++)
 	{
-	        COLOURMAP &e(amap[i]);
-		int j;
-        cout << "E.SIZE ..... " << e.size() << "\n";
-		for (j=0; j<e.size()-1; j++)
+            vector<double> e;
+            e = amap[i].x;
+            cout << "E.SIZE ..... " << e.size() << "\n";
+	    for (j=0; j<e.size() -1 ; j++)
 		{
-                        cout << "--->><< e[j]      " << e.getX(j) << "\n";
-                        cout << "--->><< e[j]      " << e.getX(j+1) << "\n";
-			amapD[index].min =e.getX(j);
-			amapD[index].max =e.getX(j+1);
-                        COLOUR	clr1=e.getY(j), clr2=e.getY(j+1);
-			amapD[index].color1.r =clr1.r;
-			amapD[index].color1.g =clr1.g;
-			amapD[index].color1.b =clr1.b;
-			amapD[index].color2.r =clr2.r;
-			amapD[index].color2.g =clr2.g;
-			amapD[index].color2.b =clr2.b;
-                        cout << "pippo\n";
+			amapD[index].min = e[j]; 
+                        amapD[index].max = e[j+1];
+			amapD[index].color1.r = amap[i].y[j].r;
+			amapD[index].color1.g = amap[i].y[j].g;
+			amapD[index].color1.b = amap[i].y[j].b;
+			amapD[index].color2.r = amap[i].y[j+1].r;
+			amapD[index].color2.g = amap[i].y[j+1].g;
+			amapD[index].color2.b = amap[i].y[j+1].b;
 			index++;
 		}
 		amapDTypeStartPos[i] =curPtypeStartPos;
@@ -1116,7 +1115,7 @@ PROBLEM HERE!
 	cu_particle_splotch	p;
 	//do filtering
 	unsigned long	posInFragBuf =0;//, countFragments;
-	int		minx=1e6,miny=1e6, maxx=-1,maxy=-1;
+	int	        minx=1e6,miny=1e6, maxx=-1,maxy=-1;
 
 //old code observ size
 	//selecte valid ones
@@ -1237,7 +1236,7 @@ PROBLEM HERE!
 	int res = params.find<int>("resolution",200);
 	long nsplotch=pFiltered;
 	long nsplotch_all=nsplotch;
-	mpiMgr.allreduce_sum (nsplotch_all);
+	mpiMgr.allreduce(nsplotch_all,MPI_Manager::Sum);
 //	if (master)
 //		cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
 //	arr2<COLOUR> pic(res,res);
@@ -1427,18 +1426,15 @@ void	DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
 {
 	bool	bTestLoadBalancing;
 	bTestLoadBalancing =g_params->find<bool>("test_load_balancing", false);
-	int		hostLoad =g_params->find<int>("host_load",0);
-
 	int	curStart =0, onePercent, averageDevLen, nDev;
+	int hostLoad =bHostThread? g_params->find<int>("host_load",0): 0;
 	nDev =bHostThread? nThread-1: nThread;
 	onePercent =particle_data.size()/100;
-	averageDevLen = (nDev!=0)? onePercent *(100-hostLoad)/nDev :
-		0;
-
+	averageDevLen = (nDev!=0)? onePercent *(100-hostLoad)/nDev : 0;
+ 
 	for (int i=0; i<nThread; i++)
 	{
 		tInfo[i].startP =curStart;
-		
 		if (tInfo[i].devID != -1) //not a host
 		{
 			if ( bTestLoadBalancing )
@@ -1454,7 +1450,6 @@ void	DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
 		{
 			tInfo[i].endP =curStart +hostLoad *onePercent;
 		}
-
 		curStart =tInfo[i].endP +1;
 	}
 

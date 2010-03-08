@@ -9,25 +9,25 @@
 
 
 #--------------------------------------- Switch on MPI
-OPT	+=  -DUSE_MPI
+#OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
 
-OPT     +=  -DHDF5
+#OPT     +=  -DHDF5
 OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-#OPT	+=  -DCUDA
-#OPT	+=  -DCUDA_THREADS
-#OPT     +=  -DNO_WIN_THREAD
-#OPT     +=  -DNO_HOST_RANGING
-#OPT     +=  -DNO_HOST_TRANSFORM
-#OPT     +=  -DNO_HOST_COLORING
-#OPT     +=  -DNO_HOST_RENDER
+OPT	+=  -DCUDA
+OPT	+=  -DCUDA_THREADS
+OPT     +=  -DNO_WIN_THREAD
+OPT     +=  -DNO_HOST_RANGING
+OPT     +=  -DNO_HOST_TRANSFORM
+OPT     +=  -DNO_HOST_COLORING
+OPT     +=  -DNO_HOST_RENDER
 #OPT	 +=  -DHOST_THREAD_RENDER
 #OPT	 +=  -DCUDA_DEVICE_COMBINE
 #OPT	 +=  -DCUDA_TEST_COLORMAP
@@ -36,11 +36,11 @@ OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Select target Computer
 
-SYSTYPE="SP6"
+#SYSTYPE="SP6"
 #SYSTYPE="GP"
-#SYSTYPE="PLX"
+SYSTYPE="PLX"
 
-ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+ifeq (HDF5,$(findstring HDF5,$(OPT)))
 HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.3_ser/xl--10.1
 LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/szlib/2.1/xl--10.1/lib/ -lsz
 HDF5_INCL = -I$(HDF5_HOME)/include
@@ -102,9 +102,11 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o reader/hdf5_reader.o\
-	cxxsupport/walltimer.o
+	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o cxxsupport/walltimer.o
 
+ifeq (HDF5,$(findstring HDF5,$(OPT)))
+OBJS += reader/hdf5_reader.o 
+endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
 OBJS += cuda/splotch.o cuda/CuPolicy.o
 endif

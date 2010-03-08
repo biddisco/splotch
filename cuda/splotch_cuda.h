@@ -159,6 +159,6 @@ extern "C"	void	cu_init_exptab(double maxexp);
 extern "C"	float	cu_get_exp(float arg);
 extern "C"	void	cu_render
 (cu_particle_splotch *p, unsigned int size,
-/* int xres, int yres, *-/bool a_eq_e,double grayabsorb);
+ int xres, int yres, bool a_eq_e,double grayabsorb);
 */
 #endif

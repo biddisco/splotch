@@ -30,12 +30,12 @@ int CuPolicy::GetSizeDPD(unsigned int n)
 	return n* sizeof(cu_particle_sim);
 }
 
-int		CuPolicy::GetMaxRegion()
+int	CuPolicy::GetMaxRegion()
 {
 	return m_pParam->find<int>("max_region", 1024);
 }
 
-int		CuPolicy::GetFBufSize()
+int	CuPolicy::GetFBufSize()
 {
 	//just for test on my own pc now
 	int	size;

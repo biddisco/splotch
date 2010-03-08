@@ -128,9 +128,9 @@ void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
-      const float64 powtmp = pow(Pi,1./3.);
-      const float64 sigma0=powtmp/sqrt(2*Pi);
-      const float64 bfak=1./(2*sqrt(Pi)*powtmp);
+      const float64 powtmp = pow(pi,1./3.);
+      const float64 sigma0=powtmp/sqrt(2*pi);
+      const float64 bfak=1./(2*sqrt(pi)*powtmp);
 	  exptable xexp(-20.);
 
       int xres = pic.size1(), yres=pic.size2();
@@ -439,9 +439,9 @@ void render_cu_test1 (cu_particle_splotch *p, int n, cu_color **pic,
 
 
       const float64 rfac=1.5;
-      const float64 powtmp = pow(Pi,1./3.);
-      const float64 sigma0=powtmp/sqrt(2*Pi);
-      const float64 bfak=1./(2*sqrt(Pi)*powtmp);
+      const float64 powtmp = pow(pi,1./3.);
+      const float64 sigma0=powtmp/sqrt(2*pi);
+      const float64 bfak=1./(2*sqrt(pi)*powtmp);
 	  exptable xexp(-20.);
 
       int xres=800,  yres=800;
@@ -550,9 +550,9 @@ void render_cu_test (cu_particle_splotch *p, unsigned int size, arr2<COLOUR> &pi
       bool a_eq_e,double grayabsorb)
       {
       const float64 rfac=1.5;
-      const float64 powtmp = pow(Pi,1./3.);
-      const float64 sigma0=powtmp/sqrt(2*Pi);
-      const float64 bfak=1./(2*sqrt(Pi)*powtmp);
+      const float64 powtmp = pow(pi,1./3.);
+      const float64 sigma0=powtmp/sqrt(2*pi);
+      const float64 bfak=1./(2*sqrt(pi)*powtmp);
 
 	  exptable xexp(MAX_EXP);
 #ifdef CUDA_TEST_FRAGMENT
@@ -690,8 +690,8 @@ fragments++;
 		return;
 #endif //CUDA_TEST_FRAGMENT
 
-      mpiMgr.allreduce_sum_raw
-        (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres);
+	 mpiMgr.allreduceRaw
+	   (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
       if (mpiMgr.master())
         {
         if (a_eq_e)

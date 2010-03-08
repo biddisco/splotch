@@ -34,7 +34,7 @@ extern "C" void getCuTransformParams(cu_param_transform &p,
 ////////////////////////////////////////////////////////////////////
 
 //////////////////////////////
-//global varibles
+//global variables
 /*
 float               *d_tmp=0;   //used for debug
 float               *d_expTable =0;
@@ -127,8 +127,7 @@ void	cu_range(paramfile &params ,cu_particle_sim* h_pd,
     
     // copy out particles for min_maxes
     s =pgv->policy->GetSizeDPD(n);
-    cutilSafeCall(cudaMemcpy( h_pd, pgv->d_pd,  s,
-                              cudaMemcpyDeviceToHost) );    
+    cutilSafeCall( cudaMemcpy( h_pd, pgv->d_pd, s, cudaMemcpyDeviceToHost) );
 
 
 
@@ -418,7 +417,7 @@ template<typename T> T findParamWithoutChange
     T   value;
     if (param->param_present(key))
     {
-        param->findParam(key, value);
+        value = param->find<T>(key);
         return value;
     }
     else
