@@ -172,9 +172,9 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points,
         int res = iaux%(dimx*dimy);
         int i2 = res/dimx;
         int i3 = res%dimx;
-        points[i].x = (float)i3;
-        points[i].y = (float)i2;
-        points[i].z = (float)i1;
+        points[i].x = float(i3);
+        points[i].y = float(i2);
+        points[i].z = float(i1);
         
       }
 
