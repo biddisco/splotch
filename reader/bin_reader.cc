@@ -135,34 +135,34 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points,
 
   for (tsize qty=0; qty<qty_idx.size(); ++qty)
     {
-    if(qty_idx[qty]<0) continue;
+    if (qty_idx[qty]>=0)
+      {
+      inp.seekg(sizeof(float)*(qty_idx[qty]*npart+mybegin),ios::beg);
+      inp.get(&buffer[0],npart);
+      }
 
-    inp.seekg(sizeof(float)*(qty_idx[qty]*npart+mybegin),ios::beg);
-    inp.get(&buffer[0],npart);
-
-#define CASEMACRO__(num,str) \
+#define CASEMACRO__(num,str,noval) \
       case num: \
-        for (int64 i=0; i<npart; ++i) \
-          points[i].str = buffer[i]; \
+        if (qty_idx[num]>=0) \
+          for (int64 i=0; i<npart; ++i) points[i].str = buffer[i]; \
+        else \
+          for (int64 i=0; i<npart; ++i) points[i].str = noval; \
         break;
 
     switch(qty)
       {
-      CASEMACRO__(0,x)
-      CASEMACRO__(1,y)
-      CASEMACRO__(2,z)
-      CASEMACRO__(3,r)
-      CASEMACRO__(4,I)
-      CASEMACRO__(5,C1)
-      CASEMACRO__(6,C2)
-      CASEMACRO__(7,C3)
+      CASEMACRO__(0,x,0)
+      CASEMACRO__(1,y,0)
+      CASEMACRO__(2,z,0)
+      CASEMACRO__(3,r,1.)
+      CASEMACRO__(4,I,.5)
+      CASEMACRO__(5,C1,0)
+      CASEMACRO__(6,C2,0)
+      CASEMACRO__(7,C3,0)
       }
     }
 
 #undef CASEMACRO__
-
-  if (qty_idx[4]<0)
-    for (int64 i=0; i<npart; ++i) points[i].I=0.5;
 
   bin_reader_finish (points, maxr, minr);
   }
