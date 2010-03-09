@@ -151,7 +151,7 @@ int main (int argc, const char **argv)
 
 #ifdef INTERPOLATE
 #ifndef GEOMETRY_FILE
-  planck_fail("splotch: interpolation without geometry file makes no sense !");
+#error  splotch: interpolation without geometry file makes no sense!
 #endif
 #endif
 
@@ -187,36 +187,35 @@ int main (int argc, const char **argv)
 
   if (master)
     cout << "building color maps (" << ptypes << ")..." << endl;
-  for(int itype=0;itype<ptypes;itype++)
+  for (int itype=0;itype<ptypes;itype++)
     {
-      if(params.find<bool>("color_is_vector"+dataToString(itype),false))
+    if (params.find<bool>("color_is_vector"+dataToString(itype),false))
+      {
+      if (master)
+        cout << " color of ptype " << itype << " is vector, so no colormap to load ..." << endl;
+      }
+    else
+      {
+      ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
+      planck_assert (infile,"could not open palette file  <" +
+        params.find<string>("palette"+dataToString(itype)) + ">");
+      string dummy;
+      int nColours;
+      infile >> dummy >> dummy >> nColours;
+      if (master)
+        cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
+      double step = 1./(nColours-1);
+      for (int i=0; i<nColours; i++)
         {
-          if (master)
-            cout << " color of ptype " << itype << " is vector, so no colormap to load ..." << endl;
+        float rrr,ggg,bbb;
+        infile >> rrr >> ggg >> bbb;
+        amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
         }
-      else
-        {
-          ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
-          planck_assert (infile,"could not open palette file  <" +
-                                params.find<string>("palette"+dataToString(itype)) + ">");
-          string dummy;
-          int nColours;
-          infile >> dummy >> dummy >> nColours;
-          if(master)
-            cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
-          double step = 1./(nColours-1);
-          for (int i=0; i<nColours; i++)
-            {
-              float rrr,ggg,bbb;
-              infile >> rrr >> ggg >> bbb;
-              amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
-            }
-        }
+      }
     }
   emap=amap;
 
-
-#ifdef NEVER_COMPILE
+#if 0
 // ----------------------------------------------
 // ------- How to build Parameter structure ------
 // ------- and Color Maps without files ---------
@@ -236,12 +235,10 @@ int main (int argc, const char **argv)
   amap.addVal(0.5,c2));
   amap.addVal(1.,c3));
   emap=amap;
-
 #endif
 
   wallTimer.stop("setup");
   wallTimer.start("read");
-
 
 #ifdef GEOMETRY_FILE
 
@@ -260,49 +257,49 @@ int main (int argc, const char **argv)
     {
     getline(inp, line);
 #ifdef INTERPOLATE
-      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
-             &campos.x,&campos.y,&campos.z,
-             &lookat.x,&lookat.y,&lookat.z,
-             &sky.x,&sky.y,&sky.z,&ninterpol);
-      if(linecount == nextfile)
-        {
-          nextfile=linecount+ninterpol;
-          snr1=snr2;
-          snr2=snr2+1;
-        }
+    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+           &campos.x,&campos.y,&campos.z,
+           &lookat.x,&lookat.y,&lookat.z,
+           &sky.x,&sky.y,&sky.z,&ninterpol);
+    if (linecount==nextfile)
+      {
+      nextfile=linecount+ninterpol;
+      snr1=snr2;
+      snr2++;
+      }
 #endif
     }
 
   while (getline(inp, line))
     {
-      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
-             &campos.x,&campos.y,&campos.z,
-             &lookat.x,&lookat.y,&lookat.z,
-             &sky.x,&sky.y,&sky.z,&ninterpol);
-      if(master)
-        {
-          cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
-          cout << " Camera:    " << campos << endl;
-          cout << " Lookat:    " << lookat << endl;
-          cout << " Sky:       " << sky << endl;
+    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+           &campos.x,&campos.y,&campos.z,
+           &lookat.x,&lookat.y,&lookat.z,
+           &sky.x,&sky.y,&sky.z,&ninterpol);
+    if (master)
+      {
+      cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
+      cout << " Camera:    " << campos << endl;
+      cout << " Lookat:    " << lookat << endl;
+      cout << " Sky:       " << sky << endl;
 #ifdef INTERPOLATE
-          cout << " ninterpol: " << ninterpol << endl;
+      cout << " ninterpol: " << ninterpol << endl;
 #endif
-        }
+      }
 #ifdef INTERPOLATE
-      if(linecount == 0 && nextfile == 0)
-        nextfile=linecount+ninterpol;
+    if(linecount == 0 && nextfile == 0)
+      nextfile=linecount+ninterpol;
 #endif
 #else
-      campos.x=params.find<double>("camera_x");
-      campos.y=params.find<double>("camera_y");
-      campos.z=params.find<double>("camera_z");
-      lookat.x=params.find<double>("lookat_x");
-      lookat.y=params.find<double>("lookat_y");
-      lookat.z=params.find<double>("lookat_z");
-      sky.x=params.find<double>("sky_x",0);
-      sky.y=params.find<double>("sky_y",0);
-      sky.z=params.find<double>("sky_z",0);
+    campos.x=params.find<double>("camera_x");
+    campos.y=params.find<double>("camera_y");
+    campos.z=params.find<double>("camera_z");
+    lookat.x=params.find<double>("lookat_x");
+    lookat.y=params.find<double>("lookat_y");
+    lookat.z=params.find<double>("lookat_z");
+    sky.x=params.find<double>("sky_x",0);
+    sky.y=params.find<double>("sky_y",0);
+    sky.z=params.find<double>("sky_z",0);
 #endif
 
 
@@ -311,168 +308,168 @@ int main (int argc, const char **argv)
 // -----------------------------------
 
 #if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
-      if (linecount == geometry_skip)      // read only once if no interpolation is choosen
-        {
+    if (linecount==geometry_skip)      // read only once if no interpolation is choosen
+      {
 #endif
-          if (master)
-            cout << endl << "reading data ..." << endl;
-          int simtype = params.find<int>("simtype"); ///2:Gadget2
-          float maxr, minr;
-#ifdef INTERPOLATE
-          double frac=(double)(linecount-(nextfile-ninterpol))/(double)ninterpol;
-#endif
-          switch(simtype)
-            {
-            case 0:
-              bin_reader_tab(params,particle_data, maxr, minr);
-              break;
-            case 1:
-              bin_reader_block(params,particle_data, maxr, minr);
-              break;
-            case 2:
-#ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
-              cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
-              cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
-              cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
-              if(snr1 == snr2_now)
-                {
-                  cout << " old2 = new1 !" << endl;
-                  particle_data1=particle_data2;
-                  snr1_now = snr1;
-                  time1 = time2;
-                }
-              if(snr1_now != snr1)
-                {
-                  cout << " reading new1 " << snr1 << endl;
-                  gadget_reader(params,particle_data1,snr1,&time1);
-                  snr1_now = snr1;
-                }
-              if(snr2_now != snr2)
-                {
-                  cout << " reading new2 " << snr2 << endl;
-                  gadget_reader(params,particle_data2,snr2,&time2);
-                  snr2_now = snr2;
-                }
-#else
-              gadget_reader(params,particle_data,0,&time); ///vector<particle_sim> particle_data;
-#ifdef GEOMETRY_FILE
-              p_orig = particle_data;
-#endif
-#endif
-              break;
-            case 3: //enzo_reader(params,particle_data);
-              break;
-            case 4:
-              gadget_millenium_reader(params,particle_data,0,&time);
-              break;
-            case 5:
-#if defined(USE_MPIIO)
-              bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-#else
-              planck_fail("mpi reader not available in non MPI compiled version !");
-#endif
-              break;
-            case 6:
-              mesh_reader(params,particle_data, maxr, minr);
-              break;
-#ifdef HDF5
-            case 7:
-              hdf5_reader(params,particle_data, maxr, minr);
-              break;
-#endif
-            default:
-              planck_fail("No valid file type given ...");
-              break;
-            }
-#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
-        }
-      else
-        {
-          particle_data = p_orig;
-        }
-#endif
-
-#ifdef INTERPOLATE
       if (master)
-        cout << "Interpolating between " << particle_data1.size() << " and " <<
-          particle_data2.size() << " particles ..." << endl;
-      particle_interpolate(params,particle_data,particle_data1,particle_data2,frac,time1,time2);
+        cout << endl << "reading data ..." << endl;
+      int simtype = params.find<int>("simtype"); ///2:Gadget2
+      float maxr, minr;
+#ifdef INTERPOLATE
+      double frac=(double)(linecount-(nextfile-ninterpol))/(double)ninterpol;
+#endif
+      switch (simtype)
+        {
+        case 0:
+          bin_reader_tab(params,particle_data, maxr, minr);
+          break;
+        case 1:
+          bin_reader_block(params,particle_data, maxr, minr);
+          break;
+        case 2:
+#ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
+          cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
+          cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+          cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
+          if (snr1==snr2_now)
+            {
+            cout << " old2 = new1!" << endl;
+            particle_data1=particle_data2;
+            snr1_now = snr1;
+            time1 = time2;
+            }
+          if (snr1_now!=snr1)
+            {
+            cout << " reading new1 " << snr1 << endl;
+            gadget_reader(params,particle_data1,snr1,&time1);
+            snr1_now = snr1;
+            }
+          if (snr2_now!=snr2)
+            {
+            cout << " reading new2 " << snr2 << endl;
+            gadget_reader(params,particle_data2,snr2,&time2);
+            snr2_now = snr2;
+            }
+#else
+          gadget_reader(params,particle_data,0,&time); ///vector<particle_sim> particle_data;
+#ifdef GEOMETRY_FILE
+          p_orig = particle_data;
+#endif
+#endif
+          break;
+        case 3: //enzo_reader(params,particle_data);
+          break;
+        case 4:
+          gadget_millenium_reader(params,particle_data,0,&time);
+          break;
+        case 5:
+#if defined(USE_MPIIO)
+          bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+#else
+          planck_fail("mpi reader not available in non MPI compiled version !");
+#endif
+          break;
+        case 6:
+          mesh_reader(params,particle_data, maxr, minr);
+          break;
+#ifdef HDF5
+        case 7:
+          hdf5_reader(params,particle_data, maxr, minr);
+          break;
+#endif
+        default:
+          planck_fail("No valid file type given ...");
+          break;
+        }
+#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
+      }
+    else
+      {
+      particle_data = p_orig;
+      }
 #endif
 
-      long npart=particle_data.size();
-      long npart_all=npart;
-      mpiMgr.allreduce (npart_all,MPI_Manager::Sum); ///does nothing
-      wallTimer.stop("read");
+#ifdef INTERPOLATE
+    if (master)
+      cout << "Interpolating between " << particle_data1.size() << " and " <<
+        particle_data2.size() << " particles ..." << endl;
+    particle_interpolate(params,particle_data,particle_data1,particle_data2,frac,time1,time2);
+#endif
+
+    long npart=particle_data.size();
+    long npart_all=npart;
+    mpiMgr.allreduce (npart_all,MPI_Manager::Sum); ///does nothing
+    wallTimer.stop("read");
 
 #ifndef CUDA
 #ifndef NO_HOST_RANGING
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
-      wallTimer.start("range");
-      if (master)
-                cout << endl << "ranging values (" << npart_all << ") ..." << endl;
-          particle_normalize(params,particle_data,true); ///does log calculations and clamps data
-      wallTimer.stop("range");
+    wallTimer.start("range");
+    if (master)
+      cout << endl << "ranging values (" << npart_all << ") ..." << endl;
+    particle_normalize(params,particle_data,true); ///does log calculations and clamps data
+    wallTimer.stop("range");
 #endif
 
 #ifndef NO_HOST_TRANSFORM
 // -------------------------------------
 // ----------- Transforming ------------
 // -------------------------------------
-      wallTimer.start("transform");
-      if (master)
-                cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
-      particle_project(params, particle_data, campos, lookat, sky);
-      wallTimer.stop("transform");
+    wallTimer.start("transform");
+    if (master)
+      cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
+    particle_project(params, particle_data, campos, lookat, sky);
+    wallTimer.stop("transform");
 #endif
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
-      wallTimer.start("sort");
-      if (master)
-        (mpiMgr.num_ranks()>1) ?
-          cout << endl << "applying local sort ..." << endl :
-          cout << endl << "applying sort (" << npart << ") ..." << endl;
-      int sort_type = params.find<int>("sort_type",1);
-      particle_sort(particle_data,sort_type,true);
-      wallTimer.stop("sort");
+    wallTimer.start("sort");
+    if (master)
+      (mpiMgr.num_ranks()>1) ?
+        cout << endl << "applying local sort ..." << endl :
+        cout << endl << "applying sort (" << npart << ") ..." << endl;
+    int sort_type = params.find<int>("sort_type",1);
+    particle_sort(particle_data,sort_type,true);
+    wallTimer.stop("sort");
 
 //2009-10-22: sorting is ignored now to simplified things.
 //if sorted, it's needed to copy particle sim back to device
 #ifdef CUDA
-          if ( sort_type !=0) //means needing sort
-                  cout<< endl << "CAUTION: SORTING NEEDED!"<<endl;
+    if (sort_type!=0) //means needing sort
+      cout<< endl << "CAUTION: SORTING NEEDED!"<<endl;
 #endif
 
 #ifndef NO_HOST_COLORING
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
-      wallTimer.start("coloring");
-      if (master)
-        cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
-      particle_colorize(params, particle_data, amap, emap);
-      wallTimer.stop("coloring");
+    wallTimer.start("coloring");
+    if (master)
+      cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
+    particle_colorize(params, particle_data, amap, emap);
+    wallTimer.stop("coloring");
 #endif
 
 // ----------------------------------
 // ----------- Rendering ------------
 // ----------------------------------
-      int res = params.find<int>("resolution",200);
-      long nsplotch=particle_data.size();
-      long nsplotch_all=nsplotch;
-      mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
-      if (master)
-        cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
-      arr2<COLOUR> pic(res,res);
-      float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-      bool a_eq_e = params.find<bool>("a_eq_e",true);
+    int res = params.find<int>("resolution",200);
+    long nsplotch=particle_data.size();
+    long nsplotch_all=nsplotch;
+    mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
+    if (master)
+      cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
+    arr2<COLOUR> pic(res,res);
+    float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+    bool a_eq_e = params.find<bool>("a_eq_e",true);
 #ifndef NO_HOST_RENDER
-      wallTimer.start("render");
-      render(particle_data,pic,a_eq_e,grayabsorb);
-      wallTimer.stop("render");
+    wallTimer.start("render");
+    render(particle_data,pic,a_eq_e,grayabsorb);
+    wallTimer.stop("render");
 #endif//NO_HOST_RENDER
 #endif //if not def CUDA
 
@@ -641,73 +638,68 @@ int main (int argc, const char **argv)
 /////////////////////////////////////////////////////////////////////
 //Codes merge here whether using CUDA or not
 
-      wallTimer.start("write");
+    wallTimer.start("write");
 
 // ---------------------------------
 // ----------- Colorbar ------------
 // ---------------------------------
-        if (master)
-        {
-          bool colbar = params.find<bool>("colorbar",false);
-          if (colbar)
-            {
-              cout << endl << "creating color bar ..." << endl;
-              add_colorbar(params,pic,amap);
-            }
-        }
-
+    if (master && params.find<bool>("colorbar",false))
+      {
+      cout << endl << "creating color bar ..." << endl;
+      add_colorbar(params,pic,amap);
+      }
 
 // -------------------------------
 // ----------- Saving ------------
 // -------------------------------
-      if (master)
-        cout << endl << "saving file ..." << endl;
+    if (master)
+      cout << endl << "saving file ..." << endl;
 
-      int pictype = params.find<int>("pictype",0);
-      string outfile = params.find<string>("outfile");
+    int pictype = params.find<int>("pictype",0);
+    string outfile = params.find<string>("outfile");
 #ifdef GEOMETRY_FILE
-      outfile = outfile + intToString(linecount,4) + ".tga";
+    outfile = outfile + intToString(linecount,4) + ".tga";
+    linecount++;
+#ifdef INTERPOLATE
+    if (linecount==nextfile)
+      {
+      nextfile=linecount+ninterpol;
+      snr1=snr2;
+      snr2++;
+      }
+#endif
+#endif
+
+    switch(pictype)
+      {
+      case 0:
+        if (master) write_tga(params,pic,res,outfile);
+        break;
+      default:
+        planck_fail("No valid image file type given ...");
+        break;
+      }
+
+    wallTimer.stop("write");
+
+#ifdef GEOMETRY_FILE
+    for (int i=1; i<geometry_incr; i++)
+      {
+      getline(inp, line);
       linecount++;
 #ifdef INTERPOLATE
-      if(linecount == nextfile)
+      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+             &campos.x,&campos.y,&campos.z,
+             &lookat.x,&lookat.y,&lookat.z,
+             &sky.x,&sky.y,&sky.z,&ninterpol);
+      if (linecount==nextfile)
         {
-          nextfile=linecount+ninterpol;
-          snr1=snr2;
-          snr2=snr2+1;
+        nextfile=linecount+ninterpol;
+        snr1=snr2;
+        snr2++;
         }
 #endif
-#endif
-
-      switch(pictype)
-        {
-        case 0:
-          if (master) write_tga(params,pic,res,outfile);
-          break;
-        default:
-          planck_fail("No valid image file type given ...");
-          break;
-        }
-
-      wallTimer.stop("write");
-
-#ifdef GEOMETRY_FILE
-      for(int i=1; i<geometry_incr; i++)
-        {
-          getline(inp, line);
-          linecount++;
-#ifdef INTERPOLATE
-          sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
-                 &campos.x,&campos.y,&campos.z,
-                 &lookat.x,&lookat.y,&lookat.z,
-                 &sky.x,&sky.y,&sky.z,&ninterpol);
-          if(linecount == nextfile)
-            {
-              nextfile=linecount+ninterpol;
-              snr1=snr2;
-              snr2=snr2+1;
-            }
-#endif
-        }
+      }
     }
 #endif
 
@@ -719,7 +711,7 @@ int main (int argc, const char **argv)
   wallTimer.stop("full");
   if (master)
     {
-      cout << endl << "--------------------------------------------" << endl;
+    cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
     cout << "Setup Data (secs)          : " << wallTimer.acc("setup") << endl;
     cout << "Read Data (secs)           : " << wallTimer.acc("read") << endl;
@@ -737,8 +729,7 @@ int main (int argc, const char **argv)
   cout << endl << "Press any key to end..." ;
   getchar();
 #endif
-
-}
+  }
 
 
 ////////////////CUDA FUNCTIONS AND HELPER FUNCTIONS ////////////////////////////
