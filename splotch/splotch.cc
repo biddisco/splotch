@@ -44,6 +44,7 @@
 
 #ifdef CUDA
 #include "cuda/splotch_cuda.h"
+#include "cuda/splotchutils_cuda.h"
 #include <string.h>
 #endif
 

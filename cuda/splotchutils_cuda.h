@@ -1,4 +1,15 @@
+#ifndef SPLOTCHUTILS_CUDA_H
+#define SPLOTCHUTILS_CUDA_H
+
 #ifdef CUDA
+
+#include <vector>
+#include "cxxsupport/datatypes.h"
+#include "kernel/colour.h"
+#include "kernel/transform.h"
+#include "splotch/splotchutils.h"
+#include "cuda/splotch_cuda.h"
+
 	//just for now that its still needed for cuda codes 2 Dec 2009
 	struct particle_splotch
 	{
@@ -61,3 +72,5 @@ extern "C" void getCuTransformParams(cu_param_transform &para_trans,
 			  paramfile &params, double c[3], double l[3], double s[3]);
 
 #endif	//CUDA
+
+#endif

@@ -1,7 +1,7 @@
 #include "splotch/splotchutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "kernel/transform.h"
-
+#include "cuda/splotch_cuda.h"
 using namespace std;
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,

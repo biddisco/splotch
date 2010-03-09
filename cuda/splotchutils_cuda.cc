@@ -1,3 +1,6 @@
+#include "cuda/splotchutils_cuda.h"
+
+using namespace std;
 
 /////////////////////////////CUDA CODE///////////////////////////////////
 #ifdef CUDA
