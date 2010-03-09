@@ -906,3 +906,159 @@ cu_color        C_get_color(int ptype, float val, cu_color_map_entry *map, //wil
 
 #endif
 //////////////////////////////////////////////////////////////////////
+/////////////Here comes CUDA code//////////////////////////
+// -----------------------------------
+// ----------- Run Cuda -------------
+// -----------------------------------
+// After reading, ranging with device
+#ifdef CUDA
+void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
+  {
+        //test assign, should remove later
+    vector<particle_sim>        tmp;
+        int     n1,n2,n3;
+        n1 =particle_data.size();
+        tmp.assign(particle_data.begin(), particle_data.begin()+1000);
+        n2 =particle_data.size();
+        n3 =tmp.size();
+        bool b;
+        b =particle_data.empty();
+
+        //prepare the parameters for the cuda thread
+        //the final image
+        res = params.find<int>("resolution",200);
+        pic.alloc(res,res);//, pic1(res,res);//pic1 for debug only
+
+        //test host threading
+/*      thread_info     ti;
+        ti.startP=0;
+        ti.endP =25000;
+        ti.pPic =&pic;
+        HANDLE h=CreateThread( NULL, 0,
+                        (LPTHREAD_START_ROUTINE)host_thread_func,&ti, 0, NULL );
+        WaitForSingleObject(h, INFINITE);
+        goto out;
+*/
+        //new arrays of thread_info and HANDLE
+        int     nDev;
+        nDev =params.find<int>("gpu_number",0);
+        //see if use host as a working thread
+        bool bHostThread;
+        bHostThread =params.find<bool>("use_host_as_thread", false);
+        int nThread = bHostThread? nDev+1: nDev;
+        //init objects for threads control
+        thread_info     *tInfo =new thread_info[nThread];
+#ifndef NO_WIN_THREAD
+        HANDLE          *tHandle =new HANDLE[nThread];
+#endif
+        //fill in thread_info
+        tInfo[0].pPic =&pic;
+        for (int i=0; i<nDev; i++)
+        {
+                tInfo[i].devID =i;
+                //local var pic is assigned to the first device
+                if ( i!=0 )
+                        tInfo[i].pPic =new arr2<COLOUR>(res, res);
+        }
+        //make the last one work for host thread
+        if (bHostThread )
+        {
+                tInfo[nThread-1].devID =-1;
+                if ( nThread-1 != 0 )
+                        tInfo[nThread-1].pPic =new arr2<COLOUR>(res, res);
+        }
+        //decide how to devide task by another function
+        DevideThreadsTasks(tInfo, nThread, bHostThread);
+
+#ifndef NO_WIN_THREAD //to let it compiled in Linux, just for now, 2 Dec 2009.
+        //issue the threads
+        for (int i=0; i<nDev; i++)
+                tHandle[i] =CreateThread( NULL, 0,
+                        (LPTHREAD_START_ROUTINE)cu_thread_func,&(tInfo[i]), 0, NULL );
+        //issue the host thread too
+        if (bHostThread)
+                tHandle[nDev] =CreateThread( NULL, 0,
+                        (LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
+        //and wait for them to finish
+        WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
+
+#else //do not use thread which is now Windows code
+        cu_thread_func (&(tInfo[0])); //just call it as normal function
+//      host_thread_func ( &(tInfo[nDev]) );
+#endif  //if not NO_WIN_THREAD
+
+        //post-process
+//      VTimer  timer;
+//      timer.reset();
+//      timer.start();
+        //combine the results to pic
+        if (1)//a_eq_e)
+        {
+                for (int i=1; i<nThread; i++)
+                        for (int x=0; x<res; x++) //  error when x =1,
+                                for (int y=0; y<res; y++)
+                                        pic[x][y] =pic[x][y] + (*tInfo[i].pPic)[x][y];
+
+        }
+        else
+        {} //to be done later...
+
+        if(1)//a_eq_e)
+        {
+                exptable        xexp(MAX_EXP);
+                for(int ix =0; ix <pic.size1(); ix++)
+                        for(int iy =0; iy <pic.size2(); iy++)
+                          {
+                                  pic[ix][iy].r=1-xexp(pic[ix][iy].r);
+                                  pic[ix][iy].g=1-xexp(pic[ix][iy].g);
+                                  pic[ix][iy].b=1-xexp(pic[ix][iy].b);
+                          }
+        }
+        else
+        {
+        }
+//      timer.stop();
+//      cout << endl << "Post-process pic[] cost time:" << timer.getTime() << "s" <<endl;
+
+
+        //now output the time records
+        for (int i=0; i<nThread; i++)
+        {
+                if ( tInfo[i].devID!= -1)
+                {
+                        cout<< endl <<"Times of GPU" << i << ":" <<endl;
+                        cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
+                        cout<< "COPY2C_LIKE:            " << tInfo[i].times[COPY2C_LIKE] <<endl;
+                        cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
+                        cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
+                        cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
+                        cout<< "FILTER:                 " << tInfo[i].times[FILTER] <<endl;
+                        cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
+                        cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
+                        cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
+                        cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
+                        cout<<endl;
+                }
+                else
+                {
+                        cout<< endl <<"Times of CPU as a thread:" <<endl;
+                        cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
+                        cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
+                        cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
+                        cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
+                        cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
+                        cout<<endl;
+                }
+        }
+
+        //delete pics that were created
+        for (int i=1; i<nThread; i++)
+          delete tInfo[i].pPic;
+        //delete thread_info and HANDLE arrays
+        delete [] tInfo;
+#ifndef NO_WIN_THREAD
+        delete [] tHandle;
+#endif
+  }
+
+#endif  //if def CUDA

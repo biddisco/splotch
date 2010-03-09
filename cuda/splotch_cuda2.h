@@ -97,6 +97,9 @@ struct region_cmp
         }
 };
 */
+
+void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic);
+
 #endif //ifdef CUDA
 
 
