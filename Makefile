@@ -37,8 +37,8 @@ OPT     +=  -DNO_HOST_RENDER
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
-#SYSTYPE="GP"
-SYSTYPE="PLX"
+SYSTYPE="GP"
+#SYSTYPE="PLX"
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.3_ser/xl--10.1
@@ -108,13 +108,13 @@ ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 
 endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotchutils_cuda.o
+OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotchutils_cuda.o cuda/splotch_cuda2.o
 endif
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 LIB_MPIIO = -Lmpiio-1.0/lib -lpartition
 endif
 
-INCL   = splotch/splotchutils.h writer/writer.h reader/reader.h	Makefile
+INCL   = */*.h Makefile
 
 CPPFLAGS = $(OPTIONS) $(SUP_INCL) $(HDF5_INCL) $(OMP)
 
