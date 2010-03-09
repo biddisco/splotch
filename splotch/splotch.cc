@@ -451,7 +451,7 @@ int main (int argc, const char **argv)
     }
 
 #ifdef VS
-  //Just to hold the screen to read the messages when debuging
+  //Just to hold the screen to read the messages when debugging
   cout << endl << "Press any key to end..." ;
   getchar();
 #endif

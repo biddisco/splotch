@@ -59,10 +59,10 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
         maxy=min(maxy,y1);
         if (miny>=maxy) continue;
 
-        COLOUR8 a=p[m].e, e, q;
+        COLOUR8 a=p[m].e, q(0,0,0);
         if (!a_eq_e)
           {
-          e=p[m].e;
+          COLOUR8 e=p[m].e;
           q=COLOUR8(e.r/(a.r+grayabsorb),e.g/(a.g+grayabsorb),e.b/(a.b+grayabsorb));
           }
 
@@ -255,7 +255,6 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   int res = params.find<int>("resolution",200);
   double fov = params.find<double>("fov",45); //in degrees
   double fovfct = tan(fov*0.5*degr2rad);
-  float64 xfac,dist;
   int npart=p.size();
 
   sky.Normalize();
@@ -283,12 +282,10 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
   bool projection = params.find<bool>("projection",true);
 
-  if(!projection)
-    {
-    dist= (campos-lookat).Length();
-    xfac=1./(fovfct*dist);
+  float64 dist = (campos-lookat).Length();
+  float64 xfac = 1./(fovfct*dist);
+  if (!projection)
     cout << " Field of fiew: " << 1./xfac*2. << endl;
-    }
 
   bool minhsmlpixel = params.find<bool>("minhsmlpixel",false);
 
@@ -474,7 +471,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
 #endif
 
   p.resize(0);
-  int i1=0,i2=0;
+  tsize i1=0,i2=0;
   while(i1<p1.size() && i2<p2.size())
     {
     if (p1[i1].id==p2[i2].id)
