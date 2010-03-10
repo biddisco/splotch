@@ -13,15 +13,6 @@
 #define WINAPI
 #endif
 
-//function definitions for cuda/testing use
-void    GoldComparePData
-(vector<particle_sim> particle_data, cu_particle_sim* d_particle_data);
-void    GoldCompareSData
-(vector<particle_splotch> host_data, cu_particle_splotch* device_data);
-cu_color        C_get_color(int ptype, float val, cu_color_map_entry *map, //will move to kernel
-                        int     mapSize, int *ptype_points, int ptypes);
-void    GoldCompareFBuf(cu_fragment_AeqE *goldBuf, cu_fragment_AeqE *buf, int n);
-
 //things for combination with host threads
 struct  param_combine_thread//for host combine thread
 {
@@ -35,7 +26,6 @@ struct  param_combine_thread//for host combine thread
 };
 #ifndef NO_WIN_THREAD
 DWORD WINAPI combine(void       *param);
-DWORD WINAPI TestThreadCombineTime(void *p);
 #else
 DWORD WINAPI cu_thread_func(void *pinfo);
 DWORD WINAPI cu_draw_chunk(void *pinfo);

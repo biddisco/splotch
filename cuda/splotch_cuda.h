@@ -5,6 +5,13 @@ Copyright things go here.
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
+#ifdef CUDA
+#ifndef VS
+#define DWORD long
+#define WINAPI
+#endif
+#endif
+
 #include "cxxsupport/paramfile.h"
 //#include "CuPolicy.h"
 class CuPolicy;

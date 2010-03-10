@@ -21,27 +21,6 @@
 		particle_splotch () {}
 	};
 	
-	//#define CUDA_TEST_FRAGMENT
-	
-	#ifdef CUDA_TEST_FRAGMENT
-		//the fragment buffer at host
-		unsigned long	posFragBufH=0;
-		cu_fragment_AeqE	fragBuf[30*100000*12];//for current test only! 10-29
-		cu_fragment_AeqE	fragBufWrittenByHost[30*100000*12];//for current test only! 10-29
-	#endif //ifdef CUDA_TEST_FRAGMENT
-
-	//a array used for debug only
-	#ifdef CUDA_TEST_COLORMAP
-		int		size_inout_buffer=0;	//for debug only.
-		float	inout_buffer[500000][5];//for debug only. ptype,input,r,g,b, 
-	#endif //if CUDA_TEST_COLORMAP
-
-	//#define CUDA_TEST_EXP
-	#ifdef CUDA_TEST_EXP
-		int		size_inout_buffer=0;	//for debug only.
-		float	inout_buffer[100000][2];//for debug only. in, out
-	#endif //if CUDA_TEST_EXP
-
 	//#define HOST_THREAD_RENDER
 	#ifdef HOST_THREAD_RENDER
 	struct particle_splotch;
