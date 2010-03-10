@@ -16,11 +16,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
   int xres = pic.size1(), yres=pic.size2();
   pic.fill(COLOUR(0,0,0));
 
-#ifdef VS
-  work_distributor wd (xres,yres,xres,yres);
-#else
   work_distributor wd (xres,yres,200,200);
-#endif //ifdef VS
 
 #pragma omp parallel
 {
@@ -179,7 +175,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
   for (int m=0; m<npart; ++m) //do log calculations if demanded
     {
     if (log_int[p[m].type])
-    p[m].I = log10(p[m].I);
+      p[m].I = log10(p[m].I);
     get_minmax(minint[p[m].type], maxint[p[m].type], p[m].I);
 
     if (log_col[p[m].type])
@@ -313,7 +309,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   }
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
-                       vector<COLOURMAP> &amap, vector<COLOURMAP> &emap)
+  vector<COLOURMAP> &amap, vector<COLOURMAP> &emap)
   {
   int res = params.find<int>("resolution",200);
   int ycut0 = params.find<int>("ycut0",0);
@@ -450,7 +446,7 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 //    v=v0+t*(v1-v0)
 
 void particle_interpolate(paramfile &params, vector<particle_sim> &p,
-  vector<particle_sim> &p1, vector<particle_sim> &p2, double frac,
+  const vector<particle_sim> &p1, const vector<particle_sim> &p2, double frac,
   double time1, double time2)
   {
   cout << " Time1/2 = " << time1 << "," << time2 << endl;

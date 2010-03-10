@@ -89,10 +89,7 @@ struct hcmp
   };
 
 template<typename T> void get_minmax (T &minv, T &maxv, T val)
-  {
-  minv=min(minv,val);
-  maxv=max(maxv,val);
-  }
+  { minv=min(minv,val); maxv=max(maxv,val); }
 
 template<typename T> void my_normalize (T minv, T maxv, T &val)
   { if (minv!=maxv) val=(val-minv)/(maxv-minv); }
@@ -110,7 +107,7 @@ class exptable
       nbits=10,
       dim1=1<<nbits,
       mask1=dim1-1,
-      dim2=1<<nbits<<nbits,
+      dim2=(1<<nbits)<<nbits,
       mask2=dim2-1,
       mask3=~mask2
       };
@@ -163,9 +160,10 @@ class work_distributor
       }
   };
 
-void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, 
-      bool a_eq_e,double grayabsorb);
-void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap);
+void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
+  bool a_eq_e,double grayabsorb);
+void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
+  vector<COLOURMAP> &amap);
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose);
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky);
@@ -173,10 +171,9 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   vector<COLOURMAP> &amap, vector<COLOURMAP> &emap);
 void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose);
 #ifdef INTERPOLATE
-void particle_interpolate(paramfile &params,
-                          vector<particle_sim> &p,vector<particle_sim> &p1,
-                          vector<particle_sim> &p2, double frac, double time1,
-                          double time2);
+void particle_interpolate(paramfile &params, vector<particle_sim> &p,
+  const vector<particle_sim> &p1, const vector<particle_sim> &p2,
+  double frac, double time1, double time2);
 #endif
 
 double my_asinh (double val);
