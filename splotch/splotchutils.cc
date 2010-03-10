@@ -3,10 +3,154 @@
 #include "kernel/transform.h"
 #include "cuda/splotch_cuda.h"
 using namespace std;
+struct particle_new
+  {
+  COLOUR a, q;
+  float32 x, y, rmax, steepness;
+  };
+
+void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
+  float64 gray, vector<particle_new> &out)
+  {
+  const float64 powtmp = pow(pi,1./3.);
+  const float64 sigma0=powtmp/sqrt(2*pi);
+  const float64 bfak=1./(2*sqrt(pi)*powtmp);
+
+  out.reserve(in.size());
+  for (tsize i=0; i< in.size(); ++i)
+    {
+    if (in[i].active)
+      {
+      particle_new p;
+      p.x = in[i].x;
+      p.y = in[i].y;
+      p.a = in[i].e;
+      if (!a_eq_e)
+        p.q = COLOUR (p.a.r/(p.a.r+gray),p.a.g/(p.a.g+gray),p.a.b/(p.a.b+gray));
+
+      p.a = p.a *(-0.5*bfak/in[i].ro);
+      const float64 min_change=8e-5;
+      p.steepness = -0.5/(in[i].r*in[i].r*sigma0*sigma0);
+//      float64 amax=max(abs(p.a.r),max(abs(p.a.g),abs(p.a.b)));
+//      const float64 min_change=8e-5;
+//      float64 attenuation = min_change/amax;
+      float64 attenuation = 3.7e-2; // equivalent to rfac=1.5
+      p.rmax = sqrt(max(0.,log(attenuation)/p.steepness));
+//p.rmax=3*in[i].r;
+      out.push_back(p);
+      }
+    }
+  }
+
+void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
+  bool a_eq_e,double grayabsorb)
+  {
+  vector<particle_new> p;
+  create_new_particles (pold, a_eq_e, grayabsorb, p);
+
+  exptable xexp(-20.);
+
+  int xres = pic.size1(), yres=pic.size2();
+  pic.fill(COLOUR(0,0,0));
+
+  work_distributor wd (xres,yres,200,200);
+
+#pragma omp parallel
+{
+  int chunk;
+#pragma omp for schedule(dynamic,1)
+  for (chunk=0; chunk<wd.nchunks(); ++chunk)
+    {
+    int x0, x1, y0, y1;
+    wd.chunk_info(chunk,x0,x1,y0,y1);
+    arr2<COLOUR8> lpic(x1-x0,y1-y0);
+    arr<float64> pre1(yres);
+    lpic.fill(COLOUR8(0,0,0));
+    int x0s=x0, y0s=y0;
+    x1-=x0; x0=0; y1-=y0; y0=0;
+
+    for (tsize m=0; m<p.size(); ++m)
+      {
+      float64 posx=p[m].x, posy=p[m].y;
+      posx-=x0s; posy-=y0s;
+      float64 rmax= p[m].rmax;
+
+      int minx=int(posx-rmax+1);
+      if (minx>=x1) continue;
+      minx=max(minx,x0);
+      int maxx=int(posx+rmax+1);
+      if (maxx<=x0) continue;
+      maxx=min(maxx,x1);
+      if (minx>=maxx) continue;
+      int miny=int(posy-rmax+1);
+      if (miny>=y1) continue;
+      miny=max(miny,y0);
+      int maxy=int(posy+rmax+1);
+      if (maxy<=y0) continue;
+      maxy=min(maxy,y1);
+      if (miny>=maxy) continue;
+
+      COLOUR8 a=p[m].a, q;
+      if (!a_eq_e) q=p[m].q;
+
+      float64 stp=p[m].steepness;
+      float64 att_max=xexp(stp*rmax*rmax);
+
+      for (int y=miny; y<maxy; ++y)
+        pre1[y] = xexp(stp*(y-posy)*(y-posy));
+
+      for (int x=minx; x<maxx; ++x)
+        {
+        double pre2 = xexp(stp*(x-posx)*(x-posx));
+        for (int y=miny; y<maxy; ++y)
+          {
+          float64 att = pre1[y]*pre2;
+          if (att>att_max)
+            {
+            if (a_eq_e)
+              {
+              lpic[x][y].r += att*a.r;
+              lpic[x][y].g += att*a.g;
+              lpic[x][y].b += att*a.b;
+              }
+            else
+              {
+              lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
+              lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
+              lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
+              } // if a_eq_e
+            } // if att>att_max
+          } // y
+        } // x
+      } // for particle[m]
+    for(int ix=0;ix<x1;ix++)
+      for(int iy=0;iy<y1;iy++)
+        pic[ix+x0s][iy+y0s]=lpic[ix][iy];
+    } // for this chunk
+} // #pragma omp parallel
+
+  mpiMgr.allreduceRaw
+    (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
+  if (mpiMgr.master())
+    {
+    if (a_eq_e)
+      for(int ix=0;ix<xres;ix++)
+        for(int iy=0;iy<yres;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
+    }
+  }
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
   double grayabsorb)
   {
+#if 0
+render_new(p,pic,a_eq_e,grayabsorb);
+return;
+#endif
   const float64 rfac=1.5;
   const float64 powtmp = pow(pi,1./3.);
   const float64 sigma0=powtmp/sqrt(2*pi);
