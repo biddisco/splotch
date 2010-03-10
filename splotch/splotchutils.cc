@@ -2,7 +2,9 @@
 #include "cxxsupport/mpi_support.h"
 #include "kernel/transform.h"
 #include "cuda/splotch_cuda.h"
+
 using namespace std;
+
 struct particle_new
   {
   COLOUR a, q;
@@ -43,7 +45,7 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
   }
 
 void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
-  bool a_eq_e,double grayabsorb)
+  bool a_eq_e, double grayabsorb)
   {
   vector<particle_new> p;
   create_new_particles (pold, a_eq_e, grayabsorb, p);
@@ -118,30 +120,27 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
               lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
               lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
               lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
-              } // if a_eq_e
-            } // if att>att_max
-          } // y
-        } // x
-      } // for particle[m]
+              }
+            }
+          }
+        }
+      }
     for(int ix=0;ix<x1;ix++)
       for(int iy=0;iy<y1;iy++)
         pic[ix+x0s][iy+y0s]=lpic[ix][iy];
-    } // for this chunk
-} // #pragma omp parallel
+    }
+}
 
   mpiMgr.allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
-  if (mpiMgr.master())
-    {
-    if (a_eq_e)
-      for(int ix=0;ix<xres;ix++)
-        for(int iy=0;iy<yres;iy++)
-          {
-          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-          }
-    }
+  if (mpiMgr.master() && a_eq_e)
+    for (int ix=0;ix<xres;ix++)
+      for (int iy=0;iy<yres;iy++)
+        {
+        pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+        pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+        pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+        }
   }
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
