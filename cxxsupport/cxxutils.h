@@ -167,56 +167,62 @@ template<typename T, typename Iter, typename Comp> inline void interpol_helper
   frac = (val-begin[idx])/(begin[idx+1]-begin[idx]);
   }
 
-template<typename It> class IdxComp__
-  {
-  private:
-    It begin;
-  public:
-    IdxComp__ (It begin_) : begin(begin_) {}
-    bool operator() (std::size_t a, std::size_t b) const
-      { return (*(begin+a)<*(begin+b)); }
-  };
-
-template<typename It> void buildIndex (It begin, It end,
-  std::vector<size_t> &idx)
-  {
-  using namespace std;
-  size_t num=end-begin;
-  idx.resize(num);
-  for (size_t i=0; i<num; ++i) idx[i] = i;
-  sort (idx.begin(),idx.end(),IdxComp__<It>(begin));
-  }
-
-template<typename It, typename Comp> struct IdxComp2__
+template<typename It, typename Comp> class IdxComp__
   {
   private:
     It begin;
     Comp comp;
   public:
-    IdxComp2__ (It begin_, Comp comp_): begin(begin_), comp(comp_) {}
+    IdxComp__ (It begin_, Comp comp_): begin(begin_), comp(comp_) {}
     bool operator() (std::size_t a, std::size_t b) const
       { return comp(*(begin+a),*(begin+b)); }
   };
 
-template<typename It, typename Comp> void buildIndex (It begin, It end,
+template<typename It, typename Comp> inline void buildIndex (It begin, It end,
   std::vector<std::size_t> &idx, Comp comp)
   {
   using namespace std;
   size_t num=end-begin;
   idx.resize(num);
   for (size_t i=0; i<num; ++i) idx[i] = i;
-  sort (idx.begin(),idx.end(),IdxComp2__<It,Comp>(begin,comp));
+  sort (idx.begin(),idx.end(),IdxComp__<It,Comp>(begin,comp));
   }
 
-template<typename T, typename It> void sortByIndex (It begin, It end,
+template<typename It> inline void buildIndex (It begin, It end,
+  std::vector<size_t> &idx)
+  {
+  using namespace std;
+  typedef typename iterator_traits<It>::value_type T;
+  buildIndex(begin,end,idx,less<T>());
+  }
+
+template<typename It> inline void sortByIndex (It begin, It end,
   const std::vector<std::size_t> &idx)
   {
   using namespace std;
+  typedef typename iterator_traits<It>::value_type T;
   size_t num=end-begin;
   T *tmp= new T[num];
   for (size_t i=0; i<num; ++i) tmp[i]=*(begin+i);
   for (size_t i=0; i<num; ++i) *(begin+i) = tmp[idx[i]];
   delete[] tmp;
+  }
+
+template<typename It, typename Comp> inline void indirectSort (It begin, It end,
+  Comp comp)
+  {
+  using namespace std;
+  typedef typename iterator_traits<It>::value_type T;
+  vector<std::size_t> idx;
+  buildIndex (begin,end,idx,comp);
+  sortByIndex (begin,end,idx);
+  }
+
+template<typename It> inline void indirectSort (It begin, It end)
+  {
+  using namespace std;
+  typedef typename iterator_traits<It>::value_type T;
+  indirectSort(begin,end,less<T>());
   }
 
 /*! \} */

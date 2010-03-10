@@ -227,6 +227,11 @@ template <typename T> class arr2
     /*! Creates an array with the dimensions \a sz1 and \a sz2. */
     arr2(tsize sz1, tsize sz2)
       : s1(sz1), s2(sz2), d(s1*s2) {}
+    /*! Creates an array with the dimensions  \a sz1 and \a sz2
+        and initializes them with \a inival. */
+    arr2(tsize sz1, tsize sz2, const T &inival)
+      : s1(sz1), s2(sz2), d (s1*s2)
+      { fill(inival); }
     /*! Creates the array as a copy of \a orig. */
     arr2(const arr2 &orig)
       : s1(orig.s1), s2(orig.s2), d(orig.d) {}

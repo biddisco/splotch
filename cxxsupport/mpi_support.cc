@@ -91,6 +91,9 @@ int MPI_Manager::rank() const
 bool MPI_Manager::master() const
   { return (rank() == 0); }
 
+void MPI_Manager::barrier() const
+  { MPI_Barrier(MPI_COMM_WORLD); }
+
 #else
 
 MPI_Manager::MPI_Manager () {}
@@ -99,6 +102,8 @@ MPI_Manager::~MPI_Manager () {}
 int MPI_Manager::num_ranks() const { return 1; }
 int MPI_Manager::rank() const { return 0; }
 bool MPI_Manager::master() const { return true; }
+
+void MPI_Manager::barrier() const {}
 
 #endif
 
@@ -110,10 +115,18 @@ void MPI_Manager::sendRawVoid (const void *data, NDT type, tsize num,
   }
 void MPI_Manager::recvRawVoid (void *data, NDT type, tsize num, tsize src) const
   { MPI_Recv(data,num,ndt2mpi(type),src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE); }
-void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
-  tsize src, tsize dest) const
+void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
+  tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const
   {
-  MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+  MPI_Datatype dtype = ndt2mpi(type);
+  MPI_Sendrecv (const_cast<void *>(sendbuf),sendcnt,dtype,dest,0,
+    recvbuf,recvcnt,dtype,src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+  }
+void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
+  tsize dest, tsize src) const
+  {
+  MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,MPI_COMM_WORLD,
+    MPI_STATUS_IGNORE);
   }
 
 void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
@@ -164,8 +177,11 @@ void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
   { planck_fail("not supported in scalar code"); }
 void MPI_Manager::recvRawVoid (void *, NDT, tsize, tsize) const
   { planck_fail("not supported in scalar code"); }
-void MPI_Manager::sendrecv_replaceRawVoid (void *, NDT, tsize, tsize src,
-  tsize dest) const
+void MPI_Manager::sendrecvRawVoid (const void *, tsize, tsize, void *, tsize,
+  tsize, NDT) const
+  { planck_fail("not supported in scalar code"); }
+void MPI_Manager::sendrecv_replaceRawVoid (void *, NDT, tsize, tsize dest,
+  tsize src) const
   { planck_assert ((dest==0) && (src==0), "inconsistent call"); }
 
 void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)

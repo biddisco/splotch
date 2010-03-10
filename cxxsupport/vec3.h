@@ -73,7 +73,7 @@ class vec3
       x*=l; y*=l; z*=l;
       }
 
-    const vec3 Norm() const
+    vec3 Norm() const
       {
       vec3 res(*this);
       res.Normalize();

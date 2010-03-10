@@ -42,8 +42,8 @@ template<typename T> class anythingMap
       using namespace std;
       vector<size_t> idx;
       buildIndex(x.begin(),x.end(),idx);
-      sortByIndex<double>(x.begin(),x.end(),idx);
-      sortByIndex<T>(y.begin(),y.end(),idx);
+      sortByIndex(x.begin(),x.end(),idx);
+      sortByIndex(y.begin(),y.end(),idx);
       sorted = true;
       }
 

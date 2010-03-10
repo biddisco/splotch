@@ -32,7 +32,9 @@ THE SOFTWARE.
 #include <algorithm>
 #include <numeric>
 #include <queue>
+#ifdef USE_MPI
 #include "mpi.h"
+#endif
 #include "arr.h"
 #include "safe_cast.h"
 
@@ -226,68 +228,6 @@ void median_split (RAIter first, RAIter last, const arr<Tdist> &dist,
     }
   }
 
-// p-way flat merge
-template<typename T, typename Tcomp, typename Tdist> void flat_merge
-  (const T *in, T *out, const arr<Tdist> &disps, int nproc, Tcomp comp)
-  {
-  arr<Tdist> heads(disps);
-  for (int i=0; i<disps[nproc]; ++i)
-    {
-    int min_head = -1;
-    for (int j=0; j<nproc; ++j)
-      {
-      if ((heads[j]<disps[j+1])
-           && ((min_head<0) || comp (in[heads[j]],in[heads[min_head]])))
-        min_head = j;
-      }
-    out[i] = in[heads[min_head]++];
-    }
-  }
-
-template<typename T, typename Tcomp> class comphelper
-  {
-  private:
-    Tcomp comp;
-    typedef pair<const T *,int> qentry;
-
-  public:
-    comphelper (const Tcomp &comp_) : comp(comp_) {}
-    bool operator() (const qentry &a, const qentry &b)
-      { return !comp(*a.first,*b.first); }
-  };
-
-// priority-queue based merge
-template<typename T, typename Tcomp, typename Tdist> void pqueue_merge
-  (const T *in, T *out, const arr<Tdist> &disps, int nproc, Tcomp comp)
-  {
-  // arrays containing pointers to the active and one-past-last elements
-  // of all sequences
-  arr<const T*> heads(nproc), stops(nproc);
-  for (int j=0; j<nproc; ++j)
-    {
-    heads[j]=&in[disps[j]];
-    stops[j]=&in[disps[j+1]];
-    }
-
-  typedef pair<const T *,int> qentry;
-  priority_queue<qentry,vector<qentry>,comphelper<T,Tcomp> > queue(comp);
-
-  // seed the queue with the first element of all sequences
-  for (int j=0; j<nproc; ++j)
-    if (heads[j]<stops[j]) // sequence is not yet empty
-      queue.push(make_pair(heads[j]++,j)); // push first element of this sequence
-
-  for (int i=0; i<disps[nproc]; ++i)
-    {
-    const qentry &top(queue.top());
-    out[i]=*(top.first); // smallest element of all sequences
-    int j=top.second; // sequence number of smallest element
-    queue.pop();
-    if (heads[j]<stops[j]) // sequence is not yet empty
-      queue.push(make_pair(heads[j]++,j)); // push next element of this sequence
-    }
-  }
-
 // out-of-place tree merge
 template<typename RAIter, typename Tcomp, typename Tdist> void oop_tree_merge
   (RAIter in, RAIter out, const arr<Tdist> &disps, int nproc, Tcomp comp)
@@ -318,7 +258,7 @@ template<typename RAIter, typename Tcomp, typename Tdist> void oop_tree_merge
     next = stride;
     }
 
-  // now have 4 cases for final merge
+  // now we have 4 cases for final merge
   if (locs[0]==0) // 00, 01 => out of place
     std::merge (in, in+disps[next], bufs[locs[next]]+disps[next],
       bufs[locs[next]]+disps[nproc], out, comp);
@@ -413,9 +353,7 @@ void parallel_sort (RAIter first, RAIter last, Tcomp comp)
             MPI_valueType, comm);
 
   // Merge streams from all tasks
-  pqueue_merge (trans_data.begin(), first, boundaries, nproc, comp);
-  //oop_tree_merge (trans_data.begin(), first, boundaries, nproc, comp);
-  //flat_merge (trans_data.begin(), first, boundaries, nproc, comp);
+  oop_tree_merge (trans_data.begin(), first, boundaries, nproc, comp);
 
   MPI_Type_free (&MPI_valueType);
   MPI_Type_free (&MPI_distanceType);

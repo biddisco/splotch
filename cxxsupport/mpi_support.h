@@ -53,6 +53,8 @@ class MPI_Manager
     int rank() const;
     bool master() const;
 
+    void barrier() const;
+
     void calcShare (int64 glo, int64 ghi, int64 &lo, int64 &hi) const
       { calcShareGeneral(glo,ghi,num_ranks(),rank(),lo,hi); }
 
@@ -69,14 +71,29 @@ class MPI_Manager
     template<typename T> void recv (arr<T> &data, tsize src) const
       { recvRaw(&data[0], data.size(), src); }
 
+    void sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
+      tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const;
+    template<typename T> void sendrecvRaw (const T *sendbuf, tsize sendcnt,
+      tsize dest, T *recvbuf, tsize recvcnt, tsize src) const
+      {
+      sendrecvRawVoid(sendbuf, sendcnt, dest, recvbuf, recvcnt, src,
+                      nativeType<T>());
+      }
+    template<typename T> void sendrecv (const arr<T> &sendbuf, tsize dest,
+      arr<T> &recvbuf, tsize src) const
+      {
+      sendrecvRaw(&sendbuf[0], sendbuf.size(), dest,
+                  &recvbuf[0], recvbuf.size(), src);
+      }
+
     void sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
-      tsize src, tsize dest) const;
+      tsize dest, tsize src) const;
     template<typename T> void sendrecv_replaceRaw (T *data, tsize num,
-      tsize src, tsize dest) const
-      { sendrecv_replaceRawVoid(data, nativeType<T>(), num, src, dest); }
-    template<typename T> void sendrecv_replace (arr<T> &data, tsize src,
-      tsize dest) const
-      { sendrecv_replaceRaw(&data[0], data.size(), src, dest); }
+      tsize dest, tsize src) const
+      { sendrecv_replaceRawVoid(data, nativeType<T>(), num, dest, src); }
+    template<typename T> void sendrecv_replace (arr<T> &data, tsize dest,
+      tsize src) const
+      { sendrecv_replaceRaw(&data[0], data.size(), dest, src); }
 
     template<typename T> void gather_m (const T &in, arr<T> &out) const
       {
