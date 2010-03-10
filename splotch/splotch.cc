@@ -43,7 +43,7 @@ int main (int argc, const char **argv)
 
 #ifdef INTERPOLATE
 #ifndef GEOMETRY_FILE
-#error  splotch: interpolation without geometry file makes no sense!
+#error Splotch: interpolation without geometry file makes no sense!
 #endif
 #endif
 
@@ -106,28 +106,6 @@ int main (int argc, const char **argv)
       }
     }
   emap=amap;
-
-#if 0
-// ----------------------------------------------
-// ------- How to build Parameter structure ------
-// ------- and Color Maps without files ---------
-// ----------------------------------------------
-
-  map<string,string> par;
-  par["infile"]="snap_92";
-  par["simtype"]="1";
-// and so on ...
-  paramfile params (par);
-
-  COLOUR c1,c2,c3
-  c1=COLOUR(1,0,0);           // red
-  c2=COLOUR(0.66,0.66,0.66);  // light gray
-  c3=COLOUR(0,0,1);           // blue
-  amap.addVal(0,c1);
-  amap.addVal(0.5,c2));
-  amap.addVal(1.,c3));
-  emap=amap;
-#endif
 
   wallTimer.stop("setup");
   wallTimer.start("read");
@@ -200,15 +178,15 @@ int main (int argc, const char **argv)
 // -----------------------------------
 
 #if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
-    if (linecount==geometry_skip)      // read only once if no interpolation is choosen
+    if (linecount==geometry_skip) // read only once if no interpolation is chosen
       {
 #endif
       if (master)
         cout << endl << "reading data ..." << endl;
-      int simtype = params.find<int>("simtype"); ///2:Gadget2
+      int simtype = params.find<int>("simtype"); // 2:Gadget2
       float maxr, minr;
 #ifdef INTERPOLATE
-      double frac=(double)(linecount-(nextfile-ninterpol))/(double)ninterpol;
+      double frac=(linecount-(nextfile-ninterpol))/double(ninterpol);
 #endif
       switch (simtype)
         {
@@ -219,7 +197,7 @@ int main (int argc, const char **argv)
           bin_reader_block(params,particle_data, maxr, minr);
           break;
         case 2:
-#ifdef INTERPOLATE          // Here only the tow datasets are prepared, interpolation will be done later
+#ifdef INTERPOLATE // Here only the two datasets are prepared, interpolation will be done later
           cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
           cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
           cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
@@ -243,14 +221,17 @@ int main (int argc, const char **argv)
             snr2_now = snr2;
             }
 #else
-          gadget_reader(params,particle_data,0,&time); ///vector<particle_sim> particle_data;
+          gadget_reader(params,particle_data,0,&time);
 #ifdef GEOMETRY_FILE
           p_orig = particle_data;
 #endif
 #endif
           break;
-        case 3: //enzo_reader(params,particle_data);
+#if 0
+        case 3:
+          enzo_reader(params,particle_data);
           break;
+#endif
         case 4:
           gadget_millenium_reader(params,particle_data,0,&time);
           break;
@@ -290,7 +271,7 @@ int main (int argc, const char **argv)
 
     long npart=particle_data.size();
     long npart_all=npart;
-    mpiMgr.allreduce (npart_all,MPI_Manager::Sum); ///does nothing
+    mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
     wallTimer.stop("read");
 
 #ifndef CUDA

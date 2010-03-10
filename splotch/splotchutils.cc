@@ -81,9 +81,9 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
               float64 fac = pre1[y]*pre2;
               if (a_eq_e)
                 {
-                lpic[x][y].r += (fac*a.r);
-                lpic[x][y].g += (fac*a.g);
-                lpic[x][y].b += (fac*a.b);
+                lpic[x][y].r += fac*a.r;
+                lpic[x][y].g += fac*a.g;
+                lpic[x][y].b += fac*a.b;
                 }
               else
                 {
@@ -147,16 +147,9 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
   {
   int ptypes = params.find<int>("ptypes",1);
-  vector<bool> col_vector,log_int,log_col,asinh_col;
-  vector<float32> mincol,maxcol,minint,maxint;
-  col_vector.resize(ptypes);
-  log_int.resize(ptypes);
-  log_col.resize(ptypes);
-  asinh_col.resize(ptypes);
-  mincol.resize(ptypes);
-  maxcol.resize(ptypes);
-  minint.resize(ptypes);
-  maxint.resize(ptypes);
+  arr<bool> col_vector(ptypes),log_int(ptypes),log_col(ptypes),asinh_col(ptypes);
+  arr<float32> mincol(ptypes,1e30),maxcol(ptypes,-1e30),
+               minint(ptypes,1e30),maxint(ptypes,-1e30);
 
   for(int itype=0;itype<ptypes;itype++)
     {
@@ -164,15 +157,11 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
     asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
     col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
-    mincol[itype]=1e30;
-    maxcol[itype]=-1e30;
-    minint[itype]=1e30;
-    maxint[itype]=-1e30;
     }
 
   int npart=p.size();
 
-  for (int m=0; m<npart; ++m) //do log calculations if demanded
+  for (int m=0; m<npart; ++m) // do log calculations if requested
     {
     if (log_int[p[m].type])
       p[m].I = log10(p[m].I);
@@ -317,12 +306,8 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   float zmaxval = params.find<float>("zmax",1.e23);
   float zminval = params.find<float>("zmin",0.0);
   int ptypes = params.find<int>("ptypes",1);
-  vector<bool> col_vector;
-  vector<float64> brightness,grayabsorb;
-
-  col_vector.resize(ptypes);
-  brightness.resize(ptypes);
-  grayabsorb.resize(ptypes);
+  arr<bool> col_vector(ptypes);
+  arr<float64> brightness(ptypes),grayabsorb(ptypes);
 
   for(int itype=0;itype<ptypes;itype++)
     {
@@ -335,7 +320,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
 
   for (int m=0; m<npart; ++m)
     {
-    p[m].active = 0;
+    p[m].active = false;
     if (p[m].z<=0) continue;
     if (p[m].z<=zminval) continue;
     if (p[m].z>=zmaxval) continue;
@@ -378,17 +363,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     else
       e=amap[p[m].type].getVal(col1)*intensity;
 
-#ifdef CUDA_TEST_COLORMAP
-//for CUDA TEST ONLY
-    inout_buffer[size_inout_buffer][0] =p[m].type;
-    inout_buffer[size_inout_buffer][1] =col1;
-    inout_buffer[size_inout_buffer][2] =amap[p[m].type].Get_Colour(col1).r;
-    inout_buffer[size_inout_buffer][3] =amap[p[m].type].Get_Colour(col1).g;
-    inout_buffer[size_inout_buffer][4] =amap[p[m].type].Get_Colour(col1).b;
-    size_inout_buffer++;
-//CUDA test over
-#endif
-    p[m].active = 1;
+    p[m].active = true;
     p[m].e = e;
     }
   }
@@ -463,7 +438,6 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
   double dt = (t2 - t1) * h;
   double v_unit1=v_unit/l_unit/sqrt(time1)*dt;
   double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
-  double vda_x,vda_y,vda_z;
 #endif
 
   p.resize(0);
@@ -475,9 +449,9 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
       planck_assert (p1[i1].type==p2[i2].type,
         "interpolate: can not interpolate between different types !");
 #ifdef HIGH_ORDER_INTERPOLATION
-      vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
-      vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
-      vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
+      double vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
+      double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
+      double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
 #endif
       p.push_back(particle_sim(
 #ifdef HIGH_ORDER_INTERPOLATION
