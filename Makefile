@@ -15,7 +15,7 @@
 #--------------------------------------- Switch on HDF5
 
 #OPT     +=  -DHDF5
-OPT     +=  -DH5_USE_16_API
+#OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
@@ -69,15 +69,15 @@ endif
 
 ifeq ($(SYSTYPE),"GP")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       =  /opt/cuda/bin/nvcc
+CC       =  nvcc
 else
-CC       =  /opt/cuda/bin/nvcc
+CC       =  nvcc
 endif
 OPTIMIZE = -O2 
-LIB_OPT  = -Xlinker -L -Xlinker /opt/cuda/lib
+LIB_OPT  = 
 OMP =  
 #-Xcompiler -openmp
-SUP_INCL += -I/opt/cuda/sdk/common/inc -I/opt/cuda/include -Icuda
+SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc # -I$(CUDA_HOME)/include  -Icuda
 endif
 
 ifeq ($(SYSTYPE),"PLX")
