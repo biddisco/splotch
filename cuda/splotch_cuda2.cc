@@ -270,7 +270,7 @@ DWORD WINAPI cu_draw_chunk(void *pinfo)
         timer.stop();
         time =timer.acc();
 //      cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
-//      tInfo->times[TRANSFORMATION]=time;
+        tInfo->times[TRANSFORMATION]=time;
 
 /*      temporarily ignore sorting 191109.
         it becomes comlicated when using multiple threads with sorting
@@ -796,9 +796,9 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
 #endif  //if not NO_WIN_THREAD
 
   // post-process
-  // VTimer  timer;
-  // timer.reset();
-  // timer.start();
+  wallTimer  timer;
+  timer.reset();
+  timer.start();
   // combine the results to pic
   if (1)//a_eq_e)
     {
@@ -825,7 +825,7 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
   else
     {
     }
-  // timer.stop();
+  timer.stop();
   // cout << endl << "Post-process pic[] cost time:" << timer.getTime() << "s" <<endl;
 
   //now output the time records
