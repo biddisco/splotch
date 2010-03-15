@@ -14,23 +14,12 @@ Copyright things go here.
 
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
+#include "splotch/splotchutils.h"
 class CuPolicy;
 
 //data structs for using on device
 //'d_' means device
-struct cu_particle_sim
-  {
-  float x,y,z,r,ro,I,C1,C2,C3;
-  unsigned short type;
-  bool active;
-  COLOUR e;
-#ifdef INTERPOLATE
-  unsigned int id;
-#ifdef HIGH_ORDER_INTERPOLATION
-  float vx,vy,vz;
-#endif
-#endif
-  };
+typedef particle_sim cu_particle_sim;
 
 #define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
                                         //in mid of developing only

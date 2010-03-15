@@ -8,8 +8,6 @@ All 'magic numbers' are out of this class.
 #ifndef CUPOLICY_H
 #define CUPOLICY_H
 
-#pragma once
-
 #include "cxxsupport/paramfile.h"
 #include "cuda/splotch_cuda.h"
 #include <cuda.h>
@@ -20,13 +18,11 @@ class CuPolicy
   private:
     paramfile *m_pParam;
     unsigned int m_blockSize;
-    unsigned int m_fragmentCount;
     void GetDims1(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
 
   public:
     CuPolicy();
     CuPolicy(paramfile *pParam);
-    ~CuPolicy();
 
     int GetMaxRegion();
     int GetFBufSize();

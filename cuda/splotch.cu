@@ -11,10 +11,11 @@ Copyright things go here.
 #include <cutil_inline.h>
 
 #include "splotch/splotchutils.h"
+#include "cuda/splotchutils_cuda.h"
 
-#include "splotch_kernel.cu"
-#include "splotch_cuda.h"
-#include "CuPolicy.h"
+#include "cuda/splotch_kernel.cu"
+#include "cuda/splotch_cuda.h"
+#include "cuda/CuPolicy.h"
 
 
 template<typename T> T findParamWithoutChange
@@ -23,25 +24,18 @@ template<typename T> T findParamWithoutChange
   return param->param_present(key) ? param->find<T>(key) : deflt;
   }
 
-extern "C" void getCuTransformParams(cu_param_transform &p,
-    paramfile &params, double campos[3], double lookat[3], double sky[3]);
-
-
 #define CLEAR_MEM(p) if(p) {cutilSafeCall(cudaFree(p)); p=0;}
-
 
 extern "C"
 void cu_init(paramfile &params, int devID, cu_gpu_vars* pgv)
   {
-  // initialize cuda runtime
-  cudaSetDevice( devID );
+  cudaSetDevice (devID); // initialize cuda runtime
 
   int d;
   cudaGetDevice(&d);
   printf("\nDevice being used %d\n", d);
 
-  // Initialize pgv->policy class
-  pgv->policy =new CuPolicy(&params);
+  pgv->policy =new CuPolicy(&params); // Initialize pgv->policy class
   }
 
 extern "C"
@@ -49,7 +43,7 @@ void cu_range(paramfile &params ,cu_particle_sim* h_pd,
   unsigned int n, cu_gpu_vars* pgv)
   {
   //allocate device memory for particle data
-  int s =pgv->policy->GetSizeDPD(n);
+  int s =pgv->policy->GetSizeDPD(n); //allocate device memory for particle data
   //one more space allocated for the dumb
   cutilSafeCall(cudaMalloc((void**) &pgv->d_pd, s +sizeof(cu_particle_sim)));
 

@@ -15,16 +15,89 @@ Copyright things go here.
 #define get_sn_from_xy(x,y,maxy,miny, sn)\
     {sn =x*(maxy-miny) +y;}
 
-//Function definitions////////////////////////////////////////////////
-__device__ void     d_dump_pr(cu_param_range *pr);
-__device__ float    my_asinh(float val);
-__device__ void     my_normalize(float minv, float maxv, float &val);
-__device__ void     dump_transform(cu_param_transform *ptrans);
-__device__ cu_color     get_color
-                    (int ptype, float val, cu_colormap_info info);
-__device__ void clamp (float minv, float maxv, float &val);
-__device__  float get_exp(float arg, cu_exptable_info d_exp_info);
-//////////////////////////////////////////////////////////////////////
+/////////help functions///////////////////////////////////
+__device__ float    my_asinh(float val)
+  {
+  return log(val+sqrt(1.+val*val));
+  }
+
+__device__ void my_normalize(float minv, float maxv, float &val)
+  {
+  if (minv!=maxv) val =  (val-minv)/(maxv-minv);
+  }
+
+__device__ void clamp (float minv, float maxv, float &val)
+  {
+  val = min(maxv, max(minv, val));
+  }
+
+//fetch a color from color table on device
+__device__ cu_color get_color
+  (int ptype, float val, cu_colormap_info info)
+  {
+  //copy things to local block memory
+  __shared__ cu_color_map_entry *map;
+  __shared__ int      mapSize;
+  __shared__ int *ptype_points;
+  __shared__ int ptypes;
+
+  map =info.map;
+  mapSize =info.mapSize;
+  ptype_points =info.ptype_points;
+  ptypes  =info.ptypes;
+
+  cu_color        clr;
+  clr.r =clr.g =clr.b =0.0;
+
+  //first find the right entry for this ptype
+  if (ptype>=ptypes)
+    return clr; //invalid input
+  int     start, end;
+  start =ptype_points[ptype];
+  if ( ptype == ptypes-1)//the last type
+    end =mapSize-1;
+  else
+    end =ptype_points[ptype+1]-1;
+
+  //seach the section of this type to find the val
+  for (int i=start; i<=end; i++)
+    {
+    if ( val>=map[i].min && val<=map[i].max)//if val falls into this entry, set clr
+      {
+      float   fract = (val-map[i].min)/(map[i].max-map[i].min);
+      cu_color        clr1=map[i].color1, clr2=map[i].color2;
+      clr.r =clr1.r + fract*(clr2.r-clr1.r);
+      clr.g =clr1.g + fract*(clr2.g-clr1.g);
+      clr.b =clr1.b + fract*(clr2.b-clr1.b);
+      break;
+      }
+    }
+
+  return clr;
+  }
+
+__device__  float get_exp(float arg, cu_exptable_info d_exp_info)
+  {
+return exp(arg);
+#if 0
+  //fetch things to local
+  __shared__  float   expfac;
+  __shared__  float   *tab1, *tab2;
+  __shared__  int     mask1, mask3, nbits;
+  expfac  =d_exp_info.expfac;
+  tab1    =d_exp_info.tab1;
+  tab2    =d_exp_info.tab2;
+  mask1   =d_exp_info.mask1;
+  mask3   =d_exp_info.mask3;
+  nbits   =d_exp_info.nbits;
+
+  int iarg= (int)(arg*expfac);
+  //  for final device code
+  if (iarg&mask3)
+    return (iarg<0) ? 1. : 0.;
+  return tab1[iarg>>nbits]*tab2[iarg&mask1];
+#endif
+  }
 
 __global__ void k_post_process(cu_color *pic, int n, cu_exptable_info exp_info)
   {
@@ -52,7 +125,7 @@ __global__ void k_combine
   int point_x, point_y;
   get_xy_from_sn(m, minx, miny, maxy, point_x, point_y);
 
-  //go through all particles, for each particle p if point(x,y) is in it's region
+  //go through all particles, for each particle p if point(x,y) is in its region
   //p(minx,miny, maxx,maxy) do the following.
   //find the sequencial number sn1 in p(minx,miny, maxx,maxy), the fragment we are looking
   //for in fragment buffer is fragBuf[ sn1+p.posInFBuf ]
@@ -182,33 +255,6 @@ __global__ void k_render1
     }//x
   }
 
-//should become __device__ later. only global in test
-__global__   void k_get_exp //only for test. passed.
-  (float arg, cu_exptable_info d_exp_info, float* d_result)
-  {
-  *d_result = get_exp(arg, d_exp_info);
-  }
-
-__device__  float get_exp(float arg, cu_exptable_info d_exp_info)
-  {
-  //fetch things to local
-  __shared__  float   expfac;
-  __shared__  float   *tab1, *tab2;
-  __shared__  int     mask1, mask3, nbits;
-  expfac  =d_exp_info.expfac;
-  tab1    =d_exp_info.tab1;
-  tab2    =d_exp_info.tab2;
-  mask1   =d_exp_info.mask1;
-  mask3   =d_exp_info.mask3;
-  nbits   =d_exp_info.nbits;
-
-  int iarg= (int)(arg*expfac);
-  //  for final device code
-  if (iarg&mask3)
-    return (iarg<0) ? 1. : 0.;
-  return tab1[iarg>>nbits]*tab2[iarg&mask1];
-  }
-
 //colorize by kernel
 __global__ void k_colorize
   (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2,
@@ -286,60 +332,6 @@ __global__ void k_colorize
   p2[m].ro=p[m].ro;
   p2[m].a=a;
   p2[m].e=e;
-  }
-
-//global k_get_color to connect host and device
-__global__ void k_get_color
-  (int ptype, float val, cu_colormap_info info, cu_color *result)
-  {
-  cu_color clr;
-  clr =get_color(ptype, val, info);
-  *result =clr;
-  }
-
-//fetch a color from color table on device
-__device__ cu_color get_color
-  (int ptype, float val, cu_colormap_info info)
-  {
-  //copy things to local block memory
-  __shared__ cu_color_map_entry *map;
-  __shared__ int      mapSize;
-  __shared__ int *ptype_points;
-  __shared__ int ptypes;
-
-  map =info.map;
-  mapSize =info.mapSize;
-  ptype_points =info.ptype_points;
-  ptypes  =info.ptypes;
-
-  cu_color        clr;
-  clr.r =clr.g =clr.b =0.0;
-
-  //first find the right entry for this ptype
-  if (ptype>=ptypes)
-    return clr; //invalid input
-  int     start, end;
-  start =ptype_points[ptype];
-  if ( ptype == ptypes-1)//the last type
-    end =mapSize-1;
-  else
-    end =ptype_points[ptype+1]-1;
-
-  //seach the section of this type to find the val
-  for (int i=start; i<=end; i++)
-    {
-    if ( val>=map[i].min && val<=map[i].max)//if val falls into this entry, set clr
-      {
-      float   fract = (val-map[i].min)/(map[i].max-map[i].min);
-      cu_color        clr1=map[i].color1, clr2=map[i].color2;
-      clr.r =clr1.r + fract*(clr2.r-clr1.r);
-      clr.g =clr1.g + fract*(clr2.g-clr1.g);
-      clr.b =clr1.b + fract*(clr2.b-clr1.b);
-      break;
-      }
-    }
-
-  return clr;
   }
 
 //Range by kernel step 1
@@ -449,22 +441,6 @@ __global__ void k_transform
       p[m].r = 0.5;
       p[m].ro = p[m].r/(ptrans->res*.5*xfac);
       }
-  }
-
-/////////help functions///////////////////////////////////
-__device__ float    my_asinh(float val)
-  {
-  return log(val+sqrt(1.+val*val));
-  }
-
-__device__ void my_normalize(float minv, float maxv, float &val)
-  {
-  if (minv!=maxv) val =  (val-minv)/(maxv-minv);
-  }
-
-__device__ void clamp (float minv, float maxv, float &val)
-  {
-  val = min(maxv, max(minv, val));
   }
 
 #endif // #ifndef SPLOTCH_KERNEL_H
