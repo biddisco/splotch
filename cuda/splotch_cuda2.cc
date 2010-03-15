@@ -2,6 +2,7 @@
 #ifdef CUDA
 
 #include "cuda/splotch_cuda2.h"
+#include "cxxsupport/walltimer.h"
 
 using namespace std;
 
@@ -25,47 +26,47 @@ DWORD WINAPI host_thread_func(void *p)
   i2 =particle_data.begin() +tInfo->endP;
   particles.assign(i1, i2);
 
-  // VTimer t, t1;
-  // t1.start();
-  // t.start();
+  wallTimer t, t1;
+  t1.start();
+  t.start();
 
   particle_normalize(params,particles,false);
 
-  // t.stop();
-  // tInfo->times[RANGE] =t.getTime();
-  // t.reset();
-  // t.start();
+  t.stop();
+  tInfo->times[RANGE] =t.acc();
+  t.reset();
+  t.start();
 
   particle_project(params, particles, campos, lookat, sky);
 
-  // t.stop();
-  // tInfo->times[TRANSFORMATION] =t.getTime();
+  t.stop();
+  tInfo->times[TRANSFORMATION] =t.acc();
 
   // ----------- Sorting ------------
   // NO SORING FOR NOW
   //int sort_type = params.find<int>("sort_type",1);
   //particle_sort(particle_data,sort_type,true);
 
-  // t.reset();
-  // t.start();
+  t.reset();
+  t.start();
 
   // particle_colorize(params, particles, particle_col, amap, emap);
   particle_colorize(params, particles, amap, emap); //new calling
 
-  // t.stop();
-  // tInfo->times[COLORIZE]=t.getTime();
-  // t.reset();
-  // t.start();
+  t.stop();
+  tInfo->times[COLORIZE]=t.acc();
+  t.reset();
+  t.start();
 
   int res = params.find<int>("resolution",200);
   float64 grayabsorb = params.find<float>("gray_absorption",0.2);
   bool a_eq_e = params.find<bool>("a_eq_e",true);
   render_as_thread1(particles,*(tInfo->pPic),a_eq_e,grayabsorb);
 
-  // t.stop();
-  // tInfo->times[RENDER] =t.getTime();
-  // t1.stop();
-  // tInfo->times[THIS_THREAD] =t1.getTime();
+  t.stop();
+  tInfo->times[RENDER] =t.acc();
+  t1.stop();
+  tInfo->times[THIS_THREAD] =t1.acc();
 
   printf("\nHost Thread End!\n");
   return 1;
@@ -82,8 +83,8 @@ DWORD WINAPI combine (void *param1)
   cu_particle_splotch *ps = param->ps;
   arr2<COLOUR> *pPic = param->pPic;
 
-// VTimer t;
-// t.start();
+  wallTimer t;
+  t.start();
 
   if (param->a_eq_e)
     {
@@ -126,8 +127,8 @@ DWORD WINAPI combine (void *param1)
       }
     }
 
-  // t.stop();
-  // param->timeUsed +=t.getTime();
+  t.stop();
+  param->timeUsed +=t.acc();
 
   // printf("\ncombine out %d", enter);
   return 1;
@@ -197,17 +198,17 @@ DWORD WINAPI cu_thread_func(void *pinfo)
 
 DWORD WINAPI cu_draw_chunk(void *pinfo)
 {
-//      VTimer  timer, timer1;
+        wallTimer  timer, timer1;
         float   time;
 
-//      timer1.reset(); //for the whole thread
-//      timer1.start();
+        timer1.reset(); //for the whole thread
+        timer1.start();
 
         //get the input info
         thread_info     *tInfo = (thread_info*)pinfo;   //      if (!tInfo->devID) return 0;
         int     nParticle =tInfo->endP -tInfo->startP +1;
         //prepare for recording times
-//      memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
+        memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
 
         paramfile       params =*g_params;
         //CUDA test. for developing only. cut short particle_data
@@ -225,34 +226,34 @@ DWORD WINAPI cu_draw_chunk(void *pinfo)
         memset(&gv, 0, sizeof(cu_gpu_vars) );
 
         //CUDA Init
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         cu_init(params, tInfo->devID, &gv);
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "cu_init() cost time:" << time << "s" <<endl;
-//      tInfo->times[CUDA_INIT]=time;
+        tInfo->times[CUDA_INIT]=time;
 
         //Copy particle sim into C-style object d_particle_data
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         //copy data to local C-like array d_particle_data, in mid of developing only
         for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
                 memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Copying particles to device cost time:" << time << "s" <<endl;
         tInfo->times[COPY2C_LIKE]=time;
 
         //here we analysis how to divide the whole task for large data handling
 
         //CUDA Ranging
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         //call cuda range
         cu_range(params, d_particle_data, nParticle, &gv);
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Ranging with device cost time:" << time << "s" <<endl;
         tInfo->times[RANGE]=time;
 
@@ -260,14 +261,14 @@ DWORD WINAPI cu_draw_chunk(void *pinfo)
         //CUDA RANGING DONE!
 
         //CUDA Transformation
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         double  c[3]={campos.x, campos.y, campos.z},
                         l[3]={lookat.x, lookat.y, lookat.z},
                         s[3]={sky.x, sky.y,     sky.z};
         cu_transform(params, nParticle,c, l, s,d_particle_data, &gv);
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Transforming with device cost time:" << time<< "s" <<endl;
 //      tInfo->times[TRANSFORMATION]=time;
 
@@ -296,8 +297,8 @@ PROBLEM HERE!
 */
 
           //CUDA Coloring
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         //init C style colormap
         cu_color_map_entry      *amapD;//amap for Device. emap is not used currently
         int     *amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
@@ -309,7 +310,11 @@ PROBLEM HERE!
         {
             vector<double> e;
             e = amap[i].x;
-            size += e.size() - 1;
+            if (e.size()>0)
+              {
+              planck_assert(e.size()>1,"bad colour map");
+              size += e.size() - 1;
+              }
         }
         //then fill up the colormap amapD
         amapD =new cu_color_map_entry[size];
@@ -318,10 +323,9 @@ PROBLEM HERE!
         {
             vector<double> e;
             e = amap[i].x;
-            cout << "E.SIZE ..... " << e.size() << "\n";
-            for (j=0; j<e.size() -1 ; j++)
+            for (j=0; j<int(e.size()) -1 ; j++)
                 {
-                        amapD[index].min = e[j];
+                       amapD[index].min = e[j];
                         amapD[index].max = e[j+1];
                         amapD[index].color1.r = amap[i].y[j].r;
                         amapD[index].color1.g = amap[i].y[j].g;
@@ -353,15 +357,15 @@ PROBLEM HERE!
 
         //Colorize with device
         cu_colorize(params, cu_ps, size, &gv);
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Coloring with device cost time:" << time << "s" <<endl;
         tInfo->times[COLORIZE]=time;
 
 
 //////////////////////////////////////////////////////////////////////////////////
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         //filter particle_splotch array to a cu_ps_filtered
         int     pFiltered=0;
         //for sorting and splitting
@@ -397,13 +401,13 @@ PROBLEM HERE!
                 }
         }
 //old code observ size
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Filtering 1 costs time:" << time << "s" <<endl;
         tInfo->times[FILTER] =time;
 
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
 
         //split large ones
         int     maxRegion =cu_get_max_region(&gv);
@@ -437,23 +441,23 @@ PROBLEM HERE!
                         v_ps1.push_back(pNew);
                 }
         }
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
         //cout << endl << "Filtering 2 costs time:" << time << "s" <<endl;
         tInfo->times[FILTER] +=time;
 
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         v_ps.clear();//not useful any more
         //sort the filtered,splitted v_ps
 //      sort(v_ps1.begin(), v_ps1.end(), region_cmp());
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
         //cout << endl << "Sorting costs time:" << time << "s" <<endl;
         tInfo->times[SORT]=time;
 
-//      timer.reset();
-//      timer.start();
+        timer.reset();
+        timer.start();
         //copy to C-style array cu_ps_filtered
         cu_particle_splotch     *cu_ps_filtered;
         size =v_ps1.size();
@@ -466,8 +470,8 @@ PROBLEM HERE!
                 posInFragBuf +=region;
                 cu_ps_filtered[i] =v_ps1[i];
         }
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
         //cout << endl << "Filtering 3 costs time:" << time << "s" <<endl;
         tInfo->times[FILTER] +=time;
 
@@ -505,8 +509,8 @@ PROBLEM HERE!
 
 //here's the point of multi-go loop starts
 #ifndef CUDA_DEVICE_COMBINE //combined by host
-//      timer.reset();//for rendering
-//      timer.start();
+        timer.reset();//for rendering
+        timer.start();
         //prepare fragment buffer memory space first
         cu_fragment_AeqE        *fragBufAeqE;
         cu_fragment_AneqE       *fragBufAneqE;
@@ -541,9 +545,9 @@ PROBLEM HERE!
         combineStartP = combineEndP=0;
         int      nFragments2Render=0;
         //some timers
-//      VTimer  t1, t2, t3;
-//      t1.reset();
-//      t2.reset();
+        wallTimer t1, t2, t3;
+        t1.reset();
+        t2.reset();
 //      memset(pic1, 0, sizeof(cu_color)*800*800); this is just for temp
 
 
@@ -629,8 +633,8 @@ PROBLEM HERE!
                 }
         }
 
-//      timer.stop();
-//      time =timer.getTime();
+        timer.stop();
+        time =timer.acc();
 //      cout << endl << "Render to fragment buffer cost time:" << time << "s" <<endl;
 //      cout << endl << "Time for combination:" << param.timeUsed <<endl;
         tInfo->times[RENDER]=time;

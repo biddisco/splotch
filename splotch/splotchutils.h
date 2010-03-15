@@ -32,8 +32,8 @@ class COLOUR8
 struct particle_sim
   {
   float32 x,y,z,r,ro,I,C1,C2,C3;
-  unsigned int type:4;
-  bool active:1;
+  unsigned short type;
+  bool active;
   COLOUR e;
 
 #ifdef INTERPOLATE

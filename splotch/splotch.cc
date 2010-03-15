@@ -36,8 +36,8 @@ using namespace std;
 
 int main (int argc, const char **argv)
   {
-  wallTimer.start("full");
-  wallTimer.start("setup");
+  wallTimers.start("full");
+  wallTimers.start("setup");
   bool master = mpiMgr.master();
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
 
@@ -107,8 +107,8 @@ int main (int argc, const char **argv)
     }
   emap=amap;
 
-  wallTimer.stop("setup");
-  wallTimer.start("read");
+  wallTimers.stop("setup");
+  wallTimers.start("read");
 
 #ifdef GEOMETRY_FILE
 
@@ -272,52 +272,52 @@ int main (int argc, const char **argv)
     long npart=particle_data.size();
     long npart_all=npart;
     mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-    wallTimer.stop("read");
+    wallTimers.stop("read");
 
 #ifndef CUDA
 #ifndef NO_HOST_RANGING
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
-    wallTimer.start("range");
+    wallTimers.start("range");
     if (master)
       cout << endl << "ranging values (" << npart_all << ") ..." << endl;
     particle_normalize(params,particle_data,true); ///does log calculations and clamps data
-    wallTimer.stop("range");
+    wallTimers.stop("range");
 #endif
 
 #ifndef NO_HOST_TRANSFORM
 // -------------------------------------
 // ----------- Transforming ------------
 // -------------------------------------
-    wallTimer.start("transform");
+    wallTimers.start("transform");
     if (master)
       cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
     particle_project(params, particle_data, campos, lookat, sky);
-    wallTimer.stop("transform");
+    wallTimers.stop("transform");
 #endif
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
-    wallTimer.start("sort");
+    wallTimers.start("sort");
     if (master)
       (mpiMgr.num_ranks()>1) ?
         cout << endl << "applying local sort ..." << endl :
         cout << endl << "applying sort (" << npart << ") ..." << endl;
     int sort_type = params.find<int>("sort_type",1);
     particle_sort(particle_data,sort_type,true);
-    wallTimer.stop("sort");
+    wallTimers.stop("sort");
 
 #ifndef NO_HOST_COLORING
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
-    wallTimer.start("coloring");
+    wallTimers.start("coloring");
     if (master)
       cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
     particle_colorize(params, particle_data, amap, emap);
-    wallTimer.stop("coloring");
+    wallTimers.stop("coloring");
 #endif
 
 // ----------------------------------
@@ -333,9 +333,9 @@ int main (int argc, const char **argv)
     float64 grayabsorb = params.find<float>("gray_absorption",0.2);
     bool a_eq_e = params.find<bool>("a_eq_e",true);
 #ifndef NO_HOST_RENDER
-    wallTimer.start("render");
+    wallTimers.start("render");
     render(particle_data,pic,a_eq_e,grayabsorb);
-    wallTimer.stop("render");
+    wallTimers.stop("render");
 #endif//NO_HOST_RENDER
 #endif //if not def CUDA
 
@@ -345,7 +345,7 @@ int main (int argc, const char **argv)
     render_cuda(params,res,pic);
 #endif
 
-    wallTimer.start("write");
+    wallTimers.start("write");
 
 // ---------------------------------
 // ----------- Colorbar ------------
@@ -387,7 +387,7 @@ int main (int argc, const char **argv)
         break;
       }
 
-    wallTimer.stop("write");
+    wallTimers.stop("write");
 
 #ifdef GEOMETRY_FILE
     for (int i=1; i<geometry_incr; i++)
@@ -415,20 +415,20 @@ int main (int argc, const char **argv)
 // -------------------------------
 // ----------- Timings -----------
 // -------------------------------
-  wallTimer.stop("full");
+  wallTimers.stop("full");
   if (master)
     {
     cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
-    cout << "Setup Data (secs)          : " << wallTimer.acc("setup") << endl;
-    cout << "Read Data (secs)           : " << wallTimer.acc("read") << endl;
-    cout << "Ranging Data (secs)        : " << wallTimer.acc("range") << endl;
-    cout << "Transforming Data (secs)   : " << wallTimer.acc("transform") << endl;
-    cout << "Sorting Data (secs)        : " << wallTimer.acc("sort") << endl;
-    cout << "Coloring Sub-Data (secs)   : " << wallTimer.acc("coloring") << endl;
-    cout << "Rendering Sub-Data (secs)  : " << wallTimer.acc("render") << endl;
-    cout << "Write Data (secs)          : " << wallTimer.acc("write") << endl;
-    cout << "Total (secs)               : " << wallTimer.acc("full") << endl;
+    cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
+    cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
+    cout << "Ranging Data (secs)        : " << wallTimers.acc("range") << endl;
+    cout << "Transforming Data (secs)   : " << wallTimers.acc("transform") << endl;
+    cout << "Sorting Data (secs)        : " << wallTimers.acc("sort") << endl;
+    cout << "Coloring Sub-Data (secs)   : " << wallTimers.acc("coloring") << endl;
+    cout << "Rendering Sub-Data (secs)  : " << wallTimers.acc("render") << endl;
+    cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
+    cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
     }
 
 #ifdef VS

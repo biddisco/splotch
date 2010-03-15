@@ -13,6 +13,7 @@ Copyright things go here.
 #endif
 
 #include "cxxsupport/paramfile.h"
+#include "kernel/colour.h"
 class CuPolicy;
 
 //data structs for using on device
@@ -20,9 +21,14 @@ class CuPolicy;
 struct cu_particle_sim
   {
   float x,y,z,r,ro,I,C1,C2,C3;
-  int type;
+  unsigned short type;
+  bool active;
+  COLOUR e;
 #ifdef INTERPOLATE
   unsigned int id;
+#ifdef HIGH_ORDER_INTERPOLATION
+  float vx,vy,vz;
+#endif
 #endif
   };
 

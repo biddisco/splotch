@@ -27,26 +27,33 @@ double wallTime()
 #endif
   }
 
+double wallTime0 = wallTime();
+
 } // unnamed namespace
 
+void wallTimer::start()
+  { t_started=wallTime(); }
+void wallTimer::stop()
+  { t_acc+=wallTime()-t_started; }
+
 void wallTimerSet::start(const string &name)
-  { timers[name].t_started=wallTime(); }
+  { timers[name].start(); }
 void wallTimerSet::stop(const string &name)
-  {
-  timer &tim=timers[name];
-  tim.t_acc+=wallTime()-tim.t_started;
-  }
+  { timers[name].stop(); }
 void wallTimerSet::reset(const string &name)
-  { timers[name].t_acc=0; }
+  { timers[name].reset(); }
 double wallTimerSet::acc(const string &name)
-  { return timers[name].t_acc; }
+  { return timers[name].acc(); }
 
 void wallTimerSet::report() const
   {
   cout << "\nWall clock timer report:" << endl;
-  for (map<string,timer>::const_iterator it=timers.begin(); it!=timers.end(); ++it)
-    printf("  %-15s: %10.5fs\n", it->first.c_str(), it->second.t_acc);
+  for (map<string,wallTimer>::const_iterator it=timers.begin(); it!=timers.end(); ++it)
+    printf("  %-15s: %10.5fs\n", it->first.c_str(), it->second.acc());
   cout << "End wall clock timer report\n" << endl;
   }
 
-wallTimerSet wallTimer;
+double elapsedWallTime()
+  { return wallTime()-wallTime0; }
+
+wallTimerSet wallTimers;

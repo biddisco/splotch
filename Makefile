@@ -65,9 +65,9 @@ endif
 
 ifeq ($(SYSTYPE),"GP")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       =  nvcc
+CC       =  nvcc -g
 else
-CC       =  nvcc
+CC       =  nvcc -g
 endif
 OPTIMIZE = -O2 
 LIB_OPT  = 

@@ -4,16 +4,23 @@
 #include <string>
 #include <map>
 
+class wallTimer
+  {
+  private:
+    double t_acc, t_started;
+
+  public:
+    wallTimer() { t_acc=t_started=0; }
+    void start();
+    void stop();
+    void reset() { t_acc=0.; }
+    double acc() const { return t_acc; }
+  };
+
 class wallTimerSet
   {
   private:
-    struct timer
-      {
-      double t_acc, t_started;
-      timer() { t_acc=t_started=0; }
-      };
-
-    std::map<std::string,timer> timers;
+    std::map<std::string,wallTimer> timers;
 
   public:
     void start(const std::string &name);
@@ -24,6 +31,8 @@ class wallTimerSet
     void report() const;
   };
 
-extern wallTimerSet wallTimer;
+double elapsedWallTime();
+
+extern wallTimerSet wallTimers;
 
 #endif
