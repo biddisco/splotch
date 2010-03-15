@@ -22,7 +22,6 @@
 
 #--------------------------------------- CUDA options
 OPT	+=  -DCUDA
-OPT	+=  -DCUDA_THREADS
 OPT     +=  -DNO_WIN_THREAD
 OPT     +=  -DNO_HOST_RANGING
 OPT     +=  -DNO_HOST_TRANSFORM
@@ -30,9 +29,6 @@ OPT     +=  -DNO_HOST_COLORING
 OPT     +=  -DNO_HOST_RENDER
 #OPT	 +=  -DHOST_THREAD_RENDER
 #OPT	 +=  -DCUDA_DEVICE_COMBINE
-#OPT	 +=  -DCUDA_TEST_COLORMAP
-#OPT	 +=  -DCUDA_TEST_FRAGMENT
-
 
 #--------------------------------------- Select target Computer
 

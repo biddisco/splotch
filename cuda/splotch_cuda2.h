@@ -47,7 +47,6 @@ enum TimeRecords {
   TIME_RECORDS   //to indicate number of times
   };
 
-#ifdef CUDA_THREADS
 // struct containing thread task info
 struct thread_info
   {
@@ -71,8 +70,6 @@ DWORD WINAPI cu_draw_chunk(void *p);
 DWORD WINAPI cu_thread_func(void *p);
 DWORD WINAPI host_thread_func(void *p);
 #endif
-
-#endif //if CUDA_THREADS defined
 
 void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic);
 
