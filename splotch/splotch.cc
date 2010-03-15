@@ -53,15 +53,15 @@ int main (int argc, const char **argv)
 
   //paramfile params (argv[1],master);
   paramfile params (argv[1],false);
-#ifndef CUDA_THREADS
+#ifndef CUDA
   vector<particle_sim> particle_data; ///row data from file
   vec3 campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
   vector<COLOURMAP> amap,emap;
   int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
-#else //if CUDA_THREADS defined
+#else //if CUDA defined
   ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
   g_params =&params;
-#endif  //if def CUDA_THREADS they will be a global vars
+#endif  //if def CUDA they will be a global vars
 
 #ifdef INTERPOLATE
   vector<particle_sim> particle_data1,particle_data2;
