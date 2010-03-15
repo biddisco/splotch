@@ -28,11 +28,7 @@
 
 template<typename T> class anythingMap
   {
-#ifdef CUDA //need to copy to a C-style colormap when using CUDA
-  public:
-#else
   private:
-#endif
     bool sorted;
     std::vector<double> x;
     std::vector<T> y;

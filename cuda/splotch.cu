@@ -31,11 +31,11 @@ void cu_init(paramfile &params, int devID, cu_gpu_vars* pgv)
   {
   cudaSetDevice (devID); // initialize cuda runtime
 
-  int d;
-  cudaGetDevice(&d);
-  printf("\nDevice being used %d\n", d);
+//  int d;
+//  cudaGetDevice(&d);
+//  printf("\nDevice being used %d\n", d);
 
-  pgv->policy =new CuPolicy(&params); // Initialize pgv->policy class
+  pgv->policy =new CuPolicy(params); // Initialize pgv->policy class
   }
 
 extern "C"

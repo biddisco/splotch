@@ -25,7 +25,7 @@ void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
                         bool a_eq_e,double grayabsorb);
 
 #ifdef HOST_THREAD_RENDER
-DWORD WINAPI render_thread (param_render_thread *param);
+THREADFUNC render_thread (param_render_thread *param);
 #endif //ifdef HOST_THREAD_RENDER
 
 extern "C" void getCuTransformParams(cu_param_transform &para_trans,

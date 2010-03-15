@@ -102,7 +102,7 @@ void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
   }
 
 #ifdef HOST_THREAD_RENDER
-DWORD WINAPI render_thread (param_render_thread *param)
+THREADFUNC render_thread (param_render_thread *param)
   {
   cu_particle_splotch *p =param->p;
   bool a_eq_e =param->a_eq_e;

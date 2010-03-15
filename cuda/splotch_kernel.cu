@@ -59,19 +59,16 @@ __device__ cu_color get_color
   else
     end =ptype_points[ptype+1]-1;
 
-  //seach the section of this type to find the val
-  for (int i=start; i<=end; i++)
-    {
-    if ( val>=map[i].min && val<=map[i].max)//if val falls into this entry, set clr
-      {
-      float   fract = (val-map[i].min)/(map[i].max-map[i].min);
-      cu_color        clr1=map[i].color1, clr2=map[i].color2;
-      clr.r =clr1.r + fract*(clr2.r-clr1.r);
-      clr.g =clr1.g + fract*(clr2.g-clr1.g);
-      clr.b =clr1.b + fract*(clr2.b-clr1.b);
-      break;
-      }
-    }
+  //search the section of this type to find the val
+  int i=start;
+  while ((val>map[i+1].val) && (i<end))
+    ++i;
+
+  float fract = (val-map[i].val)/(map[i+1].val-map[i].val);
+  cu_color clr1=map[i].color, clr2=map[i+1].color;
+  clr.r =clr1.r + fract*(clr2.r-clr1.r);
+  clr.g =clr1.g + fract*(clr2.g-clr1.g);
+  clr.b =clr1.b + fract*(clr2.b-clr1.b);
 
   return clr;
   }

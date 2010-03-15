@@ -1,18 +1,15 @@
-////////////////CUDA FUNCTIONS AND HELPER FUNCTIONS ////////////////////////////
-#ifdef CUDA
-
 #include "cuda/splotch_cuda2.h"
 #include "cxxsupport/walltimer.h"
 
 using namespace std;
 
 paramfile       *g_params;
-vector<particle_sim> particle_data; ///row data from file
+vector<particle_sim> particle_data; ///raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap,emap;
 int ptypes = 0;
 
-DWORD WINAPI host_thread_func(void *p)
+THREADFUNC host_thread_func(void *p)
   {
   printf("\nHost Thread Start!\n");
 
@@ -73,13 +70,12 @@ DWORD WINAPI host_thread_func(void *p)
   }
 
 
-DWORD WINAPI combine (void *param1)
+THREADFUNC combine (void *param1)
   {
   static int enter=-1;
 
   param_combine_thread *param = (param_combine_thread*)param1;
 
-  //combine it
   cu_particle_splotch *ps = param->ps;
   arr2<COLOUR> *pPic = param->pPic;
 
@@ -116,11 +112,9 @@ DWORD WINAPI combine (void *param1)
         {
         for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
           {
-#ifndef CUDA_THREAD
           (*pPic)[x][y].r = (*pPic)[x][y].r *bufWrite[fPos].factorR +bufWrite[fPos].deltaR;
           (*pPic)[x][y].g = (*pPic)[x][y].g *bufWrite[fPos].factorG +bufWrite[fPos].deltaG;
           (*pPic)[x][y].b = (*pPic)[x][y].b *bufWrite[fPos].factorB +bufWrite[fPos].deltaB;
-#endif  //ifndef CUDA_THREAD
           fPos ++;
           }
         }
@@ -130,11 +124,10 @@ DWORD WINAPI combine (void *param1)
   t.stop();
   param->timeUsed +=t.acc();
 
-  // printf("\ncombine out %d", enter);
   return 1;
   }
 
-DWORD WINAPI cu_thread_func(void *pinfo)
+THREADFUNC cu_thread_func(void *pinfo)
   {
   //a new thread info object that will carry each chunk's drawing
   thread_info *pInfoOutput=(thread_info*) pinfo,
@@ -160,43 +153,26 @@ DWORD WINAPI cu_thread_func(void *pinfo)
   int endP=ti.endP;
   ti.endP=ti.startP;
 
-#ifdef DEBUG
-   cout << "cu_thread_func1\n";
-#endif
   while (ti.endP<endP)
     {
     //set range
     ti.endP =ti.startP +len -1;
     if (ti.endP>endP)
       ti.endP=endP;
-    //draw chunks one by one
     cu_draw_chunk(&ti);
-    //collect image to result
-#ifdef DEBUG
-    cout << "ti.endP " << ti.endP<< "\n";
-    cout << "pic.size1() " << pic.size1()<< "\n";
-    cout << "pic.size2() " << pic.size2()<< "\n";
-#endif
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
-    //collect times to output
     for (int i=0; i<TIME_RECORDS; i++)
       pInfoOutput->times[i] +=ti.times[i];
 
-    //set range
     ti.startP =ti.endP +1;
     }
 
-  //test 2-goes pased...
-
-#ifdef DEBUG
-  cout << "cu_thread_func2\n";
-#endif
   return 1;
   }
 
-DWORD WINAPI cu_draw_chunk(void *pinfo)
+THREADFUNC cu_draw_chunk(void *pinfo)
   {
   wallTimer timer, timer1;
   float time;
@@ -236,19 +212,16 @@ DWORD WINAPI cu_draw_chunk(void *pinfo)
   time =timer.acc();
   tInfo->times[COPY2C_LIKE]=time;
 
-  //here we analysis how to divide the whole task for large data handling
+  //here we analyse how to divide the whole task for large data handling
 
   //CUDA Ranging
   timer.reset();
   timer.start();
-  //call cuda range
+
   cu_range(params, d_particle_data, nParticle, &gv);
   timer.stop();
   time =timer.acc();
   tInfo->times[RANGE]=time;
-
-  //old code then copy particles back, in mid of developing only
-  //CUDA RANGING DONE!
 
   //CUDA Transformation
   timer.reset();
@@ -295,33 +268,21 @@ PROBLEM HERE!
   int curPtypeStartPos =0;
   int size =0;
   //first we need to count all the entries to get colormap size
-  for(int i=0; i<amap.size(); i++)
-    {
-    vector<double> e;
-    e = amap[i].x;
-    if (e.size()>0)
-      {
-      planck_assert(e.size()>1,"bad colour map");
-      size += e.size() - 1;
-      }
-    }
+  for (int i=0; i<amap.size(); i++)
+    size += amap[i].size();
+
   //then fill up the colormap amapD
   amapD =new cu_color_map_entry[size];
   int j,index =0;
   for(int i=0; i<amap.size(); i++)
     {
-    vector<double> e;
-    e = amap[i].x;
-    for (j=0; j<int(e.size()) -1 ; j++)
+    for (j=0; j<amap[i].size(); j++)
       {
-      amapD[index].min = e[j];
-      amapD[index].max = e[j+1];
-      amapD[index].color1.r = amap[i].y[j].r;
-      amapD[index].color1.g = amap[i].y[j].g;
-      amapD[index].color1.b = amap[i].y[j].b;
-      amapD[index].color2.r = amap[i].y[j+1].r;
-      amapD[index].color2.g = amap[i].y[j+1].g;
-      amapD[index].color2.b = amap[i].y[j+1].b;
+      amapD[index].val = amap[i].getX(j);
+      COLOUR c (amap[i].getY(j));
+      amapD[index].color.r = c.r;
+      amapD[index].color.g = c.g;
+      amapD[index].color.b = c.b;
       index++;
       }
     amapDTypeStartPos[i] =curPtypeStartPos;
@@ -335,11 +296,8 @@ PROBLEM HERE!
   clmp_info.ptypes =ptypes;
   cu_init_colormap(clmp_info, &gv);
 
-  //old code test color map
-
   //init cu_particle_splotch array memeory
   cu_particle_splotch *cu_ps;
-// size =particle_data.size();
   size =nParticle;
   cu_ps =new cu_particle_splotch[size];
   memset(cu_ps, 0, size);
@@ -351,7 +309,7 @@ PROBLEM HERE!
   tInfo->times[COLORIZE]=time;
 
 
-//////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
   timer.reset();
   timer.start();
   //filter particle_splotch array to a cu_ps_filtered
@@ -360,7 +318,7 @@ PROBLEM HERE!
   vector <cu_particle_splotch> v_ps;
   cu_particle_splotch p;
   //do filtering
-  unsigned long posInFragBuf =0;//, countFragments;
+  unsigned long posInFragBuf =0;
   int minx=1e6,miny=1e6, maxx=-1,maxy=-1;
 
   //old code observ size
@@ -385,10 +343,9 @@ PROBLEM HERE!
       maxy=max(maxy,(int)cu_ps[i].maxy);
       }
     }
-//old code observ size
+
   timer.stop();
   time =timer.acc();
-  // cout << endl << "Filtering 1 costs time:" << time << "s" <<endl;
   tInfo->times[FILTER] =time;
 
   timer.reset();
@@ -413,8 +370,7 @@ PROBLEM HERE!
       }
 
     //now we split
-    int w1;
-    w1 = (maxRegion %h==0) ? (maxRegion /h):(maxRegion /h +1);
+    int w1 = (maxRegion %h==0) ? (maxRegion /h):(maxRegion /h +1);
     //insert new cells
     pNew =p;
     //minx,maxx of pNew need to be set
@@ -436,7 +392,6 @@ PROBLEM HERE!
   // sort(v_ps1.begin(), v_ps1.end(), region_cmp());
   timer.stop();
   time =timer.acc();
-  //cout << endl << "Sorting costs time:" << time << "s" <<endl;
   tInfo->times[SORT]=time;
 
   timer.reset();
@@ -455,7 +410,6 @@ PROBLEM HERE!
     }
   timer.stop();
   time =timer.acc();
-  //cout << endl << "Filtering 3 costs time:" << time << "s" <<endl;
   tInfo->times[FILTER] +=time;
 
 // ----------------------------------
@@ -559,11 +513,9 @@ PROBLEM HERE!
     //see if it's the first chunk
     if ( renderStartP!=0 )
       {
-      //combine it
-      // printf("\nThread%d, combine, %d-%d", tInfo->devID, combineStartP, combineEndP);
       param.combineStartP =combineStartP;
       param.combineEndP =combineEndP;
-      DWORD   id;
+      //DWORD   id;
       combine(&param);
       // CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)combine, &param, 0, &id );
       }
@@ -576,8 +528,6 @@ PROBLEM HERE!
     //see if last chunk
     if (bFinished)
       {
-      // printf("\nThread%d, last chunk to combine",tInfo->devID);
-      // printf("\nThread%d, combine, %d-%d",tInfo->devID, combineStartP, combineEndP);
       param.combineStartP =combineStartP;
       param.combineEndP =combineEndP;
       combine(&param);
@@ -587,47 +537,28 @@ PROBLEM HERE!
 
   timer.stop();
   time =timer.acc();
-  // cout << endl << "Render to fragment buffer cost time:" << time << "s" <<endl;
-  // cout << endl << "Time for combination:" << param.timeUsed <<endl;
   tInfo->times[RENDER]=time;
   tInfo->times[COMBINE]=param.timeUsed;
-
-  //....
-  //give a test for combination without device involved
 
 /////////////////////////////////////////////////////////////////////
 
 #endif //if not def CUDA_DEVICE_COMBINE
 
-//old code device combine
-
-//old code test exp
-// -----------------------------------
-// ----------- End Cuda --------------
-// -----------------------------------
   cu_end(&gv);
-  //delete things now
-  if (d_particle_data)
-    delete []d_particle_data;
+  delete []d_particle_data;
 #ifdef  CUDA_DEVICE_COMBINE
-  if (cu_pic)
-    delete  []cu_pic;
+  delete  []cu_pic;
 #endif //ifdef CUDA_DEVICE_COMBINE
-  //delete C style colormap
   delete  []amapD;
   delete  []amapDTypeStartPos;
-  //delete cu_particle_splotch objects
   delete  []cu_ps;
   delete  []cu_ps_filtered;
-  //delete fragment buffer
   if (a_eq_e)
     delete  []fragBufAeqE;
   else
     delete  []fragBufAneqE;
 
-  printf("\nThread %d finished!\n", tInfo->devID);
-
-  // tInfo->times[THIS_THREAD] =timer1.getTime();
+  tInfo->times[THIS_THREAD] =timer1.acc();
 
   return 1;
   }
@@ -664,37 +595,18 @@ void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
   tInfo[nThread-1].endP =particle_data.size()-1;
   }
 
-#endif
-//////////////////////////////////////////////////////////////////////
-/////////////Here comes CUDA code//////////////////////////
-// -----------------------------------
-// ----------- Run Cuda -------------
-// -----------------------------------
-// After reading, ranging with device
-#ifdef CUDA
 void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
   {
-  //test assign, should remove later
-  vector<particle_sim>        tmp;
-  int     n1,n2,n3;
-  n1 =particle_data.size();
-  tmp.assign(particle_data.begin(), particle_data.begin()+1000);
-  n2 =particle_data.size();
-  n3 =tmp.size();
-  bool b;
-  b =particle_data.empty();
-
   //prepare the parameters for the cuda thread
   //the final image
   res = params.find<int>("resolution",200);
-  pic.alloc(res,res);//, pic1(res,res);//pic1 for debug only
+  pic.alloc(res,res);
 
   //new arrays of thread_info and HANDLE
   int nDev;
   nDev =params.find<int>("gpu_number",0);
   //see if use host as a working thread
-  bool bHostThread;
-  bHostThread =params.find<bool>("use_host_as_thread", false);
+  bool bHostThread=params.find<bool>("use_host_as_thread", false);
   int nThread = bHostThread? nDev+1: nDev;
   //init objects for threads control
   thread_info *tInfo =new thread_info[nThread];
@@ -729,7 +641,6 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
   if (bHostThread)
     tHandle[nDev] =CreateThread( NULL, 0,
       (LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
-  //and wait for them to finish
   WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
 
 #else //do not use thread which is now Windows code
@@ -768,9 +679,7 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
     {
     }
   timer.stop();
-  // cout << endl << "Post-process pic[] cost time:" << timer.getTime() << "s" <<endl;
 
-  //now output the time records
   for (int i=0; i<nThread; i++)
     {
     if (tInfo[i].devID!=-1)
@@ -800,14 +709,10 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
       }
     }
 
-  //delete pics that were created
   for (int i=1; i<nThread; i++)
     delete tInfo[i].pPic;
-  //delete thread_info and HANDLE arrays
   delete [] tInfo;
 #ifndef NO_WIN_THREAD
   delete [] tHandle;
 #endif
   }
-
-#endif  //if def CUDA

@@ -3,15 +3,12 @@ Copyright things go here.
 */
 
 #include "CuPolicy.h"
-#include <cmath>
 
-CuPolicy::CuPolicy()
-  : m_pParam(0), m_blockSize (256) {}
-
-CuPolicy::CuPolicy(paramfile *pParam)
+CuPolicy::CuPolicy(paramfile &Param)
   {
-  m_pParam =pParam;
-  m_blockSize =pParam->find<int>("block_size", 256);
+  m_blockSize =Param.find<int>("block_size", 256);
+  maxregion = Param.find<int>("max_region", 1024);
+  fbsize = (Param.find<int>("fragment_buffer_size", 100))<<20;
   }
 
 //Get size of device particle data
@@ -19,15 +16,10 @@ int CuPolicy::GetSizeDPD(unsigned int n)
   { return n* sizeof(cu_particle_sim); }
 
 int CuPolicy::GetMaxRegion()
-  { return m_pParam->find<int>("max_region", 1024); }
+  { return maxregion; }
 
 int CuPolicy::GetFBufSize()
-  {
-  //just for test on my own pc now
-  int size=m_pParam->find<int>("fragment_buffer_size", 100);
-  unsigned int M = 1<<20;
-  return int (size*M);
-  }
+  { return fbsize; }
 
 void CuPolicy::GetDims1(unsigned int n, dim3 *dimGrid, dim3 *dimBlock)
   {

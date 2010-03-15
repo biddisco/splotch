@@ -1,17 +1,8 @@
 #ifndef SPLOTCH_CUDA2_H
 #define SPLOTCH_CUDA2_H
 
-#ifdef CUDA
 #include "cuda/splotch_cuda.h"
 #include "cuda/splotchutils_cuda.h"
-#include <string.h>
-#endif
-
-#ifdef CUDA
-#ifndef VS
-#define DWORD long
-#define WINAPI
-#endif
 
 //things for combination with host threads
 struct  param_combine_thread //for host combine thread
@@ -26,11 +17,11 @@ struct  param_combine_thread //for host combine thread
   };
 
 #ifndef NO_WIN_THREAD
-DWORD WINAPI combine(void *param);
-#else
-DWORD WINAPI cu_thread_func(void *pinfo);
-DWORD WINAPI cu_draw_chunk(void *pinfo);
+THREADFUNC combine(void *param);
 #endif
+THREADFUNC cu_thread_func(void *pinfo);
+THREADFUNC cu_draw_chunk(void *pinfo);
+THREADFUNC host_thread_func(void *pinfo);
 
 //for record times
 enum TimeRecords {
@@ -65,14 +56,6 @@ extern int ptypes;
 
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 
-#ifndef NO_WIN_THREAD
-DWORD WINAPI cu_draw_chunk(void *p);
-DWORD WINAPI cu_thread_func(void *p);
-DWORD WINAPI host_thread_func(void *p);
-#endif
-
 void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic);
-
-#endif //ifdef CUDA
 
 #endif

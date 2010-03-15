@@ -5,13 +5,13 @@ Copyright things go here.
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
-#ifdef CUDA
-#ifndef VS
-#define DWORD long
-#define WINAPI
-#endif
+#ifdef VS
+#define THREADFUNC DWORD WINAPI
+#else
+#define THREADFUNC long
 #endif
 
+#include <cstring>
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
 #include "splotch/splotchutils.h"
@@ -23,7 +23,7 @@ typedef particle_sim cu_particle_sim;
 
 #define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
                                         //in mid of developing only
-#define MAX_EXP (-20.0)
+const double MAX_EXP=-20.0;
 
 struct cu_param_range //parameters for range calculation
   {
@@ -50,8 +50,8 @@ struct cu_color
 
 struct cu_color_map_entry
   {
-  float min, max;
-  cu_color color1, color2;
+  float val;
+  cu_color color;
   };
 
 struct cu_colormap_info
@@ -68,7 +68,6 @@ struct cu_particle_splotch
   cu_color a,e;
   bool isValid;
   unsigned short minx, miny, maxx, maxy;
-  //  short startx,starty, endx,endy;
   unsigned long posInFragBuf;
   };
 
@@ -119,8 +118,6 @@ struct cu_param_combine //for combination with device
 
 struct cu_gpu_vars //variables used by each gpu
   {
-  //  float *d_tmp;   //used for debug
-  //  float *d_expTable;        //only used for testing
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;    //device_particle_data
   cu_colormap_info    d_colormap_info;    //it contains device pointers
