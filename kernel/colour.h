@@ -40,6 +40,9 @@ class COLOUR
       : r (rv), g (gv), b (bv) {}
 
     /*! */
+    const COLOUR &operator+= (const COLOUR &Col2)
+      { r+=Col2.r; g+=Col2.g; b+=Col2.b; return *this; }
+    /*! */
     COLOUR operator+ (const COLOUR &Col2) const
       { return COLOUR (r+Col2.r, g+Col2.g, b+Col2.b); }
     /*! */
