@@ -236,10 +236,9 @@ extern "C" void cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
   //set common fileds of pgv->d_exp_info
   pgv->d_exp_info.expfac =pgv->d_exp_info.dim2 / maxexp;
   //now make up tab1 and tab2 in host
-  float *h_tab1, *h_tab2;
   int dim1 =pgv->d_exp_info.dim1, dim2 =pgv->d_exp_info.dim2;
-  h_tab1 =new float[dim1];
-  h_tab2 =new float[dim2];
+  float *h_tab1 =new float[dim1];
+  float *h_tab2 =new float[dim2];
   for (int m=0; m<dim1; ++m)
     {
     h_tab1[m]=exp(m*dim1/pgv->d_exp_info.expfac);
@@ -322,19 +321,16 @@ void    cu_end(cu_gpu_vars* pgv)
 
   cudaThreadExit();
 
-  if (pgv->policy)
-    delete pgv->policy;
+  delete pgv->policy;
   }
 
 extern "C" int cu_get_chunk_particle_count(paramfile &params)
   {
-  int gMemSize, fBufSize;
-  float factor;
-  int M =int( pow(2.0, 20) );
-  gMemSize =params.find<int>("graphics_memory_size", 256) *M;
-  fBufSize =params.find<int>("fragment_buffer_size", 128) *M;
-  factor   =params.find<float>("particle_mem_factor", 4.0);
-  int spareMem =1 *M;
+  int M = 1<<20;
+  int gMemSize =params.find<int>("graphics_memory_size", 256)*M;
+  int fBufSize =params.find<int>("fragment_buffer_size", 128)*M;
+  float factor =params.find<float>("particle_mem_factor", 4.0);
+  int spareMem = 1*M;
 
   if (gMemSize <= fBufSize) return -1;
 

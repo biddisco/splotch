@@ -531,7 +531,7 @@ PROBLEM HERE!
       param.combineStartP =combineStartP;
       param.combineEndP =combineEndP;
       combine(&param);
-      // param.timeUsed +=t3.getTime();
+      // param.timeUsed +=t3.acc();
       }
     }
 
