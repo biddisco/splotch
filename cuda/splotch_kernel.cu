@@ -1,7 +1,7 @@
 #ifndef SPLOTCH_KERNEL_H
 #define SPLOTCH_KERNEL_H
 /*
-Try accelating splotch with CUDA. July 2009.
+Try accelerating splotch with CUDA. July 2009.
 Copyright things go here.
 */
 
@@ -75,8 +75,9 @@ __device__ cu_color get_color
 
 __device__  float get_exp(float arg, cu_exptable_info d_exp_info)
   {
-return exp(arg);
 #if 0
+  return exp(arg);
+#else
   //fetch things to local
   __shared__  float   expfac;
   __shared__  float   *tab1, *tab2;
@@ -337,12 +338,7 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n)
-    {
     m =n;
-#ifdef _DEVICEEMU
-    p[m].type =0;
-#endif
-    }
 
   //now do the calc
   //I, minint, maxint

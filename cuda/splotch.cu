@@ -1,5 +1,5 @@
 /*
-Try accelating splotch with CUDA. July 2009.
+Try accelerating splotch with CUDA. July 2009.
 Copyright things go here.
 */
 

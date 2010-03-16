@@ -546,17 +546,16 @@ PROBLEM HERE!
 
   cu_end(&gv);
   delete []d_particle_data;
-#ifdef  CUDA_DEVICE_COMBINE
-  delete  []cu_pic;
-#endif //ifdef CUDA_DEVICE_COMBINE
   delete  []amapD;
   delete  []amapDTypeStartPos;
   delete  []cu_ps;
   delete  []cu_ps_filtered;
+#ifndef  CUDA_DEVICE_COMBINE
   if (a_eq_e)
     delete  []fragBufAeqE;
   else
     delete  []fragBufAneqE;
+#endif //ifndef CUDA_DEVICE_COMBINE
 
   tInfo->times[THIS_THREAD] =timer1.acc();
 
@@ -645,7 +644,7 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
 
 #else //do not use thread which is now Windows code
   cu_thread_func (&(tInfo[0])); //just call it as normal function
-  // host_thread_func ( &(tInfo[nDev]) );
+  //host_thread_func ( &(tInfo[0]) );
 #endif  //if not NO_WIN_THREAD
 
   // post-process

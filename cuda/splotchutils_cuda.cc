@@ -2,8 +2,6 @@
 
 using namespace std;
 
-/////////////////////////////CUDA CODE///////////////////////////////////
-#ifdef CUDA
 void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
   bool a_eq_e,double grayabsorb)
   {
@@ -251,4 +249,3 @@ paramfile &params, double c[3], double l[3], double s[3])
   para_trans.xfac=xfac;
   para_trans.minhsmlpixel=minhsmlpixel;
   }
-#endif  //CUDA
