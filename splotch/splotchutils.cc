@@ -1,7 +1,6 @@
 #include "splotch/splotchutils.h"
 #include "cxxsupport/mpi_support.h"
 #include "kernel/transform.h"
-#include "cuda/splotch_cuda.h"
 
 using namespace std;
 
@@ -147,8 +146,8 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
   double grayabsorb)
   {
 #if 0
-render_new(p,pic,a_eq_e,grayabsorb);
-return;
+  render_new(p,pic,a_eq_e,grayabsorb);
+  return;
 #endif
   const float64 rfac=1.5;
   const float64 powtmp = pow(pi,1./3.);

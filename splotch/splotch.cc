@@ -54,8 +54,8 @@ int main (int argc, const char **argv)
   //paramfile params (argv[1],master);
   paramfile params (argv[1],false);
 #ifndef CUDA
-  vector<particle_sim> particle_data; ///row data from file
-  vec3 campos, lookat, sky; ///A 3D vector class, designed for high efficiency.
+  vector<particle_sim> particle_data; ///raw data from file
+  vec3 campos, lookat, sky;
   vector<COLOURMAP> amap,emap;
   int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
 #else //if CUDA defined
