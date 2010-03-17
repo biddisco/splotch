@@ -161,7 +161,7 @@ class work_distributor
   };
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
-  bool a_eq_e,double grayabsorb);
+  bool a_eq_e,double grayabsorb, bool nopostproc);
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   vector<COLOURMAP> &amap);
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose);

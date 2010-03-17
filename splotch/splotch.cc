@@ -334,7 +334,7 @@ int main (int argc, const char **argv)
     bool a_eq_e = params.find<bool>("a_eq_e",true);
 #ifndef NO_HOST_RENDER
     wallTimers.start("render");
-    render(particle_data,pic,a_eq_e,grayabsorb);
+    render(particle_data,pic,a_eq_e,grayabsorb,false);
     wallTimers.stop("render");
 #endif//NO_HOST_RENDER
 #endif //if not def CUDA

@@ -1,8 +1,6 @@
 #ifndef SPLOTCHUTILS_CUDA_H
 #define SPLOTCHUTILS_CUDA_H
 
-#ifdef CUDA
-
 #include <vector>
 #include "cxxsupport/datatypes.h"
 #include "kernel/colour.h"
@@ -10,12 +8,7 @@
 #include "splotch/splotchutils.h"
 #include "cuda/splotch_cuda.h"
 
-void render_as_thread1 (const vector<particle_sim> &p, arr2<COLOUR> &pic,
-                        bool a_eq_e,double grayabsorb);
-
 extern "C" void getCuTransformParams(cu_param_transform &para_trans,
                           paramfile &params, double c[3], double l[3], double s[3]);
-
-#endif  //CUDA
 
 #endif

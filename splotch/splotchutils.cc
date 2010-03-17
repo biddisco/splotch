@@ -44,7 +44,7 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
   }
 
 void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
-  bool a_eq_e, double grayabsorb)
+  bool a_eq_e, double grayabsorb, bool nopostproc)
   {
   vector<particle_new> p;
   create_new_particles (pold, a_eq_e, grayabsorb, p);
@@ -132,21 +132,22 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
 
   mpiMgr.allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
-  if (mpiMgr.master() && a_eq_e)
-    for (int ix=0;ix<xres;ix++)
-      for (int iy=0;iy<yres;iy++)
-        {
-        pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-        pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-        pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-        }
+  if (!nopostproc)
+    if (mpiMgr.master() && a_eq_e)
+      for (int ix=0;ix<xres;ix++)
+        for (int iy=0;iy<yres;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
   }
 
 void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
-  double grayabsorb)
+  double grayabsorb, bool nopostproc)
   {
 #if 0
-  render_new(p,pic,a_eq_e,grayabsorb);
+  render_new(p,pic,a_eq_e,grayabsorb,nopostproc);
   return;
 #endif
   const float64 rfac=1.5;
@@ -246,14 +247,16 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
 
   mpiMgr.allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
-  if (mpiMgr.master() && a_eq_e)
-    for (int ix=0;ix<xres;ix++)
-      for (int iy=0;iy<yres;iy++)
-        {
-        pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-        pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-        pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-        }
+
+  if (!nopostproc)
+    if (mpiMgr.master() && a_eq_e)
+      for (int ix=0;ix<xres;ix++)
+        for (int iy=0;iy<yres;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
   }
 
 double my_asinh (double val)

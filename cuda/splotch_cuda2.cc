@@ -58,7 +58,7 @@ THREADFUNC host_thread_func(void *p)
   int res = params.find<int>("resolution",200);
   float64 grayabsorb = params.find<float>("gray_absorption",0.2);
   bool a_eq_e = params.find<bool>("a_eq_e",true);
-  render_as_thread1(particles,*(tInfo->pPic),a_eq_e,grayabsorb);
+  render(particles,*(tInfo->pPic),a_eq_e,grayabsorb,true);
 
   t.stop();
   tInfo->times[RENDER] =t.acc();
@@ -590,9 +590,6 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
   int nThread = bHostThread? nDev+1: nDev;
   //init objects for threads control
   thread_info *tInfo =new thread_info[nThread];
-#ifndef NO_WIN_THREAD
-  HANDLE *tHandle =new HANDLE[nThread];
-#endif
   //fill in thread_info
   tInfo[0].pPic =&pic;
   for (int i=0; i<nDev; i++)
@@ -609,10 +606,11 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
     if (nThread-1 != 0)
       tInfo[nThread-1].pPic =new arr2<COLOUR>(res, res);
     }
-  //decide how to devide task by another function
+  //decide how to divide task by another function
   DevideThreadsTasks(tInfo, nThread, bHostThread);
 
 #ifndef NO_WIN_THREAD //to let it compiled in Linux, just for now, 2 Dec 2009.
+  HANDLE *tHandle =new HANDLE[nThread];
   //issue the threads
   for (int i=0; i<nDev; i++)
     tHandle[i] =CreateThread( NULL, 0,
@@ -624,8 +622,10 @@ void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
   WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
 
 #else //do not use thread which is now Windows code
+  planck_assert(nThread==1,
+    "can't have multiple threads on Linux (yet), so 'gpu_number' must be 1");
   cu_thread_func (&(tInfo[0])); //just call it as normal function
-  //host_thread_func ( &(tInfo[0]) );
+  //host_thread_func (&(tInfo[0]));
 #endif  //if not NO_WIN_THREAD
 
   // post-process
