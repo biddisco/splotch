@@ -21,14 +21,12 @@
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT	+=  -DCUDA
+OPT     +=  -DCUDA
 OPT     +=  -DNO_WIN_THREAD
 OPT     +=  -DNO_HOST_RANGING
 OPT     +=  -DNO_HOST_TRANSFORM
 OPT     +=  -DNO_HOST_COLORING
 OPT     +=  -DNO_HOST_RENDER
-#OPT	 +=  -DHOST_THREAD_RENDER
-#OPT	 +=  -DCUDA_DEVICE_COMBINE
 
 #--------------------------------------- Select target Computer
 

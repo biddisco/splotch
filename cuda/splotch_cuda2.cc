@@ -427,7 +427,6 @@ PROBLEM HERE!
   //CUDA Rendering with device
 
   //here's the point of multi-go loop starts
-#ifndef CUDA_DEVICE_COMBINE //combined by host
   timer.reset();//for rendering
   timer.start();
   //prepare fragment buffer memory space first
@@ -475,20 +474,6 @@ PROBLEM HERE!
     param.fbuf =(void*)fragBufAneqE;
   param.ps =cu_ps_filtered;
   param.timeUsed =0.0;
-
-#ifdef HOST_THREAD_RENDER
-  bFinished=true;//let device not working
-
-  param_render_thread     param_render;
-  param_render.p  =cu_ps_filtered;
-  param_render.start =0;
-  param_render.end   =pFiltered;
-  param_render.a_eq_e =a_eq_e;
-  param_render.grayabsorb =grayabsorb;
-  param_render.pic        =(cu_color [][800])pic1;
-
-  render_thread(&param_render);
-#endif
 
   while (!bFinished)
     {
@@ -542,20 +527,16 @@ PROBLEM HERE!
 
 /////////////////////////////////////////////////////////////////////
 
-#endif //if not def CUDA_DEVICE_COMBINE
-
   cu_end(&gv);
   delete []d_particle_data;
   delete  []amapD;
   delete  []amapDTypeStartPos;
   delete  []cu_ps;
   delete  []cu_ps_filtered;
-#ifndef  CUDA_DEVICE_COMBINE
   if (a_eq_e)
     delete  []fragBufAeqE;
   else
     delete  []fragBufAneqE;
-#endif //ifndef CUDA_DEVICE_COMBINE
 
   tInfo->times[THIS_THREAD] =timer1.acc();
 
