@@ -2,7 +2,6 @@
 #define SPLOTCH_CUDA2_H
 
 #include "cuda/splotch_cuda.h"
-#include "cuda/splotchutils_cuda.h"
 
 //things for combination with host threads
 struct  param_combine_thread //for host combine thread

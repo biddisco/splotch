@@ -102,7 +102,7 @@ ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 
 endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotchutils_cuda.o cuda/splotch_cuda2.o
+OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotch_cuda2.o
 endif
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 LIB_MPIIO = -Lmpiio-1.0/lib -lpartition
