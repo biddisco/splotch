@@ -3,8 +3,8 @@
 
 using namespace std;
 
-paramfile       *g_params;
-vector<particle_sim> particle_data; ///raw data from file
+paramfile *g_params;
+vector<particle_sim> particle_data; //raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap,emap;
 int ptypes = 0;
@@ -15,7 +15,7 @@ THREADFUNC host_thread_func(void *p)
 
   thread_info *tInfo = (thread_info*)p;
 
-  paramfile params =*g_params;
+  paramfile &params(*g_params);
 
   vector<particle_sim> particles;
   vector<particle_sim>::iterator i1,i2;
@@ -186,7 +186,7 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   //prepare for recording times
   memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
 
-  paramfile params =*g_params;
+  paramfile &params (*g_params);
 
   cu_particle_sim *d_particle_data =new cu_particle_sim[nParticle];
 
