@@ -343,11 +343,11 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
   //now do the calc
   //I, minint, maxint
   if (pr->log_int[p[m].type]) //could access invalid address under EMULATION
-    p[m].I = log(p[m].I);
+    p[m].I = log10(p[m].I);
 
   //C1, mincol, maxcol
   if (pr->log_col[p[m].type])
-  p[m].C1 = log(p[m].C1);
+  p[m].C1 = log10(p[m].C1);
   if (pr->asinh_col[p[m].type])
     p[m].C1 = my_asinh(p[m].C1);
 
@@ -356,8 +356,8 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
     {
     if (pr->log_col[p[m].type])
       {
-      p[m].C2 = log(p[m].C2);
-      p[m].C3 = log(p[m].C3);
+      p[m].C2 = log10(p[m].C2);
+      p[m].C3 = log10(p[m].C3);
       }
     if (pr->asinh_col[p[m].type])
       {
