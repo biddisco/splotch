@@ -34,47 +34,11 @@
 
 using namespace std;
 
-int main (int argc, const char **argv)
+void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap,
+  vector<COLOURMAP> &emap)
   {
-  wallTimers.start("full");
-  wallTimers.start("setup");
+  int ptypes = params.find<int>("ptypes",1);
   bool master = mpiMgr.master();
-  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
-
-#ifdef INTERPOLATE
-#ifndef GEOMETRY_FILE
-#error Splotch: interpolation without geometry file makes no sense!
-#endif
-#endif
-
-// -----------------------------------
-// ----------- Needed Data -----------
-// -----------------------------------
-
-  //paramfile params (argv[1],master);
-  paramfile params (argv[1],false);
-#ifndef CUDA
-  vector<particle_sim> particle_data; ///raw data from file
-  vec3 campos, lookat, sky;
-  vector<COLOURMAP> amap,emap;
-  int ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
-#else //if CUDA defined
-  ptypes = params.find<int>("ptypes",1); ///each particle type has a color map
-  g_params =&params;
-#endif  //if def CUDA they will be a global vars
-
-#ifdef INTERPOLATE
-  vector<particle_sim> particle_data1,particle_data2;
-  int snr_start = params.find<int>("snap_start",10);
-  int snr1=snr_start,snr2=snr_start+1,snr1_now=-1,snr2_now=-1;
-  double time1,time2;
-#endif
-  double time;
-
-// ----------------------------------------------
-// ----------- Loading Color Maps ---------------
-// ----------------------------------------------
-
   amap.resize(ptypes);
 
   if (master)
@@ -106,6 +70,45 @@ int main (int argc, const char **argv)
       }
     }
   emap=amap;
+  }
+
+int main (int argc, const char **argv)
+  {
+  wallTimers.start("full");
+  wallTimers.start("setup");
+  bool master = mpiMgr.master();
+  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
+
+#ifdef INTERPOLATE
+#ifndef GEOMETRY_FILE
+#error Splotch: interpolation without geometry file makes no sense!
+#endif
+#endif
+
+  paramfile params (argv[1],false);
+#ifndef CUDA
+  vector<particle_sim> particle_data; //raw data from file
+  vec3 campos, lookat, sky;
+  vector<COLOURMAP> amap,emap;
+  int ptypes = params.find<int>("ptypes",1);
+#else
+  ptypes = params.find<int>("ptypes",1);
+  g_params =&params;
+#endif  //ifdef CUDA they will be global vars
+
+#ifdef INTERPOLATE
+  vector<particle_sim> particle_data1,particle_data2;
+  int snr_start = params.find<int>("snap_start",10);
+  int snr1=snr_start,snr2=snr_start+1,snr1_now=-1,snr2_now=-1;
+  double time1,time2;
+#endif
+  double dummy;
+
+// ----------------------------------------------
+// ----------- Loading Color Maps ---------------
+// ----------------------------------------------
+
+  get_colourmaps(params,amap,emap);
 
   wallTimers.stop("setup");
   wallTimers.start("read");
@@ -221,7 +224,7 @@ int main (int argc, const char **argv)
             snr2_now = snr2;
             }
 #else
-          gadget_reader(params,particle_data,0,&time);
+          gadget_reader(params,particle_data,0,&dummy);
 #ifdef GEOMETRY_FILE
           p_orig = particle_data;
 #endif
@@ -233,7 +236,7 @@ int main (int argc, const char **argv)
           break;
 #endif
         case 4:
-          gadget_millenium_reader(params,particle_data,0,&time);
+          gadget_millenium_reader(params,particle_data,0,&dummy);
           break;
         case 5:
 #if defined(USE_MPIIO)
