@@ -630,7 +630,7 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		}
 	      else
 		if(mpiMgr.master())
-		  cout << " Cant find color field <" << label_col << "> ..." << endl; 
+		  cout << " Cannot find color field <" << label_col << "> ..." << endl; 
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
@@ -752,7 +752,7 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		}
 	      else
 		if(mpiMgr.master() && itype==0 && f==0)
-		  cout << " Cant find intensity field <" << label_int << "> ..." << endl; 
+		  cout << " Cannot find intensity field <" << label_int << "> ..." << endl; 
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
