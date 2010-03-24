@@ -9,15 +9,25 @@ struct particle_new
   COLOUR a, q;
   float32 x, y, rmax, steepness;
   };
+struct locinfo
+  {
+  uint16 minx, maxx, miny, maxy;
+  };
 
 void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
-  float64 gray, vector<particle_new> &out)
+  float64 gray, vector<particle_new> &out, vector<locinfo> &loc)
   {
   const float64 powtmp = pow(pi,1./3.);
   const float64 sigma0=powtmp/sqrt(2*pi);
   const float64 bfak=1./(2*sqrt(pi)*powtmp);
+  const int maxpix=65000;
 
-  out.reserve(in.size());
+  tsize nactive=0;
+  for (tsize i=0; i< in.size(); ++i)
+    if (in[i].active) ++nactive;
+
+  out.reserve(nactive);
+  loc.reserve(nactive);
   for (tsize i=0; i< in.size(); ++i)
     {
     if (in[i].active)
@@ -39,6 +49,13 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
       p.rmax = sqrt(max(0.,log(attenuation)/p.steepness));
 //p.rmax=3*in[i].r;
       out.push_back(p);
+
+      locinfo l;
+      l.minx = uint16(max(0,min(maxpix,int(p.x-p.rmax+1))));
+      l.maxx = uint16(max(0,min(maxpix,int(p.x+p.rmax+1))));
+      l.miny = uint16(max(0,min(maxpix,int(p.y-p.rmax+1))));
+      l.maxy = uint16(max(0,min(maxpix,int(p.y+p.rmax+1))));
+      loc.push_back(l);
       }
     }
   }
@@ -46,8 +63,14 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
 void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
   bool a_eq_e, double grayabsorb, bool nopostproc)
   {
+  planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
+    "MPI only supported for A==E so far");
+  const tsize maxpix=65000;
+  planck_assert ((pic.size1()<maxpix) && (pic.size2()<maxpix),
+    "image dimensions too large");
   vector<particle_new> p;
-  create_new_particles (pold, a_eq_e, grayabsorb, p);
+  vector<locinfo> loc;
+  create_new_particles (pold, a_eq_e, grayabsorb, p, loc);
 
   exptable xexp(-20.);
 
@@ -72,27 +95,25 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
 
     for (tsize m=0; m<p.size(); ++m)
       {
-      float64 posx=p[m].x, posy=p[m].y;
-      posx-=x0s; posy-=y0s;
-      float64 rmax= p[m].rmax;
-
-      int minx=int(posx-rmax+1);
+      int minx=loc[m].minx-x0s;
       if (minx>=x1) continue;
       minx=max(minx,x0);
-      int maxx=int(posx+rmax+1);
+      int maxx=loc[m].maxx-x0s;
       if (maxx<=x0) continue;
       maxx=min(maxx,x1);
       if (minx>=maxx) continue;
-      int miny=int(posy-rmax+1);
+      int miny=loc[m].miny-y0s;
       if (miny>=y1) continue;
       miny=max(miny,y0);
-      int maxy=int(posy+rmax+1);
+      int maxy=loc[m].maxy-y0s;
       if (maxy<=y0) continue;
       maxy=min(maxy,y1);
       if (miny>=maxy) continue;
 
-      COLOUR8 a=p[m].a, q;
-      if (!a_eq_e) q=p[m].q;
+      float64 posx=p[m].x, posy=p[m].y;
+      posx-=x0s; posy-=y0s;
+      float64 rmax= p[m].rmax;
+      COLOUR8 a=p[m].a;
 
       float64 stp=p[m].steepness;
       float64 att_max=xexp(stp*rmax*rmax);
@@ -100,21 +121,34 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
       for (int y=miny; y<maxy; ++y)
         pre1[y] = xexp(stp*(y-posy)*(y-posy));
 
-      for (int x=minx; x<maxx; ++x)
+      if (a_eq_e)
         {
-        double pre2 = xexp(stp*(x-posx)*(x-posx));
-        for (int y=miny; y<maxy; ++y)
+        for (int x=minx; x<maxx; ++x)
           {
-          float64 att = pre1[y]*pre2;
-          if (att>att_max)
+          double pre2 = xexp(stp*(x-posx)*(x-posx));
+          for (int y=miny; y<maxy; ++y)
             {
-            if (a_eq_e)
+            float64 att = pre1[y]*pre2;
+            if (att>att_max)
               {
               lpic[x][y].r += att*a.r;
               lpic[x][y].g += att*a.g;
               lpic[x][y].b += att*a.b;
               }
-            else
+            }
+          }
+        }
+      else
+        {
+        COLOUR8 q=p[m].q;
+
+        for (int x=minx; x<maxx; ++x)
+          {
+          double pre2 = xexp(stp*(x-posx)*(x-posx));
+          for (int y=miny; y<maxy; ++y)
+            {
+            float64 att = pre1[y]*pre2;
+            if (att>att_max)
               {
               lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
               lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
@@ -124,6 +158,7 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
           }
         }
       }
+
     for(int ix=0;ix<x1;ix++)
       for(int iy=0;iy<y1;iy++)
         pic[ix+x0s][iy+y0s]=lpic[ix][iy];
@@ -546,95 +581,3 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
       break;
     }
   }
-
-
-#ifdef INTERPOLATE
-
-// Higher order interpolation would be:
-// Time between snapshots (cosmology !)
-//    dt=(z2t(h1.redshift)-z2t(h0.redshift))*0.7
-// Velocity factors:
-//    v_unit1=v_unit/l_unit/sqrt(h1.time)*dt
-//    v_unit0=v_unit/l_unit/sqrt(h0.time)*dt
-// Delta_v (cosmology)
-//    vda=2*(x1-x0)-(v0*v_unit0+v1*v_unit1)
-// Delta_t (0..1)
-//     t=FLOAT(k)/FLOAT(nint) == frac (!)
-// Interpolated positions:
-//    x=x0+v0*v_unit0*t+0.5*(v1*v_unit1-v0*v_unit0+vda)*t^2
-// Interpolated velocities:
-//    v=v0+t*(v1-v0)
-
-void particle_interpolate(paramfile &params, vector<particle_sim> &p,
-  const vector<particle_sim> &p1, const vector<particle_sim> &p2, double frac,
-  double time1, double time2)
-  {
-  cout << " Time1/2 = " << time1 << "," << time2 << endl;
-
-#ifdef HIGH_ORDER_INTERPOLATION
-  double h = params.find<double>("hubble",0.7);
-  double O = params.find<double>("omega",0.3);
-  double L = params.find<double>("lambda",0.7);
-  double mparsck = 3.0856780e+24;
-  double l_unit = params.find<double>("l_unit",3.0856780e+21);
-  double v_unit = params.find<double>("v_unit",100000.00);
-  double t1 = log(sqrt(L/O*time1*time1*time1)+sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
-  double t2 = log(sqrt(L/O*time2*time2*time2)+sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
-  double dt = (t2 - t1) * h;
-  double v_unit1=v_unit/l_unit/sqrt(time1)*dt;
-  double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
-#endif
-
-  p.resize(0);
-  tsize i1=0,i2=0;
-  while(i1<p1.size() && i2<p2.size())
-    {
-    if (p1[i1].id==p2[i2].id)
-      {
-      planck_assert (p1[i1].type==p2[i2].type,
-        "interpolate: can not interpolate between different types !");
-#ifdef HIGH_ORDER_INTERPOLATION
-      double vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
-      double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
-      double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
-#endif
-      p.push_back(particle_sim(
-#ifdef HIGH_ORDER_INTERPOLATION
-         p1[i1].x + p1[i1].vx * v_unit1 * frac
-           + 0.5 * (p2[i2].vx * v_unit2 - p1[i1].vx * v_unit1 + vda_x) * frac * frac,
-         p1[i1].y + p1[i1].vy * v_unit1 * frac
-           + 0.5 * (p2[i2].vy * v_unit2 - p1[i1].vy * v_unit1 + vda_y) * frac * frac,
-         p1[i1].z + p1[i1].vz * v_unit1 * frac
-           + 0.5 * (p2[i2].vz * v_unit2 - p1[i1].vz * v_unit1 + vda_z) * frac * frac,
-#else
-         (1-frac) * p1[i1].x  + frac*p2[i2].x,
-         (1-frac) * p1[i1].y  + frac*p2[i2].y,
-         (1-frac) * p1[i1].z  + frac*p2[i2].z,
-#endif
-         (1-frac) * p1[i1].r  + frac*p2[i2].r,
-         (1-frac) * p1[i1].ro + frac*p2[i2].ro,
-         (1-frac) * p1[i1].I  + frac*p2[i2].I,
-         (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
-         (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
-         (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
-         p1[i1].type,p1[i1].active,p1[i1].e,p1[i1].id
-#ifdef HIGH_ORDER_INTERPOLATION
-        ,(1-frac) * p1[i1].vx  + frac*p2[i2].vx,
-         (1-frac) * p1[i1].vy  + frac*p2[i2].vy,
-         (1-frac) * p1[i1].vz  + frac*p2[i2].vz
-#endif
-         ));
-      i1++;
-      i2++;
-      }
-    else if (p1[i1].id<p2[i2].id)
-      i1++;
-    else if (p1[i1].id>p2[i2].id)
-      i2++;
-    }
-
-  if(mpiMgr.master())
-    cout << " found " << p.size() << " common particles ..." << endl;
-  }
-
-#endif

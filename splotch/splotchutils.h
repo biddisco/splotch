@@ -170,11 +170,6 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
   vector<COLOURMAP> &amap, vector<COLOURMAP> &emap);
 void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose);
-#ifdef INTERPOLATE
-void particle_interpolate(paramfile &params, vector<particle_sim> &p,
-  const vector<particle_sim> &p1, const vector<particle_sim> &p2,
-  double frac, double time1, double time2);
-#endif
 
 double my_asinh (double val);
 

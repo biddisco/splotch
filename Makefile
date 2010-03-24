@@ -23,10 +23,6 @@
 #--------------------------------------- CUDA options
 OPT     +=  -DCUDA
 OPT     +=  -DNO_WIN_THREAD
-OPT     +=  -DNO_HOST_RANGING
-OPT     +=  -DNO_HOST_TRANSFORM
-OPT     +=  -DNO_HOST_COLORING
-OPT     +=  -DNO_HOST_RENDER
 
 #--------------------------------------- Select target Computer
 
@@ -71,7 +67,7 @@ OPTIMIZE = -O2
 LIB_OPT  = 
 OMP =  
 #-Xcompiler -openmp
-SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc # -I$(CUDA_HOME)/include  -Icuda
+SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/inc # -I$(CUDA_HOME)/include  -Icuda
 endif
 
 ifeq ($(SYSTYPE),"PLX")
@@ -96,7 +92,7 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o cxxsupport/walltimer.o
+	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o splotch/scenemaker.o cxxsupport/walltimer.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 
