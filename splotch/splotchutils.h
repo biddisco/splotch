@@ -7,7 +7,29 @@
 #include "cxxsupport/vec3.h"
 #include "kernel/colourmap.h"
 
-using namespace std;
+template<typename It, typename Comp> void openmp_sort (It first, It last, Comp comp)
+  {
+  using namespace std;
+#ifndef _OPENMP
+  sort (first,last,comp);
+#else
+  size_t sz = last-first;
+  if (sz>100)
+    {
+    It mid = first+(last-first-1)/2;
+    nth_element(first,mid,last,comp);
+#pragma omp parallel sections
+{
+#pragma omp section
+    openmp_sort(first,mid,comp);
+#pragma omp section
+    openmp_sort(mid+1,last,comp);
+}
+    }
+  else
+    sort (first,last,comp);
+#endif
+  }
 
 class COLOUR8
   {
@@ -155,21 +177,26 @@ class work_distributor
       {
       int ix = n%((sx+tx-1)/tx);
       int iy = n/((sx+tx-1)/tx);
-      x0 = ix*tx; x1 = min(x0+tx, sx);
-      y0 = iy*ty; y1 = min(y0+ty, sy);
+      x0 = ix*tx; x1 = std::min(x0+tx, sx);
+      y0 = iy*ty; y1 = std::min(y0+ty, sy);
       }
   };
 
-void render (const vector<particle_sim> &p, arr2<COLOUR> &pic,
+void render (const std::vector<particle_sim> &p, arr2<COLOUR> &pic,
   bool a_eq_e,double grayabsorb, bool nopostproc);
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
-  vector<COLOURMAP> &amap);
-void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose);
-void particle_project(paramfile &params, vector<particle_sim> &p,
+  std::vector<COLOURMAP> &amap);
+void particle_normalize(paramfile &params, std::vector<particle_sim> &p, bool verbose);
+void particle_project(paramfile &params, std::vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky);
-void particle_colorize(paramfile &params, vector<particle_sim> &p,
-  vector<COLOURMAP> &amap, vector<COLOURMAP> &emap);
-void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose);
+void particle_colorize(paramfile &params, std::vector<particle_sim> &p,
+  std::vector<COLOURMAP> &amap, std::vector<COLOURMAP> &emap);
+void particle_sort(std::vector<particle_sim> &p, int sort_type, bool verbose);
+
+void timeReport();
+
+void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap,
+  std::vector<COLOURMAP> &emap);
 
 double my_asinh (double val);
 

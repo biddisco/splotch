@@ -20,7 +20,6 @@
  */
 #include <iostream>
 #include <cmath>
-#include <fstream>
 #include <algorithm>
 
 #include "splotch/scenemaker.h"
@@ -33,44 +32,6 @@
 #endif
 
 using namespace std;
-
-void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap,
-  vector<COLOURMAP> &emap)
-  {
-  int ptypes = params.find<int>("ptypes",1);
-  bool master = mpiMgr.master();
-  amap.resize(ptypes);
-
-  if (master)
-    cout << "building color maps (" << ptypes << ")..." << endl;
-  for (int itype=0;itype<ptypes;itype++)
-    {
-    if (params.find<bool>("color_is_vector"+dataToString(itype),false))
-      {
-      if (master)
-        cout << " color of ptype " << itype << " is vector, so no colormap to load ..." << endl;
-      }
-    else
-      {
-      ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
-      planck_assert (infile,"could not open palette file  <" +
-        params.find<string>("palette"+dataToString(itype)) + ">");
-      string dummy;
-      int nColours;
-      infile >> dummy >> dummy >> nColours;
-      if (master)
-        cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
-      double step = 1./(nColours-1);
-      for (int i=0; i<nColours; i++)
-        {
-        float rrr,ggg,bbb;
-        infile >> rrr >> ggg >> bbb;
-        amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
-        }
-      }
-    }
-  emap=amap;
-  }
 
 int main (int argc, const char **argv)
   {
@@ -89,10 +50,6 @@ int main (int argc, const char **argv)
   g_params =&params;
 #endif  //ifdef CUDA they will be global vars
 
-// ----------------------------------------------
-// ----------- Loading Color Maps ---------------
-// ----------------------------------------------
-
   get_colourmaps(params,amap,emap);
 
   wallTimers.stop("setup");
@@ -104,7 +61,6 @@ int main (int argc, const char **argv)
     long npart=particle_data.size();
     long npart_all=npart;
     mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-    wallTimers.stop("read");
 
 #ifdef CUDA
     int res;
@@ -176,25 +132,8 @@ int main (int argc, const char **argv)
       }
 
     wallTimers.stop("write");
-    }
 
-// -------------------------------
-// ----------- Timings -----------
-// -------------------------------
-  wallTimers.stop("full");
-  if (master)
-    {
-    cout << endl << "--------------------------------------------" << endl;
-    cout << "Summary of timings" << endl;
-    cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
-    cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
-    cout << "Ranging Data (secs)        : " << wallTimers.acc("range") << endl;
-    cout << "Transforming Data (secs)   : " << wallTimers.acc("transform") << endl;
-    cout << "Sorting Data (secs)        : " << wallTimers.acc("sort") << endl;
-    cout << "Coloring Sub-Data (secs)   : " << wallTimers.acc("coloring") << endl;
-    cout << "Rendering Sub-Data (secs)  : " << wallTimers.acc("render") << endl;
-    cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
-    cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
+    timeReport();
     }
 
 #ifdef VS
