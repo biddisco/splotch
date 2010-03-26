@@ -1,5 +1,5 @@
 # ============================================================================
-# Name        : partition.c
+# Name        : enable.m4
 # Author      : Gian Franco Marras
 # Version     : 1.0
 # Copyright   : free
@@ -30,19 +30,8 @@ fi
 AM_CONDITIONAL([DEBUG], [test $enable_debug = yes])
 
 #####################################################################################
-## ENABLE TYPE
-AC_ARG_ENABLE(type,AC_HELP_STRING([--enable-type=serial|seek_wr|wr_at|setv_wr|darray_wr],[Enable choise of version (default=serial)]),
-  [enable_type=$enableval],
-  [enable_type="serial darray_wr"]
-)
-
-mpi=0
-
+## CHECK MPI COMPILER
 AC_MPI
 CC=$MPICC
-mpi=yes
 
-AM_CONDITIONAL([MPI], [test $mpi = yes])
-
-
-]) 
+])

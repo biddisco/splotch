@@ -12,3 +12,4 @@ m4dir = ${top_srcdir}/m4
 
 SUBDIRS = src man 
 dist_doc_DATA     = README
+docdir = ${exec_prefix}/doc

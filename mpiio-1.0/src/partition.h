@@ -1,10 +1,10 @@
 /*
  ============================================================================
- Name        : partition.c
+ Name        : partition.h
  Author      : Gian Franco Marras
  Version     : 1.0
  Copyright   : free
- Description : A simple MPI Library I/O for access file in parallel system
+ Description : A simple MPI I/O Library for file access in parallel system 
  ============================================================================
  */
 
@@ -21,10 +21,10 @@ extern "C"
 
 int MPI_Ajo_partition ( MPI_Comm comm, int my_rank, int ndim_array, int nsize_global[], int psize[], int nsize[], int start_global_array[] );
 
-int MPI_Ajo_write ( MPI_Comm comm, int my_rank, const char *filename, int ndim_array, int nsize_global[], int nsize[], int start_global_array[], MPI_Datatype etype, void *array, MPI_Offset disp );
+int MPI_Ajo_write ( MPI_Comm comm, int my_rank, char *filename, int ndim_array, int nsize_global[], int nsize[], int start_global_array[], MPI_Datatype etype, void *array, MPI_Offset disp );
 
 
-int MPI_Ajo_read ( MPI_Comm comm, int my_rank, const char *filename, int ndim_array, int nsize_global[], int nsize[], int start_global_array[], MPI_Datatype etype, void *array, MPI_Offset disp );
+int MPI_Ajo_read ( MPI_Comm comm, int my_rank, char *filename, int ndim_array, int nsize_global[], int nsize[], int start_global_array[], MPI_Datatype etype, void *array, MPI_Offset disp );
 
 int MPI_Ajo_check_size ( MPI_Comm comm, int my_rank, MPI_Datatype *etype, MPI_Datatype *filetype, int ndim_array, int nsize[] );
 

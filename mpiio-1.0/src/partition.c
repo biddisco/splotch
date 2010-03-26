@@ -4,7 +4,7 @@
  Author      : Gian Franco Marras
  Version     : 1.0
  Copyright   : free
- Description : A simple MPI Library I/O for access file in parallel system
+ Description : A simple MPI I/O Library for file access in parallel system
  ============================================================================
  */
 
@@ -69,7 +69,7 @@ MPI_Ajo_partition (MPI_Comm comm, int my_rank, int ndim_array, int nsize_global[
 }
 
 int
-MPI_Ajo_write (MPI_Comm comm, int my_rank, const char *filename,
+MPI_Ajo_write (MPI_Comm comm, int my_rank, char *filename,
 	       int ndim_array, int nsize_global[], int nsize[],
 	       int start_global_array[], MPI_Datatype etype, void *array,
 	       MPI_Offset disp)
@@ -87,8 +87,7 @@ MPI_Ajo_write (MPI_Comm comm, int my_rank, const char *filename,
 
 
   ierr =
-    MPI_File_open (comm, filename, MPI_MODE_CREATE | MPI_MODE_WRONLY,
-		   MPI_INFO_NULL, &fh);
+    MPI_File_open (comm, filename, MPI_MODE_CREATE | MPI_MODE_WRONLY, MPI_INFO_NULL, &fh);
   MPI_Ajo_msgerr (comm, my_rank, ierr, "MPI_File_open");
   ierr =
     MPI_Type_create_subarray (ndim_array, nsize_global, nsize,
@@ -118,7 +117,7 @@ MPI_Ajo_write (MPI_Comm comm, int my_rank, const char *filename,
 }
 
 int
-MPI_Ajo_read (MPI_Comm comm, int my_rank, const char *filename,
+MPI_Ajo_read (MPI_Comm comm, int my_rank, char *filename,
 	      int ndim_array, int nsize_global[], int nsize[],
 	      int start_global_array[], MPI_Datatype etype, void *array,
 	      MPI_Offset disp)

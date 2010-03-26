@@ -1,5 +1,5 @@
 # ============================================================================
-# Name        : partition.c
+# Name        : Makefile.am
 # Author      : Gian Franco Marras
 # Version     : 1.0
 # Copyright   : free
@@ -13,10 +13,6 @@ lib_LIBRARIES = libpartition.a
 libpartition_a_SOURCES = partition.c
 include_HEADERS = partition.h
 
-
-if MPI
-enable_mpi=-DMPI
-endif
 
 if DEBUG
 enable_debug=-DDEBUG
