@@ -16,7 +16,7 @@ using namespace std;
 namespace {
 
 void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
-  int &nfields, int64 &npart, float * rrr, string * field, int * rank)
+  int &nfields, int64 &npart, float * rrr, string * field, int * rank, int64 * start)
   {
   /* qty_idx characterize the mesh according 
      to the following standard:
@@ -52,13 +52,16 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
   cout << "DIMENSIONS = " << s_dims[0] << " " << s_dims[1] << " " << s_dims[2]  << endl;
   H5Dclose(dataset_id);
 
-  qty_idx[0] = (int)s_dims[0];
+  int64 dimaux = (int)s_dims[0]/mpiMgr.num_ranks();
+  qty_idx[0] = dimaux;
+  if(mpiMgr.rank() == mpiMgr.num_ranks()-1) qty_idx[0] = s_dims[0]-(qty_idx[0]*(mpiMgr.num_ranks()-1));
   qty_idx[1] = (int)s_dims[1];
   qty_idx[2] = (int)s_dims[2];
   int64 npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
 // change for parallel
   npart = npart_total;
   *rrr = raux;
+  *start = dimaux * mpiMgr.rank();
 
   if (mpiMgr.master())
     {
@@ -119,6 +122,7 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
   float rrr;
   int nfields;
   string * field;
+  int64 start_local;
   int rank;
   int64 mybegin, npart;
   arr<int> qty_idx;
@@ -131,7 +135,35 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
   field[2] = params.find<string>("C3", "-1");
   float thresh = params.find<float>("thresh", 0.0);
 
-  hdf5_reader_prep (params, &file_id, qty_idx, nfields, npart, &rrr, field, &rank);
+  hdf5_reader_prep (params, &file_id, qty_idx, nfields, npart, &rrr, field, &rank, &start_local);
+  hid_t dataset_space;
+  hsize_t * start     = new hsize_t [rank];
+  hsize_t * stride    = new hsize_t [rank];
+  hsize_t * count     = new hsize_t [rank];
+  hsize_t * block     = new hsize_t [rank];
+
+  start[0]  = (hsize_t)start_local;
+  start[1]  = 0;
+  start[2]  = 0; 
+/*
+  stride[0] = NULL;
+  stride[1] = NULL;
+  stride[2] = NULL;
+*/
+  count[0]  = (hsize_t)qty_idx[0];
+  count[1]  = (hsize_t)qty_idx[1];
+  count[2]  = (hsize_t)qty_idx[2];
+/*
+  block[0]  = NULL;
+  block[1]  = NULL;
+  block[2]  = NULL;
+*/
+
+#ifdef DEBUG
+  cout << mpiMgr.rank() << " - - - - " << start[0] << endl;
+  cout << mpiMgr.rank() << " npart - - - - " << npart << endl;
+  cout << mpiMgr.rank() << " - - - - " << qty_idx[0] << " " << qty_idx[1] << " " << qty_idx[2] << endl;
+#endif
 
   points.resize(npart);
 
@@ -139,20 +171,18 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
     {
     if(field[qty].compare("-1") == 0) continue;
     float * buffer = new float [npart];
-    cout << "N....... " << qty << endl;
     cout << "FIELD NAME" << field[qty].c_str() << endl; 
 
 //NOW HDF READ STUFF
 
-  hid_t dataset_space;
-  hsize_t * s_dims    = new hsize_t [rank];
-  hsize_t * s_maxdims = new hsize_t [rank];
 
+// set the hyperslab to be read
   dataset_id = H5Dopen(file_id,field[qty].c_str());
-  dataset_space = H5Dget_space(dataset_id);
-  H5Sget_simple_extent_dims(dataset_space, s_dims, s_maxdims);
+  dataset_space = H5Dget_space(dataset_id);  
+  H5Sselect_hyperslab(dataset_space, H5S_SELECT_SET, start, NULL, count, NULL); 
+// prepare the memory space
+  hid_t memoryspace = H5Screate_simple(rank, count, count); 
 
-  hid_t memoryspace = H5Scopy(dataset_space);
   H5Dread(dataset_id, H5T_NATIVE_FLOAT, memoryspace, dataset_space, H5P_DEFAULT, buffer);
 
   H5Dclose(dataset_id);
@@ -192,13 +222,14 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
       {
         //int64 iaux = i + mybegin;
         int64 iaux = i;
-        int i1 = iaux/(dimx*dimy);  
-        int res = iaux%(dimx*dimy);
-        int i2 = res/dimx;
-        int i3 = res%dimx;
-        points[i].x = (float)i3;
+        int i1 = iaux/(dimz*dimy);  
+        int res = iaux%(dimz*dimy);
+        int i2 = res/dimz;
+        int i3 = res%dimz;
+        points[i].x = (float)(i1+start_local);
         points[i].y = (float)i2;
-        points[i].z = (float)i1;
+        points[i].z = (float)i3;
+        //if(points[i].C1 > 1e-10)cout << mpiMgr.rank() << " " << i << " " << points[i].x << " " << points[i].y << " " << points[i].z << " " <<  points[i].C1 << "\n";
         
       }
 
