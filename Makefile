@@ -9,29 +9,29 @@
 
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
+OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
 
-#OPT     +=  -DHDF5
-#OPT     +=  -DH5_USE_16_API
+OPT     +=  -DHDF5
+OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT     +=  -DCUDA
-OPT     +=  -DNO_WIN_THREAD
+#OPT     +=  -DCUDA
+#OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
-#SYSTYPE="SP6"
-SYSTYPE="GP"
+SYSTYPE="SP6"
+#SYSTYPE="GP"
 #SYSTYPE="PLX"
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
-HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.3_ser/xl--10.1
+HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.4_ser/xl--10.1
 LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/szlib/2.1/xl--10.1/lib/ -lsz
 HDF5_INCL = -I$(HDF5_HOME)/include
 endif

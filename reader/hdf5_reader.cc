@@ -111,12 +111,12 @@ void hdf5_reader_finish (vector<particle_sim> &points, float &maxr, float &minr,
   mpiMgr.allreduce(miny,MPI_Manager::Min);
   mpiMgr.allreduce(maxz,MPI_Manager::Max);
   mpiMgr.allreduce(minz,MPI_Manager::Min);
-#ifdef DEBUG
+ifdef DEBUG
   cout << "MIN, MAX --> " << minr << " " << maxr << endl;
   cout << "MIN, MAX --> " << minx << " " << maxx << endl;
   cout << "MIN, MAX --> " << miny << " " << maxy << endl;
   cout << "MIN, MAX --> " << minz << " " << maxz << endl;
-#endif
+endif
   }
 
 } // unnamed namespace
@@ -178,7 +178,7 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
     {
     if(field[qty].compare("-1") == 0) continue;
     float * buffer = new float [npart];
-    cout << "FIELD NAME" << field[qty].c_str() << endl; 
+    //cout << "FIELD NAME" << field[qty].c_str() << endl; 
 
 //NOW HDF READ STUFF
 
