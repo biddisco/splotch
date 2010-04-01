@@ -44,13 +44,20 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
   dataset_id = H5Dopen(file_id,field[0].c_str());
   dataset_space = H5Dget_space(dataset_id);
   nrank = H5Sget_simple_extent_ndims(dataset_space);
-  cout << "SPACE DIM = " << nrank << endl;
+  //cout << "SPACE DIM = " << nrank << endl;
   *rank = nrank;
   hsize_t * s_dims    = new hsize_t [nrank];
   hsize_t * s_maxdims = new hsize_t [nrank];
   H5Sget_simple_extent_dims(dataset_space, s_dims, s_maxdims);
-  cout << "DIMENSIONS = " << s_dims[0] << " " << s_dims[1] << " " << s_dims[2]  << endl;
+  //cout << "DIMENSIONS = " << s_dims[0] << " " << s_dims[1] << " " << s_dims[2]  << endl;
   H5Dclose(dataset_id);
+
+  if(s_dims[0]<mpiMgr.num_ranks())
+    {
+      cout << "Too many processors. For this problem maximum number of processors is " 
+           << s_dims[0] << "... Exiting\n";
+      exit(100);
+    } 
 
   int64 dimaux = (int)s_dims[0]/mpiMgr.num_ranks();
   qty_idx[0] = dimaux;
@@ -159,11 +166,11 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
   block[2]  = NULL;
 */
 
-#ifdef DEBUG
+//#ifdef DEBUG
   cout << mpiMgr.rank() << " - - - - " << start[0] << endl;
   cout << mpiMgr.rank() << " npart - - - - " << npart << endl;
   cout << mpiMgr.rank() << " - - - - " << qty_idx[0] << " " << qty_idx[1] << " " << qty_idx[2] << endl;
-#endif
+//#endif
 
   points.resize(npart);
 
