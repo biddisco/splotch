@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <math.h>
 
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
@@ -111,12 +112,12 @@ void hdf5_reader_finish (vector<particle_sim> &points, float &maxr, float &minr,
   mpiMgr.allreduce(miny,MPI_Manager::Min);
   mpiMgr.allreduce(maxz,MPI_Manager::Max);
   mpiMgr.allreduce(minz,MPI_Manager::Min);
-ifdef DEBUG
+#ifdef DEBUG
   cout << "MIN, MAX --> " << minr << " " << maxr << endl;
   cout << "MIN, MAX --> " << minx << " " << maxx << endl;
   cout << "MIN, MAX --> " << miny << " " << maxy << endl;
   cout << "MIN, MAX --> " << minz << " " << maxz << endl;
-endif
+#endif
   }
 
 } // unnamed namespace
