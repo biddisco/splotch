@@ -156,7 +156,7 @@ class exptable
       }
     float64 expm1(float64 arg) const
       {
-      if (abs(arg)<taylorlimit) return arg;
+      if (std::abs(arg)<taylorlimit) return arg;
       return operator()(arg)-1.;
       }
   };
