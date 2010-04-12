@@ -11,26 +11,23 @@
 class sceneMaker
   {
   private:
-#ifdef INTERPOLATE
-#ifndef GEOMETRY_FILE
-#error Splotch: interpolation without geometry file makes no sense!
-#endif
-#endif
     paramfile &params;
+
+    bool geomfile;
 #ifdef INTERPOLATE
     std::vector<particle_sim> particle_data1,particle_data2;
     int snr_start;
     int snr1,snr2,snr1_now,snr2_now;
     double time1,time2;
 #endif
-#ifdef GEOMETRY_FILE
+
+    // only used if geomfile==true
     std::vector<particle_sim> p_orig;
     std::ifstream inp;
     int linecount,ninterpol,nextfile;
     int geometry_incr, geometry_skip;
-#else
+    // only used if geomfile==false
     bool done;
-#endif
 
   public:
     sceneMaker (paramfile &par);

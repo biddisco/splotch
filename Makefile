@@ -3,7 +3,6 @@
 #######################################################################
 
 #--------------------------------------- Basic operation mode of code
-#OPT	+=  -DGEOMETRY_FILE
 #OPT	+=  -DINTERPOLATE
 #OPT	+=  -DHIGH_ORDER_INTERPOLATION
 

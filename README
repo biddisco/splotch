@@ -25,7 +25,7 @@ If you have an MPI environment installed, you can also turn
 on the USE_MPI option.
 
 For producing image sequences, use the other options in the 
-Makefile (e.g. GEOMETRY_FILE, etc. ...)
+Makefile (e.g. INTERPOLATE, etc. ...)
 
 To run it on your simulations, have a look into the splotch.par
 file and set the parameters you prefer.

@@ -102,85 +102,90 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
 sceneMaker::sceneMaker (paramfile &par)
   : params(par)
   {
-#ifndef GEOMETRY_FILE
+  string geometry_file = params.find<string>("geometry_file","");
+  geomfile = (geometry_file!="");
   done=false;
-#endif
 #ifdef INTERPOLATE
   snr_start = params.find<int>("snap_start",10);
   snr1=snr_start;
   snr2=snr_start+1;
   snr1_now=snr2_now=-1;
 #endif
-#ifdef GEOMETRY_FILE
-  inp.open(params.find<string>("geometry_file").c_str());
-  linecount=ninterpol=nextfile=0;
-  geometry_skip = params.find<int>("geometry_start",0);
-  geometry_incr = params.find<int>("geometry_incr",1);
 
-  string line;
-  for(int i=0; i<geometry_skip; i++, linecount++)
+  if (geomfile)
     {
-    getline(inp, line);
-#ifdef INTERPOLATE
-    if (linecount==nextfile)
+    inp.open(geometry_file.c_str());
+    linecount=ninterpol=nextfile=0;
+    geometry_skip = params.find<int>("geometry_start",0);
+    geometry_incr = params.find<int>("geometry_incr",1);
+
+    string line;
+    for(int i=0; i<geometry_skip; i++, linecount++)
       {
-      nextfile=linecount+ninterpol;
-      snr1=snr2;
-      snr2++;
+      getline(inp, line);
+#ifdef INTERPOLATE
+      if (linecount==nextfile)
+        {
+        nextfile=linecount+ninterpol;
+        snr1=snr2;
+        snr2++;
+        }
+#endif
       }
-#endif
     }
-#endif
   }
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
   {
   wallTimers.start("read");
-#ifndef GEOMETRY_FILE
-  if (done) return false;
-#endif
+  if ((!geomfile)&&done) return false;
+
   bool master = mpiMgr.master();
   double dummy;
-#ifdef GEOMETRY_FILE
-  string line;
-  if (!getline(inp, line)) return false;
-  sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
-    &campos.x,&campos.y,&campos.z,
-    &lookat.x,&lookat.y,&lookat.z,
-    &sky.x,&sky.y,&sky.z,&ninterpol);
-  if (master)
+
+  if (geomfile)
     {
-    cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
-    cout << " Camera:    " << campos << endl;
-    cout << " Lookat:    " << lookat << endl;
-    cout << " Sky:       " << sky << endl;
+    string line;
+    if (!getline(inp, line)) return false;
+    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+      &campos.x,&campos.y,&campos.z,
+      &lookat.x,&lookat.y,&lookat.z,
+      &sky.x,&sky.y,&sky.z,&ninterpol);
+    if (master)
+      {
+      cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
+      cout << " Camera:    " << campos << endl;
+      cout << " Lookat:    " << lookat << endl;
+      cout << " Sky:       " << sky << endl;
 #ifdef INTERPOLATE
-    cout << " ninterpol: " << ninterpol << endl;
+      cout << " ninterpol: " << ninterpol << endl;
+#endif
+      }
+#ifdef INTERPOLATE
+    if(linecount == 0 && nextfile == 0)
+      nextfile=linecount+ninterpol;
 #endif
     }
-#ifdef INTERPOLATE
-  if(linecount == 0 && nextfile == 0)
-    nextfile=linecount+ninterpol;
-#endif
-#else
-  campos.x=params.find<double>("camera_x");
-  campos.y=params.find<double>("camera_y");
-  campos.z=params.find<double>("camera_z");
-  lookat.x=params.find<double>("lookat_x");
-  lookat.y=params.find<double>("lookat_y");
-  lookat.z=params.find<double>("lookat_z");
-  sky.x=params.find<double>("sky_x",0);
-  sky.y=params.find<double>("sky_y",0);
-  sky.z=params.find<double>("sky_z",0);
-#endif
+  else
+    {
+    campos.x=params.find<double>("camera_x");
+    campos.y=params.find<double>("camera_y");
+    campos.z=params.find<double>("camera_z");
+    lookat.x=params.find<double>("lookat_x");
+    lookat.y=params.find<double>("lookat_y");
+    lookat.z=params.find<double>("lookat_z");
+    sky.x=params.find<double>("sky_x",0);
+    sky.y=params.find<double>("sky_y",0);
+    sky.z=params.find<double>("sky_z",0);
+    }
 
 // -----------------------------------
 // ----------- Reading ---------------
 // -----------------------------------
 
-#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
-  if (linecount==geometry_skip) // read only once if no interpolation is chosen
+#ifndef INTERPOLATE
+  if ((geomfile) && (linecount==geometry_skip)) // read only once if no interpolation is chosen
     {
 #endif
     if (master)
@@ -224,9 +229,8 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
           }
 #else
         gadget_reader(params,particle_data,0,&dummy);
-#ifdef GEOMETRY_FILE
-        p_orig = particle_data;
-#endif
+        if (geomfile)
+          p_orig = particle_data;
 #endif
         break;
 #if 0
@@ -256,12 +260,10 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
         planck_fail("No valid file type given ...");
         break;
       }
-#if defined(GEOMETRY_FILE) && !defined(INTERPOLATE)
+#ifndef INTERPOLATE
     }
   else
-    {
-    particle_data = p_orig;
-    }
+    if (geomfile) particle_data = p_orig;
 #endif
 
 #ifdef INTERPOLATE
@@ -271,22 +273,9 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   particle_interpolate(params,particle_data,particle_data1,particle_data2,frac,time1,time2);
 #endif
   outfile = params.find<string>("outfile");
-#ifdef GEOMETRY_FILE
-  outfile = outfile + intToString(linecount,4) + ".tga";
-  linecount++;
-#ifdef INTERPOLATE
-  if (linecount==nextfile)
+  if (geomfile)
     {
-    nextfile=linecount+ninterpol;
-    snr1=snr2;
-    snr2++;
-    }
-#endif
-#endif
-#ifdef GEOMETRY_FILE
-  for (int i=1; i<geometry_incr; i++)
-    {
-    getline(inp, line);
+    outfile += intToString(linecount,4) + ".tga";
     linecount++;
 #ifdef INTERPOLATE
     if (linecount==nextfile)
@@ -296,11 +285,25 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
       snr2++;
       }
 #endif
+
+    string line;
+    for (int i=1; i<geometry_incr; i++)
+      {
+      getline(inp, line);
+      linecount++;
+#ifdef INTERPOLATE
+      if (linecount==nextfile)
+        {
+        nextfile=linecount+ninterpol;
+        snr1=snr2;
+        snr2++;
+        }
+#endif
+      }
     }
-#endif
-#ifndef GEOMETRY_FILE
+
   done=true;
-#endif
+
   wallTimers.stop("read");
   return true;
   }
