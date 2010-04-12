@@ -7,30 +7,6 @@
 #include "cxxsupport/vec3.h"
 #include "kernel/colourmap.h"
 
-template<typename It, typename Comp> void openmp_sort (It first, It last, Comp comp)
-  {
-  using namespace std;
-#ifndef _OPENMP
-  sort (first,last,comp);
-#else
-  size_t sz = last-first;
-  if (sz>100)
-    {
-    It mid = first+(last-first-1)/2;
-    nth_element(first,mid,last,comp);
-#pragma omp parallel sections
-{
-#pragma omp section
-    openmp_sort(first,mid,comp);
-#pragma omp section
-    openmp_sort(mid+1,last,comp);
-}
-    }
-  else
-    sort (first,last,comp);
-#endif
-  }
-
 class COLOUR8
   {
   public:
