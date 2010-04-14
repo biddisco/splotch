@@ -18,6 +18,8 @@ Copyright things go here.
 #include "cuda/CuPolicy.h"
 
 
+using namespace std;
+
 template<typename T> T findParamWithoutChange
   (paramfile *param, std::string &key, T &deflt)
   {

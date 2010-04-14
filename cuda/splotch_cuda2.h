@@ -48,9 +48,9 @@ struct thread_info
 
 //some global info shared by all threads
 extern paramfile       *g_params;
-extern vector<particle_sim> particle_data; //raw data from file
+extern std::vector<particle_sim> particle_data; //raw data from file
 extern vec3 campos, lookat, sky;
-extern vector<COLOURMAP> amap,emap;
+extern std::vector<COLOURMAP> amap,emap;
 extern int ptypes;
 
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);

@@ -58,7 +58,7 @@ THREADFUNC host_thread_func(void *p)
   int res = params.find<int>("resolution",200);
   float64 grayabsorb = params.find<float>("gray_absorption",0.2);
   bool a_eq_e = params.find<bool>("a_eq_e",true);
-  render(particles,*(tInfo->pPic),a_eq_e,grayabsorb,true);
+  render_classic(particles,*(tInfo->pPic),a_eq_e,grayabsorb,true);
 
   t.stop();
   tInfo->times[RENDER] =t.acc();
