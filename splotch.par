@@ -2,9 +2,9 @@
 # Input Options
 ############################
 infile=/afs/mpa/home/kdolag/HydroSims/Salacious/snap_136.0
-ptypes=3
+ptypes=1
 
-# 0,1: plain binary file, 2: Gadget2, 3: Enzo
+# 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio, 6: mesh reader, 7: hdf7
 simtype=2
 
 # In case of interpolating between snaps
@@ -140,12 +140,12 @@ fov=30
 ###########################
 # CUDA SETUP
 ############################
-graphics_memory_size =800    #must set, total graphics memory that you want to use
-fragment_buffer_size =400    #must set, graphics memory that you want to use as fragment buffer, 
+graphics_memory_size =200    #must set, total graphics memory that you want to use
+fragment_buffer_size =100    #must set, graphics memory that you want to use as fragment buffer, 
                              #300, 400M usually ok
 max_region =1024             #the barrier value in my part of the paper, would better be not less 
                              #than the height and width of output image
-gpu_number =2                #this must be set to the number of gpus you want to use
+gpu_number = 2                #this must be set to the number of gpus you want to use
 
 #the following is for testing now, you don't have to touch them, just leave the two as false
 test_load_balancing=false
