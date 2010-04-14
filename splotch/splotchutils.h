@@ -158,7 +158,9 @@ class work_distributor
       }
   };
 
-void render (const std::vector<particle_sim> &p, arr2<COLOUR> &pic,
+void render_new (const std::vector<particle_sim> &p, arr2<COLOUR> &pic,
+  bool a_eq_e,double grayabsorb, bool nopostproc);
+void render_classic (const std::vector<particle_sim> &p, arr2<COLOUR> &pic,
   bool a_eq_e,double grayabsorb, bool nopostproc);
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);

@@ -8,7 +8,7 @@ using namespace std;
 
 struct particle_new
   {
-  COLOUR a, q;
+  COLOUR a;
   float32 x, y, rmax, steepness;
   };
 struct locinfo
@@ -17,7 +17,7 @@ struct locinfo
   };
 
 void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
-  float64 gray, vector<particle_new> &out, vector<locinfo> &loc)
+  float64 gray, vector<particle_new> &out, vector<locinfo> &loc, vector<COLOUR> &qvec)
   {
   const float64 powtmp = pow(pi,1./3.);
   const float64 sigma0=powtmp/sqrt(2*pi);
@@ -25,11 +25,12 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
   const int maxpix=65000;
 
   tsize nactive=0;
-  for (tsize i=0; i< in.size(); ++i)
+  for (tsize i=0; i<in.size(); ++i)
     if (in[i].active) ++nactive;
 
   out.reserve(nactive);
   loc.reserve(nactive);
+  if (!a_eq_e) qvec.reserve(nactive);
   for (tsize i=0; i< in.size(); ++i)
     {
     if (in[i].active)
@@ -39,7 +40,7 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
       p.y = in[i].y;
       p.a = in[i].e;
       if (!a_eq_e)
-        p.q = COLOUR (p.a.r/(p.a.r+gray),p.a.g/(p.a.g+gray),p.a.b/(p.a.b+gray));
+        qvec.push_back (COLOUR (p.a.r/(p.a.r+gray),p.a.g/(p.a.g+gray),p.a.b/(p.a.b+gray)));
 
       p.a = p.a *(-0.5*bfak/in[i].ro);
       const float64 min_change=8e-5;
@@ -62,6 +63,8 @@ void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
     }
   }
 
+const int chunkdim=200;
+
 void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
   bool a_eq_e, double grayabsorb, bool nopostproc)
   {
@@ -72,14 +75,15 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
     "image dimensions too large");
   vector<particle_new> p;
   vector<locinfo> loc;
-  create_new_particles (pold, a_eq_e, grayabsorb, p, loc);
+  vector<COLOUR> qvec;
+  create_new_particles (pold, a_eq_e, grayabsorb, p, loc, qvec);
 
   exptable xexp(-20.);
 
   int xres = pic.size1(), yres=pic.size2();
   pic.fill(COLOUR(0,0,0));
 
-  work_distributor wd (xres,yres,200,200);
+  work_distributor wd (xres,yres,chunkdim,chunkdim);
 
 #pragma omp parallel
 {
@@ -142,7 +146,7 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
         }
       else
         {
-        COLOUR8 q=p[m].q;
+        COLOUR8 q=qvec[m];
 
         for (int x=minx; x<maxx; ++x)
           {
@@ -180,13 +184,9 @@ void render_new (const vector<particle_sim> &pold, arr2<COLOUR> &pic,
           }
   }
 
-void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
-  double grayabsorb, bool nopostproc)
+void render_classic (const vector<particle_sim> &p, arr2<COLOUR> &pic,
+  bool a_eq_e, double grayabsorb, bool nopostproc)
   {
-#if 0
-  render_new(p,pic,a_eq_e,grayabsorb,nopostproc);
-  return;
-#endif
   const float64 rfac=1.5;
   const float64 powtmp = pow(pi,1./3.);
   const float64 sigma0=powtmp/sqrt(2*pi);
@@ -196,7 +196,7 @@ void render (const vector<particle_sim> &p, arr2<COLOUR> &pic, bool a_eq_e,
   int xres = pic.size1(), yres=pic.size2();
   pic.fill(COLOUR(0,0,0));
 
-  work_distributor wd (xres,yres,200,200);
+  work_distributor wd (xres,yres,chunkdim,chunkdim);
 
 #pragma omp parallel
 {

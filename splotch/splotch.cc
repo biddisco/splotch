@@ -104,7 +104,9 @@ int main (int argc, const char **argv)
     float64 grayabsorb = params.find<float>("gray_absorption",0.2);
     bool a_eq_e = params.find<bool>("a_eq_e",true);
     wallTimers.start("render");
-    render(particle_data,pic,a_eq_e,grayabsorb,false);
+    bool new_renderer = params.find<bool>("new_renderer",false);
+    new_renderer ? render_new    (particle_data,pic,a_eq_e,grayabsorb,false)
+                 : render_classic(particle_data,pic,a_eq_e,grayabsorb,false);
     wallTimers.stop("render");
 #endif
 
