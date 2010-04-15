@@ -185,7 +185,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 // -----------------------------------
 
 #ifndef INTERPOLATE
-  if ((geomfile) && (linecount==geometry_skip)) // read only once if no interpolation is chosen
+  if ((!geomfile) || (geomfile&&(linecount==geometry_skip))) // read only once if no interpolation is chosen
     {
 #endif
     if (master)
