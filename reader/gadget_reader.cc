@@ -285,7 +285,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 		      v1_tmp[ncount]=ftmp[3*m];
 		      v2_tmp[ncount]=ftmp[3*m+1];
 		      v3_tmp[ncount]=ftmp[3*m+2];
-		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
 		      i1_tmp[ncount] = itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -636,17 +635,24 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	      else
 		if(mpiMgr.master())
 		  cout << " Cannot find color field <" << label_col << "> ..." << endl; 
+	      tsize fnread=0;
+              if (read_col>0) fnread=npartthis[type];
+              if ((read_col>0) && col_vector) fnread=3*npartthis[type];
+	      arr<unsigned int> ftmp(fnread);
+	      infile.get(&ftmp[0],ftmp.size());
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
 		      if (read_col > 0)
 			{
-			  infile >> p[ncount].C1;
+			  tsize ofs = col_vector ? 3*m : m;
+			  p[ncount].C1 = ftmp[ofs];
 			  p[ncount].C1 *= col_fac;
 			  if(col_vector)
 			    {
-			      infile >> p[ncount].C2 >> p[ncount].C3;
+			      p[ncount].C2 = ftmp[ofs+1];
+                              p[ncount].C3 = ftmp[ofs+2];
 			      p[ncount].C2 *= col_fac;
 			      p[ncount].C3 *= col_fac;
 			    }
@@ -669,11 +675,13 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 #ifdef USE_MPI
 		      if (read_col > 0)
 			{
-			  infile >> v1_tmp[ncount];
+			  tsize ofs = col_vector ? 3*m : m;
+			  v1_tmp[ncount] = ftmp[ofs];
 			  v1_tmp[ncount] *= col_fac;
 			  if(col_vector)
 			    {
-			      infile >> v2_tmp[ncount] >> v3_tmp[ncount];
+			      v2_tmp[ncount] = ftmp[ofs+1];
+                              v3_tmp[ncount] = ftmp[ofs+2];
 			      v2_tmp[ncount] *= col_fac;
 			      v3_tmp[ncount] *= col_fac;
 			    }
