@@ -1,5 +1,5 @@
 #######################################################################
-#  Splotch V4                                                         #
+#  Splotch V4.1                                                       #
 #######################################################################
 
 #--------------------------------------- Basic operation mode of code
@@ -85,7 +85,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.0$(SYSTYPE)
+EXEC   = Splotch4.1$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
