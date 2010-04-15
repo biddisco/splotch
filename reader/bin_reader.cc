@@ -30,6 +30,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   bool doswap = params.find<bool>("swap_endian",true);
   string datafile = params.find<string>("infile");
   inp.open (datafile.c_str(),doswap);
+  planck_assert (inp,"could not open input file '" + datafile + "'");
   nfields = params.find<int>("num_blocks");
 
   qty_idx.alloc(8);

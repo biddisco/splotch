@@ -115,6 +115,7 @@ sceneMaker::sceneMaker (paramfile &par)
   if (geomfile)
     {
     inp.open(geometry_file.c_str());
+    planck_assert (inp, "could not open geometry file '" + geometry_file +"'");
     linecount=ninterpol=nextfile=0;
     geometry_skip = params.find<int>("geometry_start",0);
     geometry_incr = params.find<int>("geometry_incr",1);
