@@ -638,7 +638,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
 	      tsize fnread=0;
               if (read_col>0) fnread=npartthis[type];
               if ((read_col>0) && col_vector) fnread=3*npartthis[type];
-	      arr<unsigned int> ftmp(fnread);
+	      arr<float32> ftmp(fnread);
 	      infile.get(&ftmp[0],ftmp.size());
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
