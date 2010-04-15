@@ -136,10 +136,29 @@ template <typename T> class arr
     /*! Returns a constant reference to element \a #n */
     template<typename T2> const T &operator[] (T2 n) const {return d[n];}
 
+    /*! Returns a pointer to the first array element, or NULL if the array
+        is zero-sized. */
     T *begin() { return d; }
+    /*! Returns a pointer to the one-past-last array element, or NULL if the
+        array is zero-sized. */
     T *end() { return d+s; }
+    /*! Returns a constant pointer to the first array element, or NULL if the
+        array is zero-sized. */
     const T *begin() const { return d; }
+    /*! Returns a constant pointer to the one-past-last array element, or NULL
+        if the array is zero-sized. */
     const T *end() const { return d+s; }
+
+    /*! Reserves space for \a sz elements, then copies \a sz elements
+        from \a ptr into the array. */
+    template<typename T2> void copyFromPtr (const T2 *ptr, tsize sz)
+      {
+      alloc(sz);
+      for (tsize m=0; m<s; ++m) d[m]=ptr[m];
+      }
+    /*! Copies all array elements to \a ptr. */
+    template<typename T2> void copyToPtr (T *ptr) const
+      { for (tsize m=0; m<s; ++m) ptr[m]=d[m]; }
 
     /*! Sorts the elements in the array, in ascending order. */
     void sort()

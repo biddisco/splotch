@@ -292,6 +292,9 @@ class chunkMaker
     chunkMaker (uint64 s_full_, uint64 s_chunk_)
       : s_full(s_full_), s_chunk(s_chunk_), offset(0) {}
 
+    uint64 nchunks() const
+      { return (s_full+s_chunk-1)/s_chunk; }
+
     bool getNext (uint64 &start, uint64 &size)
       {
       using namespace std;
@@ -302,5 +305,9 @@ class chunkMaker
       return true;
       }
   };
+
+/*! Tries to split \a inp into a white-space separated list of values of
+    type \a T, and appends them to \a list. */
+template<typename T> void split (const std::string &inp, std::vector<T> &list);
 
 #endif

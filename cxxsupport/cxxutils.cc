@@ -255,3 +255,22 @@ void calcShareGeneral (int64 glo, int64 ghi, int64 nshares, int64 myshare,
   lo = glo+myshare*nbase + ((myshare<additional) ? myshare : additional);
   hi = lo+nbase+(myshare<additional);
   }
+
+template<typename T> void split (const string &inp, vector<T> &list)
+  {
+  istringstream stream(inp);
+  while (stream)
+    {
+    string word;
+    stream >> word;
+    planck_assert (stream||stream.eof(), "error while splitting '"
+      + inp + "' into " + type2typename<T>() + "components");
+    if (stream) list.push_back(stringToData<T>(word));
+    }
+  }
+
+template void split (const string &inp, vector<string> &list);
+template void split (const string &inp, vector<float> &list);
+template void split (const string &inp, vector<double> &list);
+template void split (const string &inp, vector<int> &list);
+template void split (const string &inp, vector<long> &list);
