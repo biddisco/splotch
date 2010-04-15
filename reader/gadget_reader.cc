@@ -232,9 +232,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *
   v2_tmp=new float[nmax];
   v3_tmp=new float[nmax];
   i1_tmp=new int[nmax];
-#ifdef READTEST
-float rtmp[3];
-#endif
+
   if(mpiMgr.master())
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
@@ -264,16 +262,15 @@ float rtmp[3];
 		  {
 		    infile.skip(4*3*npartthis[s]);
 		  }
+	      arr<float32> ftmp(3*npartthis[type]);
+	      infile.get(&ftmp[0],ftmp.size());
 	      for(int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
-#ifdef READTEST
-infile.get(rtmp,3);
-p[ncount].x=rtmp[0];p[ncount].y=rtmp[1];p[ncount].z=rtmp[2];
-#else
-		      infile >> p[ncount].x >> p[ncount].y >> p[ncount].z;
-#endif
+		      p[ncount].x=ftmp[3*m];
+		      p[ncount].y=ftmp[3*m+1];
+		      p[ncount].z=ftmp[3*m+2];
 		      p[ncount].type=itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -285,12 +282,10 @@ p[ncount].x=rtmp[0];p[ncount].y=rtmp[1];p[ncount].z=rtmp[2];
 		  else
 		    {
 #ifdef USE_MPI
-#ifdef READTEST
-infile.get(rtmp,3);
-v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
-#else
+		      v1_tmp[ncount]=ftmp[3*m];
+		      v2_tmp[ncount]=ftmp[3*m+1];
+		      v3_tmp[ncount]=ftmp[3*m+2];
 		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
-#endif
 		      i1_tmp[ncount] = itype;
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
@@ -362,11 +357,15 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		  {
 		    infile.skip(4*3*npartthis[s]);
 		  }
+	      arr<float32> ftmp(3*npartthis[type]);
+	      infile.get(&ftmp[0],ftmp.size());
 	      for(int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
-		      infile >> p[ncount].vx >> p[ncount].vy >> p[ncount].vz;
+		      p[ncount].vx=ftmp[3*m];
+		      p[ncount].vy=ftmp[3*m+1];
+		      p[ncount].vz=ftmp[3*m+2];
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
@@ -377,7 +376,9 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		  else
 		    {
 #ifdef USE_MPI
-		      infile >> v1_tmp[ncount] >> v2_tmp[ncount] >> v3_tmp[ncount];
+		      v1_tmp[ncount]=ftmp[3*m];
+		      v2_tmp[ncount]=ftmp[3*m+1];
+		      v3_tmp[ncount]=ftmp[3*m+2];
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
@@ -445,11 +446,13 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		  {
 		    infile.skip(4*npartthis[s]);
 		  }
+	      arr<unsigned int> ftmp(npartthis[type]);
+	      infile.get(&ftmp[0],ftmp.size());
 	      for(int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
-		      infile >> p[ncount].id;
+		      p[ncount].id=ftmp[m];
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
@@ -460,7 +463,7 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		  else
 		    {
 #ifdef USE_MPI
-		      infile >> i1_tmp[ncount];
+		      i1_tmp[ncount]=ftmp[m];
 		      ncount++;
 		      if(ncount == NPartThisTask[ToTask])
 			{
@@ -531,13 +534,15 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 			infile.skip(4*npartthis[s]);
 		      }
 		}
+	      arr<float32> ftmp(npartthis[type]);
+	      if (fix_size == 0.0) infile.get(&ftmp[0],ftmp.size());
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
 		      if (fix_size == 0.0)
 			{
-			  infile >> p[ncount].r;
+			  p[ncount].r=ftmp[m];
 			  p[ncount].r *= size_fac;
 			}
 		      else
@@ -554,7 +559,7 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 #ifdef USE_MPI
 		      if (fix_size == 0.0)
 			{
-			  infile >> v1_tmp[ncount];
+			  v1_tmp[ncount]=ftmp[m];
 			  v1_tmp[ncount] *= size_fac;
 			}
 		      else
@@ -753,12 +758,14 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 	      else
 		if(mpiMgr.master() && itype==0 && f==0)
 		  cout << " Cannot find intensity field <" << label_int << "> ..." << endl; 
+	      arr<float32> ftmp(npartthis[type]);
+	      if (read_int>0) infile.get(&ftmp[0],ftmp.size());
 	      for (int m=0; m<npartthis[type]; ++m)
 		{
 		  if(ThisTask == ToTask)
 		    {
 		      if (read_int > 0)
-			infile >> p[ncount].I;
+			p[ncount].I=ftmp[m];
 		      else
 			p[ncount].I = 1;
 		      ncount++;
@@ -772,7 +779,7 @@ v1_tmp[ncount]=rtmp[0];v2_tmp[ncount]=rtmp[1];v3_tmp[ncount]=rtmp[2];
 		    {
 #ifdef USE_MPI
 		      if (read_int > 0)
-			  infile >> v1_tmp[ncount];
+			  v1_tmp[ncount]=ftmp[m];
 		      else
 			v1_tmp[ncount] = 1;
 		      ncount++;
