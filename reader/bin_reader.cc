@@ -14,7 +14,7 @@ using namespace std;
 namespace {
 
 void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
-  int &nfields, int64 &mybegin, int64 &npart)
+  int &nfields, int64 &mybegin, int64 &npart, int64 &npart_total)
   {
   /* qty_idx represents the index for the various quantities according
      to the following standard:
@@ -57,7 +57,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
     cout << "C3 value in column " << qty_idx[7] << endl;
     }
   inp.seekg(0,ios::end);
-  int64 npart_total = inp.tellg()/(sizeof(float)*nfields);
+  npart_total = inp.tellg()/(sizeof(float)*nfields);
   inp.seekg(0,ios::beg);
   int64 myend;
   mpiMgr.calcShare (0, npart_total, mybegin, myend);
@@ -89,11 +89,11 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points,
   {
   bifstream inp;
   int nfields;
-  int64 mybegin, npart;
+  int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
   if (mpiMgr.master())
     cout << "TABULAR BINARY FILE" << endl;
-  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart);
+  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, npart_total);
 
   inp.skip(mybegin*sizeof(float)*nfields);
 
@@ -125,11 +125,11 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points,
   {
   bifstream inp;
   int nfields;
-  int64 mybegin, npart;
+  int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
   if (mpiMgr.master())
     cout << "BLOCK BINARY FILE" << endl;
-  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart);
+  bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, npart_total);
 
   points.resize(npart);
   arr<float> buffer(npart);
@@ -138,7 +138,7 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points,
     {
     if (qty_idx[qty]>=0)
       {
-      inp.seekg(sizeof(float)*(qty_idx[qty]*npart+mybegin),ios::beg);
+      inp.seekg(sizeof(float)*(qty_idx[qty]*npart_total+mybegin),ios::beg);
       inp.get(&buffer[0],npart);
       }
 
