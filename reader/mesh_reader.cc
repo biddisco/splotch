@@ -14,7 +14,7 @@ using namespace std;
 namespace {
 
 void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
-  int &nfields, int64 &mybegin, int64 &npart, float * rrr)
+  int &nfields, int64 &mybegin, int64 &npart, float * rrr, int64 &npart_total)
   {
   /* qty_idx characterize the mesh according 
      to the following standard:
@@ -45,7 +45,7 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   qty_idx[6] = params.find<int>("C2",-1)-1;
   qty_idx[7] = params.find<int>("C3",-1)-1;
   qty_idx[8] = params.find<int>("order",0);
-  int64 npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
+  npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
   *rrr = raux;
 
   if (mpiMgr.master())
@@ -109,11 +109,11 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points,
   bifstream inp;
   float rrr;
   int nfields;
-  int64 mybegin, npart;
+  int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
   if (mpiMgr.master())
     cout << "MESH BINARY DATA" << endl;
-  mesh_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, &rrr);
+  mesh_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, &rrr, npart_total);
 
   points.resize(npart);
   arr<float> buffer(npart);
@@ -122,7 +122,7 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points,
     {
     if(qty_idx[qty]<0) continue;
 
-    inp.seekg(sizeof(float)*(qty_idx[qty]*npart+mybegin),ios::beg);
+    inp.seekg(sizeof(float)*(qty_idx[qty]*npart_total+mybegin),ios::beg);
     inp.get(&buffer[0],npart);
 
 #define CASEMACRO__(num,str) \
