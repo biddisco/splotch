@@ -65,10 +65,10 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
 
   }
 
-void bin_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)
+void bin_reader_finish (vector<particle_sim> &points)
   {
-  minr=1e30;
-  maxr=-1e30;
+  float minr=1e30;
+  float maxr=-1e30;
   for (tsize i=0; i<points.size(); ++i)
     {
     points[i].ro=points[i].r;
@@ -84,8 +84,7 @@ void bin_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)
 
 /* In this case we expect the file to be written as a binary table
    xyzrabcdexyzrabcdexyzrabcde...xyzrabcde */
-void bin_reader_tab (paramfile &params, vector<particle_sim> &points,
-                     float &maxr, float &minr)
+void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
   {
   bifstream inp;
   int nfields;
@@ -115,13 +114,12 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points,
     points[i].C3= have_c2c3 ? buffer[qty_idx[7]] : 0.0;
     }
 
-  bin_reader_finish (points, maxr, minr);
+  bin_reader_finish (points);
   }
 
 /* In this case we expect the file to be written as
    xxxxxxxxxxxxxxxxxxxxyyyyyyyyyyyyyyyyyyyy...TTTTTTTTTTTTTTTTTTTT */
-void bin_reader_block (paramfile &params, vector<particle_sim> &points,
-                       float &maxr, float &minr)
+void bin_reader_block (paramfile &params, vector<particle_sim> &points)
   {
   bifstream inp;
   int nfields;
@@ -165,5 +163,5 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points,
 
 #undef CASEMACRO__
 
-  bin_reader_finish (points, maxr, minr);
+  bin_reader_finish (points);
   }

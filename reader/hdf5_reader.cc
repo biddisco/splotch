@@ -1,3 +1,5 @@
+// This reader allows to read only 1D (particles) or 3D (regular grids) datasets
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -24,8 +26,6 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
      qty_idx[0] = x size (number of cells)
      qty_idx[1] = y size (number of cells)
      qty_idx[2] = z size (number of cells)
-     qty_idx[3] = dummy -> substituted by rrr which must be float
-     qty_idx[4] = intensity
   */
 
   hid_t       file_id, dataset_id;  /* identifiers */
@@ -34,15 +34,19 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
   string datafile = params.find<string>("infile");
 
   qty_idx.alloc(5);
-  raux = params.find<float>("r",1.0);
-  qty_idx[4] = params.find<int>("I",-1)-1;
+  raux = params.find<float>("smooth_param",0.0);
 
-  
+    cout << "FIELD NAME" << field[0].c_str() << endl; 
+  int use_field = 0;
+  if(field[0].compare("-1") == 0)use_field=3;
+
   hid_t dataset_space, nrank;
 
   file_id = H5Fopen(datafile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   *inp = file_id;
-  dataset_id = H5Dopen(file_id,field[0].c_str());
+    cout << "son qua 1\n";
+  dataset_id = H5Dopen(file_id,field[use_field].c_str());
+    cout << "son qua 2\n";
   dataset_space = H5Dget_space(dataset_id);
   nrank = H5Sget_simple_extent_ndims(dataset_space);
   //cout << "SPACE DIM = " << nrank << endl;
@@ -63,10 +67,14 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
   int64 dimaux = (int)s_dims[0]/mpiMgr.num_ranks();
   qty_idx[0] = dimaux;
   if(mpiMgr.rank() == mpiMgr.num_ranks()-1) qty_idx[0] = s_dims[0]-(qty_idx[0]*(mpiMgr.num_ranks()-1));
-  qty_idx[1] = (int)s_dims[1];
-  qty_idx[2] = (int)s_dims[2];
-  int64 npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
-// change for parallel
+  int64 npart_total = qty_idx[0];
+  if(nrank == 3)
+  {
+    qty_idx[1] = (int)s_dims[1];
+    qty_idx[2] = (int)s_dims[2];
+    npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
+  }
+
   npart = npart_total;
   *rrr = raux;
   *start = dimaux * mpiMgr.rank();
@@ -79,13 +87,13 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
 
   }
 
-void hdf5_reader_finish (vector<particle_sim> &points, float &maxr, float &minr, float thresh)
+void hdf5_reader_finish (vector<particle_sim> &points, float thresh)
   {
-  minr=1e30;
+  float minr=1e30;
   float minx=1e30;
   float miny=1e30;
   float minz=1e30;
-  maxr=-1e30;
+  float maxr=-1e30;
   float maxx=-1e30;
   float maxy=-1e30;
   float maxz=-1e30;
@@ -122,8 +130,7 @@ void hdf5_reader_finish (vector<particle_sim> &points, float &maxr, float &minr,
 
 } // unnamed namespace
 
-void hdf5_reader (paramfile &params, vector<particle_sim> &points,
-                       float &maxr, float &minr)
+void hdf5_reader (paramfile &params, vector<particle_sim> &points)
   {
   hid_t file_id, dataset_id;
   bifstream inp;
@@ -137,10 +144,17 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
   if (mpiMgr.master())
     cout << "HDF5 DATA" << endl;
 
-  field = new string[3];
-  field[0] = params.find<string>("C1");
-  field[1] = params.find<string>("C2", "-1");
-  field[2] = params.find<string>("C3", "-1");
+  int number_of_fields = 8; 
+  field = new string[number_of_fields];
+  
+  field[0] = params.find<string>("x", "-1");
+  field[1] = params.find<string>("y", "-1");
+  field[2] = params.find<string>("z", "-1");
+  field[3] = params.find<string>("C1");
+  field[4] = params.find<string>("C2", "-1");
+  field[5] = params.find<string>("C3", "-1");
+  field[6] = params.find<string>("r", "-1");
+  field[7] = params.find<string>("I", "-1");
   float thresh = params.find<float>("thresh", 0.0);
 
   hdf5_reader_prep (params, &file_id, qty_idx, nfields, npart, &rrr, field, &rank, &start_local);
@@ -151,21 +165,17 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
   hsize_t * block     = new hsize_t [rank];
 
   start[0]  = (hsize_t)start_local;
-  start[1]  = 0;
-  start[2]  = 0; 
-/*
-  stride[0] = NULL;
-  stride[1] = NULL;
-  stride[2] = NULL;
-*/
-  count[0]  = (hsize_t)qty_idx[0];
-  count[1]  = (hsize_t)qty_idx[1];
-  count[2]  = (hsize_t)qty_idx[2];
-/*
-  block[0]  = NULL;
-  block[1]  = NULL;
-  block[2]  = NULL;
-*/
+  if(rank == 3)
+  {
+    start[1]  = 0;
+    start[2]  = 0; 
+  }
+  for(int k=0; k<rank; k++)
+  {
+    stride[k] = NULL;
+    count[k]  = (hsize_t)qty_idx[k];
+    block[k]  = NULL;
+  }
 
 //#ifdef DEBUG
   cout << mpiMgr.rank() << " - - - - " << start[0] << endl;
@@ -175,14 +185,15 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
 
   points.resize(npart);
 
-  for (tsize qty=0; qty<3; ++qty)
+// read fields
+
+  for (tsize qty=0; qty<number_of_fields; ++qty)
     {
     if(field[qty].compare("-1") == 0) continue;
     float * buffer = new float [npart];
-    //cout << "FIELD NAME" << field[qty].c_str() << endl; 
+    cout << "FIELD NAME" << field[qty].c_str() << endl; 
 
 //NOW HDF READ STUFF
-
 
 // set the hyperslab to be read
   dataset_id = H5Dopen(file_id,field[qty].c_str());
@@ -205,22 +216,30 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
 
     switch(qty)
       {
-      CASEMACRO__(0,C1)
-      CASEMACRO__(1,C2)
-      CASEMACRO__(2,C3)
+      CASEMACRO__(0,x)
+      CASEMACRO__(1,y)
+      CASEMACRO__(2,z)
+      CASEMACRO__(3,C1)
+      CASEMACRO__(4,C2)
+      CASEMACRO__(5,C3)
+      CASEMACRO__(6,r)
       }
 
     delete [] buffer;
     }
 
 #undef CASEMACRO__
+
 //set intensity if not read
-  if (qty_idx[4]<0)
+  if(field[6].compare("-1") == 0)
     for (int64 i=0; i<npart; ++i) points[i].I=0.5;
 
 //set smoothing length: assumed constant for all volume
+  if(field[7].compare("-1") == 0)
     for (int64 i=0; i<npart; ++i) points[i].r=rrr;
 
+    if(field[0].compare("-1") == 0)
+    {
 //set coordinates: HDF5 files are ALWAYS written in C ordering
     int dimx = qty_idx[0];
     int dimy = qty_idx[1];
@@ -240,13 +259,14 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points,
         //if(points[i].C1 > 1e-10)cout << mpiMgr.rank() << " " << i << " " << points[i].x << " " << points[i].y << " " << points[i].z << " " <<  points[i].C1 << "\n";
         
       }
+// end if
+      }
 
-  hdf5_reader_finish (points, maxr, minr, thresh);
+  hdf5_reader_finish (points, thresh);
   }
 #else
 
-void hdf5_reader (paramfile &params, vector<particle_sim> &points,
-                       float &maxr, float &minr)
+void hdf5_reader (paramfile &params, vector<particle_sim> &points)
   {
     cout << "HDF5 I/O not supported... Exiting... " << endl;
   }

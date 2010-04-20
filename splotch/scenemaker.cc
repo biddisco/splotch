@@ -199,10 +199,10 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
     switch (simtype)
       {
       case 0:
-        bin_reader_tab(params,particle_data, maxr, minr);
+        bin_reader_tab(params,particle_data);
         break;
       case 1:
-        bin_reader_block(params,particle_data, maxr, minr);
+        bin_reader_block(params,particle_data);
         break;
       case 2:
 #ifdef INTERPOLATE // Here only the two datasets are prepared, interpolation will be done later
@@ -250,11 +250,11 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 #endif
         break;
       case 6:
-        mesh_reader(params,particle_data, maxr, minr);
+        mesh_reader(params,particle_data);
         break;
 #ifdef HDF5
       case 7:
-        hdf5_reader(params,particle_data, maxr, minr);
+        hdf5_reader(params,particle_data);
         break;
 #endif
       default:

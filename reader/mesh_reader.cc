@@ -61,13 +61,13 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
 
   }
 
-void mesh_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)
+void mesh_reader_finish (vector<particle_sim> &points)
   {
-  minr=1e30;
+  float minr=1e30;
   float minx=1e30;
   float miny=1e30;
   float minz=1e30;
-  maxr=-1e30;
+  float maxr=-1e30;
   float maxx=-1e30;
   float maxy=-1e30;
   float maxz=-1e30;
@@ -103,8 +103,7 @@ void mesh_reader_finish (vector<particle_sim> &points, float &maxr, float &minr)
 
 } // unnamed namespace
 
-void mesh_reader (paramfile &params, vector<particle_sim> &points,
-                       float &maxr, float &minr)
+void mesh_reader (paramfile &params, vector<particle_sim> &points)
   {
   bifstream inp;
   float rrr;
@@ -178,5 +177,5 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points,
         
       }
 
-  mesh_reader_finish (points, maxr, minr);
+  mesh_reader_finish (points);
   }
