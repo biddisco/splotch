@@ -24,6 +24,7 @@
 
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
+#include "splotch/splotch_host.h"
 #include "writer/writer.h"
 #include "cxxsupport/walltimer.h"
 
@@ -41,16 +42,17 @@ int main (int argc, const char **argv)
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
 
   paramfile params (argv[1],false);
+
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
   vec3 campos, lookat, sky;
-  vector<COLOURMAP> amap,emap;
+  vector<COLOURMAP> amap;
 #else
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
 #endif  //ifdef CUDA they will be global vars
 
-  get_colourmaps(params,amap,emap);
+  get_colourmaps(params,amap);
 
   wallTimers.stop("setup");
 
@@ -62,52 +64,14 @@ int main (int argc, const char **argv)
     long npart_all=npart;
     mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
 
-#ifdef CUDA
-    int res;
-    arr2<COLOUR> pic;
-    render_cuda(params,res,pic);
-#else
-    wallTimers.start("range");
-    if (master)
-      cout << endl << "ranging values (" << npart_all << ") ..." << endl;
-    particle_normalize(params,particle_data,true); ///does log calculations and clamps data
-    wallTimers.stop("range");
-
-    wallTimers.start("transform");
-    if (master)
-      cout << endl << "applying geometry (" << npart_all << ") ..." << endl;
-    particle_project(params, particle_data, campos, lookat, sky);
-    wallTimers.stop("transform");
-
-    wallTimers.start("sort");
-    if (master)
-      (mpiMgr.num_ranks()>1) ?
-        cout << endl << "applying local sort ..." << endl :
-        cout << endl << "applying sort (" << npart << ") ..." << endl;
-    int sort_type = params.find<int>("sort_type",1);
-    particle_sort(particle_data,sort_type,true);
-    wallTimers.stop("sort");
-
-    wallTimers.start("coloring");
-    if (master)
-      cout << endl << "calculating colors (" << npart_all << ") ..." << endl;
-    particle_colorize(params, particle_data, amap, emap);
-    wallTimers.stop("coloring");
-
     int res = params.find<int>("resolution",200);
-    long nsplotch=particle_data.size();
-    long nsplotch_all=nsplotch;
-    mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
-    if (master)
-      cout << endl << "rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
     arr2<COLOUR> pic(res,res);
-    float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-    bool a_eq_e = params.find<bool>("a_eq_e",true);
-    wallTimers.start("render");
-    bool new_renderer = params.find<bool>("new_renderer",false);
-    new_renderer ? render_new    (particle_data,pic,a_eq_e,grayabsorb,false)
-                 : render_classic(particle_data,pic,a_eq_e,grayabsorb,false);
-    wallTimers.stop("render");
+
+#ifndef CUDA
+    host_rendering(master, params, npart_all, pic, particle_data,
+                   campos, lookat, sky, amap);
+#else
+    cuda_rendering(res, pic, npart_all);
 #endif
 
     wallTimers.start("write");
