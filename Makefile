@@ -13,8 +13,8 @@ OPT	+=  -DUSE_MPI
 
 #--------------------------------------- Switch on HDF5
 
-OPT     +=  -DHDF5
-OPT     +=  -DH5_USE_16_API
+#OPT     +=  -DHDF5
+#OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
@@ -25,15 +25,9 @@ OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Select target Computer
 
-SYSTYPE="SP6"
+#SYSTYPE="SP6"
 #SYSTYPE="GP"
-#SYSTYPE="PLX"
-
-ifeq (HDF5,$(findstring HDF5,$(OPT)))
-HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.4_ser/xl--10.1
-LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/szlib/2.1/xl--10.1/lib/ -lsz
-HDF5_INCL = -I$(HDF5_HOME)/include
-endif
+SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -43,9 +37,18 @@ endif
 OMP      = -fopenmp
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
-SUP_INCL = -I. -Icxxsupport -Impiio-1.0/include/
+SUP_INCL = -I. -Icxxsupport
+
+ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
+SUP_INCL += -Impiio-1.0/include/
+endif
 
 ifeq ($(SYSTYPE),"SP6")
+ifeq (HDF5,$(findstring HDF5,$(OPT)))
+HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.4_ser/xl--10.1
+LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/szlib/2.1/xl--10.1/lib/ -lsz
+HDF5_INCL = -I$(HDF5_HOME)/include
+endif
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       =  mpCC_r
 else
@@ -71,14 +74,17 @@ endif
 
 ifeq ($(SYSTYPE),"PLX")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       =  nvcc -g
+CC       =  mpiCC -g 
 else
-CC       =  nvcc -g
+CC       =  nvcc -g 
 endif
 OPTIMIZE = -O2 -DDEBUG
 LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
 OMP =
-SUP_INCL += -I$(CUDASDK_HOME)/common/inc -I$(NVCC_HOME)/include -Icuda
+ifeq (CUDA,$(findstring CUDA,$(OPT)))
+LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
+SUP_INCL += -I$(CUDASDK_HOME)/common/inc #-I$(NVCC_HOME)/include -Icuda
+endif
 endif
 
 #--------------------------------------- Here we go
@@ -91,7 +97,7 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o splotch/scenemaker.o cxxsupport/walltimer.o
+	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 
