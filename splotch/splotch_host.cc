@@ -554,10 +554,8 @@ void render_classic (const vector<particle_sim> &p, arr2<COLOUR> &pic,
     } // for this chunk
 } // #pragma omp parallel
 
-  //cout << "SON QUA 4 " << mpiMgr.rank() <<"\n";
   mpiMgr.allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
-  //cout << "SON QUA 4.1 " << mpiMgr.rank() <<"\n";
 
   if (!nopostproc)
     if (mpiMgr.master() && a_eq_e)
@@ -568,5 +566,4 @@ void render_classic (const vector<particle_sim> &p, arr2<COLOUR> &pic,
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
           }
-  //cout << "SON QUA 5 " << mpiMgr.rank() <<"\n";
   }

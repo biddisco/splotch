@@ -1,6 +1,8 @@
+#ifndef SPLOTCH_HOST_H
+#define SPLOTCH_HOST_H
+
 #include "splotch/splotchutils.h"
 #include "cxxsupport/walltimer.h"
-
 
 void host_rendering(bool master, paramfile &params, long npart_all, 
                     arr2<COLOUR> &pic, std::vector<particle_sim> &particle_data,
@@ -18,3 +20,4 @@ void particle_colorize(paramfile &params, std::vector<particle_sim> &p,
   std::vector<COLOURMAP> &amap);
 void particle_sort(std::vector<particle_sim> &p, int sort_type, bool verbose);
 
+#endif

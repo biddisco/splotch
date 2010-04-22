@@ -176,19 +176,6 @@ void create_new_particles (const std::vector<particle_sim> &in, bool a_eq_e,
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);
 
-/*<<<<<<< .mine
-void particle_colorize(paramfile &params, vector<particle_sim> &p,
-  vector<COLOURMAP> &amap);
-void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose);
-#ifdef INTERPOLATE
-void particle_interpolate(paramfile &params, vector<particle_sim> &p,
-  const vector<particle_sim> &p1, const vector<particle_sim> &p2,
-  double frac, double time1, double time2);
-#endif
-=======*/
-
-//>>>>>>> .r8555
-
 void timeReport();
 
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
