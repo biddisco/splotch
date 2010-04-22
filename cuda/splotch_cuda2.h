@@ -2,6 +2,7 @@
 #define SPLOTCH_CUDA2_H
 
 #include "cuda/splotch_cuda.h"
+#include "splotch/splotch_host.h"
 
 //things for combination with host threads
 struct  param_combine_thread //for host combine thread
@@ -15,9 +16,9 @@ struct  param_combine_thread //for host combine thread
   arr2<COLOUR> *pPic;
   };
 
-#ifndef NO_WIN_THREAD
+//#ifndef NO_WIN_THREAD
 THREADFUNC combine(void *param);
-#endif
+//#endif
 THREADFUNC cu_thread_func(void *pinfo);
 THREADFUNC cu_draw_chunk(void *pinfo);
 THREADFUNC host_thread_func(void *pinfo);
@@ -42,7 +43,8 @@ struct thread_info
   {
   int devID;                  //index of the device selected
   int startP, endP;           //start and end particles to handle
-  arr2<COLOUR> *pPic;         //the output image
+  long npart_all;             //total number of particles
+  arr2<COLOUR> *pPic;         //output image computed 
   float times[TIME_RECORDS];  //carry out times of computing
   };
 
@@ -50,11 +52,11 @@ struct thread_info
 extern paramfile       *g_params;
 extern std::vector<particle_sim> particle_data; //raw data from file
 extern vec3 campos, lookat, sky;
-extern std::vector<COLOURMAP> amap,emap;
+extern std::vector<COLOURMAP> amap;
 extern int ptypes;
 
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 
-void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic);
+void cuda_rendering(int res, arr2<COLOUR> &pic, long npart_all);
 
 #endif
