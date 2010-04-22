@@ -1,137 +1,172 @@
+//#ifndef NO_WIN_THREAD 
+//#include <pthread.h>
+//#endif
+
 #include "cuda/splotch_cuda2.h"
 #include "cxxsupport/walltimer.h"
 
 using namespace std;
 
 paramfile *g_params;
+int ptypes = 0;
 vector<particle_sim> particle_data; //raw data from file
 vec3 campos, lookat, sky;
-vector<COLOURMAP> amap,emap;
-int ptypes = 0;
+vector<COLOURMAP> amap;
 
-THREADFUNC host_thread_func(void *p)
+void cuda_rendering(int res, arr2<COLOUR> &pic, long npart_all)
   {
-  printf("\nHost Thread Start!\n");
-
-  thread_info *tInfo = (thread_info*)p;
-
-  paramfile &params(*g_params);
-
-  vector<particle_sim> particles;
-  vector<particle_sim>::iterator i1,i2;
-  i1 =particle_data.begin() +tInfo->startP;
-  i2 =particle_data.begin() +tInfo->endP;
-  particles.assign(i1, i2);
-
-  wallTimer t, t1;
-  t1.start();
-  t.start();
-
-  particle_normalize(params,particles,false);
-
-  t.stop();
-  tInfo->times[RANGE] =t.acc();
-  t.reset();
-  t.start();
-
-  particle_project(params, particles, campos, lookat, sky);
-
-  t.stop();
-  tInfo->times[TRANSFORMATION] =t.acc();
-
-  // ----------- Sorting ------------
-  // NO SORING FOR NOW
-  //int sort_type = params.find<int>("sort_type",1);
-  //particle_sort(particle_data,sort_type,true);
-
-  t.reset();
-  t.start();
-
-  // particle_colorize(params, particles, particle_col, amap, emap);
-  particle_colorize(params, particles, amap, emap); //new calling
-
-  t.stop();
-  tInfo->times[COLORIZE]=t.acc();
-  t.reset();
-  t.start();
-
-  int res = params.find<int>("resolution",200);
-  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-  bool a_eq_e = params.find<bool>("a_eq_e",true);
-  render_classic(particles,*(tInfo->pPic),a_eq_e,grayabsorb,true);
-
-  t.stop();
-  tInfo->times[RENDER] =t.acc();
-  t1.stop();
-  tInfo->times[THIS_THREAD] =t1.acc();
-
-  printf("\nHost Thread End!\n");
-  return 1;
-  }
-
-
-THREADFUNC combine (void *param1)
-  {
-  static int enter=-1;
-
-  param_combine_thread *param = (param_combine_thread*)param1;
-
-  cu_particle_splotch *ps = param->ps;
-  arr2<COLOUR> *pPic = param->pPic;
-
-  wallTimer t;
-  t.start();
-
-  if (param->a_eq_e)
+  //new arrays of thread_info and HANDLE
+  int nDev = g_params->find<int>("gpu_number",1);
+  //see if use host must be a working thread
+  bool bHostThread = g_params->find<bool>("use_host_as_thread", false);
+  int nThread = bHostThread? nDev+1: nDev;
+  //init objects for threads control
+  thread_info *tInfo = new thread_info[nThread];
+  tInfo[0].pPic = &pic;  //local var pic is assigned to the first thread
+  tInfo[0].devID = 0;
+  tInfo[0].npart_all = npart_all;
+  for (int i=1; i<nDev; i++)
     {
-    cu_fragment_AeqE *bufWrite =(cu_fragment_AeqE*)param->fbuf;
+    tInfo[i].devID = i;
+    tInfo[i].npart_all = npart_all;
+    tInfo[i].pPic = new arr2<COLOUR>(res, res);
+    }
+  //make the last one work for host thread
+  if (bHostThread)
+    {
+    tInfo[nThread-1].devID =-1;
+    if (nThread-1 != 0)
+      tInfo[nThread-1].pPic = new arr2<COLOUR>(res, res);
+    }
+  //decide how to divide task by another function
+  DevideThreadsTasks(tInfo, nThread, bHostThread);
 
-    for (int pPos=param->combineStartP, fPos=0;
-         pPos<param->combineEndP; pPos++)
-      {
-      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
+#ifndef NO_WIN_THREAD // create cuda threads on Windows using CreateThread function
+  HANDLE *tHandle = new HANDLE[nThread];
+  //issue the threads
+  for (int i=0; i<nDev; i++)
+    tHandle[i] = CreateThread( NULL, 0,
+      (LPTHREAD_START_ROUTINE)cu_thread_func,&(tInfo[i]), 0, NULL );
+  //issue the host thread too
+  if (bHostThread)
+    tHandle[nDev] = CreateThread( NULL, 0,
+      (LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
+  WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
+
+#else // create cuda threads on Linux using pthread_create function
+/*
+  pthread_t *tHandle = new pthread_t[nThread];
+  for (int i=0; i<nDev; i++)
+     pthread_create(&(tHandle[i]), cu_thread_func, &(tInfo[i]) );
+  if (bHostThread)
+     pthread_create(&(tHandle[nDev]), NULL, host_thread_func, &(tInfo[nDev]) );*/
+  planck_assert(nDev <= 1, "can't have multiple cuda threads on Linux (yet), so 'gpu_number' must be 1");
+  cu_thread_func (&(tInfo[0])); //just call it as normal function
+ // host_thread_func (&(tInfo[nDev])); 
+#endif  //if not NO_WIN_THREAD
+
+  // post-process
+  wallTimer  timer;
+  timer.reset();
+  timer.start();
+
+  exptable xexp(MAX_EXP);
+  // combine the results to pic
+  if (1)//a_eq_e)
+    {
+      for (int x=0; x<res; x++) //  error when x =1,
+        for (int y=0; y<res; y++)
         {
-        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
-          {
-          (*pPic)[x][y].r += bufWrite[fPos].deltaR;
-          (*pPic)[x][y].g += bufWrite[fPos].deltaG;
-          (*pPic)[x][y].b += bufWrite[fPos].deltaB;
-          fPos ++;
-          }
+          for (int i=1; i<nThread; i++)
+              pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
+
+          pic[x][y].r = 1-xexp(pic[x][y].r);
+          pic[x][y].g = 1-xexp(pic[x][y].g);
+          pic[x][y].b = 1-xexp(pic[x][y].b);
         }
-      }
     }
   else
-    {
-    cu_fragment_AneqE *bufWrite =(cu_fragment_AneqE*)param->fbuf;
+    {} //to be done later...
 
-    for (int pPos=param->combineStartP, fPos=0;
-         pPos<param->combineEndP; pPos++)
+  timer.stop();
+
+  for (int i=0; i<nThread; i++)
+    {
+    if (tInfo[i].devID!=-1)
       {
-      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
-        {
-        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
-          {
-          (*pPic)[x][y].r = (*pPic)[x][y].r *bufWrite[fPos].factorR +bufWrite[fPos].deltaR;
-          (*pPic)[x][y].g = (*pPic)[x][y].g *bufWrite[fPos].factorG +bufWrite[fPos].deltaG;
-          (*pPic)[x][y].b = (*pPic)[x][y].b *bufWrite[fPos].factorB +bufWrite[fPos].deltaB;
-          fPos ++;
-          }
-        }
+      cout<< endl <<"Times of GPU" << i << ":" <<endl;
+      cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
+      cout<< "COPY2C_LIKE:            " << tInfo[i].times[COPY2C_LIKE] <<endl;
+      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
+      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
+      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
+      cout<< "FILTER:                 " << tInfo[i].times[FILTER] <<endl;
+      cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
+      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
+      cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
+      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
+      cout<<endl;
       }
+/*    else
+      {
+      cout<< endl <<"Times of CPU as a thread:" <<endl;
+      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
+      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
+      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
+      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
+      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
+      cout<<endl;
+      } */
     }
 
-  t.stop();
-  param->timeUsed +=t.acc();
-
-  return 1;
+  for (int i=1; i<nThread; i++)
+    delete tInfo[i].pPic;
+  delete [] tInfo;
+#ifndef NO_WIN_THREAD
+  delete [] tHandle;
+#endif
   }
+
+
+void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
+  {
+  bool bTestLoadBalancing = g_params->find<bool>("test_load_balancing", false);
+  int curStart = 0;
+  int hostLoad = bHostThread? g_params->find<int>("host_load",0): 0;
+  int nDev = bHostThread? nThread-1: nThread;
+  int onePercent = particle_data.size()/100;
+  int averageDevLen = (nDev!=0)? onePercent *(100-hostLoad)/nDev : 0;
+
+  for (int i=0; i<nThread; i++)
+    {
+    tInfo[i].startP = curStart;
+    if (tInfo[i].devID != -1) //not a host
+      {
+      if (bTestLoadBalancing)
+        {
+        int gpuLoad = g_params->find<int>("gpu_load"+dataToString(i),0);
+        tInfo[i].endP = curStart + gpuLoad * onePercent;
+        }
+      else
+        tInfo[i].endP = curStart +averageDevLen;
+      }
+    else //if this is a host
+      {
+      tInfo[i].endP = curStart + hostLoad * onePercent;
+      }
+    curStart = tInfo[i].endP + 1;
+    }
+
+  tInfo[nThread-1].endP = particle_data.size()-1;
+  }
+
+
 
 THREADFUNC cu_thread_func(void *pinfo)
   {
   //a new thread info object that will carry each chunk's drawing
-  thread_info *pInfoOutput=(thread_info*) pinfo,
-              ti =*pInfoOutput;
+  thread_info *pInfoOutput = (thread_info*) pinfo;
+  thread_info ti = *pInfoOutput;
 
   //do some cleaning for final thread_info
   pInfoOutput->pPic->fill(COLOUR(0.0, 0.0, 0.0));
@@ -139,38 +174,35 @@ THREADFUNC cu_thread_func(void *pinfo)
 
   //a new pic object residing in ti that will carry the result
   arr2<COLOUR> pic(pInfoOutput->pPic->size1(), pInfoOutput->pPic->size2());
-  ti.pPic =&pic;
+  ti.pPic = &pic;
 
-  //set startP and end P of ti
-  int len = cu_get_chunk_particle_count(*g_params);
-  if (len==-1)
+  // num particles to manage at once
+  int len = cu_get_chunk_particle_count(*g_params); 
+  if (len == -1)
     {
     printf("\nGraphics memory setting error\n");
     return -1;
     }
 
-  int curEnd=0;
-  int endP=ti.endP;
-  ti.endP=ti.startP;
+  int curEnd = 0;
+  int endP = ti.endP;
 
-  while (ti.endP<endP)
+  ti.endP = ti.startP;
+  while(ti.endP < endP)
     {
-    //set range
-    ti.endP =ti.startP +len -1;
-    if (ti.endP>endP)
-      ti.endP=endP;
+    ti.endP =ti.startP + len - 1;   //set range
+    if (ti.endP > endP) ti.endP = endP;
     cu_draw_chunk(&ti);
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
     for (int i=0; i<TIME_RECORDS; i++)
       pInfoOutput->times[i] +=ti.times[i];
-
-    ti.startP =ti.endP +1;
+    ti.startP = ti.endP +1;
     }
-
   return 1;
   }
+
 
 THREADFUNC cu_draw_chunk(void *pinfo)
   {
@@ -543,156 +575,79 @@ PROBLEM HERE!
   return 1;
   }
 
-void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
+
+
+THREADFUNC host_thread_func(void *p)
   {
-  bool bTestLoadBalancing=g_params->find<bool>("test_load_balancing", false);
-  int curStart =0;
-  int hostLoad =bHostThread? g_params->find<int>("host_load",0): 0;
-  int nDev =bHostThread? nThread-1: nThread;
-  int onePercent =particle_data.size()/100;
-  int averageDevLen = (nDev!=0)? onePercent *(100-hostLoad)/nDev : 0;
+  thread_info *tInfo = (thread_info*)p;
 
-  for (int i=0; i<nThread; i++)
-    {
-    tInfo[i].startP =curStart;
-    if (tInfo[i].devID != -1) //not a host
-      {
-      if (bTestLoadBalancing)
-        {
-        int gpuLoad=g_params->find<int>("gpu_load"+dataToString(i),0);
-        tInfo[i].endP =curStart +gpuLoad* onePercent;
-        }
-      else
-        tInfo[i].endP =curStart +averageDevLen;
-      }
-    else //if this is a host
-      {
-      tInfo[i].endP =curStart +hostLoad *onePercent;
-      }
-    curStart =tInfo[i].endP +1;
-    }
+  vector<particle_sim>::iterator i1,i2;
+  i1 =particle_data.begin() + tInfo->startP;
+  i2 =particle_data.begin() + tInfo->endP + 1;
+  vector<particle_sim> particles(i1,i2);
+//  particles.assign(i1, i2);
 
-  tInfo[nThread-1].endP =particle_data.size()-1;
+  host_rendering(true, *g_params, tInfo->npart_all , *(tInfo->pPic),
+                 particles, campos, lookat, sky, amap);
+
   }
 
-void render_cuda(paramfile &params, int &res, arr2<COLOUR> &pic)
+
+THREADFUNC combine (void *param1)
   {
-  //prepare the parameters for the cuda thread
-  //the final image
-  res = params.find<int>("resolution",200);
-  pic.alloc(res,res);
+  static int enter=-1;
 
-  //new arrays of thread_info and HANDLE
-  int nDev;
-  nDev =params.find<int>("gpu_number",0);
-  //see if use host as a working thread
-  bool bHostThread=params.find<bool>("use_host_as_thread", false);
-  int nThread = bHostThread? nDev+1: nDev;
-  //init objects for threads control
-  thread_info *tInfo =new thread_info[nThread];
-  //fill in thread_info
-  tInfo[0].pPic =&pic;
-  for (int i=0; i<nDev; i++)
+  param_combine_thread *param = (param_combine_thread*)param1;
+
+  cu_particle_splotch *ps = param->ps;
+  arr2<COLOUR> *pPic = param->pPic;
+
+  wallTimer t;
+  t.start();
+
+  if (param->a_eq_e)
     {
-    tInfo[i].devID =i;
-    //local var pic is assigned to the first device
-    if (i!=0)
-      tInfo[i].pPic =new arr2<COLOUR>(res, res);
-    }
-  //make the last one work for host thread
-  if (bHostThread )
-    {
-    tInfo[nThread-1].devID =-1;
-    if (nThread-1 != 0)
-      tInfo[nThread-1].pPic =new arr2<COLOUR>(res, res);
-    }
-  //decide how to divide task by another function
-  DevideThreadsTasks(tInfo, nThread, bHostThread);
+    cu_fragment_AeqE *bufWrite =(cu_fragment_AeqE*)param->fbuf;
 
-#ifndef NO_WIN_THREAD //to let it compiled in Linux, just for now, 2 Dec 2009.
-  HANDLE *tHandle =new HANDLE[nThread];
-  //issue the threads
-  for (int i=0; i<nDev; i++)
-    tHandle[i] =CreateThread( NULL, 0,
-      (LPTHREAD_START_ROUTINE)cu_thread_func,&(tInfo[i]), 0, NULL );
-  //issue the host thread too
-  if (bHostThread)
-    tHandle[nDev] =CreateThread( NULL, 0,
-      (LPTHREAD_START_ROUTINE)host_thread_func,&(tInfo[nDev]), 0, NULL );
-  WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
-
-#else //do not use thread which is now Windows code
-  planck_assert(nThread==1,
-    "can't have multiple threads on Linux (yet), so 'gpu_number' must be 1");
-  cu_thread_func (&(tInfo[0])); //just call it as normal function
-  //host_thread_func (&(tInfo[0]));
-#endif  //if not NO_WIN_THREAD
-
-  // post-process
-  wallTimer  timer;
-  timer.reset();
-  timer.start();
-  // combine the results to pic
-  if (1)//a_eq_e)
-    {
-    for (int i=1; i<nThread; i++)
-      for (int x=0; x<res; x++) //  error when x =1,
-        for (int y=0; y<res; y++)
-          pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
-
-    }
-  else
-    {} //to be done later...
-
-  if (1)//a_eq_e)
-    {
-    exptable xexp(MAX_EXP);
-    for (int ix =0; ix <pic.size1(); ix++)
-      for (int iy =0; iy <pic.size2(); iy++)
+    for (int pPos=param->combineStartP, fPos=0;
+         pPos<param->combineEndP; pPos++)
+      {
+      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
         {
-        pic[ix][iy].r=1-xexp(pic[ix][iy].r);
-        pic[ix][iy].g=1-xexp(pic[ix][iy].g);
-        pic[ix][iy].b=1-xexp(pic[ix][iy].b);
+        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
+          {
+          (*pPic)[x][y].r += bufWrite[fPos].deltaR;
+          (*pPic)[x][y].g += bufWrite[fPos].deltaG;
+          (*pPic)[x][y].b += bufWrite[fPos].deltaB;
+          fPos ++;
+          }
         }
+      }
     }
   else
     {
-    }
-  timer.stop();
+    cu_fragment_AneqE *bufWrite =(cu_fragment_AneqE*)param->fbuf;
 
-  for (int i=0; i<nThread; i++)
-    {
-    if (tInfo[i].devID!=-1)
+    for (int pPos=param->combineStartP, fPos=0;
+         pPos<param->combineEndP; pPos++)
       {
-      cout<< endl <<"Times of GPU" << i << ":" <<endl;
-      cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
-      cout<< "COPY2C_LIKE:            " << tInfo[i].times[COPY2C_LIKE] <<endl;
-      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
-      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
-      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
-      cout<< "FILTER:                 " << tInfo[i].times[FILTER] <<endl;
-      cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
-      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
-      cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
-      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
-      cout<<endl;
-      }
-    else
-      {
-      cout<< endl <<"Times of CPU as a thread:" <<endl;
-      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
-      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
-      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
-      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
-      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
-      cout<<endl;
+      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
+        {
+        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
+          {
+          (*pPic)[x][y].r = (*pPic)[x][y].r *bufWrite[fPos].factorR +bufWrite[fPos].deltaR;
+          (*pPic)[x][y].g = (*pPic)[x][y].g *bufWrite[fPos].factorG +bufWrite[fPos].deltaG;
+          (*pPic)[x][y].b = (*pPic)[x][y].b *bufWrite[fPos].factorB +bufWrite[fPos].deltaB;
+          fPos ++;
+          }
+        }
       }
     }
 
-  for (int i=1; i<nThread; i++)
-    delete tInfo[i].pPic;
-  delete [] tInfo;
-#ifndef NO_WIN_THREAD
-  delete [] tHandle;
-#endif
+  t.stop();
+  param->timeUsed +=t.acc();
+
+  return 1;
   }
+
+
