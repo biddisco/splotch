@@ -20,8 +20,8 @@ OPT	+=  -DUSE_MPI
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-#OPT     +=  -DCUDA
-#OPT     +=  -DNO_WIN_THREAD
+OPT     +=  -DCUDA
+OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
@@ -52,7 +52,7 @@ endif
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       =  mpCC_r
 else
-CC       =  xlc++        
+CC       =  xlc++
 endif
 OPTIMIZE =  -q64 -O3 -qarch=auto -qtune=auto -qinline
 LIB_OPT	 =  -bstackpsize:64k -bdatapsize:64k -btextpsize:64k
@@ -75,16 +75,15 @@ endif
 ifeq ($(SYSTYPE),"PLX")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       =  mpiCC -g 
-else
-CC       =  nvcc -g 
 endif
-OPTIMIZE = -O2 -DDEBUG
-LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
-OMP =
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-LIB_OPT  = -Xlinker -L$(NVCC_HOME)/lib
-SUP_INCL += -I$(CUDASDK_HOME)/common/inc #-I$(NVCC_HOME)/include -Icuda
+NVCC       =  nvcc -g 
+LIB_OPT  += -Xlinker -L$(NVCC_HOME)/lib -lcudart
+SUP_INCL += -I$(CUDASDK_HOME)/common/inc -I$(NVCC_HOME)/include #-Icuda
 endif
+ 
+OPTIMIZE = -O2 -DDEBUG
+OMP =
 endif
 
 #--------------------------------------- Here we go
@@ -103,7 +102,7 @@ ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 
 endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotch_cuda2.o
+OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotch_cuda2.o cuda/deviceQuery.o
 endif
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 LIB_MPIIO = -Lmpiio-1.0/lib -lpartition
@@ -129,7 +128,7 @@ LIBS   = $(LIB_OPT) $(OMP)
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cu.o:
-	$(CC) -c $(CUFLAGS) -o "$@" "$<"
+	$(NVCC) -c $(CUFLAGS) -o "$@" "$<"
 
 $(EXEC): $(OBJS)
 	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC) $(LIB_MPIIO) $(LIB_HDF5)
