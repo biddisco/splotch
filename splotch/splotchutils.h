@@ -61,16 +61,6 @@ struct particle_sim
 
   };
 
-struct particle_new
-  {
-  COLOUR a;
-  float32 x, y, rmax, steepness;
-  };
-struct locinfo
-  {
-  uint16 minx, maxx, miny, maxy;
-  };
-
 struct zcmp
   {
   bool operator()(const particle_sim &p1, const particle_sim &p2) const
@@ -173,10 +163,6 @@ class work_distributor
       }
   };
 
-
-void create_new_particles (const std::vector<particle_sim> &in, bool a_eq_e,
-  float64 gray, std::vector<particle_new> &out, std:: vector<locinfo> &loc,
-  std::vector<COLOUR> &qvec);
 
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);

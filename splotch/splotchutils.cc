@@ -5,54 +5,6 @@
 
 using namespace std;
 
-void create_new_particles (const vector<particle_sim> &in, bool a_eq_e,
-  float64 gray, vector<particle_new> &out, vector<locinfo> &loc, vector<COLOUR> &qvec)
-  {
-  const float64 powtmp = pow(pi,1./3.);
-  const float64 sigma0=powtmp/sqrt(2*pi);
-  const float64 bfak=1./(2*sqrt(pi)*powtmp);
-  const int maxpix=65000;
-
-  tsize nactive=0;
-  for (tsize i=0; i<in.size(); ++i)
-    if (in[i].active) ++nactive;
-
-  out.reserve(nactive);
-  loc.reserve(nactive);
-  if (!a_eq_e) qvec.reserve(nactive);
-  for (tsize i=0; i< in.size(); ++i)
-    {
-    if (in[i].active)
-      {
-      particle_new p;
-      p.x = in[i].x;
-      p.y = in[i].y;
-      p.a = in[i].e;
-      if (!a_eq_e)
-        qvec.push_back (COLOUR (p.a.r/(p.a.r+gray),p.a.g/(p.a.g+gray),p.a.b/(p.a.b+gray)));
-
-      p.a = p.a *(-0.5*bfak/in[i].ro);
-      const float64 min_change=8e-5;
-      p.steepness = -0.5/(in[i].r*in[i].r*sigma0*sigma0);
-//      float64 amax=max(abs(p.a.r),max(abs(p.a.g),abs(p.a.b)));
-//      const float64 min_change=8e-5;
-//      float64 attenuation = min_change/amax;
-      float64 attenuation = 3.7e-2; // equivalent to rfac=1.5
-      p.rmax = sqrt(max(0.,log(attenuation)/p.steepness));
-//p.rmax=3*in[i].r;
-      out.push_back(p);
-
-      locinfo l;
-      l.minx = uint16(max(0,min(maxpix,int(p.x-p.rmax+1))));
-      l.maxx = uint16(max(0,min(maxpix,int(p.x+p.rmax+1))));
-      l.miny = uint16(max(0,min(maxpix,int(p.y-p.rmax+1))));
-      l.maxy = uint16(max(0,min(maxpix,int(p.y+p.rmax+1))));
-      loc.push_back(l);
-      }
-    }
-  }
-
-
 double my_asinh (double val)
   { return log(val+sqrt(1.+val*val)); }
 
