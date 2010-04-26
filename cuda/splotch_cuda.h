@@ -23,7 +23,6 @@ typedef particle_sim cu_particle_sim;
 
 #define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
                                         //in mid of developing only
-const double MAX_EXP=-20.0;
 
 struct cu_param_range //parameters for range calculation
   {
@@ -131,7 +130,7 @@ struct cu_gpu_vars //variables used by each gpu
 //functions
 extern "C" {
 
-void cu_init(paramfile &params, int devID, cu_gpu_vars* pgv);
+void cu_init(int devID);
 void cu_range
   (paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
 void cu_transform (paramfile &params, unsigned int n, double campos[3],
