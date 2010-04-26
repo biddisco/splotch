@@ -18,87 +18,109 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
   arr<bool> col_vector(ptypes),log_int(ptypes),log_col(ptypes),asinh_col(ptypes);
   arr<float32> mincol(ptypes,1e30),maxcol(ptypes,-1e30),
                minint(ptypes,1e30),maxint(ptypes,-1e30);
+  arr<float32> minval_col(ptypes,1e30),maxval_col(ptypes,-1e30),
+               minval_int(ptypes,1e30),maxval_int(ptypes,-1e30);
 
-  for(int itype=0;itype<ptypes;itype++)
+  for(int t=0;t<ptypes;t++)
     {
-    log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
-    log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
-    asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
-    col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+    log_int[t] = params.find<bool>("intensity_log"+dataToString(t),true);
+    log_col[t] = params.find<bool>("color_log"+dataToString(t),true);
+    asinh_col[t] = params.find<bool>("color_asinh"+dataToString(t),false);
+    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
 
   int npart=p.size();
 
-  for (int m=0; m<npart; ++m) // do log calculations if requested
+#pragma omp parallel
+{
+  arr<float32> minc(ptypes,1e30),maxc(ptypes,-1e30),
+               mini(ptypes,1e30),maxi(ptypes,-1e30);
+  int m;
+#pragma omp for schedule(guided,1000)
+  for (m=0; m<npart; ++m) // do log calculations if requested
     {
-    if (log_int[p[m].type])
-      p[m].I = log10(p[m].I);
-    get_minmax(minint[p[m].type], maxint[p[m].type], p[m].I);
+    int t=p[m].type;
 
-    if (log_col[p[m].type])
+    if (log_int[t])
+      p[m].I = log10(p[m].I);
+    get_minmax(mini[t], maxi[t], p[m].I);
+
+    if (log_col[t])
       p[m].C1 = log10(p[m].C1);
-    if (asinh_col[p[m].type])
+    if (asinh_col[t])
       p[m].C1 = my_asinh(p[m].C1);
-    get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C1);
-    if (col_vector[p[m].type])
+    get_minmax(minc[t], maxc[t], p[m].C1);
+    if (col_vector[t])
       {
-      if (log_col[p[m].type])
+      if (log_col[t])
         {
         p[m].C2 = log10(p[m].C2);
         p[m].C3 = log10(p[m].C3);
         }
-      if (asinh_col[p[m].type])
+      if (asinh_col[t])
         {
         p[m].C2 = my_asinh(p[m].C2);
         p[m].C3 = my_asinh(p[m].C3);
         }
-      get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C2);
-      get_minmax(mincol[p[m].type], maxcol[p[m].type], p[m].C3);
+      get_minmax(minc[t], maxc[t], p[m].C2);
+      get_minmax(minc[t], maxc[t], p[m].C3);
       }
     }
-
-
-  for(int itype=0;itype<ptypes;itype++)
+#pragma omp critical
+  for(int t=0;t<ptypes;t++)
     {
-    mpiMgr.allreduce(minint[itype],MPI_Manager::Min);
-    mpiMgr.allreduce(mincol[itype],MPI_Manager::Min);
-    mpiMgr.allreduce(maxint[itype],MPI_Manager::Max);
-    mpiMgr.allreduce(maxcol[itype],MPI_Manager::Max);
+    mincol[t]=min(mincol[t],minc[t]);
+    maxcol[t]=max(maxcol[t],maxc[t]);
+    minint[t]=min(minint[t],mini[t]);
+    maxint[t]=max(maxint[t],maxi[t]);
+    }
 
-    float minval_int = params.find<float>("intensity_min"+dataToString(itype),minint[itype]);
-    float maxval_int = params.find<float>("intensity_max"+dataToString(itype),maxint[itype]);
-    float minval_col = params.find<float>("color_min"+dataToString(itype),mincol[itype]);
-    float maxval_col = params.find<float>("color_max"+dataToString(itype),maxcol[itype]);
+}
+
+  for(int t=0;t<ptypes;t++)
+    {
+    mpiMgr.allreduce(minint[t],MPI_Manager::Min);
+    mpiMgr.allreduce(mincol[t],MPI_Manager::Min);
+    mpiMgr.allreduce(maxint[t],MPI_Manager::Max);
+    mpiMgr.allreduce(maxcol[t],MPI_Manager::Max);
+
+    minval_int[t] = params.find<float>("intensity_min"+dataToString(t),minint[t]);
+    maxval_int[t] = params.find<float>("intensity_max"+dataToString(t),maxint[t]);
+    minval_col[t] = params.find<float>("color_min"+dataToString(t),mincol[t]);
+    maxval_col[t] = params.find<float>("color_max"+dataToString(t),maxcol[t]);
 
     if (verbose && mpiMgr.master())
       {
-      cout << " For particles of type " << itype << " : " << endl;
+      cout << " For particles of type " << t << " : " << endl;
       cout << " From data: " << endl;
-      cout << " Color Range:     " << mincol[itype] << " (min) , " <<
-                                      maxcol[itype] << " (max) " << endl;
-      cout << " Intensity Range: " << minint[itype] << " (min) , " <<
-                                      maxint[itype] << " (max) " << endl;
+      cout << " Color Range:     " << mincol[t] << " (min) , " <<
+                                      maxcol[t] << " (max) " << endl;
+      cout << " Intensity Range: " << minint[t] << " (min) , " <<
+                                      maxint[t] << " (max) " << endl;
       cout << " Restricted to: " << endl;
-      cout << " Color Range:     " << minval_col << " (min) , " <<
-                                      maxval_col << " (max) " << endl;
-      cout << " Intensity Range: " << minval_int << " (min) , " <<
-                                      maxval_int << " (max) " << endl;
-      }
-
-    for(int m=0; m<npart; ++m)
-      {
-      if(p[m].type == itype)///clamp into (min,max)
-        {
-        my_normalize(minval_int,maxval_int,p[m].I);
-        my_normalize(minval_col,maxval_col,p[m].C1);
-        if (col_vector[p[m].type])
-          {
-          my_normalize(minval_col,maxval_col,p[m].C2);
-          my_normalize(minval_col,maxval_col,p[m].C3);
-          }
-        }
+      cout << " Color Range:     " << minval_col[t] << " (min) , " <<
+                                      maxval_col[t] << " (max) " << endl;
+      cout << " Intensity Range: " << minval_int[t] << " (min) , " <<
+                                      maxval_int[t] << " (max) " << endl;
       }
     }
+
+#pragma omp parallel
+{
+  int m;
+#pragma omp for schedule(guided,1000)
+  for(m=0; m<npart; ++m)
+    {
+    int t=p[m].type;
+    my_normalize(minval_int[t],maxval_int[t],p[m].I);
+    my_normalize(minval_col[t],maxval_col[t],p[m].C1);
+    if (col_vector[t])
+      {
+      my_normalize(minval_col[t],maxval_col[t],p[m].C2);
+      my_normalize(minval_col[t],maxval_col[t],p[m].C3);
+      }
+    }
+}
   }
 
 
@@ -106,6 +128,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
   int res = params.find<int>("resolution",200);
+  double res2=0.5*res;
   double fov = params.find<double>("fov",45); //in degrees
   double fovfct = tan(fov*0.5*degr2rad);
   int npart=p.size();
@@ -137,8 +160,9 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
 #pragma omp parallel
 {
+  float64 xfac2=xfac;
   long m;
-#pragma omp for schedule(static)
+#pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m)
     {
     vec3 v(p[m].x,p[m].y,p[m].z);
@@ -147,21 +171,21 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
     if (!projection)
       {
-      p[m].x = res*.5*(p[m].x+fovfct*dist)*xfac;
-      p[m].y = res*.5*(p[m].y+fovfct*dist)*xfac;
+      p[m].x = res2*(p[m].x+fovfct*dist)*xfac2;
+      p[m].y = res2*(p[m].y+fovfct*dist)*xfac2;
       }
     else
       {
-      xfac=1./(fovfct*p[m].z);
-      p[m].x = res*.5*(p[m].x+fovfct*p[m].z)*xfac;
-      p[m].y = res*.5*(p[m].y+fovfct*p[m].z)*xfac;
+      xfac2=1./(fovfct*p[m].z);
+      p[m].x = res2*(p[m].x+fovfct*p[m].z)*xfac2;
+      p[m].y = res2*(p[m].y+fovfct*p[m].z)*xfac2;
       }
     p[m].ro = p[m].r;
-    p[m].r = p[m].r *res*.5*xfac;
+    p[m].r *= res2*xfac2;
     if (minhsmlpixel && (p[m].r>=0.0))
       {
       p[m].r = sqrt(p[m].r*p[m].r + .5*.5);
-      p[m].ro = p[m].r/(res*.5*xfac);
+      p[m].ro = p[m].r/(res2*xfac2);
       }
     }
 }
@@ -179,16 +203,20 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   arr<bool> col_vector(ptypes);
   arr<float64> brightness(ptypes),grayabsorb(ptypes);
 
-  for(int itype=0;itype<ptypes;itype++)
+  for(int t=0;t<ptypes;t++)
     {
-    brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
-    grayabsorb[itype] = params.find<float>("gray_absorption"+dataToString(itype),0.2);
-    col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
+    brightness[t] = params.find<double>("brightness"+dataToString(t),1.);
+    grayabsorb[t] = params.find<float>("gray_absorption"+dataToString(t),0.2);
+    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
   float64 rfac=1.5;
   int npart=p.size();
 
-  for (int m=0; m<npart; ++m)
+#pragma omp parallel
+{
+  int m;
+#pragma omp for schedule(guided,1000)
+  for (m=0; m<npart; ++m)
     {
     p[m].active = false;
     if (p[m].z<=0) continue;
@@ -231,11 +259,12 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
       e.b=col3*intensity;
       }
     else
-      e=amap[p[m].type].getVal(col1)*intensity;
+      e=amap[p[m].type].getVal_const(col1)*intensity;
 
     p[m].active = true;
     p[m].e = e;
     }
+}
   }
 
 void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)

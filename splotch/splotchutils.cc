@@ -68,6 +68,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
         amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
         }
       }
+    amap[itype].sortMap();
     }
   }
 

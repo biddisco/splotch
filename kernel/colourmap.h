@@ -33,6 +33,14 @@ template<typename T> class anythingMap
     std::vector<double> x;
     std::vector<T> y;
 
+  public:
+    void addVal (double x_, const T &val)
+      {
+      sorted=false;
+      x.push_back(x_);
+      y.push_back(val);
+      }
+
     void sortMap()
       {
       using namespace std;
@@ -43,19 +51,23 @@ template<typename T> class anythingMap
       sorted = true;
       }
 
-  public:
-    void addVal (double x_, const T &val)
-      {
-      sorted=false;
-      x.push_back(x_);
-      y.push_back(val);
-      }
     T getVal (double x_)
       {
       using namespace std;
       planck_assert(x.size()>0,"trying to access an empty map");
       if (x.size()==1) return y[0];
       if (!sorted) sortMap();
+      tsize index;
+      double frac;
+      interpol_helper (x.begin(), x.end(), x_, index, frac);
+      return (1.-frac)*y[index]+frac*y[index+1];
+      }
+    T getVal_const (double x_) const
+      {
+      using namespace std;
+      planck_assert(x.size()>0,"trying to access an empty map");
+      planck_assert(sorted,"map must be sorted");
+      if (x.size()==1) return y[0];
       tsize index;
       double frac;
       interpol_helper (x.begin(), x.end(), x_, index, frac);
