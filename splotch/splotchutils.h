@@ -7,6 +7,8 @@
 #include "cxxsupport/vec3.h"
 #include "kernel/colourmap.h"
 
+const double MAX_EXP=-20.0;
+
 class COLOUR8
   {
   public:
