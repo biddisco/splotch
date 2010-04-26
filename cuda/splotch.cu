@@ -78,21 +78,16 @@ paramfile &params, double c[3], double l[3], double s[3])
   }
 
 extern "C"
-void cu_init(paramfile &params, int devID, cu_gpu_vars* pgv)
+void cu_init(int devID)
   {
   cudaSetDevice (devID); // initialize cuda runtime
-
-//  int d;
-//  cudaGetDevice(&d);
-//  printf("\nDevice being used %d\n", d);
-
-  pgv->policy =new CuPolicy(params); // Initialize pgv->policy class
   }
 
 extern "C"
 void cu_range(paramfile &params ,cu_particle_sim* h_pd,
   unsigned int n, cu_gpu_vars* pgv)
   {
+  pgv->policy =new CuPolicy(params); // Initialize pgv->policy class
   //allocate device memory for particle data
   int s =pgv->policy->GetSizeDPD(n); //allocate device memory for particle data
   //one more space allocated for the dumb
