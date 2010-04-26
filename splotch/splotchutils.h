@@ -166,6 +166,11 @@ class work_distributor
       x0 = ix*tx; x1 = std::min(x0+tx, sx);
       y0 = iy*ty; y1 = std::min(y0+ty, sy);
       }
+    void chunk_info_idx (int n, int &ix, int &iy) const
+      {
+      ix = n%((sx+tx-1)/tx);
+      iy = n/((sx+tx-1)/tx);
+      }
   };
 
 
