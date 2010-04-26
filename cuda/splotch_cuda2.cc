@@ -9,23 +9,21 @@ using namespace std;
 
 paramfile *g_params;
 int ptypes = 0;
-vector<particle_sim> particle_data; //raw data from file
+vector<particle_sim> particle_data;   //raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
 
-void cuda_rendering(int res, arr2<COLOUR> &pic, long npart_all)
+void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npart_all)
   {
-  //new arrays of thread_info and HANDLE
-  int nDev = g_params->find<int>("gpu_number",1);
-  //see if use host must be a working thread
+  //see if host must be a working thread
   bool bHostThread = g_params->find<bool>("use_host_as_thread", false);
   int nThread = bHostThread? nDev+1: nDev;
-  //init objects for threads control
+  //init array info for threads control
   thread_info *tInfo = new thread_info[nThread];
-  tInfo[0].pPic = &pic;  //local var pic is assigned to the first thread
-  tInfo[0].devID = 0;
+  tInfo[0].pPic = &pic;      //local var pic is assigned to the first thread
+  tInfo[0].devID = mydevID;
   tInfo[0].npart_all = npart_all;
-  for (int i=1; i<nDev; i++)
+  for (int i=mydevID+1; i<nDev; i++)
     {
     tInfo[i].devID = i;
     tInfo[i].npart_all = npart_all;
@@ -38,7 +36,7 @@ void cuda_rendering(int res, arr2<COLOUR> &pic, long npart_all)
     if (nThread-1 != 0)
       tInfo[nThread-1].pPic = new arr2<COLOUR>(res, res);
     }
-  //decide how to divide task by another function
+  //decide how to divide particles range by another function
   DevideThreadsTasks(tInfo, nThread, bHostThread);
 
 #ifndef NO_WIN_THREAD // create cuda threads on Windows using CreateThread function
@@ -59,64 +57,44 @@ void cuda_rendering(int res, arr2<COLOUR> &pic, long npart_all)
   for (int i=0; i<nDev; i++)
      pthread_create(&(tHandle[i]), cu_thread_func, &(tInfo[i]) );
   if (bHostThread)
-     pthread_create(&(tHandle[nDev]), NULL, host_thread_func, &(tInfo[nDev]) );*/
+     pthread_create(&(tHandle[nDev]), NULL, host_ RLIMIT_MEMLOCKthread_func, &(tInfo[nDev]) );*/
   planck_assert(nDev <= 1, "can't have multiple cuda threads on Linux (yet), so 'gpu_number' must be 1");
   cu_thread_func (&(tInfo[0])); //just call it as normal function
- // host_thread_func (&(tInfo[nDev])); 
 #endif  //if not NO_WIN_THREAD
 
-  // post-process
-  wallTimer  timer;
-  timer.reset();
-  timer.start();
-
-  exptable xexp(MAX_EXP);
-  // combine the results to pic
-  if (1)//a_eq_e)
-    {
+  // combine the results of multiple threads to pic
+    for (int i=1; i<nThread; i++)
       for (int x=0; x<res; x++) //  error when x =1,
         for (int y=0; y<res; y++)
-        {
-          for (int i=1; i<nThread; i++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
 
-          pic[x][y].r = 1-xexp(pic[x][y].r);
-          pic[x][y].g = 1-xexp(pic[x][y].g);
-          pic[x][y].b = 1-xexp(pic[x][y].b);
-        }
-    }
-  else
-    {} //to be done later...
-
-  timer.stop();
-
-  for (int i=0; i<nThread; i++)
+  for (int i=mydevID; i<mydevID+nThread; i++)
     {
     if (tInfo[i].devID!=-1)
       {
-      cout<< endl <<"Times of GPU" << i << ":" <<endl;
-      cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
+      cout<< endl <<"Rank " << mpiMgr.rank() << ": Times of GPU" << i << ":" <<endl;
+//      cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
       cout<< "COPY2C_LIKE:            " << tInfo[i].times[COPY2C_LIKE] <<endl;
       cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
       cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
       cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
       cout<< "FILTER:                 " << tInfo[i].times[FILTER] <<endl;
-      cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
+//      cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
       cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
-      cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
+//      cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
       cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
       cout<<endl;
       }
-/*    else
+    else
       {
-      cout<< endl <<"Times of CPU as a thread:" <<endl;
+      cout<< endl <<"Times of CPU " << mpiMgr.rank() << "as a thread:" <<endl;
       cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
       cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
       cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
       cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
       cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
       cout<<endl;
-      } */
+      } 
     }
 
   for (int i=1; i<nThread; i++)
@@ -184,6 +162,9 @@ THREADFUNC cu_thread_func(void *pinfo)
     return -1;
     }
 
+  //CUDA Init
+  cu_init(pInfoOutput->devID);
+
   int curEnd = 0;
   int endP = ti.endP;
 
@@ -215,28 +196,20 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   //get the input info
   thread_info *tInfo = (thread_info*)pinfo;
   int nParticle =tInfo->endP -tInfo->startP +1;
+  printf("GPU %d : Rendering %d particles\n", tInfo->devID, nParticle);
   //prepare for recording times
   memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
 
   paramfile &params (*g_params);
 
-  cu_particle_sim *d_particle_data =new cu_particle_sim[nParticle];
-
   //for each gpu/thread a varible pack is needed
   cu_gpu_vars gv;
   memset(&gv, 0, sizeof(cu_gpu_vars));
 
-  //CUDA Init
-  timer.reset();
-  timer.start();
-  cu_init(params, tInfo->devID, &gv);
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[CUDA_INIT]=time;
-
   //Copy particle sim into C-style object d_particle_data
   timer.reset();
   timer.start();
+  cu_particle_sim *d_particle_data = new cu_particle_sim[nParticle];
   //copy data to local C-like array d_particle_data, in mid of developing only
   for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
     memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
@@ -249,7 +222,6 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   //CUDA Ranging
   timer.reset();
   timer.start();
-
   cu_range(params, d_particle_data, nParticle, &gv);
   timer.stop();
   time =timer.acc();
@@ -587,8 +559,8 @@ THREADFUNC host_thread_func(void *p)
   vector<particle_sim> particles(i1,i2);
 //  particles.assign(i1, i2);
 
-  host_rendering(true, *g_params, tInfo->npart_all , *(tInfo->pPic),
-                 particles, campos, lookat, sky, amap);
+ // host_processing(true, *g_params, tInfo->npart_all , *(tInfo->pPic),
+ //                particles, campos, lookat, sky, amap);
 
   }
 
