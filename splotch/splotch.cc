@@ -40,17 +40,44 @@ int main (int argc, const char **argv)
   wallTimers.start("setup");
   bool master = mpiMgr.master();
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
-
   paramfile params (argv[1],false);
 
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
-#else
+#else //ifdef CUDA they will be global vars
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
-#endif  //ifdef CUDA they will be global vars
+  int nDevProc = 1; // number of gpus per process
+#ifdef USE_MPI
+  // We assume a geometry where each mpi-process uses one gpu
+  int myID = mpiMgr.rank();
+  int nDevNode = check_device(myID);     // number of gpus per node
+  int mydevID = myID;
+  if (myID >= nDevNode) mydevID = myID%nDevNode;
+  if (nDevNode == 0 || mydevID >= nDevNode)
+  {
+      cout << "There isn't a gpu available for process = " << myID << endl;
+      cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
+      mpiMgr.abort();
+  }
+  else printf("Rank %d: my device %d\n",myID, mydevID);
+#else
+  if (nDevNode == 0) exit(EXIT_FAILURE);
+  int mydevID = 0;
+#ifndef NO_WIN_THREAD
+  nDevProc = g_params->find<int>("gpu_number",1);  // number of GPU per process
+  if (nDevNode < nDevProc )
+  {
+      cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
+      exit(EXIT_FAILURE);
+  }
+#endif // NO_WIN_THREAD
+#endif // USE_MPI
+  bool gpu_info = params.find<bool>("gpu_info",false);
+  if (gpu_info) device_info(myID, mydevID);
+#endif // CUDA 
 
   get_colourmaps(params,amap);
 
@@ -60,20 +87,52 @@ int main (int argc, const char **argv)
   string outfile;
   while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
     {
-    long npart=particle_data.size();
-    long npart_all=npart;
+    long npart_all = particle_data.size();
     mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
 
+    bool a_eq_e = params.find<bool>("a_eq_e",true);
     int res = params.find<int>("resolution",200);
     arr2<COLOUR> pic(res,res);
 
 #ifndef CUDA
-    host_rendering(master, params, npart_all, pic, particle_data,
+    host_processing(master, params, npart_all, particle_data,
                    campos, lookat, sky, amap);
+ 
+// ----------- Rendering ---------------
+    long nsplotch = particle_data.size();
+    long nsplotch_all = nsplotch;
+    mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
+    if (master)
+      cout << endl << "host: rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
+
+    float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+    bool new_renderer = params.find<bool>("new_renderer",false);
+
+    wallTimers.start("render");
+    new_renderer ? render_new    (particle_data,pic,a_eq_e,grayabsorb)
+                 : render_classic(particle_data,pic,a_eq_e,grayabsorb);
 #else
-    cuda_rendering(res, pic, npart_all);
+    if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
 #endif
 
+  int xres = pic.size1(), yres=pic.size2();
+  mpiMgr.allreduceRaw
+    (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
+
+  exptable xexp(MAX_EXP);
+//if (!nopostproc)
+  if (mpiMgr.master() && a_eq_e)
+      for (int ix=0;ix<xres;ix++)
+        for (int iy=0;iy<yres;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
+
+    wallTimers.stop("render");
+ 
+// ------------ Writing -------------
     wallTimers.start("write");
 
     if (master && params.find<bool>("colorbar",false))
