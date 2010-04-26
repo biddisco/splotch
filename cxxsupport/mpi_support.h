@@ -52,8 +52,10 @@ class MPI_Manager
     int num_ranks() const;
     int rank() const;
     bool master() const;
+    int node_dim() const;   /* number of procs in this job that are sharing the same node*/
 
     void barrier() const;
+    void abort() const;
 
     void calcShare (int64 glo, int64 ghi, int64 &lo, int64 &hi) const
       { calcShareGeneral(glo,ghi,num_ranks(),rank(),lo,hi); }
