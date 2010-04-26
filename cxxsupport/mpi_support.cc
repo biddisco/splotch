@@ -3,6 +3,7 @@
 MPI_Manager mpiMgr;
 
 #ifdef USE_MPI
+#include <cstdlib>
 #include "mpi.h"
 #else
 #include <cstring>
@@ -93,7 +94,15 @@ bool MPI_Manager::master() const
 
 void MPI_Manager::barrier() const
   { MPI_Barrier(MPI_COMM_WORLD); }
-
+void MPI_Manager::abort() const
+  { MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE); }
+ 
+/*procs in this job that are sharing the node*/
+int MPI_Manager::node_dim() const
+  { 
+    char* nodes = getenv("OMPI_COMM_WORLD_LOCAL_SIZE"); 
+    return atoi(nodes);
+  }
 #else
 
 MPI_Manager::MPI_Manager () {}
