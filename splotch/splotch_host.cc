@@ -272,6 +272,8 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
     }
   }
 
+} // unnamed namespace
+
 const int chunkdim=100;
 
 void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
@@ -433,9 +435,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
           }
   }
-
-
-} // unnamed namespace
 
 void host_processing(bool master, paramfile &params, long npart_all, 
                      vector<particle_sim> &particles,

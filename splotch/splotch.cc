@@ -106,14 +106,11 @@ int main (int argc, const char **argv)
       cout << endl << "host: rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
 
     float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-    bool new_renderer = params.find<bool>("new_renderer",false);
 
     wallTimers.start("render");
-    new_renderer ? render_new    (particle_data,pic,a_eq_e,grayabsorb)
-                 : render_classic(particle_data,pic,a_eq_e,grayabsorb);
+    render_new (particle_data,pic,a_eq_e,grayabsorb,false);
 #else
     if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
-#endif
 
   int xres = pic.size1(), yres=pic.size2();
   mpiMgr.allreduceRaw
@@ -129,6 +126,7 @@ int main (int argc, const char **argv)
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
           }
+#endif
 
     wallTimers.stop("render");
  
