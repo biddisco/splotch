@@ -437,8 +437,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
 } // unnamed namespace
 
-void host_rendering(bool master, paramfile &params, long npart_all, 
-                    arr2<COLOUR> &pic, vector<particle_sim> &particles,
+void host_processing(bool master, paramfile &params, long npart_all, 
+                     vector<particle_sim> &particles,
                     vec3 &campos, vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap)
   {
 // -----------------------------------
@@ -480,20 +480,5 @@ void host_rendering(bool master, paramfile &params, long npart_all,
   particle_colorize(params, particles, amap);
   wallTimers.stop("coloring");
 
-
-// ----------------------------------
-// ----------- Rendering ------------
-// ----------------------------------
-  long nsplotch = particles.size();
-  long nsplotch_all = nsplotch;
-  mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
-  if (master)
-    cout << endl << "host: rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
-  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-  bool a_eq_e = params.find<bool>("a_eq_e",true);
-  wallTimers.start("render");
-  render_new (particles,pic,a_eq_e,grayabsorb,false);
-
-  wallTimers.stop("render");
   }
 
