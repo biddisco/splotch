@@ -77,7 +77,7 @@ int main (int argc, const char **argv)
 #endif // USE_MPI
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) device_info(myID, mydevID);
-#endif // CUDA 
+#endif // CUDA
 
   get_colourmaps(params,amap);
 
@@ -97,7 +97,7 @@ int main (int argc, const char **argv)
 #ifndef CUDA
     host_processing(master, params, npart_all, particle_data,
                    campos, lookat, sky, amap);
- 
+
 // ----------- Rendering ---------------
     long nsplotch = particle_data.size();
     long nsplotch_all = nsplotch;
@@ -112,13 +112,13 @@ int main (int argc, const char **argv)
 #else
     if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
 
-  int xres = pic.size1(), yres=pic.size2();
-  mpiMgr.allreduceRaw
-    (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
+    int xres = pic.size1(), yres=pic.size2();
+    mpiMgr.allreduceRaw
+      (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
-  exptable xexp(MAX_EXP);
-//if (!nopostproc)
-  if (mpiMgr.master() && a_eq_e)
+    exptable xexp(MAX_EXP);
+
+    if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
           {
@@ -129,7 +129,7 @@ int main (int argc, const char **argv)
 #endif
 
     wallTimers.stop("render");
- 
+
 // ------------ Writing -------------
     wallTimers.start("write");
 
