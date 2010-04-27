@@ -49,11 +49,11 @@ int main (int argc, const char **argv)
 #else //ifdef CUDA they will be global vars
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
+  int myID = mpiMgr.rank();
+  int nDevNode = check_device(myID);     // number of gpus per node
   int nDevProc = 1; // number of gpus per process
 #ifdef USE_MPI
   // We assume a geometry where each mpi-process uses one gpu
-  int myID = mpiMgr.rank();
-  int nDevNode = check_device(myID);     // number of gpus per node
   int mydevID = myID;
   if (myID >= nDevNode) mydevID = myID%nDevNode;
   if (nDevNode == 0 || mydevID >= nDevNode)
@@ -77,10 +77,9 @@ int main (int argc, const char **argv)
 #endif // USE_MPI
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) device_info(myID, mydevID);
-#endif // CUDA
+#endif // CUDA 
 
   get_colourmaps(params,amap);
-
   wallTimers.stop("setup");
 
   sceneMaker sMaker(params);
@@ -95,29 +94,19 @@ int main (int argc, const char **argv)
     arr2<COLOUR> pic(res,res);
 
 #ifndef CUDA
-    host_processing(master, params, npart_all, particle_data,
-                   campos, lookat, sky, amap);
-
-// ----------- Rendering ---------------
-    long nsplotch = particle_data.size();
-    long nsplotch_all = nsplotch;
-    mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
-    if (master)
-      cout << endl << "host: rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
-
-    float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-
-    wallTimers.start("render");
-    render_new (particle_data,pic,a_eq_e,grayabsorb,false);
+    host_rendering(master, params, npart_all, particle_data, pic,
+                    campos, lookat, sky, amap);
 #else
     if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
+#endif
 
+    wallTimers.start("postproc");
     int xres = pic.size1(), yres=pic.size2();
     mpiMgr.allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
     exptable xexp(MAX_EXP);
-
+//if (!nopostproc)
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
@@ -126,18 +115,15 @@ int main (int argc, const char **argv)
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
           }
-#endif
+    wallTimers.stop("postproc");
 
-    wallTimers.stop("render");
-
-// ------------ Writing -------------
     wallTimers.start("write");
 
     if (master && params.find<bool>("colorbar",false))
-      {
+    {
       cout << endl << "creating color bar ..." << endl;
       add_colorbar(params,pic,amap);
-      }
+    }
 
     if (master)
       cout << endl << "saving file ..." << endl;
@@ -157,7 +143,7 @@ int main (int argc, const char **argv)
     wallTimers.stop("write");
 
     timeReport();
-    }
+   }
 
 #ifdef VS
   //Just to hold the screen to read the messages when debugging
