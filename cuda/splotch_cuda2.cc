@@ -68,7 +68,7 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npar
         for (int y=0; y<res; y++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
 
-  for (int i=mydevID; i<mydevID+nThread; i++)
+  for (int i=0; i<nThread; i++)
     {
     if (tInfo[i].devID!=-1)
       {
