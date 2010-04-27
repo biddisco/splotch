@@ -81,11 +81,14 @@ void timeReport()
     cout << "Summary of timings" << endl;
     cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
     cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
+#ifndef CUDA
     cout << "Ranging Data (secs)        : " << wallTimers.acc("range") << endl;
     cout << "Transforming Data (secs)   : " << wallTimers.acc("transform") << endl;
     cout << "Sorting Data (secs)        : " << wallTimers.acc("sort") << endl;
     cout << "Coloring Sub-Data (secs)   : " << wallTimers.acc("coloring") << endl;
     cout << "Rendering Sub-Data (secs)  : " << wallTimers.acc("render") << endl;
+#endif
+    cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc") << endl;
     cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
     cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
     wallTimers.start("full");
