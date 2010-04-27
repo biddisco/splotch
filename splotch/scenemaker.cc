@@ -49,7 +49,10 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
   while(i1<p1.size() && i2<p2.size())
     {
     if (p1[i1].id==p2[i2].id)
+      {
       v.push_back(pair<uint32,uint32>(i1,i2));
+      i1++; i2++;
+      }
     else if (p1[i1].id<p2[i2].id)
       i1++;
     else if (p1[i1].id>p2[i2].id)
