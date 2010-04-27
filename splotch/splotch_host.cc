@@ -452,10 +452,15 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
 } // unnamed namespace
 
-void host_rendering(bool master, paramfile &params, long npart_all, 
+void host_rendering(bool master, paramfile &params, 
                      vector<particle_sim> &particles, arr2<COLOUR> &pic,
                     vec3 &campos, vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap)
 {
+  long npart_all = particles.size();
+  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+
+  long nsplotch = particles.size();
+
 // -----------------------------------
 // ----------- Ranging ---------------
 // -----------------------------------
@@ -481,7 +486,7 @@ void host_rendering(bool master, paramfile &params, long npart_all,
   if (master)
     (mpiMgr.num_ranks()>1) ?
       cout << endl << "host: applying local sort ..." << endl :
-      cout << endl << "host: applying sort (" << particles.size() << ") ..." << endl;
+      cout << endl << "host: applying sort (" << nsplotch << ") ..." << endl;
   int sort_type = params.find<int>("sort_type",1);
   particle_sort(particles,sort_type,true);
   wallTimers.stop("sort");
@@ -498,7 +503,6 @@ void host_rendering(bool master, paramfile &params, long npart_all,
 // ------------------------------------
 // ----------- Rendering ---------------
 // ------------------------------------
-   long nsplotch = particles.size();
    long nsplotch_all = nsplotch;
    mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
    if (master)
