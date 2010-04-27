@@ -106,7 +106,6 @@ int main (int argc, const char **argv)
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
     exptable xexp(MAX_EXP);
-
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
