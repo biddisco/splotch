@@ -47,11 +47,14 @@ int main (int argc, const char **argv)
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
 #else //ifdef CUDA they will be global vars
+  //see if host must be a working thread
+  bool bHostThread = params.find<bool>("use_host_as_thread", false);
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
   int myID = mpiMgr.rank();
   int nDevNode = check_device(myID);     // number of gpus per node
-  int nDevProc = 1; // number of gpus per process
+//  int nDevProc = 1; // number of gpus per process
+  int nDevProc = g_params->find<int>("gpu_number",1);  // number of GPU per process
 #ifdef USE_MPI
   // We assume a geometry where each mpi-process uses one gpu
   int mydevID = myID;
@@ -62,12 +65,11 @@ int main (int argc, const char **argv)
       cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
       mpiMgr.abort();
   }
-  else printf("Rank %d: my device %d\n",myID, mydevID);
+//  else printf("Rank %d: my device %d\n",myID, mydevID);
 #else
   if (nDevNode == 0) exit(EXIT_FAILURE);
   int mydevID = 0;
 #ifndef NO_WIN_THREAD
-  nDevProc = g_params->find<int>("gpu_number",1);  // number of GPU per process
   if (nDevNode < nDevProc )
   {
       cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
@@ -86,18 +88,15 @@ int main (int argc, const char **argv)
   string outfile;
   while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
     {
-    long npart_all = particle_data.size();
-    mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-
     bool a_eq_e = params.find<bool>("a_eq_e",true);
     int res = params.find<int>("resolution",200);
     arr2<COLOUR> pic(res,res);
 
 #ifndef CUDA
-    host_rendering(master, params, npart_all, particle_data, pic,
+    host_rendering(master, params, particle_data, pic,
                    campos, lookat, sky, amap);
 #else
-    if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
+    if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, bHostThread);
 #endif
 
     wallTimers.start("postproc");
@@ -141,6 +140,14 @@ int main (int argc, const char **argv)
 
     wallTimers.stop("write");
 
+#ifdef CUDA
+    cout<< endl <<"Times of GPU threads:" <<endl;
+    if (bHostThread)
+    {
+       cout<< endl <<"Times of CPU HOST as threads:" <<endl;
+       hostReport();
+    }
+#endif
     timeReport();
    }
 
