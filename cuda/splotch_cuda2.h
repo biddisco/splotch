@@ -59,6 +59,6 @@ int check_device(int rank);
 void device_info(int rank, int dev);
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 
-void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npart_all);
+void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, bool bHostThread);
 
 #endif
