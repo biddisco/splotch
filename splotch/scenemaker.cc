@@ -43,20 +43,37 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
   double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
 #endif
 
-  p.resize(0);
+  vector<pair<uint32,uint32> >v;
+  v.reserve(min(p1.size(),p2.size()));
   tsize i1=0,i2=0;
   while(i1<p1.size() && i2<p2.size())
     {
     if (p1[i1].id==p2[i2].id)
-      {
-      planck_assert (p1[i1].type==p2[i2].type,
-        "interpolate: can not interpolate between different types !");
+      v.push_back(pair<uint32,uint32>(i1,i2));
+    else if (p1[i1].id<p2[i2].id)
+      i1++;
+    else if (p1[i1].id>p2[i2].id)
+      i2++;
+    }
+
+  tsize npart=v.size();
+  p.reserve(npart);
+
+#pragma omp parallel
+{
+  int i;
+#pragma omp for schedule(guided,10000)
+  for (i=0; i<npart; ++i)
+    {
+    tsize i1=v[i].first, i2=v[i].second;
+    planck_assert (p1[i1].type==p2[i2].type,
+      "interpolate: can not interpolate between different types !");
 #ifdef HIGH_ORDER_INTERPOLATION
-      double vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
-      double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
-      double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
+    double vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
+    double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
+    double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
 #endif
-      p.push_back(particle_sim(
+    p.push_back(particle_sim(
 #ifdef HIGH_ORDER_INTERPOLATION
          p1[i1].x + p1[i1].vx * v_unit1 * frac
            + 0.5 * (p2[i2].vx * v_unit2 - p1[i1].vx * v_unit1 + vda_x) * frac * frac,
@@ -82,14 +99,8 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
          (1-frac) * p1[i1].vz  + frac*p2[i2].vz
 #endif
          ));
-      i1++;
-      i2++;
-      }
-    else if (p1[i1].id<p2[i2].id)
-      i1++;
-    else if (p1[i1].id>p2[i2].id)
-      i2++;
     }
+}
 
   if(mpiMgr.master())
     cout << " found " << p.size() << " common particles ..." << endl;
