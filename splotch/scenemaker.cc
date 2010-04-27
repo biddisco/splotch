@@ -60,7 +60,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
     }
 
   tsize npart=v.size();
-  p.reserve(npart);
+  p.resize(npart);
 
 #pragma omp parallel
 {
@@ -76,7 +76,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
     double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
     double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
 #endif
-    p.push_back(particle_sim(
+    p[i]=particle_sim(
 #ifdef HIGH_ORDER_INTERPOLATION
          p1[i1].x + p1[i1].vx * v_unit1 * frac
            + 0.5 * (p2[i2].vx * v_unit2 - p1[i1].vx * v_unit1 + vda_x) * frac * frac,
@@ -101,7 +101,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
          (1-frac) * p1[i1].vy  + frac*p2[i2].vy,
          (1-frac) * p1[i1].vz  + frac*p2[i2].vz
 #endif
-         ));
+         );
     }
 }
 
