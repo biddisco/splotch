@@ -123,7 +123,6 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 }
   }
 
-
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
@@ -301,8 +300,6 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
     }
   }
 
-} // unnamed namespace
-
 const int chunkdim=100;
 
 void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
@@ -452,6 +449,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 } // #pragma omp parallel
 
   }
+
+} // unnamed namespace
 
 void host_rendering(bool master, paramfile &params, long npart_all, 
                      vector<particle_sim> &particles, arr2<COLOUR> &pic,

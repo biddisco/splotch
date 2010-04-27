@@ -7,9 +7,4 @@ void host_rendering(bool master, paramfile &params, long npart_all,
                     std::vector<particle_sim> &particle_data, arr2<COLOUR> &pic,
                     vec3 &campos, vec3 &lookat, vec3 &sky, std::vector<COLOURMAP> &amap);
 
-void render_new (std::vector<particle_sim> &p, arr2<COLOUR> &pic,
-  bool a_eq_e, double grayabsorb); 
-void render_classic (const std::vector<particle_sim> &p, arr2<COLOUR> &pic,
-  bool a_eq_e, double grayabsorb);
-
 #endif
