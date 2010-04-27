@@ -13,27 +13,25 @@ vector<particle_sim> particle_data;   //raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
 
-void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npart_all)
+void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, bool bHostThread)
   {
-  //see if host must be a working thread
-  bool bHostThread = g_params->find<bool>("use_host_as_thread", false);
   int nThread = bHostThread? nDev+1: nDev;
   //init array info for threads control
   thread_info *tInfo = new thread_info[nThread];
   tInfo[0].pPic = &pic;      //local var pic is assigned to the first thread
   tInfo[0].devID = mydevID;
-  tInfo[0].npart_all = npart_all;
+//  tInfo[0].npart_all = npart_all;
   for (int i=1; i<nDev; i++)
     {
     tInfo[i].devID = mydevID+i;
-    tInfo[i].npart_all = npart_all;
+//    tInfo[i].npart_all = npart_all;
     tInfo[i].pPic = new arr2<COLOUR>(res, res);
     }
   //make the last one work for host thread
   if (bHostThread)
     {
     tInfo[nThread-1].devID =-1;
-    tInfo[nThread-1].npart_all = npart_all;
+//    tInfo[nThread-1].npart_all = npart_all;
     if (nThread-1 != 0)
       tInfo[nThread-1].pPic = new arr2<COLOUR>(res, res);
     }
@@ -127,19 +125,19 @@ void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
       if (bTestLoadBalancing)
         {
         int gpuLoad = g_params->find<int>("gpu_load"+dataToString(i),0);
-        tInfo[i].endP = curStart + gpuLoad * onePercent;
+        tInfo[i].endP = curStart + gpuLoad * onePercent - 1;
         }
       else
-        tInfo[i].endP = curStart +averageDevLen;
+        tInfo[i].endP = curStart + averageDevLen - 1;
       }
     else //if this is a host
       {
-      tInfo[i].endP = curStart + hostLoad * onePercent;
+      tInfo[i].endP = curStart + hostLoad * onePercent - 1;
       }
     curStart = tInfo[i].endP + 1;
     }
 
-  tInfo[nThread-1].endP = particle_data.size()-1;
+ // tInfo[nThread-1].endP = particle_data.size()-1;
   }
 
 
@@ -199,7 +197,7 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   //get the input info
   thread_info *tInfo = (thread_info*)pinfo;
   int nParticle =tInfo->endP -tInfo->startP +1;
-  printf("GPU %d : Rendering %d particles\n", tInfo->devID, nParticle);
+  printf("GPU %d : Processing %d particles\n", tInfo->devID, nParticle);
   //prepare for recording times
   memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
 
@@ -560,8 +558,7 @@ THREADFUNC host_thread_func(void *p)
   i2 =particle_data.begin() + tInfo->endP + 1;
   vector<particle_sim> particles(i1,i2);
 
-  host_rendering(true, *g_params, tInfo->npart_all ,
-                 particles, *(tInfo->pPic), campos, lookat, sky, amap);
+  host_rendering(true, *g_params, particles, *(tInfo->pPic), campos, lookat, sky, amap);
 
   }
 
