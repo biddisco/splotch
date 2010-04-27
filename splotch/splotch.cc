@@ -95,7 +95,7 @@ int main (int argc, const char **argv)
 
 #ifndef CUDA
     host_rendering(master, params, npart_all, particle_data, pic,
-                    campos, lookat, sky, amap);
+                   campos, lookat, sky, amap);
 #else
     if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, npart_all);
 #endif
@@ -106,7 +106,7 @@ int main (int argc, const char **argv)
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
     exptable xexp(MAX_EXP);
-//if (!nopostproc)
+
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
