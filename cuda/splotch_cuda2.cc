@@ -33,6 +33,7 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npar
   if (bHostThread)
     {
     tInfo[nThread-1].devID =-1;
+    tInfo[nThread-1].npart_all = npart_all;
     if (nThread-1 != 0)
       tInfo[nThread-1].pPic = new arr2<COLOUR>(res, res);
     }
@@ -52,21 +53,24 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npar
   WaitForMultipleObjects(nThread, tHandle, true, INFINITE);
 
 #else // create cuda threads on Linux using pthread_create function
-/*
+
+//  planck_assert(nDev <= 1, "can't have multiple cuda threads on Linux (yet), so 'gpu_number' must be 1");
   pthread_t *tHandle = new pthread_t[nThread];
   for (int i=0; i<nDev; i++)
-     pthread_create(&(tHandle[i]), cu_thread_func, &(tInfo[i]) );
+     pthread_create(&(tHandle[i]), NULL, cu_thread_func, (void *) &(tInfo[i]) );
   if (bHostThread)
-     pthread_create(&(tHandle[nDev]), NULL, host_ RLIMIT_MEMLOCKthread_func, &(tInfo[nDev]) );*/
-  planck_assert(nDev <= 1, "can't have multiple cuda threads on Linux (yet), so 'gpu_number' must be 1");
-  cu_thread_func (&(tInfo[0])); //just call it as normal function
+     pthread_create(&(tHandle[nDev]), NULL, host_thread_func, (void *) &(tInfo[nDev]) );
+  void *status[nThread];
+  for (int i=0; i <nThread; ++i) pthread_join(tHandle[i], &status[i]);
+//  cu_thread_func (&(tInfo[0])); //just call it as normal function
 #endif  //if not NO_WIN_THREAD
 
   // combine the results of multiple threads to pic
-    for (int i=1; i<nThread; i++)
+  for (int i=1; i<nThread; i++)
       for (int x=0; x<res; x++) //  error when x =1,
         for (int y=0; y<res; y++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
+
 
   for (int i=0; i<nThread; i++)
     {
@@ -85,16 +89,16 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npar
       cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
       cout<<endl;
       }
-    else
+/*    else
       {
-      cout<< endl <<"Times of CPU " << mpiMgr.rank() << "as a thread:" <<endl;
+      cout<< endl <<"Times of CPU " << mpiMgr.rank() << " as a thread:" <<endl;
       cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
       cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
       cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
       cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
       cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
       cout<<endl;
-      } 
+      } */
     }
 
   for (int i=1; i<nThread; i++)
@@ -159,7 +163,7 @@ THREADFUNC cu_thread_func(void *pinfo)
   if (len == -1)
     {
     printf("\nGraphics memory setting error\n");
-    return -1;
+//    return -1;
     }
 
   //CUDA Init
@@ -181,7 +185,6 @@ THREADFUNC cu_thread_func(void *pinfo)
       pInfoOutput->times[i] +=ti.times[i];
     ti.startP = ti.endP +1;
     }
-  return 1;
   }
 
 
@@ -544,7 +547,6 @@ PROBLEM HERE!
 
   tInfo->times[THIS_THREAD] =timer1.acc();
 
-  return 1;
   }
 
 
@@ -557,10 +559,9 @@ THREADFUNC host_thread_func(void *p)
   i1 =particle_data.begin() + tInfo->startP;
   i2 =particle_data.begin() + tInfo->endP + 1;
   vector<particle_sim> particles(i1,i2);
-//  particles.assign(i1, i2);
 
- // host_processing(true, *g_params, tInfo->npart_all , *(tInfo->pPic),
- //                particles, campos, lookat, sky, amap);
+  host_rendering(true, *g_params, tInfo->npart_all ,
+                 particles, *(tInfo->pPic), campos, lookat, sky, amap);
 
   }
 
@@ -618,8 +619,7 @@ THREADFUNC combine (void *param1)
 
   t.stop();
   param->timeUsed +=t.acc();
-
-  return 1;
+ 
   }
 
 
