@@ -11,7 +11,7 @@ void write_tga(paramfile &params, const arr2<COLOUR> &pic, tsize res,
   tsize ycut0 = params.find<int>("ycut0",0);
   tsize ycut1 = params.find<int>("ycut1",res);
 
-  cout << " writing tga file" << endl;
+  cout << " writing tga file '" << frame_name << "'" << endl;
   tsize yres=ycut1-ycut0;
   const uint8 header[18] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     res%256, res/256, yres%256, yres/256, 24, 32 };
