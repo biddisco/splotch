@@ -8,7 +8,7 @@ Copyright things go here.
 #ifdef VS
 #define THREADFUNC DWORD WINAPI
 #else
-#define THREADFUNC long
+#define THREADFUNC static void*
 #endif
 
 #include <cstring>
