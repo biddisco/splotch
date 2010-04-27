@@ -23,9 +23,9 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, long npar
   tInfo[0].pPic = &pic;      //local var pic is assigned to the first thread
   tInfo[0].devID = mydevID;
   tInfo[0].npart_all = npart_all;
-  for (int i=mydevID+1; i<nDev; i++)
+  for (int i=1; i<nDev; i++)
     {
-    tInfo[i].devID = i;
+    tInfo[i].devID = mydevID+i;
     tInfo[i].npart_all = npart_all;
     tInfo[i].pPic = new arr2<COLOUR>(res, res);
     }
