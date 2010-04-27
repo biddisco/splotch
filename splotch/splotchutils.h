@@ -170,6 +170,7 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);
 
 void timeReport();
+void hostReport();
 
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
 
