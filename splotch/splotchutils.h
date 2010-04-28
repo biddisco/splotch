@@ -169,8 +169,9 @@ class work_distributor
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);
 
-void timeReport();
+void timeReport(paramfile &params);
 void hostReport();
+//void GPUReport();
 
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
 
