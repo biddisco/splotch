@@ -6,6 +6,7 @@
 #include "kernel/colour.h"
 #include "cxxsupport/vec3.h"
 #include "kernel/colourmap.h"
+#include "cxxsupport/walltimer.h"
 
 const double MAX_EXP=-20.0;
 
@@ -170,8 +171,8 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);
 
 void timeReport(paramfile &params);
-void hostReport();
-//void GPUReport();
+void hostReport(wallTimerSet &Timers);
+void GPUReport(wallTimerSet &cuTimers);
 
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
 

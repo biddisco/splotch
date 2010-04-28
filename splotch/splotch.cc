@@ -90,7 +90,7 @@ int main (int argc, const char **argv)
     arr2<COLOUR> pic(res,res);
 
 #ifndef CUDA
-    host_rendering(master, params, particle_data, pic,
+    host_rendering(params, particle_data, pic,
                    campos, lookat, sky, amap);
 #else
     cuda_rendering(mydevID, nDevProc, res, pic);

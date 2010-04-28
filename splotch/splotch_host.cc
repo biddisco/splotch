@@ -452,10 +452,10 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
 } // unnamed namespace
 
-void host_rendering(bool master, paramfile &params, 
-                     vector<particle_sim> &particles, arr2<COLOUR> &pic,
+void host_rendering( paramfile &params, vector<particle_sim> &particles, arr2<COLOUR> &pic,
                     vec3 &campos, vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap)
 {
+  bool master = mpiMgr.master();
   long npart_all = particles.size();
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
 
