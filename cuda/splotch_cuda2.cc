@@ -1,9 +1,8 @@
-//#ifndef NO_WIN_THREAD 
-//#include <pthread.h>
-//#endif
+#ifndef NO_WIN_THREAD 
+#include <pthread.h>
+#endif
 
 #include "cuda/splotch_cuda2.h"
-#include "cxxsupport/walltimer.h"
 
 using namespace std;
 
@@ -71,42 +70,28 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
         for (int y=0; y<res; y++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
 
-
-  for (int i=0; i<nThread; i++)
+  if (g_params->getVerbosity())
+   for (int i=0; i<nThread; i++)
     {
     if (tInfo[i].devID!=-1)
       {
       cout<< endl <<"Rank " << mpiMgr.rank() << ": Times of GPU" << i << ":" <<endl;
-//      cout<< "CUDA_INIT:              " << tInfo[i].times[CUDA_INIT] <<endl;
-      cout<< "COPY2C_LIKE:            " << tInfo[i].times[COPY2C_LIKE] <<endl;
-      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
-      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
-      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
-      cout<< "FILTER:                 " << tInfo[i].times[FILTER] <<endl;
-//      cout<< "SORT:                   " << tInfo[i].times[SORT] <<endl;
-      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
-//      cout<< "COMBINE:                " << tInfo[i].times[COMBINE] <<endl;
-      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
+      GPUReport(tInfo[i].times);
       cout<<endl;
       }
 /*    else
       {
       cout<< endl <<"Times of CPU " << mpiMgr.rank() << " as a thread:" <<endl;
-      cout<< "RANGE:                  " << tInfo[i].times[RANGE] <<endl;
-      cout<< "TRANSFORMATION:         " << tInfo[i].times[TRANSFORMATION] <<endl;
-      cout<< "COLORIZE:               " << tInfo[i].times[COLORIZE] <<endl;
-      cout<< "RENDER:                 " << tInfo[i].times[RENDER] <<endl;
-      cout<< "THIS_THREAD:            " << tInfo[i].times[THIS_THREAD] <<endl;
       cout<<endl;
       } */
     }
+  
+  if (mpiMgr.master()) cuWallTimers = tInfo[0].times;
 
   for (int i=1; i<nThread; i++)
     delete tInfo[i].pPic;
   delete [] tInfo;
-#ifndef NO_WIN_THREAD
   delete [] tHandle;
-#endif
   }
 
 
@@ -152,7 +137,6 @@ THREADFUNC cu_thread_func(void *pinfo)
 
   //do some cleaning for final thread_info
   pInfoOutput->pPic->fill(COLOUR(0.0, 0.0, 0.0));
-  memset(pInfoOutput->times, 0, sizeof(float)*TIME_RECORDS);
 
   //a new pic object residing in ti that will carry the result
   arr2<COLOUR> pic(pInfoOutput->pPic->size1(), pInfoOutput->pPic->size2());
@@ -163,7 +147,7 @@ THREADFUNC cu_thread_func(void *pinfo)
   if (len == -1)
     {
     printf("\nGraphics memory setting error\n");
-//    return -1;
+    mpiMgr.abort();
     }
 
   //CUDA Init
@@ -181,27 +165,21 @@ THREADFUNC cu_thread_func(void *pinfo)
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
-    for (int i=0; i<TIME_RECORDS; i++)
-      pInfoOutput->times[i] +=ti.times[i];
     ti.startP = ti.endP +1;
+    pInfoOutput->times = ti.times;
     }
   }
 
 
 THREADFUNC cu_draw_chunk(void *pinfo)
   {
-  wallTimer timer, timer1;
-  float time;
-
-  timer1.reset(); //for the whole thread
-  timer1.start();
 
   //get the input info
   thread_info *tInfo = (thread_info*)pinfo;
+  tInfo->times.start("gpu_thread");
+
   int nParticle =tInfo->endP -tInfo->startP +1;
-  printf("GPU %d : Processing %d particles\n", tInfo->devID, nParticle);
-  //prepare for recording times
-  memset(tInfo->times, 0, sizeof(float)*TIME_RECORDS);
+  printf("Rank %d - GPU %d : Processing %d particles\n", mpiMgr.rank(), tInfo->devID, nParticle);
 
   paramfile &params (*g_params);
 
@@ -210,36 +188,27 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   memset(&gv, 0, sizeof(cu_gpu_vars));
 
   //Copy particle sim into C-style object d_particle_data
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gcopy");
   cu_particle_sim *d_particle_data = new cu_particle_sim[nParticle];
   //copy data to local C-like array d_particle_data, in mid of developing only
   for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
     memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[COPY2C_LIKE]=time;
+  tInfo->times.stop("gcopy"); 
 
   //here we analyse how to divide the whole task for large data handling
 
   //CUDA Ranging
-  timer.reset();
-  timer.start();
+  tInfo->times.start("grange");
   cu_range(params, d_particle_data, nParticle, &gv);
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[RANGE]=time;
+  tInfo->times.stop("grange");
 
   //CUDA Transformation
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gtransform");
   double  c[3]={campos.x, campos.y, campos.z},
           l[3]={lookat.x, lookat.y, lookat.z},
           s[3]={sky.x, sky.y,     sky.z};
   cu_transform(params, nParticle,c, l, s,d_particle_data, &gv);
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[TRANSFORMATION]=time;
+  tInfo->times.stop("gtransform");
 
 /* temporarily ignore sorting 191109.
    it becomes complicated when using multiple threads with sorting
@@ -266,8 +235,7 @@ PROBLEM HERE!
 */
 
   //CUDA Coloring
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gcoloring");
   //init C style colormap
   cu_color_map_entry *amapD;//amap for Device. emap is not used currently
   int *amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
@@ -311,14 +279,10 @@ PROBLEM HERE!
 
   //Colorize with device
   cu_colorize(params, cu_ps, size, &gv);
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[COLORIZE]=time;
-
+  tInfo->times.stop("gcoloring");
 
 //////////////////////////////////////////////////////////////////////
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gfilter");
   //filter particle_splotch array to a cu_ps_filtered
   int pFiltered=0;
   //for sorting and splitting
@@ -350,15 +314,7 @@ PROBLEM HERE!
       maxy=max(maxy,(int)cu_ps[i].maxy);
       }
     }
-
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[FILTER] =time;
-
-  timer.reset();
-  timer.start();
-
-  //split large ones
+ 
   int maxRegion =cu_get_max_region(&gv);
   vector<cu_particle_splotch> v_ps1;//result goes to it
   for (vector<cu_particle_splotch>::iterator i=v_ps.begin(); i<v_ps.end(); i++)
@@ -388,21 +344,15 @@ PROBLEM HERE!
       v_ps1.push_back(pNew);
       }
     }
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[FILTER] +=time;
+  tInfo->times.stop("gfilter");
 
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gsort");
   v_ps.clear();//not useful any more
   //sort the filtered,splitted v_ps
   // sort(v_ps1.begin(), v_ps1.end(), region_cmp());
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[SORT]=time;
+  tInfo->times.stop("gsort");
 
-  timer.reset();
-  timer.start();
+  tInfo->times.start("gfilter");
   //copy to C-style array cu_ps_filtered
   cu_particle_splotch *cu_ps_filtered;
   size =v_ps1.size();
@@ -415,9 +365,7 @@ PROBLEM HERE!
     posInFragBuf +=region;
     cu_ps_filtered[i] =v_ps1[i];
     }
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[FILTER] +=time;
+  tInfo->times.stop("gfilter");
 
 // ----------------------------------
 // ----------- Rendering ------------
@@ -434,8 +382,7 @@ PROBLEM HERE!
   //CUDA Rendering with device
 
   //here's the point of multi-go loop starts
-  timer.reset();//for rendering
-  timer.start();
+  tInfo->times.start("grender");
   //prepare fragment buffer memory space first
   cu_fragment_AeqE  *fragBufAeqE;
   cu_fragment_AneqE *fragBufAneqE;
@@ -466,10 +413,6 @@ PROBLEM HERE!
   renderStartP =renderEndP =0;
   combineStartP = combineEndP=0;
   int nFragments2Render=0;
-  //some timers
-  wallTimer t1, t2, t3;
-  t1.reset();
-  t2.reset();
 
   //now prepare the parameters for combination
   param_combine_thread param;
@@ -514,7 +457,7 @@ PROBLEM HERE!
 
     //collect result
     cu_get_fbuf(fragBufAeqE, a_eq_e, nFragments2Render, &gv);
-    combineStartP=renderStartP;
+    combineStartP=renderStartP; 
     combineEndP =renderEndP;
 
     //see if last chunk
@@ -523,32 +466,26 @@ PROBLEM HERE!
       param.combineStartP =combineStartP;
       param.combineEndP =combineEndP;
       combine(&param);
-      // param.timeUsed +=t3.acc();
       }
     }
-
-  timer.stop();
-  time =timer.acc();
-  tInfo->times[RENDER]=time;
-  tInfo->times[COMBINE]=param.timeUsed;
+  tInfo->times.stop("grender");
+//  tInfo->times[COMBINE] = param.timeUsed;
 
 /////////////////////////////////////////////////////////////////////
 
   cu_end(&gv);
   delete []d_particle_data;
-  delete  []amapD;
-  delete  []amapDTypeStartPos;
-  delete  []cu_ps;
-  delete  []cu_ps_filtered;
+  delete []amapD;
+  delete []amapDTypeStartPos;
+  delete []cu_ps;
+  delete []cu_ps_filtered;
   if (a_eq_e)
-    delete  []fragBufAeqE;
+    delete []fragBufAeqE;
   else
-    delete  []fragBufAneqE;
+    delete []fragBufAneqE;
 
-  tInfo->times[THIS_THREAD] =timer1.acc();
-
+  tInfo->times.stop("gpu_thread");
   }
-
 
 
 THREADFUNC host_thread_func(void *p)
@@ -560,8 +497,7 @@ THREADFUNC host_thread_func(void *p)
   i2 =particle_data.begin() + tInfo->endP + 1;
   vector<particle_sim> particles(i1,i2);
 
-  host_rendering(true, *g_params, particles, *(tInfo->pPic), campos, lookat, sky, amap);
-
+  host_rendering(*g_params, particles, *(tInfo->pPic), campos, lookat, sky, amap);
   }
 
 
@@ -574,8 +510,8 @@ THREADFUNC combine (void *param1)
   cu_particle_splotch *ps = param->ps;
   arr2<COLOUR> *pPic = param->pPic;
 
-  wallTimer t;
-  t.start();
+  wallTimer Timer;
+  Timer.start();
 
   if (param->a_eq_e)
     {
@@ -616,8 +552,8 @@ THREADFUNC combine (void *param1)
       }
     }
 
-  t.stop();
-  param->timeUsed +=t.acc();
+  Timer.stop();
+  param->timeUsed += Timer.acc();
  
   }
 

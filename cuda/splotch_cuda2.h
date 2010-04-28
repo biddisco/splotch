@@ -3,6 +3,7 @@
 
 #include "cuda/splotch_cuda.h"
 #include "splotch/splotch_host.h"
+#include "cxxsupport/walltimer.h"
 
 //things for combination with host threads
 struct  param_combine_thread //for host combine thread
@@ -23,21 +24,6 @@ THREADFUNC cu_thread_func(void *pinfo);
 THREADFUNC cu_draw_chunk(void *pinfo);
 THREADFUNC host_thread_func(void *pinfo);
 
-//for record times
-enum TimeRecords {
-  CUDA_INIT,
-  COPY2C_LIKE,
-  RANGE,
-  TRANSFORMATION,
-  COLORIZE,
-  FILTER,
-  SORT,
-  RENDER,
-  COMBINE,
-  THIS_THREAD,
-  TIME_RECORDS   //to indicate number of times
-  };
-
 // struct containing thread task info
 struct thread_info
   {
@@ -45,7 +31,7 @@ struct thread_info
   int startP, endP;           //start and end particles to handle
   long npart_all;             //total number of particles
   arr2<COLOUR> *pPic;         //output image computed 
-  float times[TIME_RECORDS];  //carry out times of computing
+  wallTimerSet times;
   };
 
 //some global info shared by all threads
