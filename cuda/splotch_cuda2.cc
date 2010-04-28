@@ -13,8 +13,10 @@ vector<particle_sim> particle_data;   //raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
 
-void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic, bool bHostThread)
+void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
   {
+  //see if host must be a working thread
+  bool bHostThread = g_params->find<bool>("use_host_as_thread", false);
   int nThread = bHostThread? nDev+1: nDev;
   //init array info for threads control
   thread_info *tInfo = new thread_info[nThread];
