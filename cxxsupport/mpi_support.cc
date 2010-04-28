@@ -113,6 +113,8 @@ int MPI_Manager::rank() const { return 0; }
 bool MPI_Manager::master() const { return true; }
 
 void MPI_Manager::barrier() const {}
+void MPI_Manager::abort() const
+  { exit(EXIT_FAILURE); }
 
 #endif
 
