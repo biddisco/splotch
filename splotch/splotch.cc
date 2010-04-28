@@ -47,36 +47,33 @@ int main (int argc, const char **argv)
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
 #else //ifdef CUDA they will be global vars
-  //see if host must be a working thread
-  bool bHostThread = params.find<bool>("use_host_as_thread", false);
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
+
   int myID = mpiMgr.rank();
-  int nDevNode = check_device(myID);     // number of gpus per node
-//  int nDevProc = 1; // number of gpus per process
-  int nDevProc = g_params->find<int>("gpu_number",1);  // number of GPU per process
-#ifdef USE_MPI
-  // We assume a geometry where each mpi-process uses one gpu
-  int mydevID = myID;
-  if (myID >= nDevNode) mydevID = myID%nDevNode;
-  if (nDevNode == 0 || mydevID >= nDevNode)
+  int nDevNode = check_device(myID);     // number of GPUs available per node
+  int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
+  int mydevID = 0;
+  // We assume a geometry where 
+  // a) either each process uses only one gpu
+  if (nDevProc == 1)
   {
+    mydevID = myID;
+    if (mydevID >= nDevNode) mydevID = myID%nDevNode;
+    if (nDevNode == 0 || mydevID >= nDevNode)
+    {
       cout << "There isn't a gpu available for process = " << myID << endl;
       cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
       mpiMgr.abort();
+    }
   }
-//  else printf("Rank %d: my device %d\n",myID, mydevID);
-#else
-  if (nDevNode == 0) exit(EXIT_FAILURE);
-  int mydevID = 0;
-#ifndef NO_WIN_THREAD
-  if (nDevNode < nDevProc )
+  // b) or processes run on different nodes and use a number of GPUs >= 1 and <= nDevNode
+  else if (nDevNode < nDevProc)
   {
-      cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
-      exit(EXIT_FAILURE);
+    cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
+    mpiMgr.abort();
   }
-#endif // NO_WIN_THREAD
-#endif // USE_MPI
+
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) device_info(myID, mydevID);
 #endif // CUDA 
@@ -96,7 +93,7 @@ int main (int argc, const char **argv)
     host_rendering(master, params, particle_data, pic,
                    campos, lookat, sky, amap);
 #else
-    if (mydevID < nDevNode) cuda_rendering(mydevID, nDevProc, res, pic, bHostThread);
+    cuda_rendering(mydevID, nDevProc, res, pic);
 #endif
 
     wallTimers.start("postproc");
@@ -140,15 +137,7 @@ int main (int argc, const char **argv)
 
     wallTimers.stop("write");
 
-#ifdef CUDA
-    cout<< endl <<"Times of GPU threads:" <<endl;
-    if (bHostThread)
-    {
-       cout<< endl <<"Times of CPU HOST as threads:" <<endl;
-       hostReport();
-    }
-#endif
-    timeReport();
+    timeReport(params);
    }
 
 #ifdef VS
