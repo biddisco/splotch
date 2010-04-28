@@ -72,10 +72,20 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
     }
   }
 
-void timeReport()
+void timeReport(paramfile &params)
   {
   if (mpiMgr.master())
     {
+#ifdef CUDA
+    //see if host must be a working thread
+     bool bHostThread = params.find<bool>("use_host_as_thread", false);
+     if (bHostThread)
+     {
+       cout<< endl <<"Times of CPU HOST as threads:" <<endl;
+       hostReport();
+     }
+#endif
+
     wallTimers.stop("full");
     cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
@@ -99,3 +109,13 @@ void hostReport()
     cout << "Coloring Sub-Data (secs)   : " << wallTimers.acc("coloring") << endl;
     cout << "Rendering Sub-Data (secs)  : " << wallTimers.acc("render") << endl;
   }
+
+/*void GPUReport()
+  {
+    cout<< endl <<"Times of GPU threads:" <<endl;
+    cout << "Ranging Data (secs)        : " << wallTimers.acc("grange") << endl;
+    cout << "Transforming Data (secs)   : " << wallTimers.acc("gtransform") << endl;
+    cout << "Sorting Data (secs)        : " << wallTimers.acc("gsort") << endl;
+    cout << "Coloring Sub-Data (secs)   : " << wallTimers.acc("gcoloring") << endl;
+    cout << "Rendering Sub-Data (secs)  : " << wallTimers.acc("grender") << endl;
+  }*/
