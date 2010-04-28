@@ -34,5 +34,8 @@ class wallTimerSet
 double elapsedWallTime();
 
 extern wallTimerSet wallTimers;
+#ifdef CUDA
+extern wallTimerSet cuWallTimers;
+#endif 
 
 #endif

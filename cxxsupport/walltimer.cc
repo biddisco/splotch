@@ -57,3 +57,6 @@ double elapsedWallTime()
   { return wallTime()-wallTime0; }
 
 wallTimerSet wallTimers;
+#ifdef CUDA
+wallTimerSet cuWallTimers;
+#endif
