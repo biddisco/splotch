@@ -350,10 +350,10 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD);
-              MPI_Ssend(v2_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD);
-              MPI_Ssend(v3_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
-              MPI_Ssend(i1_tmp, NPartThisTask[ToTask], MPI_INT, ToTask, TAG_TYPE, MPI_COMM_WORLD);
+              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD);
+              MPI_Ssend(&v2_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD);
+              MPI_Ssend(&v3_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
+              MPI_Ssend(&i1_tmp[0], NPartThisTask[ToTask], MPI_INT, ToTask, TAG_TYPE, MPI_COMM_WORLD);
               ToTask++;
               ncount=0;
               }
@@ -375,10 +375,10 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   else
     {
 #ifdef USE_MPI
-    MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
-    MPI_Recv(v2_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
-    MPI_Recv(v3_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
-    MPI_Recv(i1_tmp, NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_TYPE, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
+    MPI_Recv(&i1_tmp[0], NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_TYPE, MPI_COMM_WORLD, &status);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
       p[m].x=v1_tmp[m];
@@ -455,7 +455,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_SIZE, MPI_COMM_WORLD);
+              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_SIZE, MPI_COMM_WORLD);
               ToTask++;
               ncount=0;
               }
@@ -473,7 +473,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   else
     {
 #ifdef USE_MPI
-    MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_SIZE, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_SIZE, MPI_COMM_WORLD, &status);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].r=v1_tmp[m];
 #else
@@ -583,9 +583,9 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL1, MPI_COMM_WORLD);
-              MPI_Ssend(v2_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL2, MPI_COMM_WORLD);
-              MPI_Ssend(v3_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL3, MPI_COMM_WORLD);
+              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL1, MPI_COMM_WORLD);
+              MPI_Ssend(&v2_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL2, MPI_COMM_WORLD);
+              MPI_Ssend(&v3_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL3, MPI_COMM_WORLD);
               ToTask++;
               ncount=0;
               }
@@ -603,9 +603,9 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   else
     {
 #ifdef USE_MPI
-    MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL1, MPI_COMM_WORLD, &status);
-    MPI_Recv(v2_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL2, MPI_COMM_WORLD, &status);
-    MPI_Recv(v3_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL3, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL1, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL2, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL3, MPI_COMM_WORLD, &status);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
       p[m].C1=v1_tmp[m];
@@ -693,7 +693,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(v1_tmp, NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_INT, MPI_COMM_WORLD);
+              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_INT, MPI_COMM_WORLD);
               ToTask++;
               ncount=0;
               }
@@ -711,7 +711,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   else
     {
 #ifdef USE_MPI
-    MPI_Recv(v1_tmp, NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_INT, MPI_COMM_WORLD, &status);
+    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_INT, MPI_COMM_WORLD, &status);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].I=v1_tmp[m];
 #else
