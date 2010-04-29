@@ -14,7 +14,7 @@ using namespace std;
 namespace {
 
 void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
-  int &nfields, int64 &mybegin, int64 &npart, float * rrr, int64 &npart_total)
+  int &nfields, int64 &mybegin, int64 &npart, float *rrr, int64 &npart_total)
   {
   /* qty_idx characterize the mesh according 
      to the following standard:
@@ -29,7 +29,6 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
      qty_idx[8] = ordering (0=C, 1=Fortran)
   */
 
-  float raux;
   bool doswap = params.find<bool>("swap_endian",true);
   string datafile = params.find<string>("infile");
   inp.open (datafile.c_str(),doswap);
@@ -39,14 +38,13 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   qty_idx[0] = params.find<int>("x");
   qty_idx[1] = params.find<int>("y");
   qty_idx[2] = params.find<int>("z");
-  raux = params.find<float>("r",1.0);
   qty_idx[4] = params.find<int>("I",-1)-1;
   qty_idx[5] = params.find<int>("C1")-1;
   qty_idx[6] = params.find<int>("C2",-1)-1;
   qty_idx[7] = params.find<int>("C3",-1)-1;
   qty_idx[8] = params.find<int>("order",0);
   npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
-  *rrr = raux;
+  *rrr = params.find<float>("r",1.0);
 
   if (mpiMgr.master())
     {
@@ -57,8 +55,6 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   int64 myend;
   mpiMgr.calcShare (0, npart_total, mybegin, myend);
   npart = myend-mybegin;
-  //cout << "----> " << mybegin << " " << npart << endl;
-
   }
 
 void mesh_reader_finish (vector<particle_sim> &points)
@@ -125,10 +121,10 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points)
     inp.get(&buffer[0],npart);
 
 #define CASEMACRO__(num,str) \
-      case num: \
-        for (int64 i=0; i<npart; ++i) \
-          points[i].str = buffer[i]; \
-        break;
+    case num: \
+      for (int64 i=0; i<npart; ++i) \
+        points[i].str = buffer[i]; \
+      break;
 
     switch(qty)
       {
@@ -141,7 +137,6 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points)
       CASEMACRO__(6,C2)
       CASEMACRO__(7,C3)
       }
-         
     }
 
 #undef CASEMACRO__
@@ -151,31 +146,26 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points)
     for (int64 i=0; i<npart; ++i) points[i].I=0.5;
 
 //set smoothing length: assumed constant for all volume
-    for (int64 i=0; i<npart; ++i) points[i].r=rrr;
+  for (int64 i=0; i<npart; ++i) points[i].r=rrr;
 
 //set coordinates: now be careful to ordering!
-    int dimx = qty_idx[0];
-    int dimy = qty_idx[1];
-    int dimz = qty_idx[2];
-    if(qty_idx[8] == 1)
-      {
-	dimx = qty_idx[2];
-	dimy = qty_idx[1];
-	dimz = qty_idx[0];
-      }
+  int dimx = qty_idx[0];
+  int dimy = qty_idx[1];
+  int dimz = qty_idx[2];
+  if (qty_idx[8] == 1)
+    swap(dimx,dimz);
 
-    for(int64 i=0; i<npart; ++i)
-      {
-        int64 iaux = i + mybegin;
-        int i1 = iaux/(dimx*dimy);  
-        int res = iaux%(dimx*dimy);
-        int i2 = res/dimx;
-        int i3 = res%dimx;
-        points[i].x = float(i3);
-        points[i].y = float(i2);
-        points[i].z = float(i1);
-        
-      }
+  for(int64 i=0; i<npart; ++i)
+    {
+    int64 iaux = i + mybegin;
+    int i1 = iaux/(dimx*dimy);
+    int res = iaux%(dimx*dimy);
+    int i2 = res/dimx;
+    int i3 = res%dimx;
+    points[i].x = float(i3);
+    points[i].y = float(i2);
+    points[i].z = float(i1);
+    }
 
   mesh_reader_finish (points);
   }
