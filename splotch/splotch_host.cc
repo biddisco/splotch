@@ -14,14 +14,14 @@ namespace {
 
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
   {
-  int ptypes = params.find<int>("ptypes",1);
-  arr<bool> col_vector(ptypes),log_int(ptypes),log_col(ptypes),asinh_col(ptypes);
-  arr<float32> mincol(ptypes,1e30),maxcol(ptypes,-1e30),
-               minint(ptypes,1e30),maxint(ptypes,-1e30);
-  arr<float32> minval_col(ptypes,1e30),maxval_col(ptypes,-1e30),
-               minval_int(ptypes,1e30),maxval_int(ptypes,-1e30);
+  int nt = params.find<int>("ptypes",1);
+  arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
+  arr<float32> mincol(nt,1e30),maxcol(nt,-1e30),
+               minint(nt,1e30),maxint(nt,-1e30);
+  arr<float32> minval_col(nt,1e30),maxval_col(nt,-1e30),
+               minval_int(nt,1e30),maxval_int(nt,-1e30);
 
-  for(int t=0;t<ptypes;t++)
+  for(int t=0;t<nt;t++)
     {
     log_int[t] = params.find<bool>("intensity_log"+dataToString(t),true);
     log_col[t] = params.find<bool>("color_log"+dataToString(t),true);
@@ -33,8 +33,8 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
 #pragma omp parallel
 {
-  arr<float32> minc(ptypes,1e30),maxc(ptypes,-1e30),
-               mini(ptypes,1e30),maxi(ptypes,-1e30);
+  arr<float32> minc(nt,1e30),maxc(nt,-1e30),
+               mini(nt,1e30),maxi(nt,-1e30);
   int m;
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m) // do log calculations if requested
@@ -67,7 +67,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
       }
     }
 #pragma omp critical
-  for(int t=0;t<ptypes;t++)
+  for(int t=0;t<nt;t++)
     {
     mincol[t]=min(mincol[t],minc[t]);
     maxcol[t]=max(maxcol[t],maxc[t]);
@@ -77,7 +77,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
 }
 
-  for(int t=0;t<ptypes;t++)
+  for(int t=0;t<nt;t++)
     {
     mpiMgr.allreduce(minint[t],MPI_Manager::Min);
     mpiMgr.allreduce(mincol[t],MPI_Manager::Min);
@@ -198,11 +198,11 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   int ycut1 = params.find<int>("ycut1",res);
   float zmaxval = params.find<float>("zmax",1.e23);
   float zminval = params.find<float>("zmin",0.0);
-  int ptypes = params.find<int>("ptypes",1);
-  arr<bool> col_vector(ptypes);
-  arr<float64> brightness(ptypes),grayabsorb(ptypes);
+  int nt = params.find<int>("ptypes",1);
+  arr<bool> col_vector(nt);
+  arr<float64> brightness(nt),grayabsorb(nt);
 
-  for(int t=0;t<ptypes;t++)
+  for(int t=0;t<nt;t++)
     {
     brightness[t] = params.find<double>("brightness"+dataToString(t),1.);
     grayabsorb[t] = params.find<float>("gray_absorption"+dataToString(t),0.2);
@@ -452,14 +452,14 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
 } // unnamed namespace
 
-void host_rendering( paramfile &params, vector<particle_sim> &particles, arr2<COLOUR> &pic,
-                    vec3 &campos, vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap)
-{
+void host_rendering (paramfile &params, vector<particle_sim> &particles,
+  arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
+  vector<COLOURMAP> &amap)
+  {
   bool master = mpiMgr.master();
-  long npart_all = particles.size();
+  tsize npart = particles.size();
+  tsize npart_all = npart;
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-
-  long nsplotch = particles.size();
 
 // -----------------------------------
 // ----------- Ranging ---------------
@@ -486,7 +486,7 @@ void host_rendering( paramfile &params, vector<particle_sim> &particles, arr2<CO
   if (master)
     (mpiMgr.num_ranks()>1) ?
       cout << endl << "host: applying local sort ..." << endl :
-      cout << endl << "host: applying sort (" << nsplotch << ") ..." << endl;
+      cout << endl << "host: applying sort (" << npart << ") ..." << endl;
   int sort_type = params.find<int>("sort_type",1);
   particle_sort(particles,sort_type,true);
   wallTimers.stop("sort");
@@ -503,16 +503,13 @@ void host_rendering( paramfile &params, vector<particle_sim> &particles, arr2<CO
 // ------------------------------------
 // ----------- Rendering ---------------
 // ------------------------------------
-   long nsplotch_all = nsplotch;
-   mpiMgr.allreduce (nsplotch_all,MPI_Manager::Sum);
-   if (master)
-      cout << endl << "host: rendering (" << nsplotch_all << "/" << npart_all << ")..." << endl;
+  if (master)
+    cout << endl << "host: rendering (" << npart_all << "/" << npart_all << ")..." << endl;
 
-   bool a_eq_e = params.find<bool>("a_eq_e",true);
-   float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+  bool a_eq_e = params.find<bool>("a_eq_e",true);
+  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
 
-   wallTimers.start("render");
-   render_new (particles,pic,a_eq_e,grayabsorb);
-   wallTimers.stop("render");
-}
-
+  wallTimers.start("render");
+  render_new (particles,pic,a_eq_e,grayabsorb);
+  wallTimers.stop("render");
+  }

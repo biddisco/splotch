@@ -3,8 +3,8 @@
 
 #include "splotch/splotchutils.h"
 
-void host_rendering( paramfile &params, std::vector<particle_sim> &particle_data, 
-                     arr2<COLOUR> &pic, vec3 &campos, vec3 &lookat, vec3 &sky,
-                     std::vector<COLOURMAP> &amap);
+void host_rendering (paramfile &params, std::vector<particle_sim> &particle_data,
+  arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
+  std::vector<COLOURMAP> &amap);
 
 #endif

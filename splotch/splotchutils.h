@@ -8,8 +8,6 @@
 #include "kernel/colourmap.h"
 #include "cxxsupport/walltimer.h"
 
-const double MAX_EXP=-20.0;
-
 class COLOUR8
   {
   public:
@@ -143,26 +141,26 @@ class exptable
 class work_distributor
   {
   private:
-    int sx, sy, tx, ty;
+    int sx, sy, tx, ty, nx;
 
   public:
     work_distributor (int sx_, int sy_, int tx_, int ty_)
-      : sx(sx_), sy(sy_), tx(tx_), ty(ty_) {}
+      : sx(sx_), sy(sy_), tx(tx_), ty(ty_), nx((sx+tx-1)/tx) {}
 
     int nchunks() const
-      { return ((sx+tx-1)/tx) * ((sy+ty-1)/ty); }
+      { return nx * ((sy+ty-1)/ty); }
 
     void chunk_info (int n, int &x0, int &x1, int &y0, int &y1) const
       {
-      int ix = n%((sx+tx-1)/tx);
-      int iy = n/((sx+tx-1)/tx);
+      int ix = n%nx;
+      int iy = n/nx;
       x0 = ix*tx; x1 = std::min(x0+tx, sx);
       y0 = iy*ty; y1 = std::min(y0+ty, sy);
       }
     void chunk_info_idx (int n, int &ix, int &iy) const
       {
-      ix = n%((sx+tx-1)/tx);
-      iy = n/((sx+tx-1)/tx);
+      ix = n%nx;
+      iy = n/nx;
       }
   };
 

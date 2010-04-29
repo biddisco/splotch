@@ -45,6 +45,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
 
   vector<pair<uint32,uint32> >v;
   v.reserve(min(p1.size(),p2.size()));
+  {
   tsize i1=0,i2=0;
   while(i1<p1.size() && i2<p2.size())
     {
@@ -58,6 +59,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
     else if (p1[i1].id>p2[i2].id)
       i2++;
     }
+  }
 
   tsize npart=v.size();
   p.resize(npart);
@@ -65,7 +67,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
 #pragma omp parallel
 {
   int i;
-#pragma omp for schedule(guided,10000)
+#pragma omp for schedule(guided,1000)
   for (i=0; i<npart; ++i)
     {
     tsize i1=v[i].first, i2=v[i].second;
