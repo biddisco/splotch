@@ -89,7 +89,11 @@ int gadget_read_header(bifstream &file, int32 *npart, double *time)
   return blocksize;
   }
 
+#ifdef INTERPOLATE
 void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *time)
+#else
+void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, double *time)
+#endif
   {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",true);

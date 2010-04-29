@@ -206,7 +206,6 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
     if (master)
       cout << endl << "reading data ..." << endl;
     int simtype = params.find<int>("simtype"); // 2:Gadget2
-    float maxr, minr;
 #ifdef INTERPOLATE
     double frac=(linecount-(nextfile-ninterpol))/double(ninterpol);
 #endif
@@ -258,7 +257,10 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
         break;
       case 5:
 #if defined(USE_MPIIO)
+        {
+        float maxr, minr;
         bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+        }
 #else
         planck_fail("mpi reader not available in non MPI compiled version !");
 #endif
