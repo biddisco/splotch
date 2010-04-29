@@ -78,7 +78,7 @@ class paramfile
     void setVerbosity (bool verbose_)
       { verbose = verbose_; }
 
-    bool getVerbosity ()
+    bool getVerbosity () const
       { return verbose; }
 
     bool param_present(const std::string &key) const
