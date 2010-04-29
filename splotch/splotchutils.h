@@ -170,9 +170,8 @@ class work_distributor
 void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
   std::vector<COLOURMAP> &amap);
 
-void timeReport(paramfile &params);
-void hostReport(wallTimerSet &Timers);
-void GPUReport(wallTimerSet &cuTimers);
+void timeReport();
+void hostTimeReport(wallTimerSet &Timers);
 
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
 

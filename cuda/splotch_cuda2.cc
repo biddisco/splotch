@@ -11,6 +11,7 @@ int ptypes = 0;
 vector<particle_sim> particle_data;   //raw data from file
 vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
+wallTimerSet cuWallTimers;
 
 void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
   {
@@ -557,4 +558,40 @@ THREADFUNC combine (void *param1)
  
   }
 
+void GPUReport(wallTimerSet &cuTimers)
+  {
+    cout << "Copy2C_like (secs)         : " << cuTimers.acc("gcopy") << endl;
+    cout << "Ranging Data (secs)        : " << cuTimers.acc("grange") << endl;
+    cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
+//    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;
+    cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
+    cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
+    cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
+    cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl;
+  }
+void cuda_timeReport(paramfile &params)
+  {
+  if (mpiMgr.master())
+    {
+    wallTimers.stop("full");
+    cout << endl << "--------------------------------------------" << endl;
+    cout << "Summary of timings" << endl;
+    cout << "--------------------------------------------" << endl;
+    cout<< endl <<"Times of GPU:" <<endl;
+    GPUReport (cuWallTimers);
+    cout <<  "--------------------------------------------" << endl;
+
+    if (params.find<bool>("use_host_as_thread", false))
+      {
+      cout<< endl <<"Times of CPU HOST as threads:" <<endl;
+      hostTimeReport(wallTimers);
+      cout << "--------------------------------------------" << endl;
+      }
+    cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
+    cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
+    cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc") << endl;
+    cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
+    cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
+    }
+  }
 

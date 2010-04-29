@@ -71,7 +71,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
     }
   }
 
-void timeReport(paramfile &params)
+void timeReport()
   {
   if (mpiMgr.master())
     {
@@ -79,47 +79,20 @@ void timeReport(paramfile &params)
     cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
     cout << "--------------------------------------------" << endl;
-#ifdef CUDA
-     cout<< endl <<"Times of GPU:" <<endl;
-     GPUReport(cuWallTimers);
-     cout <<  "--------------------------------------------" << endl;
-
-     bool bHostThread = params.find<bool>("use_host_as_thread", false);
-     if (bHostThread)
-     {
-       cout<< endl <<"Times of CPU HOST as threads:" <<endl;
-       hostReport(wallTimers);
-       cout << "--------------------------------------------" << endl;
-     }
-#endif
     cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
     cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
-#ifndef CUDA
-    hostReport(wallTimers);
-#endif
+    hostTimeReport(wallTimers);
     cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc") << endl;
     cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
     cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
     }
   }
 
-void hostReport(wallTimerSet &Timers)
+void hostTimeReport(wallTimerSet &Timers)
   {
-    cout << "Ranging Data (secs)        : " << Timers.acc("range") << endl;
-    cout << "Transforming Data (secs)   : " << Timers.acc("transform") << endl;
-    cout << "Sorting Data (secs)        : " << Timers.acc("sort") << endl;
-    cout << "Coloring Sub-Data (secs)   : " << Timers.acc("coloring") << endl;
-    cout << "Rendering Sub-Data (secs)  : " << Timers.acc("render") << endl;
-  }
-
-void GPUReport(wallTimerSet &cuTimers)
-  {
-    cout << "Copy2C_like (secs)         : " << cuTimers.acc("gcopy") << endl;
-    cout << "Ranging Data (secs)        : " << cuTimers.acc("grange") << endl;
-    cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
-//    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;
-    cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
-    cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
-    cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
-    cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl;
+  cout << "Ranging Data (secs)        : " << Timers.acc("range") << endl;
+  cout << "Transforming Data (secs)   : " << Timers.acc("transform") << endl;
+  cout << "Sorting Data (secs)        : " << Timers.acc("sort") << endl;
+  cout << "Coloring Sub-Data (secs)   : " << Timers.acc("coloring") << endl;
+  cout << "Rendering Sub-Data (secs)  : " << Timers.acc("render") << endl;
   }

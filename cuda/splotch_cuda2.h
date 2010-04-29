@@ -40,11 +40,15 @@ extern std::vector<particle_sim> particle_data; //raw data from file
 extern vec3 campos, lookat, sky;
 extern std::vector<COLOURMAP> amap;
 extern int ptypes;
+extern wallTimerSet cuWallTimers;
 
 int check_device(int rank);
 void device_info(int rank, int dev);
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 
 void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic);
+
+void GPUReport(wallTimerSet &cuTimers);
+void cuda_timeReport(paramfile &params);
 
 #endif

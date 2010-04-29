@@ -54,25 +54,25 @@ int main (int argc, const char **argv)
   int nDevNode = check_device(myID);     // number of GPUs available per node
   int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
   int mydevID = 0;
-  // We assume a geometry where 
+  // We assume a geometry where
   // a) either each process uses only one gpu
   if (nDevProc == 1)
-  {
+    {
     mydevID = myID;
     if (mydevID >= nDevNode) mydevID = myID%nDevNode;
     if (nDevNode == 0 || mydevID >= nDevNode)
-    {
+      {
       cout << "There isn't a gpu available for process = " << myID << endl;
       cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
       mpiMgr.abort();
+      }
     }
-  }
   // b) or processes run on different nodes and use a number of GPUs >= 1 and <= nDevNode
   else if (nDevNode < nDevProc)
-  {
+    {
     cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
     mpiMgr.abort();
-  }
+    }
 
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) device_info(myID, mydevID);
@@ -137,7 +137,11 @@ int main (int argc, const char **argv)
 
     wallTimers.stop("write");
 
-    timeReport(params);
+#ifdef CUDA
+    cuda_timeReport(params);
+#else
+    timeReport();
+#endif
    }
 
 #ifdef VS

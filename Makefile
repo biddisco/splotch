@@ -60,12 +60,9 @@ OMP =
 endif
 
 ifeq ($(SYSTYPE),"GP")
-ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       =  nvcc -g
-else
-CC       =  nvcc -g
-endif
-OPTIMIZE = -O2 
+NVCC       =  nvcc -g 
+OPTIMIZE = -O2
 LIB_OPT  = 
 OMP =  
 #-Xcompiler -openmp
