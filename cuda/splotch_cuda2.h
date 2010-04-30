@@ -5,21 +5,7 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/walltimer.h"
 
-//things for combination with host threads
-struct  param_combine_thread //for host combine thread
-  {
-  // bool    bFinished; used in thread combine. not working.
-  bool a_eq_e;
-  void *fbuf;
-  int combineStartP, combineEndP;
-  cu_particle_splotch *ps;
-  float timeUsed;
-  arr2<COLOUR> *pPic;
-  };
 
-//#ifndef NO_WIN_THREAD
-THREADFUNC combine(void *param);
-//#endif
 THREADFUNC cu_thread_func(void *pinfo);
 THREADFUNC cu_draw_chunk(void *pinfo);
 THREADFUNC host_thread_func(void *pinfo);

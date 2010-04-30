@@ -23,6 +23,7 @@ typedef particle_sim cu_particle_sim;
 
 #define MAX_P_TYPE 8//('XXXX','TEMP','U','RHO','MACH','DTEG','DISS','VEL')
                                         //in mid of developing only
+#define MAX_EXP -20.0
 
 struct cu_param_range //parameters for range calculation
   {
@@ -118,10 +119,10 @@ struct cu_param_combine //for combination with device
 struct cu_gpu_vars //variables used by each gpu
   {
   CuPolicy            *policy;
-  cu_particle_sim     *d_pd;    //device_particle_data
-  cu_colormap_info    d_colormap_info;    //it contains device pointers
+  cu_particle_sim     *d_pd;             //device_particle_data
+  cu_colormap_info    d_colormap_info;   //device pointers
   cu_particle_splotch *d_ps_colorize;
-  cu_exptable_info    d_exp_info; //it contains device pointers
+  cu_exptable_info    d_exp_info;        //device pointers
   cu_particle_splotch *d_ps_render;
   cu_fragment_AeqE    *d_fbuf;
   cu_color            *d_pic;

@@ -163,6 +163,7 @@ THREADFUNC cu_thread_func(void *pinfo)
     ti.endP =ti.startP + len - 1;   //set range
     if (ti.endP > endP) ti.endP = endP;
     cu_draw_chunk(&ti);
+    // combine results of chunks
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
@@ -184,16 +185,15 @@ THREADFUNC cu_draw_chunk(void *pinfo)
 
   paramfile &params (*g_params);
 
-  //for each gpu/thread a varible pack is needed
+  //for each gpu/thread a variable pack is needed
   cu_gpu_vars gv;
   memset(&gv, 0, sizeof(cu_gpu_vars));
 
-  //Copy particle sim into C-style object d_particle_data
+  //copy data to local C-like array d_particle_data
   tInfo->times.start("gcopy");
   cu_particle_sim *d_particle_data = new cu_particle_sim[nParticle];
-  //copy data to local C-like array d_particle_data, in mid of developing only
-  for (int i=tInfo->startP,j=0; i<=tInfo->endP; i++, j++)
-    memcpy( &(d_particle_data[j]), &(particle_data[i]), sizeof(cu_particle_sim));
+  memcpy( &(d_particle_data[0]), &(particle_data[tInfo->startP]),
+          nParticle*sizeof(cu_particle_sim));
   tInfo->times.stop("gcopy"); 
 
   //here we analyse how to divide the whole task for large data handling
@@ -409,68 +409,69 @@ PROBLEM HERE!
   //cu_ps_filtered:       the particle array
   //pFiltered:            length of particle array
   //pPosInFragBuf:        length of the whole fragment buffer counted after filterign
-  bool bFinished=false;
-  int renderStartP, renderEndP, combineStartP, combineEndP;
-  renderStartP =renderEndP =0;
-  combineStartP = combineEndP=0;
-  int nFragments2Render=0;
 
-  //now prepare the parameters for combination
-  param_combine_thread param;
-  param.pPic =tInfo->pPic;
-  param.a_eq_e =a_eq_e;
-  if (a_eq_e)
-    param.fbuf =(void*)fragBufAeqE;
-  else
-    param.fbuf =(void*)fragBufAneqE;
-  param.ps =cu_ps_filtered;
-  param.timeUsed =0.0;
-
-  while (!bFinished)
-    {
-    //find a chunk
-    nFragments2Render =0;
-    for (renderStartP =renderEndP; renderEndP<pFiltered; renderEndP++)
+  int renderStartP, renderEndP;
+  renderEndP = 0;
+  do {
+    //find a chunk: compute number of fragments needed to render this chunk
+    int nFragments2Render = 0;
+    renderStartP =renderEndP;
+    while (renderEndP<pFiltered && nFragments2Render < nFBufInCell)
       {
-      int inc;//increasment
-      inc =(cu_ps_filtered[renderEndP].maxx-cu_ps_filtered[renderEndP].minx) *
+       int inc =(cu_ps_filtered[renderEndP].maxx-cu_ps_filtered[renderEndP].minx) *
            (cu_ps_filtered[renderEndP].maxy -cu_ps_filtered[renderEndP].miny);
-      if ( nFragments2Render +inc > nFBufInCell)
-        break;
-      else
-        nFragments2Render +=inc;
+       nFragments2Render +=inc;
+       renderEndP++;
       }
-    if (renderEndP == pFiltered)
-      bFinished =true;
 
     //render it
     cu_render1(renderStartP, renderEndP, a_eq_e, grayabsorb, &gv);
 
-    //see if it's the first chunk
-    if ( renderStartP!=0 )
-      {
-      param.combineStartP =combineStartP;
-      param.combineEndP =combineEndP;
-      //DWORD   id;
-      combine(&param);
-      // CreateThread( NULL, 0, (LPTHREAD_START_ROUTINE)combine, &param, 0, &id );
-      }
-
     //collect result
     cu_get_fbuf(fragBufAeqE, a_eq_e, nFragments2Render, &gv);
-    combineStartP=renderStartP; 
-    combineEndP =renderEndP;
 
-    //see if last chunk
-    if (bFinished)
+    //combine chunks
+    tInfo->times.start("gcombine");
+    if (a_eq_e)
+    {
+      for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
       {
-      param.combineStartP =combineStartP;
-      param.combineEndP =combineEndP;
-      combine(&param);
+        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
+        {
+          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++)
+          {
+           (*tInfo->pPic)[x][y].r += fragBufAeqE[fPos].deltaR;
+           (*tInfo->pPic)[x][y].g += fragBufAeqE[fPos].deltaG;
+           (*tInfo->pPic)[x][y].b += fragBufAeqE[fPos].deltaB;
+           fPos ++;
+          }
+        }
       }
     }
+    else
+    {
+      for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
+      {
+        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
+        {
+          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++) 
+          {
+           (*tInfo->pPic)[x][y].r = (*tInfo->pPic)[x][y].r *fragBufAneqE[fPos].factorR 
+                                   +fragBufAneqE[fPos].deltaR;
+           (*tInfo->pPic)[x][y].g = (*tInfo->pPic)[x][y].g *fragBufAneqE[fPos].factorG 
+                                   +fragBufAneqE[fPos].deltaG;
+           (*tInfo->pPic)[x][y].b = (*tInfo->pPic)[x][y].b *fragBufAneqE[fPos].factorB 
+                                   +fragBufAneqE[fPos].deltaB;
+           fPos ++;
+          }
+        }
+      }
+    }
+    tInfo->times.stop("gcombine");
+
+  } while (renderEndP < pFiltered);
+
   tInfo->times.stop("grender");
-//  tInfo->times[COMBINE] = param.timeUsed;
 
 /////////////////////////////////////////////////////////////////////
 
@@ -502,62 +503,6 @@ THREADFUNC host_thread_func(void *p)
   }
 
 
-THREADFUNC combine (void *param1)
-  {
-  static int enter=-1;
-
-  param_combine_thread *param = (param_combine_thread*)param1;
-
-  cu_particle_splotch *ps = param->ps;
-  arr2<COLOUR> *pPic = param->pPic;
-
-  wallTimer Timer;
-  Timer.start();
-
-  if (param->a_eq_e)
-    {
-    cu_fragment_AeqE *bufWrite =(cu_fragment_AeqE*)param->fbuf;
-
-    for (int pPos=param->combineStartP, fPos=0;
-         pPos<param->combineEndP; pPos++)
-      {
-      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
-        {
-        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
-          {
-          (*pPic)[x][y].r += bufWrite[fPos].deltaR;
-          (*pPic)[x][y].g += bufWrite[fPos].deltaG;
-          (*pPic)[x][y].b += bufWrite[fPos].deltaB;
-          fPos ++;
-          }
-        }
-      }
-    }
-  else
-    {
-    cu_fragment_AneqE *bufWrite =(cu_fragment_AneqE*)param->fbuf;
-
-    for (int pPos=param->combineStartP, fPos=0;
-         pPos<param->combineEndP; pPos++)
-      {
-      for (int x =ps[pPos].minx; x <ps[pPos].maxx; x++)
-        {
-        for (int y =ps[pPos].miny; y <ps[pPos].maxy; y++)
-          {
-          (*pPic)[x][y].r = (*pPic)[x][y].r *bufWrite[fPos].factorR +bufWrite[fPos].deltaR;
-          (*pPic)[x][y].g = (*pPic)[x][y].g *bufWrite[fPos].factorG +bufWrite[fPos].deltaG;
-          (*pPic)[x][y].b = (*pPic)[x][y].b *bufWrite[fPos].factorB +bufWrite[fPos].deltaB;
-          fPos ++;
-          }
-        }
-      }
-    }
-
-  Timer.stop();
-  param->timeUsed += Timer.acc();
- 
-  }
-
 void GPUReport(wallTimerSet &cuTimers)
   {
     cout << "Copy2C_like (secs)         : " << cuTimers.acc("gcopy") << endl;
@@ -569,6 +514,7 @@ void GPUReport(wallTimerSet &cuTimers)
     cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
     cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl;
   }
+
 void cuda_timeReport(paramfile &params)
   {
   if (mpiMgr.master())
