@@ -398,7 +398,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
       float64 radsq = r*r;
       float64 stp = pp.I;
-      float64 att_max=xexp(stp*radsq);
       for (int y=miny; y<maxy; ++y)
         pre1[y]=xexp(stp*(y-posy)*(y-posy));
 
@@ -406,17 +405,17 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         {
         for (int x=minx; x<maxx; ++x)
           {
-          double pre2 = xexp(stp*(x-posx)*(x-posx));
-          for (int y=miny; y<maxy; ++y)
+          double dxsq=(x-posx)*(x-posx);
+          double dy=sqrt(radsq-dxsq);
+          int miny2=max(miny,int(posy-dy+1)),
+              maxy2=min(maxy,int(posy+dy+1));
+          double pre2 = xexp(stp*dxsq);
+          for (int y=miny2; y<maxy2; ++y)
             {
             float64 att = pre1[y]*pre2;
-//FIXME: this if() seems to hurt performance
-            if (att>att_max)
-              {
-              lpic[x][y].r += att*a.r;
-              lpic[x][y].g += att*a.g;
-              lpic[x][y].b += att*a.b;
-              }
+            lpic[x][y].r += att*a.r;
+            lpic[x][y].g += att*a.g;
+            lpic[x][y].b += att*a.b;
             }
           }
         }
@@ -426,17 +425,17 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
         for (int x=minx; x<maxx; ++x)
           {
-          double pre2 = xexp(stp*(x-posx)*(x-posx));
-          for (int y=miny; y<maxy; ++y)
+          double dxsq=(x-posx)*(x-posx);
+          double dy=sqrt(radsq-dxsq);
+          int miny2=max(miny,int(posy-dy+1)),
+              maxy2=min(maxy,int(posy+dy+1));
+          double pre2 = xexp(stp*dxsq);
+          for (int y=miny2; y<maxy2; ++y)
             {
             float64 att = pre1[y]*pre2;
-//FIXME: this if() seems to hurt performance
-            if (att>att_max)
-              {
-              lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
-              lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
-              lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
-              }
+            lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
+            lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
+            lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
             }
           }
         }
