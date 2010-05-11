@@ -44,9 +44,7 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
 
   file_id = H5Fopen(datafile.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
   *inp = file_id;
-    cout << "son qua 1\n";
   dataset_id = H5Dopen(file_id,field[use_field].c_str());
-    cout << "son qua 2\n";
   dataset_space = H5Dget_space(dataset_id);
   nrank = H5Sget_simple_extent_ndims(dataset_space);
   //cout << "SPACE DIM = " << nrank << endl;
