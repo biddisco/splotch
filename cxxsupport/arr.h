@@ -222,8 +222,8 @@ template <typename T> class arr
       planck_fail ("entry '"+dataToString(val)+"' not found in array");
       }
 
-    /*! Assigns the contents and size of \a other to the array. On exit,
-        \a other is zero-sized. */
+    /*! Assigns the contents and size of \a other to the array.
+        \note On exit, \a other is zero-sized! */
     void transfer (arr &other)
       { if (own) delete[] d; d=other.d; s=other.s; own=other.own; other.reset(); }
     /*! Swaps contents and size with \a other. */
