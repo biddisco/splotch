@@ -52,6 +52,8 @@ int main (int argc, const char **argv)
 
   int myID = mpiMgr.rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
+  if (nDevNode < 1)   mpiMgr.abort();
+
   int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
   int mydevID = 0;
   // We assume a geometry where
@@ -60,7 +62,7 @@ int main (int argc, const char **argv)
     {
     mydevID = myID;
     if (mydevID >= nDevNode) mydevID = myID%nDevNode;
-    if (nDevNode == 0 || mydevID >= nDevNode)
+    if ( mydevID >= nDevNode)
       {
       cout << "There isn't a gpu available for process = " << myID << endl;
       cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
@@ -75,7 +77,7 @@ int main (int argc, const char **argv)
     }
 
   bool gpu_info = params.find<bool>("gpu_info",false);
-  if (gpu_info) device_info(myID, mydevID);
+  if (gpu_info) print_device_info(myID, mydevID);
 #endif // CUDA 
 
   get_colourmaps(params,amap);
