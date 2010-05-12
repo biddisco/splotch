@@ -26,6 +26,7 @@
 #include <vector>
 #include "kernel/colour.h"
 
+
 template<typename T> class anythingMap
   {
   private:
@@ -43,8 +44,7 @@ template<typename T> class anythingMap
 
     void sortMap()
       {
-      using namespace std;
-      vector<size_t> idx;
+      std::vector<size_t> idx;
       buildIndex(x.begin(),x.end(),idx);
       sortByIndex(x.begin(),x.end(),idx);
       sortByIndex(y.begin(),y.end(),idx);
@@ -53,7 +53,6 @@ template<typename T> class anythingMap
 
     T getVal (double x_)
       {
-      using namespace std;
       planck_assert(x.size()>0,"trying to access an empty map");
       if (x.size()==1) return y[0];
       if (!sorted) sortMap();
@@ -64,7 +63,6 @@ template<typename T> class anythingMap
       }
     T getVal_const (double x_) const
       {
-      using namespace std;
       planck_assert(x.size()>0,"trying to access an empty map");
       planck_assert(sorted,"map must be sorted");
       if (x.size()==1) return y[0];
