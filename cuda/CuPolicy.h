@@ -17,7 +17,6 @@ class CuPolicy
   {
   private:
     unsigned int m_blockSize, maxregion, fbsize;
-    void GetDims1(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
 
   public:
     CuPolicy(paramfile &Param);
@@ -25,12 +24,7 @@ class CuPolicy
     int GetMaxRegion();
     int GetFBufSize();
     int GetSizeDPD(unsigned int n);
-    void GetDimsRange(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
-    void GetDimsColorize(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
-    void GetDimsRender(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
-    void GetDimsCombine(unsigned int minx, unsigned int miny,
-      unsigned int maxx, unsigned int maxy,dim3 *dimGrid, dim3 *dimBlock);
-    void GetDimsPostProcess(int xres, int yres,dim3 *dimGrid, dim3 *dimBlock);
+    void GetDimsBlockGrid(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
     unsigned int GetFBufSize(bool a_eq_e);
   };
 

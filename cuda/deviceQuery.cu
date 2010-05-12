@@ -47,24 +47,25 @@ int check_device(int rank)
 {
     int deviceCount;
     CUDA_SAFE_CALL(cudaGetDeviceCount(&deviceCount));
-    if (deviceCount == 0)
+    if (deviceCount == 1)
     {
+      cudaDeviceProp deviceProp;
+      CUDA_SAFE_CALL(cudaGetDeviceProperties(&deviceProp, 0));
+      if (deviceProp.major == 9999 && deviceProp.minor == 9999) // emulation mode
+      {
         printf("Rank %d: There is no device supporting CUDA\n", rank);
         fflush(stdout);
         return 0;
+      }
     }
-    else return deviceCount;
+    return deviceCount;
 }
 
-void device_info(int rank, int dev)
+void print_device_info(int rank, int dev)
 {
    cudaDeviceProp deviceProp;
    CUDA_SAFE_CALL(cudaGetDeviceProperties(&deviceProp, dev));
- 
-   if (deviceProp.major == 9999 && deviceProp.minor == 9999)
-             printf("Rank %d:There is no device supporting CUDA.\n");
-   else
-   {
+  
     printf("\nRank %d - Device %d: \"%s\"\n", rank, dev, deviceProp.name);
     printf("  Major revision number:                         %d\n",
                deviceProp.major);
@@ -106,5 +107,5 @@ void device_info(int rank, int dev)
     printf("  Concurrent copy and execution:                 %s\n",
                deviceProp.deviceOverlap ? "Yes" : "No");
 #endif
-   }
+ 
 }
