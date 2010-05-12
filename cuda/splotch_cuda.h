@@ -65,7 +65,7 @@ struct cu_colormap_info
 struct cu_particle_splotch
   {
   float x,y,r,ro;
-  cu_color a,e;
+  cu_color e;
   bool isValid;
   unsigned short minx, miny, maxx, maxy;
   unsigned long posInFragBuf;
@@ -82,7 +82,7 @@ struct cu_param_colorize
 
 struct cu_exptable_info
   {
-  float expfac;
+  float expfac, taylorlimit;
   float *tab1, *tab2;
   enum {
     nbits=10,
@@ -96,25 +96,15 @@ struct cu_exptable_info
 
 struct cu_fragment_AeqE
   {
-  float deltaR, deltaG, deltaB;
+  float aR, aG, aB;
   };
 
 struct cu_fragment_AneqE
   {
-  float deltaR, deltaG, deltaB;
-  float factorR, factorG, factorB;
+  float aR, aG, aB;
+  float qR, qG, qB;
   };
 
-struct cu_param_combine //for combination with device
-  {
-  cu_color *pic;
-  unsigned int xres, yres;
-  cu_fragment_AeqE *fbuf;
-  unsigned int lenFBuf;
-  cu_particle_splotch *p;
-  unsigned int pStart, pEnd;
-  int minx,miny, maxx,maxy;
-  };
 
 struct cu_gpu_vars //variables used by each gpu
   {
@@ -124,18 +114,19 @@ struct cu_gpu_vars //variables used by each gpu
   cu_particle_splotch *d_ps_colorize;
   cu_exptable_info    d_exp_info;        //device pointers
   cu_particle_splotch *d_ps_render;
-  cu_fragment_AeqE    *d_fbuf;
+ // cu_fragment_AeqE    *d_fbuf;
+  void                *d_fbuf;
   cu_color            *d_pic;
   };
 
 //functions
-extern "C" {
 
 void cu_init(int devID);
+void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
 void cu_range
   (paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
-void cu_transform (paramfile &params, unsigned int n, double campos[3],
-  double lookat[3], double sky[3],cu_particle_sim* h_pd, cu_gpu_vars* pgv);
+void cu_transform (paramfile &fparams, unsigned int n,
+  vec3 &campos, vec3 &lookat, vec3 &sky, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_colorize
   (paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
@@ -147,7 +138,8 @@ void cu_render1
 void cu_get_fbuf (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void cu_end (cu_gpu_vars* pgv);
 int cu_get_chunk_particle_count(paramfile &params);
+void getCuTransformParams(cu_param_transform &para_trans,
+paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
 
-}
 
 #endif

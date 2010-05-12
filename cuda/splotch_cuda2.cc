@@ -3,6 +3,7 @@
 #endif
 
 #include "cuda/splotch_cuda2.h"
+#include "cuda/CuPolicy.h"
 
 using namespace std;
 
@@ -167,7 +168,7 @@ THREADFUNC cu_thread_func(void *pinfo)
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
-    ti.startP = ti.endP +1;
+    ti.startP = ti.endP + 1;
     pInfoOutput->times = ti.times;
     }
   }
@@ -180,24 +181,21 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   thread_info *tInfo = (thread_info*)pinfo;
   tInfo->times.start("gpu_thread");
 
-  int nParticle =tInfo->endP -tInfo->startP +1;
+  int nParticle = tInfo->endP - tInfo->startP + 1;
   printf("Rank %d - GPU %d : Processing %d particles\n", mpiMgr.rank(), tInfo->devID, nParticle);
 
-  paramfile &params (*g_params);
+  paramfile &params(*g_params);
 
   //for each gpu/thread a variable pack is needed
   cu_gpu_vars gv;
   memset(&gv, 0, sizeof(cu_gpu_vars));
+  gv.policy = new CuPolicy(params); // Initialize gv.policy class
 
-  //copy data to local C-like array d_particle_data
-  tInfo->times.start("gcopy");
-  cu_particle_sim *d_particle_data = new cu_particle_sim[nParticle];
-  memcpy( &(d_particle_data[0]), &(particle_data[tInfo->startP]),
-          nParticle*sizeof(cu_particle_sim));
-  tInfo->times.stop("gcopy"); 
+  //copy data address to local C-like array pointer d_particle_data
+  cu_particle_sim *d_particle_data = &(particle_data[tInfo->startP]);
+  cu_copy_particles_to_device(d_particle_data, nParticle, &gv);
 
   //here we analyse how to divide the whole task for large data handling
-
   //CUDA Ranging
   tInfo->times.start("grange");
   cu_range(params, d_particle_data, nParticle, &gv);
@@ -205,10 +203,7 @@ THREADFUNC cu_draw_chunk(void *pinfo)
 
   //CUDA Transformation
   tInfo->times.start("gtransform");
-  double  c[3]={campos.x, campos.y, campos.z},
-          l[3]={lookat.x, lookat.y, lookat.z},
-          s[3]={sky.x, sky.y,     sky.z};
-  cu_transform(params, nParticle,c, l, s,d_particle_data, &gv);
+  cu_transform(params, nParticle, campos, lookat, sky, d_particle_data, &gv);
   tInfo->times.stop("gtransform");
 
 /* temporarily ignore sorting 191109.
@@ -238,7 +233,7 @@ PROBLEM HERE!
   //CUDA Coloring
   tInfo->times.start("gcoloring");
   //init C style colormap
-  cu_color_map_entry *amapD;//amap for Device. emap is not used currently
+  cu_color_map_entry *amapD;//amap for Device
   int *amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
   amapDTypeStartPos =new int[ptypes];
   int curPtypeStartPos =0;
@@ -261,7 +256,7 @@ PROBLEM HERE!
       amapD[index].color.b = c.b;
       index++;
       }
-    amapDTypeStartPos[i] =curPtypeStartPos;
+    amapDTypeStartPos[i] = curPtypeStartPos;
     curPtypeStartPos += j;
     }
   //now let cuda init colormap on device
@@ -272,10 +267,10 @@ PROBLEM HERE!
   clmp_info.ptypes =ptypes;
   cu_init_colormap(clmp_info, &gv);
 
-  //init cu_particle_splotch array memeory
+  //init cu_particle_splotch array memory
   cu_particle_splotch *cu_ps;
-  size =nParticle;
-  cu_ps =new cu_particle_splotch[size];
+  size = nParticle;
+  cu_ps = new cu_particle_splotch[size];
   memset(cu_ps, 0, size);
 
   //Colorize with device
@@ -283,89 +278,59 @@ PROBLEM HERE!
   tInfo->times.stop("gcoloring");
 
 //////////////////////////////////////////////////////////////////////
-  tInfo->times.start("gfilter");
+ 
   //filter particle_splotch array to a cu_ps_filtered
-  int pFiltered=0;
-  //for sorting and splitting
-  vector <cu_particle_splotch> v_ps;
-  cu_particle_splotch p;
-  //do filtering
+  tInfo->times.start("gfilter");
+
   unsigned long posInFragBuf =0;
   int minx=1e6,miny=1e6, maxx=-1,maxy=-1;
+  int maxRegion = cu_get_max_region(&gv);
 
-  //old code observ size
-  //select valid ones
+  //for select and splitting
+  vector <cu_particle_splotch> v_ps;
+  cu_particle_splotch p, pNew;
+  
   for (int i=0; i<size; i++)
-    {
-    if (cu_ps[i].isValid)
-      {
-      //IMPORTANT: set the start position of this particle in fragment buffer
-      // cu_ps[i].posInFragBuf =posInFragBuf;
-      // posInFragBuf += (cu_ps[i].maxx -cu_ps[i].minx)*
-      // (cu_ps[i].maxy -cu_ps[i].miny); SHOULD DO AFTER SORTING!
-      // memcpy(&cu_ps_filtered[pFiltered],&cu_ps[i], sizeof(cu_particle_splotch));
+   {
+     //select valid ones
+     p = cu_ps[i];
+     if (p.isValid)
+     {
+       int h = p.maxy - p.miny;
+       int w = p.maxx - p.minx;
 
-      memcpy(&p, &cu_ps[i], sizeof(cu_particle_splotch));
-      v_ps.push_back(p);
-      pFiltered++;
-
-      minx=min(minx,(int)cu_ps[i].minx);
-      miny=min(miny,(int)cu_ps[i].miny);
-      maxx=max(maxx,(int)cu_ps[i].maxx);
-      maxy=max(maxy,(int)cu_ps[i].maxy);
+       if (h*w < maxRegion)
+       {
+         v_ps.push_back(p);
+       }
+       else
+       { //particle too big -> split
+         pNew = p;
+         int w1 = (maxRegion%h == 0) ? (maxRegion/h):(maxRegion/h + 1);
+         for (int minx = p.minx; minx < p.maxx; minx += w1)
+         {
+           pNew.minx = minx;  //minx,maxx of pNew need to be set
+           pNew.maxx = (minx+w1 >= p.maxx) ? p.maxx : minx+w1;
+           v_ps.push_back(pNew);
+         }
+       }
       }
     }
- 
-  int maxRegion =cu_get_max_region(&gv);
-  vector<cu_particle_splotch> v_ps1;//result goes to it
-  for (vector<cu_particle_splotch>::iterator i=v_ps.begin(); i<v_ps.end(); i++)
-    {
-    int h, w;
-    cu_particle_splotch     p, pNew;
-    p =(*i);
-    h = p.maxy - p.miny;
-    w = p.maxx - p.minx;
 
-    if (h*w <maxRegion)
-    // if ( 1)//no splitting test
-      {
-      v_ps1.push_back(p);
-      continue;
-      }
-
-    //now we split
-    int w1 = (maxRegion %h==0) ? (maxRegion /h):(maxRegion /h +1);
-    //insert new cells
-    pNew =p;
-    //minx,maxx of pNew need to be set
-    for (int minx =p.minx; minx<p.maxx; minx+=w1)
-      {
-      pNew.minx =minx;
-      pNew.maxx =( minx+w1 >=p.maxx) ? p.maxx : minx+w1;
-      v_ps1.push_back(pNew);
-      }
-    }
-  tInfo->times.stop("gfilter");
-
-  tInfo->times.start("gsort");
-  v_ps.clear();//not useful any more
-  //sort the filtered,splitted v_ps
-  // sort(v_ps1.begin(), v_ps1.end(), region_cmp());
-  tInfo->times.stop("gsort");
-
-  tInfo->times.start("gfilter");
-  //copy to C-style array cu_ps_filtered
+  int pFiltered = v_ps.size();
   cu_particle_splotch *cu_ps_filtered;
-  size =v_ps1.size();
-  cu_ps_filtered =new cu_particle_splotch[size];
-  pFiltered =v_ps1.size();
-  for(int i=0; i<pFiltered; i++)
-    {
-    v_ps1[i].posInFragBuf =posInFragBuf;
-    int     region =(v_ps1[i].maxx -v_ps1[i].minx)*(v_ps1[i].maxy -v_ps1[i].miny);
-    posInFragBuf +=region;
-    cu_ps_filtered[i] =v_ps1[i];
-    }
+  cu_ps_filtered = new cu_particle_splotch[pFiltered];
+  for (int i=0; i< pFiltered; i++)
+   {
+    //IMPORTANT: set the start position of the particle in fragment buffer
+    v_ps[i].posInFragBuf = posInFragBuf;
+    int     region = (v_ps[i].maxx - v_ps[i].minx) *
+                     (v_ps[i].maxy - v_ps[i].miny);  //SHOULD DO AFTER SORTING!
+    posInFragBuf += region;
+    cu_ps_filtered[i] = v_ps[i];
+   }
+
+  v_ps.clear();
   tInfo->times.stop("gfilter");
 
 // ----------------------------------
@@ -380,35 +345,28 @@ PROBLEM HERE!
   float64 grayabsorb = params.find<float>("gray_absorption",0.2);
   bool a_eq_e = params.find<bool>("a_eq_e",true);
 
-  //CUDA Rendering with device
-
-  //here's the point of multi-go loop starts
   tInfo->times.start("grender");
   //prepare fragment buffer memory space first
   cu_fragment_AeqE  *fragBufAeqE;
   cu_fragment_AneqE *fragBufAneqE;
-  int nFBufInByte =cu_get_fbuf_size(&gv);
+  int nFBufInByte = cu_get_fbuf_size(&gv);
   int nFBufInCell;
   if (a_eq_e)
     {
-    nFBufInCell =nFBufInByte/sizeof(cu_fragment_AeqE);
-    fragBufAeqE =new cu_fragment_AeqE[nFBufInCell];
+    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AeqE);
+    fragBufAeqE = new cu_fragment_AeqE[nFBufInCell];
     }
   else
     {
-    nFBufInCell =nFBufInByte/sizeof(cu_fragment_AneqE);
-    fragBufAneqE =new cu_fragment_AneqE[nFBufInCell];
+    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AneqE);
+    fragBufAneqE = new cu_fragment_AneqE[nFBufInCell];
     }
 
-  cu_prepare_render(cu_ps_filtered,pFiltered, &gv);
+  //allocate particles and buffer on device
+  cu_prepare_render(&(cu_ps_filtered[0]), pFiltered, &gv);
 
   //clear the output pic
   tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
-
-  //initialize combine vars
-  //cu_ps_filtered:       the particle array
-  //pFiltered:            length of particle array
-  //pPosInFragBuf:        length of the whole fragment buffer counted after filterign
 
   int renderStartP, renderEndP;
   renderEndP = 0;
@@ -418,31 +376,32 @@ PROBLEM HERE!
     renderStartP =renderEndP;
     while (renderEndP<pFiltered && nFragments2Render < nFBufInCell)
       {
-       int inc =(cu_ps_filtered[renderEndP].maxx-cu_ps_filtered[renderEndP].minx) *
-           (cu_ps_filtered[renderEndP].maxy -cu_ps_filtered[renderEndP].miny);
-       nFragments2Render +=inc;
+       int inc =(cu_ps_filtered[renderEndP].maxx - cu_ps_filtered[renderEndP].minx) *
+                (cu_ps_filtered[renderEndP].maxy - cu_ps_filtered[renderEndP].miny);
+       nFragments2Render += inc;
        renderEndP++;
       }
 
     //render it
     cu_render1(renderStartP, renderEndP, a_eq_e, grayabsorb, &gv);
 
-    //collect result
-    cu_get_fbuf(fragBufAeqE, a_eq_e, nFragments2Render, &gv);
-
     //combine chunks
+    //cu_ps_filtered:       the particle array
+    //pFiltered:            length of particle array
     tInfo->times.start("gcombine");
     if (a_eq_e)
     {
+      //collect result
+      cu_get_fbuf(fragBufAeqE, a_eq_e, nFragments2Render, &gv);
       for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
       {
         for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
         {
           for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++)
           {
-           (*tInfo->pPic)[x][y].r += fragBufAeqE[fPos].deltaR;
-           (*tInfo->pPic)[x][y].g += fragBufAeqE[fPos].deltaG;
-           (*tInfo->pPic)[x][y].b += fragBufAeqE[fPos].deltaB;
+           (*tInfo->pPic)[x][y].r += fragBufAeqE[fPos].aR;
+           (*tInfo->pPic)[x][y].g += fragBufAeqE[fPos].aG;
+           (*tInfo->pPic)[x][y].b += fragBufAeqE[fPos].aB;
            fPos ++;
           }
         }
@@ -450,18 +409,20 @@ PROBLEM HERE!
     }
     else
     {
+      //collect result
+      cu_get_fbuf(fragBufAneqE, a_eq_e, nFragments2Render, &gv);
       for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
       {
         for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
         {
           for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++) 
           {
-           (*tInfo->pPic)[x][y].r = (*tInfo->pPic)[x][y].r *fragBufAneqE[fPos].factorR 
-                                   +fragBufAneqE[fPos].deltaR;
-           (*tInfo->pPic)[x][y].g = (*tInfo->pPic)[x][y].g *fragBufAneqE[fPos].factorG 
-                                   +fragBufAneqE[fPos].deltaG;
-           (*tInfo->pPic)[x][y].b = (*tInfo->pPic)[x][y].b *fragBufAneqE[fPos].factorB 
-                                   +fragBufAneqE[fPos].deltaB;
+           (*tInfo->pPic)[x][y].r += fragBufAneqE[fPos].aR *
+				   ((*tInfo->pPic)[x][y].r - fragBufAneqE[fPos].qR);
+           (*tInfo->pPic)[x][y].g += fragBufAneqE[fPos].aG *
+				   ((*tInfo->pPic)[x][y].g - fragBufAneqE[fPos].qG); 
+           (*tInfo->pPic)[x][y].b += fragBufAneqE[fPos].aB *
+                                   ((*tInfo->pPic)[x][y].b - fragBufAneqE[fPos].qB);
            fPos ++;
           }
         }
@@ -476,7 +437,7 @@ PROBLEM HERE!
 /////////////////////////////////////////////////////////////////////
 
   cu_end(&gv);
-  delete []d_particle_data;
+
   delete []amapD;
   delete []amapDTypeStartPos;
   delete []cu_ps;
@@ -505,7 +466,6 @@ THREADFUNC host_thread_func(void *p)
 
 void GPUReport(wallTimerSet &cuTimers)
   {
-    cout << "Copy2C_like (secs)         : " << cuTimers.acc("gcopy") << endl;
     cout << "Ranging Data (secs)        : " << cuTimers.acc("grange") << endl;
     cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
 //    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;

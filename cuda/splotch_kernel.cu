@@ -15,6 +15,10 @@ Copyright things go here.
 #define get_sn_from_xy(x,y,maxy,miny, sn)\
     {sn =x*(maxy-miny) +y;}
 
+#define get_minmax(minv, maxv, val) \
+         minv=min(minv,val); \
+         maxv=max(maxv,val);
+
 /////////help functions///////////////////////////////////
 __device__ float    my_asinh(float val)
   {
@@ -82,18 +86,32 @@ __device__  float get_exp(float arg, cu_exptable_info d_exp_info)
   __shared__  float   expfac;
   __shared__  float   *tab1, *tab2;
   __shared__  int     mask1, mask3, nbits;
-  expfac  =d_exp_info.expfac;
-  tab1    =d_exp_info.tab1;
-  tab2    =d_exp_info.tab2;
-  mask1   =d_exp_info.mask1;
-  mask3   =d_exp_info.mask3;
-  nbits   =d_exp_info.nbits;
+  expfac  = d_exp_info.expfac;
+  tab1    = d_exp_info.tab1;
+  tab2    = d_exp_info.tab2;
+  mask1   = d_exp_info.mask1;
+  mask3   = d_exp_info.mask3;
+  nbits   = d_exp_info.nbits;
 
   int iarg= (int)(arg*expfac);
   //  for final device code
   if (iarg&mask3)
     return (iarg<0) ? 1. : 0.;
   return tab1[iarg>>nbits]*tab2[iarg&mask1];
+#endif
+  }
+
+__device__  float get_expm1(float arg, cu_exptable_info d_exp_info)
+  {
+#if 0
+  return exp(arg)-1.0;
+#else
+  //fetch things to local
+  __shared__  float  taylorlimit;
+  taylorlimit = d_exp_info.taylorlimit;
+  
+  if(abs(arg) < taylorlimit) return arg;
+  return get_exp(arg, d_exp_info)-1.0;   // exp(x)-1~x
 #endif
   }
 
@@ -142,9 +160,9 @@ __global__ void k_combine
       fpos =sn1 +p[i].posInFragBuf;
 
       get_sn_from_xy(point_x, point_y, yres,0, sn2);
-      pic[sn2].r +=fbuf[fpos].deltaR;
-      pic[sn2].g +=fbuf[fpos].deltaG;
-      pic[sn2].b +=fbuf[fpos].deltaB;
+      pic[sn2].r +=fbuf[fpos].aR;
+      pic[sn2].g +=fbuf[fpos].aG;
+      pic[sn2].b +=fbuf[fpos].aB;
       }
     }
   }
@@ -153,7 +171,7 @@ __global__ void k_combine
 __global__ void k_render1
   (cu_particle_splotch *p,  int startP,  int endP,
   void *buf, bool a_eq_e, float grayabsorb,
-  cu_exptable_info d_exp_info)//, int xres, int yres)
+  cu_exptable_info d_exp_info)
   {
   //first get the index m of this thread
   int m, n=endP-startP;
@@ -171,80 +189,76 @@ __global__ void k_render1
     fbuf1 =(cu_fragment_AneqE*)buf;
 
   //now do the calc
-  const float rfac=1.5;
   const float powtmp = pow(Pi,1./3.);
   const float sigma0=powtmp/sqrt(2*Pi);
   const float bfak=1./(2*sqrt(Pi)*powtmp);
 
   int x0s=0, y0s=0;
-  float r=p[m].r;
   float posx=p[m].x, posy=p[m].y;
   posx-=x0s; posy-=y0s;
-  float rfacr=rfac*r;
 
-  cu_color a=p[m].a, e, q;
+  cu_color e=p[m].e, q;
   if (!a_eq_e)
-    {
-    e=p[m].e;
-    q.r=e.r/(a.r+grayabsorb);
-    q.g=e.g/(a.g+grayabsorb);
-    q.b=e.b/(a.b+grayabsorb);
-    }
+   {
+     q.r = e.r/(e.r+grayabsorb);
+     q.g = e.g/(e.g+grayabsorb);
+     q.b = e.b/(e.b+grayabsorb);
+   }
+  float intens = -0.5*bfak/p[m].ro;
+  e.r*=intens; e.g*=intens; e.b*=intens;
 
+  const float rfac=1.5;
+  float r=p[m].r;
+  float rfacr=rfac*r;
   float radsq = rfacr*rfacr;
-  float prefac1 = -0.5/(r*r*sigma0*sigma0);
-  float prefac2 = -0.5*bfak/p[m].ro;
-  int minx, miny, maxx, maxy;
-  minx =p[m].minx;    miny =p[m].miny;
-  maxx =p[m].maxx;    maxy =p[m].maxy;
-  unsigned int    fpos;
-  fpos =p[m].posInFragBuf -p[startP].posInFragBuf;
+  float stp = -0.5/(r*r*sigma0*sigma0);
 
-  for (int x=minx; x<maxx; ++x)
+  unsigned int fpos =p[m].posInFragBuf -p[startP].posInFragBuf;
+  for (int x=p[m].minx; x<p[m].maxx; ++x)
     {
-    float xsq=(x-posx)*(x-posx);
-    for (int y=miny; y<maxy; ++y)
+     float xsq=(x-posx)*(x-posx);
+     for (int y=p[m].miny; y<p[m].maxy; ++y)
       {
-      float dsq = (y-posy)*(y-posy) + xsq;
-      if (dsq<radsq)
+        float dsq = (y-posy)*(y-posy) + xsq;
+        if (dsq<radsq)
         {
-        float fac = prefac2*get_exp(prefac1*dsq, d_exp_info);
-        if (a_eq_e)
+         float att = get_exp(stp*dsq, d_exp_info);
+         if (a_eq_e)
           {
-          fbuf[fpos].deltaR = (fac*a.r);
-          fbuf[fpos].deltaG = (fac*a.g);
-          fbuf[fpos].deltaB = (fac*a.b);
+          fbuf[fpos].aR = att*e.r;
+          fbuf[fpos].aG = att*e.g;
+          fbuf[fpos].aB = att*e.b;
           }
-        else
+         else
           {
-          float   exp;
-          exp =get_exp(fac*a.r, d_exp_info);
-          fbuf1[fpos].factorR =exp;
-          fbuf1[fpos].deltaR  =q.r*(1.0-exp);
-          exp =get_exp(fac*a.g, d_exp_info);
-          fbuf1[fpos].factorG =exp;
-          fbuf1[fpos].deltaG  =q.g*(1.0-exp);
-          exp =get_exp(fac*a.b, d_exp_info);
-          fbuf1[fpos].factorB =exp;
-          fbuf1[fpos].deltaB  =q.b*(1.0-exp);
+          float   expm1;
+          expm1 =get_expm1(att*e.r, d_exp_info);
+          fbuf1[fpos].aR = expm1;
+          fbuf1[fpos].qR = q.r;
+          expm1 =get_expm1(att*e.g, d_exp_info);
+          fbuf1[fpos].aG = expm1;
+          fbuf1[fpos].qG = q.g;
+          expm1 =get_expm1(att*e.b, d_exp_info);
+          fbuf1[fpos].aB = expm1;
+          fbuf1[fpos].qB = q.b;
           }//if a_eq_e
         }//if dsq<radsq
       else
         {
         if (a_eq_e)
           {
-          fbuf[fpos].deltaR =0.0;
-          fbuf[fpos].deltaG =0.0;
-          fbuf[fpos].deltaB =0.0;
+          fbuf[fpos].aR =0.0;
+          fbuf[fpos].aG =0.0;
+          fbuf[fpos].aB =0.0;
           }
         else
           {
-          fbuf1[fpos].deltaR =0.0;
-          fbuf1[fpos].deltaG =0.0;
-          fbuf1[fpos].deltaB =0.0;
-          fbuf1[fpos].factorR =1.0;
-          fbuf1[fpos].factorG =1.0;
-          fbuf1[fpos].factorB =1.0;
+          fbuf1[fpos].aR =0.0;
+          fbuf1[fpos].aG =0.0;
+          fbuf1[fpos].aB =0.0;
+          fbuf1[fpos].qR =1.0;
+          fbuf1[fpos].qG =1.0;
+          fbuf1[fpos].qB =1.0;
           }
         }
       //for each (x,y)
@@ -260,8 +274,7 @@ __global__ void k_colorize
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n)
-    m =n;
+  if (m >n) m =n;
 
   //now do the calc, p[m]--->p2[m]
   p2[m].isValid=false;
@@ -270,7 +283,6 @@ __global__ void k_colorize
 
   float r=p[m].r;
   float posx=p[m].x, posy=p[m].y;
-
   float rfacr=params->rfac*r;
 
   int minx=int(posx-rfacr+1);
@@ -316,19 +328,16 @@ __global__ void k_colorize
   else
     {
     e=get_color(p[m].type, col1, info);
-    e.r *=intensity;
-    e.g *=intensity;
-    e.b *=intensity;
+    e.r *= intensity;
+    e.g *= intensity;
+    e.b *= intensity;
     }
-
-  cu_color a=e;
 
   p2[m].isValid =true;
   p2[m].x =p[m].x;
   p2[m].y =p[m].y;
   p2[m].r =p[m].r;
   p2[m].ro=p[m].ro;
-  p2[m].a=a;
   p2[m].e=e;
   }
 
@@ -337,19 +346,20 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >=n)
-    m =n;
+  if (m >=n) m = n;
 
   //now do the calc
   //I, minint, maxint
   if (pr->log_int[p[m].type]) //could access invalid address under EMULATION
     p[m].I = log10(p[m].I);
+  get_minmax(pr->minint[p[m].type], pr->maxint[p[m].type], p[m].I);
 
   //C1, mincol, maxcol
   if (pr->log_col[p[m].type])
   p[m].C1 = log10(p[m].C1);
   if (pr->asinh_col[p[m].type])
     p[m].C1 = my_asinh(p[m].C1);
+  get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C1);
 
   //C2, C3, mincol, maxcol
   if (pr->col_vector[p[m].type])
@@ -364,6 +374,8 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
       p[m].C2 = my_asinh(p[m].C2);
       p[m].C3 = my_asinh(p[m].C3);
       }
+    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C2);
+    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C3);
     }
   }
 
@@ -375,8 +387,7 @@ __global__ void k_range2
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n)
-    m =n;
+  if (m >n) m =n;
 
   //do the calculation
   if(p[m].type == itype)///clamp into (min,max)
@@ -397,8 +408,7 @@ __global__ void k_transform
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n)
-    m =n;
+  if (m >n) m =n;
 
   //copy parameters to __share__ local memory? later
 
@@ -412,27 +422,27 @@ __global__ void k_transform
   p[m].z =z;
 
   //do ro and r
-  float   xfac =ptrans->xfac;
+  float   xfac = ptrans->xfac;
+  float   res2 = 0.5*ptrans->res;
   if (!ptrans->projection)
     {
-    p[m].x = ptrans->res*.5 * (p[m].x+ptrans->fovfct*ptrans->dist)*xfac;
-    p[m].y = ptrans->res*.5 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac;
+    p[m].x = res2 * (p[m].x+ptrans->fovfct*ptrans->dist)*xfac;
+    p[m].y = res2 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac;
     }
     else
     {
     xfac=1./(ptrans->fovfct*p[m].z);
-    p[m].x = ptrans->res*.5 * (p[m].x+ptrans->fovfct*p[m].z)*xfac;
-    p[m].y = ptrans->res*.5 * (p[m].y+ptrans->fovfct*p[m].z)*xfac;
+    p[m].x = res2 * (p[m].x+ptrans->fovfct*p[m].z)*xfac;
+    p[m].y = res2 * (p[m].y+ptrans->fovfct*p[m].z)*xfac;
     }
 
   p[m].ro = p[m].r;
-  p[m].r = p[m].r *ptrans->res*.5*xfac;
+  p[m].r = p[m].r *res2*xfac;
 
-  if (ptrans->minhsmlpixel)
-    if ((p[m].r <= 0.5) && (p[m].r >= 0.0))
+  if (ptrans->minhsmlpixel && (p[m].r >= 0.0))
       {
-      p[m].r = 0.5;
-      p[m].ro = p[m].r/(ptrans->res*.5*xfac);
+      p[m].r = sqrt(p[m].r*p[m].r + .5 * .5);
+      p[m].ro = p[m].r/(res2*xfac);
       }
   }
 
