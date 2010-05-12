@@ -214,23 +214,44 @@ __global__ void k_render1
   float stp = -0.5/(r*r*sigma0*sigma0);
 
   unsigned int fpos =p[m].posInFragBuf -p[startP].posInFragBuf;
-  for (int x=p[m].minx; x<p[m].maxx; ++x)
+
+  if (a_eq_e)
+  {
+    for (int x=p[m].minx; x<p[m].maxx; ++x)
     {
-     float xsq=(x-posx)*(x-posx);
+     float dxsq=(x-posx)*(x-posx);
      for (int y=p[m].miny; y<p[m].maxy; ++y)
       {
-        float dsq = (y-posy)*(y-posy) + xsq;
+        float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
-         float att = get_exp(stp*dsq, d_exp_info);
-         if (a_eq_e)
-          {
+          float att = get_exp(stp*dsq, d_exp_info);
           fbuf[fpos].aR = att*e.r;
           fbuf[fpos].aG = att*e.g;
           fbuf[fpos].aB = att*e.b;
-          }
-         else
-          {
+        }
+        else
+        {
+          fbuf[fpos].aR =0.0;
+          fbuf[fpos].aG =0.0;
+          fbuf[fpos].aB =0.0;
+        }
+      //for each (x,y)
+      fpos++;
+      }//y
+    }//x
+  }
+  else
+  {
+    for (int x=p[m].minx; x<p[m].maxx; ++x)
+    {
+     float dxsq=(x-posx)*(x-posx);
+     for (int y=p[m].miny; y<p[m].maxy; ++y)
+      {
+        float dsq = (y-posy)*(y-posy) + dxsq;
+        if (dsq<radsq)
+        {
+          float att = get_exp(stp*dsq, d_exp_info);
           float   expm1;
           expm1 =get_expm1(att*e.r, d_exp_info);
           fbuf1[fpos].aR = expm1;
@@ -241,32 +262,22 @@ __global__ void k_render1
           expm1 =get_expm1(att*e.b, d_exp_info);
           fbuf1[fpos].aB = expm1;
           fbuf1[fpos].qB = q.b;
-          }//if a_eq_e
-        }//if dsq<radsq
-      else
-        {
-        if (a_eq_e)
-          {
-          fbuf[fpos].aR =0.0;
-          fbuf[fpos].aG =0.0;
-          fbuf[fpos].aB =0.0;
-          }
+        }
         else
-          {
+        {
           fbuf1[fpos].aR =0.0;
           fbuf1[fpos].aG =0.0;
           fbuf1[fpos].aB =0.0;
           fbuf1[fpos].qR =1.0;
           fbuf1[fpos].qG =1.0;
           fbuf1[fpos].qB =1.0;
-          }
         }
       //for each (x,y)
       fpos++;
       }//y
     }//x
   }
-
+ }
 //colorize by kernel
 __global__ void k_colorize
   (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2,
