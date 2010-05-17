@@ -112,7 +112,6 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
          (1-frac) * p1[i1].z  + frac*p2[i2].z,
 #endif
          (1-frac) * p1[i1].r  + frac*p2[i2].r,
-         (1-frac) * p1[i1].ro + frac*p2[i2].ro,
          (1-frac) * p1[i1].I  + frac*p2[i2].I,
          (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
          (1-frac) * p1[i1].C2 + frac*p2[i2].C2,

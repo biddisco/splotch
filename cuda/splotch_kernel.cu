@@ -204,7 +204,7 @@ __global__ void k_render1
      q.g = e.g/(e.g+grayabsorb);
      q.b = e.b/(e.b+grayabsorb);
    }
-  float intens = -0.5*bfak/p[m].ro;
+  float intens = -0.5*bfak;
   e.r*=intens; e.g*=intens; e.b*=intens;
 
   const float rfac=1.5;
@@ -348,7 +348,6 @@ __global__ void k_colorize
   p2[m].x =p[m].x;
   p2[m].y =p[m].y;
   p2[m].r =p[m].r;
-  p2[m].ro=p[m].ro;
   p2[m].e=e;
   }
 
@@ -432,7 +431,7 @@ __global__ void k_transform
   p[m].y =y;
   p[m].z =z;
 
-  //do ro and r
+  //do r
   float   xfac = ptrans->xfac;
   float   res2 = 0.5*ptrans->res;
   if (!ptrans->projection)
@@ -447,13 +446,14 @@ __global__ void k_transform
     p[m].y = res2 * (p[m].y+ptrans->fovfct*p[m].z)*xfac;
     }
 
-  p[m].ro = p[m].r;
+  p[m].I /= p[m].r;
   p[m].r = p[m].r *res2*xfac;
 
-  if (ptrans->minhsmlpixel && (p[m].r >= 0.0))
+  if (ptrans->minhsmlpixel && (p[m].r > 0.0))
       {
-      p[m].r = sqrt(p[m].r*p[m].r + .5 * .5);
-      p[m].ro = p[m].r/(res2*xfac);
+      double rfac=sqrt(p[m].r*p[m].r + .5*.5)/p[m].r;
+      p[m].r *=rfac;
+      p[m].I /= rfac;
       }
   }
 

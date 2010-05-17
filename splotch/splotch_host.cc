@@ -199,12 +199,13 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
       p[m].x = res2*(p[m].x+fovfct*p[m].z)*xfac2;
       p[m].y = res2*(p[m].y+fovfct*p[m].z)*xfac2;
       }
-    p[m].ro = p[m].r;
+    p[m].I /= p[m].r;
     p[m].r *= res2*xfac2;
-    if (minhsmlpixel && (p[m].r>=0.0))
+    if (minhsmlpixel && (p[m].r>0.0))
       {
-      p[m].r = sqrt(p[m].r*p[m].r + .5*.5);
-      p[m].ro = p[m].r/(res2*xfac2);
+      double rfac=sqrt(p[m].r*p[m].r + .5*.5)/p[m].r;
+      p[m].r *=rfac;
+      p[m].I /= rfac;
       }
     }
 }
@@ -357,7 +358,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         pp.C2=pp.e.g/(pp.e.g+grayabsorb);
         pp.C3=pp.e.b/(pp.e.b+grayabsorb);
         }
-      float64 intens = -0.5*bfak/pp.ro;
+      float64 intens = -0.5*bfak;
       pp.e.r*=intens; pp.e.g*=intens; pp.e.b*=intens;
 
       int minx=max(0,int(pp.x-pr+1)/chunkdim);

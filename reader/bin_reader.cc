@@ -71,7 +71,6 @@ void bin_reader_finish (vector<particle_sim> &points)
   float maxr=-1e30;
   for (tsize i=0; i<points.size(); ++i)
     {
-    points[i].ro=points[i].r;
     points[i].type=0;
     minr = min(minr,points[i].r);
     maxr = max(maxr,points[i].r);

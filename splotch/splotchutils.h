@@ -50,7 +50,7 @@ class COLOUR8
 
 struct particle_sim
   {
-  float32 x,y,z,r,ro,I,C1,C2,C3;
+  float32 x,y,z,r,I,C1,C2,C3;
   unsigned short type;
   bool active;
   COLOUR e;
@@ -61,7 +61,7 @@ struct particle_sim
   float32 vx,vy,vz;
 #endif
 #endif
-  particle_sim (float32 x_, float32 y_, float32 z_, float32 r_, float32 ro_, 
+  particle_sim (float32 x_, float32 y_, float32 z_, float32 r_,
                 float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_,
                 int active_, const COLOUR &e_
 #ifdef INTERPOLATE
@@ -70,7 +70,7 @@ struct particle_sim
                 , float32 vx_, float32 vy_, float32 vz_
 #endif
 #endif
-                ): x(x_), y(y_), z(z_), r(r_), ro(ro_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_), active(active_), e(e_)
+                ): x(x_), y(y_), z(z_), r(r_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_), active(active_), e(e_)
 #ifdef INTERPOLATE
                 , id(id_)
 #ifdef HIGH_ORDER_INTERPOLATION

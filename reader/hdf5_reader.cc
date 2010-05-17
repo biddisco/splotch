@@ -97,7 +97,6 @@ void hdf5_reader_finish (vector<particle_sim> &points, float thresh)
   float maxz=-1e30;
   for (tsize i=0; i<points.size(); ++i)
     {
-    points[i].ro=points[i].r;
     points[i].C1=points[i].C1+thresh;
     //points[i].active = 1;
     points[i].type=0;
