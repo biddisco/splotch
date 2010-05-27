@@ -76,7 +76,7 @@ struct cu_param_colorize
   int res, ycut0, ycut1, ptypes;
   float zmaxval, zminval;
   bool col_vector[MAX_P_TYPE];
-  float brightness[MAX_P_TYPE], grayabsorb[MAX_P_TYPE];
+  float brightness[MAX_P_TYPE];
   float rfac;
   };
 

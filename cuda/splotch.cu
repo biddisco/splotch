@@ -214,7 +214,6 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
   for(int itype=0; itype<pcolorize.ptypes; itype++)
     {
     pcolorize.brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
-    pcolorize.grayabsorb[itype] = params.find<float>("gray_absorption"+dataToString(itype),0.2);
     pcolorize.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
     }
   pcolorize.rfac=1.5;
