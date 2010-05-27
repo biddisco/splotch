@@ -138,14 +138,13 @@ int main (int argc, const char **argv)
       }
 
     wallTimers.stop("write");
-    wallTimers.stop("full");
 
 #ifdef CUDA
     cuda_timeReport(params);
 #else
     timeReport();
 #endif
-   }
+    }
 
 #ifdef VS
   //Just to hold the screen to read the messages when debugging
