@@ -1,0 +1,53 @@
+\documentclass{report}
+\parindent0cm
+\parskip0.5cm
+\begin{document}
+
+{\bf \large Equations governing intensity calculations in {\tt splotch}}
+
+Only a single kind of intensity is considered. For full RGB, this has to be
+applied to all color components.
+
+Definitions:
+\begin{equation}
+Q_p := \frac{E_p}{A_p}
+\end{equation}
+\begin{equation}
+R_p := \exp\left(\int_{-\infty}^{\infty}\rho_p(x)dx\right)
+\end{equation}
+
+Intensity change caused by a single particle (general case, corresponds to
+equation 3 in the original Splotch paper):
+\begin{equation}
+I_2-I_1=\left(e^{-A_p R_p}-1\right)(I_1-Q_p)
+\end{equation}
+
+{\bf Special case:} $Q_p=$const$=:Q$ independent of particle
+\begin{equation}
+I_2-I_1=\left(e^{-A_p R_p}-1\right)(I_1-Q)
+\end{equation}
+\begin{equation}
+\frac{I_2-I_1}{I_1-Q} + 1=\frac{I_2-I_1 + I_1-Q}{I_1-Q}=\frac{I_2-Q}{I_1-Q}=e^{-A_p R_p}
+\end{equation}
+\begin{equation}
+\ln|I_2-Q|-\ln|I_1-Q|=-A_p R_p
+\end{equation}
+
+Variable substitution: $Y:=-\ln|I-Q|$
+\begin{equation}
+Y_2-Y_1=A_p R_p
+\end{equation}
+Instead of $I$, the rendering algorithm computes the resulting $Y$
+for every pixel.
+At the end, the intensity is obtained by
+\begin{equation}
+I=Q-e^Y
+\end{equation}
+If we assume that $Q=1$ (this is currently assumed for {\tt a\_eq\_e} in Splotch),
+then the starting value for $Y$ is 0 in every pixel.
+For the somewhat more general case of $Q=$const, but different from 1, the starting
+value for $Y$ would have to be $-\ln|Q|$.
+
+As a consequence, the quick rendering algorithm can be extended to scenes where
+$E/A$ is constant, but not necessarily 1.
+\end{document}
