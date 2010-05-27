@@ -221,12 +221,11 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   float zminval = params.find<float>("zmin",0.0);
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt);
-  arr<float64> brightness(nt),grayabsorb(nt);
+  arr<float64> brightness(nt);
 
   for(int t=0;t<nt;t++)
     {
     brightness[t] = params.find<double>("brightness"+dataToString(t),1.);
-    grayabsorb[t] = params.find<float>("gray_absorption"+dataToString(t),0.2);
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
   float64 rfac=1.5;
