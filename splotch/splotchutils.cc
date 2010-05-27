@@ -95,7 +95,6 @@ void timeReport()
   {
   if (mpiMgr.master())
     {
-    wallTimers.stop("full");
     cout << endl << "--------------------------------------------" << endl;
     cout << "Summary of timings" << endl;
     cout << "--------------------------------------------" << endl;

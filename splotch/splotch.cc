@@ -138,6 +138,7 @@ int main (int argc, const char **argv)
       }
 
     wallTimers.stop("write");
+    wallTimers.stop("full");
 
 #ifdef CUDA
     cuda_timeReport(params);
