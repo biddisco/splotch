@@ -8,13 +8,14 @@ class wallTimer
   {
   private:
     double t_acc, t_started;
+    bool running;
 
   public:
-    wallTimer() { t_acc=t_started=0; }
+    wallTimer() : t_acc(0.), t_started(0.), running(false) {}
     void start();
     void stop();
-    void reset() { t_acc=0.; }
-    double acc() const { return t_acc; }
+    void reset() { t_acc=t_started=0.; running=false;}
+    double acc() const;
   };
 
 class wallTimerSet

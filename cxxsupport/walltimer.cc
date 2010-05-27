@@ -32,9 +32,11 @@ double wallTime0 = wallTime();
 } // unnamed namespace
 
 void wallTimer::start()
-  { t_started=wallTime(); }
+  { t_started=wallTime(); running=true; }
 void wallTimer::stop()
-  { t_acc+=wallTime()-t_started; }
+  { if (running) t_acc+=wallTime()-t_started; running=false; }
+double wallTimer::acc() const
+  { return running ? t_acc+wallTime()-t_started : t_acc; }
 
 void wallTimerSet::start(const string &name)
   { timers[name].start(); }
