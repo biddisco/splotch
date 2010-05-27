@@ -1,0 +1,84 @@
+<html>
+<body>
+
+<h1>Splotch</h1>
+
+<h2>Abstract</h2>
+<b>Splotch</b> is a ray tracer to visualize SPH simulations.
+
+<h2>Authors</h2>
+This software package is developed and brought to you by<p>
+Martin Reinecke (martin&lt;at&gt;mpa-garching.mpg.de)<p>
+Klaus Dolag (kdolag&lt;at&gt;mpa-garching.mpg.de)<p>
+Claudio Gheller (c.gheller&lt;at&gt;cineca.it)<p>
+Zhefan.Jin (Zhefan.Jin&lt;at&gt;port.ac.uk)<p>
+
+<h2> Copyrights and Acknowledgements</h2>
+<UL>
+<LI><b>Splotch</b> is free software, distributed under the <a href="http://www.gnu.org/copyleft/gpl.html">
+GNU General Public License</a>. This implies that you may freely distribute and copy the software. You may
+also modify it as you wish, and distribute these modified versions as long as you indicate prominently any
+changes you made in the original code, and as long as you leave the copyright notices, and the no-warranty
+notice intact. Please read the General Public License for more details. Note that the authors retain their
+copyright on the code.
+<LI>Requested Acknowledgement<br>
+The authors kindly ask you to acknowledge the use of the <b>Splotch</b> package
+in your publications in the following form: <p>
+
+At the first image produced with <b>Splotch</b>, a footnote placed in the main
+body of the paper referring to the <b>Splotch</b> web-site - currently
+<i>http://www.mpa-garching.mpg.de/~kdolag/Splotch</i>
+
+<h2> Download source code </h2>
+<b>Splotch</b> is written in the C++ language. To install it you just have
+to unpack <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.0.tar.gz">splotch_4.0.tar.gz</a>, edit the <b>Makefile</b>
+to suit your needs and type <b>make</b>.<br>
+<p>
+Please check your compiler for the OpenMP flags if you want to use
+OpenMP functionality (<i>-fopenmp</i>).<p>
+If you have an MPI environment installed, you can also use
+<i>mpiCC</i> instead of <i>g++</i> and add the option <i>"-DUSE_MPI"</i> to activate
+the MPI implementation.
+
+<h2> History </h2>
+<UL>
+   <LI> 07.02.2005: First public version, <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch.tar.gz">v 1.0</a>
+   <LI> 22.07.2005: Many improvements, <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_1.1.tar.gz">v 1.1</a>
+   <LI> 16.08.2006: Many improvements, now allows to process a geometry file to render several different aspects of a single simulation without reloading the data from disk.<br>
+<a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_2.0.tar.gz">v 2.0</a>
+   <LI> 11.04.2008: Many improvements, now allows to select individual
+   smoothing lengths for stars, freely select a block to visualize,
+   color palette is now read from files, or select a 3-vector to
+   represent the colors from file.<br>
+<a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_3.0.tar.gz">v 3.0</a>
+   <LI> 09.06.2009: Fixed some typos in parameter file and source code. Now also supports OpenMP.<br>
+<a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_3.1.tar.gz">v 3.1</a>
+   <LI> 25.11.2009: Major code reorganization to be much more modular. Now contains readers for different file formats,
+        is fully MPI/OpenMP parallelized and allows to utilize GPUs (via CUDA).<br>
+        <b>Note that the format of the parameter file has changed!</b><br>
+   <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.0.tar.gz">v 4.0</a>
+</UL>
+
+<h2>Test Example</h2>
+<UL>
+   <LI> Binary <a href="Source/snap_092.gz">file</a> of a small
+   cosmological simulation.
+   <LI> Example <a href="Source/splotch.par">parameter</a> file to
+   test <i>Splotch</i>.
+</UL>
+
+<h2>Example Images</h2>
+
+<a href="http://www.astro.unipd.it/~cosmo/Key2002"><img src="slice_big_dens.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/Key2002"><img src="slice_big_temp.jpg"></a><br>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g1_gas.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g51_gas.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g72_gas.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g8_gas.jpg"></a><br>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g1_gas_log_t.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g51_gas_log_t.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g72_gas_log_t.jpg"></a>
+<a href="http://www.astro.unipd.it/~cosmo/documents/Clusters/hutt.html"><img src="g8_gas_log_t.jpg"></a><br>
+
+</body>
+</html>
