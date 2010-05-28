@@ -40,7 +40,7 @@ int main (int argc, const char **argv)
   wallTimers.start("setup");
   bool master = mpiMgr.master();
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
-  paramfile params (argv[1],true);
+  paramfile params (argv[1],false);
 
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
