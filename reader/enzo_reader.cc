@@ -1,3 +1,6 @@
+#ifdef USE_MPI
+#include "mpi.h"
+#endif
 #include <cstdio>
 #include <iostream>
 #include <string>
@@ -5,9 +8,6 @@
 #include <cassert>
 #include <cstdlib>
 #include <vector>
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
 #include "hdf5.h"
 
 using namespace std;
