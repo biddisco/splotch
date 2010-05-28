@@ -5,10 +5,9 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/walltimer.h"
 
-
-THREADFUNC cu_thread_func(void *pinfo);
-THREADFUNC cu_draw_chunk(void *pinfo);
 THREADFUNC host_thread_func(void *pinfo);
+THREADFUNC cu_thread_func(void *pinfo);
+
 
 // struct containing thread task info
 struct thread_info
@@ -30,9 +29,18 @@ extern wallTimerSet cuWallTimers;
 
 int check_device(int rank);
 void print_device_info(int rank, int dev);
-void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 
 void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic);
+void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
+void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv);
+int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion,
+                 cu_particle_splotch *cu_ps,
+                 cu_particle_splotch *cu_ps_filtered, int *End_cu_ps);
+void render_chunk(int EndP, int nFBufInCell, cu_particle_splotch *cu_ps_filtered,                           void *fragBuf, cu_gpu_vars *gv, bool a_eq_e, float64 grayabsorb,
+                  arr2<COLOUR> &pPic, wallTimerSet &times);
+void combine_chunk(int StartP, int EndP, cu_particle_splotch *cu_ps_filtered, 
+                  void *fragBuf, bool a_eq_e, float64 grayabsorb, arr2<COLOUR> &pPic);
+void setup_colormap(int ptypes, cu_gpu_vars* gv);
 
 void GPUReport(wallTimerSet &cuTimers);
 void cuda_timeReport(paramfile &params);

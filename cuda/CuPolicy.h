@@ -16,16 +16,16 @@ All 'magic numbers' are out of this class.
 class CuPolicy
   {
   private:
-    unsigned int m_blockSize, maxregion, fbsize;
-
+    int m_blockSize, maxregion, fbsize;
+    size_t gmsize;
   public:
     CuPolicy(paramfile &Param);
 
     int GetMaxRegion();
     int GetFBufSize();
-    int GetSizeDPD(unsigned int n);
-    void GetDimsBlockGrid(unsigned int n, dim3 *dimGrid, dim3 *dimBlock);
-    unsigned int GetFBufSize(bool a_eq_e);
+    int GetGMemSize();
+    size_t GetSizeDPD(int n);
+    void GetDimsBlockGrid(int n, dim3 *dimGrid, dim3 *dimBlock);
   };
 
 #endif //CUPOLICY_H

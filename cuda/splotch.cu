@@ -75,22 +75,32 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   }
 
 
-void cu_init(int devID)
+void cu_init(int devID, int nP, cu_gpu_vars* pgv)
   {
   cudaSetDevice (devID); // initialize cuda runtime
+  
+  //allocate device memory for particle data
+  size_t s = pgv->policy->GetSizeDPD(nP);
+  //one more space allocated for the dumb
+  cutilSafeCall(cudaMalloc((void**) &pgv->d_pd, s +sizeof(cu_particle_sim)));
+  
+  //now prepare memory for d_particle_splotch.
+  //one more for dums
+  s = nP* sizeof(cu_particle_splotch);
+  cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, s+sizeof(cu_particle_splotch)));
+
+  //allocate fragment buffer memory on device
+  size_t size = pgv->policy->GetFBufSize() <<20;
+  cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size));
   }
 
 
 void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv)
   {
-  //allocate device memory for particle data
-  int s =pgv->policy->GetSizeDPD(n);
-  //one more space allocated for the dumb
-  cutilSafeCall(cudaMalloc((void**) &pgv->d_pd, s +sizeof(cu_particle_sim)));
-
   //copy particle data to device
+  size_t s = pgv->policy->GetSizeDPD(n);
   cutilSafeCall(cudaMemcpy(pgv->d_pd, h_pd, s, cudaMemcpyHostToDevice) );
-  }   //pgv->d_pd will be freed in cu_end
+  }
 
 
 void cu_range(paramfile &params ,cu_particle_sim* h_pd,
@@ -184,7 +194,7 @@ void cu_transform (paramfile &fparams, unsigned int n,
 void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   {
   //allocate memories for colormap and ptype_points and dump host data into it
-  int size =sizeof(cu_color_map_entry) *h_info.mapSize;
+  size_t size =sizeof(cu_color_map_entry) *h_info.mapSize;
   cutilSafeCall( cudaMalloc((void**) &pgv->d_colormap_info.map, size));
   cutilSafeCall(cudaMemcpy(pgv->d_colormap_info.map, h_info.map,
     size, cudaMemcpyHostToDevice) );
@@ -224,39 +234,21 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
   cutilSafeCall( cudaMemcpy(d_param_colorize, &pcolorize, sizeof(cu_param_colorize),
     cudaMemcpyHostToDevice));
 
-  //now prepare memory for d_particle_splotch.
-  //one more for dums
-  int size =n* sizeof(cu_particle_splotch);
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_colorize, size+sizeof(cu_particle_splotch)));
-
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_colorize,pgv->d_colormap_info);
+  k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_render,pgv->d_colormap_info);
 
   //copy the result out
-  cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_colorize, size, cudaMemcpyDeviceToHost) );
+  size_t size = n* sizeof(cu_particle_splotch);
+  cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_render, size, cudaMemcpyDeviceToHost) );
 
   //free params memory
   CLEAR_MEM((d_param_colorize));
 
-  //device particle_sim memory can be freed now!
-  CLEAR_MEM(pgv->d_pd);
-
   //particle_splotch memory on device will be freed in cu_end
   }
-
-int cu_get_max_region(cu_gpu_vars* pgv)
-  {
-  if (!pgv->policy) return -1;
-  return pgv->policy->GetMaxRegion();
-  }
-
-int cu_get_fbuf_size(cu_gpu_vars* pgv)
-  {
-  if (!pgv->policy) return -1;
-  return pgv->policy->GetFBufSize();
-  }
+ 
 
 void cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
   {
@@ -274,7 +266,7 @@ void cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
   pgv->d_exp_info.taylorlimit = sqrt(2.*abs(maxexp)/dim2);
 
   //allocate device memory and dump
-  int size =sizeof(float) *dim1;
+  size_t size =sizeof(float) *dim1;
   cutilSafeCall( cudaMalloc((void**) &pgv->d_exp_info.tab1, size));
   cutilSafeCall( cudaMemcpy(pgv->d_exp_info.tab1, h_tab1, size,
     cudaMemcpyHostToDevice));
@@ -288,25 +280,13 @@ void cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
   delete []h_tab2;
   }
 
-void cu_prepare_render(cu_particle_splotch *p,
+void cu_copy_particles_to_render(cu_particle_splotch *p,
   int n, cu_gpu_vars* pgv)
   {
-  //init exp table
-  cu_init_exptab(MAX_EXP, pgv);
-
-  //allocate new memory as it may grow longer after splitting
-  CLEAR_MEM(pgv->d_ps_colorize);
-  int size = (n+1) *sizeof(cu_particle_splotch);
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, size));
-
   //copy filtered particles into device
-  size = n *sizeof(cu_particle_splotch);
+  size_t size = n *sizeof(cu_particle_splotch);
   cutilSafeCall(cudaMemcpy(pgv->d_ps_render, p,size,
     cudaMemcpyHostToDevice) );
-
-  //allocate fragment buffer memory on device
-  size =cu_get_fbuf_size( pgv);
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size));
   }
 
 void cu_render1
@@ -322,44 +302,44 @@ void cu_render1
     pgv->d_fbuf, a_eq_e, grayabsorb,pgv->d_exp_info);
   }
 
+
 void cu_get_fbuf
   (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv)
   {
-  int size;
+  size_t size;
   if (a_eq_e)
     size =n* sizeof(cu_fragment_AeqE);
   else
     size =n* sizeof(cu_fragment_AneqE);
 
-  cutilSafeCall(cudaMemcpy(h_fbuf, pgv->d_fbuf,size,
-    cudaMemcpyDeviceToHost) );
+  cutilSafeCall( cudaMemcpy(h_fbuf, pgv->d_fbuf,size,
+    cudaMemcpyDeviceToHost)) ;
   }
 
 void    cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
-  CLEAR_MEM((pgv->d_ps_colorize));
+  CLEAR_MEM((pgv->d_ps_render));
   CLEAR_MEM((pgv->d_colormap_info.map));
   CLEAR_MEM((pgv->d_colormap_info.ptype_points));
   CLEAR_MEM((pgv->d_exp_info.tab1));
   CLEAR_MEM((pgv->d_exp_info.tab2));
   CLEAR_MEM((pgv->d_fbuf));
-  CLEAR_MEM((pgv->d_pic));
 
   cudaThreadExit();
 
   delete pgv->policy;
   }
 
-int cu_get_chunk_particle_count(paramfile &params)
+int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy)
   {
-  int M = 1<<20;
-  int gMemSize =params.find<int>("graphics_memory_size", 256)*M;
-  int fBufSize =params.find<int>("fragment_buffer_size", 128)*M;
-  float factor =params.find<float>("particle_mem_factor", 4.0);
-  int spareMem = 1*M;
+   int gMemSize = policy->GetGMemSize();
+   int fBufSize = policy->GetFBufSize();
+   if (gMemSize <= fBufSize) return 0;
 
-  if (gMemSize <= fBufSize) return -1;
+   float factor =params.find<float>("particle_mem_factor", 3);
+   int spareMem = 10;
+   int arrayParticleSize = gMemSize -fBufSize -spareMem;
 
-  return ( gMemSize -fBufSize -spareMem)/sizeof(cu_particle_sim) /factor;
+   return (arrayParticleSize/sizeof(cu_particle_sim)/factor)*(1<<20);
   }

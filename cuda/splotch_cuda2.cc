@@ -66,9 +66,9 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
 //  cu_thread_func (&(tInfo[0])); //just call it as normal function
 #endif  //if not NO_WIN_THREAD
 
-  // combine the results of multiple threads to pic
+  // combine the results of multiple threads(devices + host) to pic
   for (int i=1; i<nThread; i++)
-      for (int x=0; x<res; x++) //  error when x =1,
+      for (int x=0; x<res; x++) 
         for (int y=0; y<res; y++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
 
@@ -100,7 +100,7 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
   {
   bool bTestLoadBalancing = g_params->find<bool>("test_load_balancing", false);
-  int curStart = 0;
+  unsigned int curStart = 0;
   int hostLoad = bHostThread? g_params->find<int>("host_load",0): 0;
   int nDev = bHostThread? nThread-1: nThread;
   int onePercent = particle_data.size()/100;
@@ -126,13 +126,13 @@ void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread)
     curStart = tInfo[i].endP + 1;
     }
 
- // tInfo[nThread-1].endP = particle_data.size()-1;
+  tInfo[nThread-1].endP = particle_data.size()-1;
   }
 
 
 
 THREADFUNC cu_thread_func(void *pinfo)
-  {
+ {
   //a new thread info object that will carry each chunk's drawing
   thread_info *pInfoOutput = (thread_info*) pinfo;
   thread_info ti = *pInfoOutput;
@@ -140,41 +140,54 @@ THREADFUNC cu_thread_func(void *pinfo)
   //do some cleaning for final thread_info
   pInfoOutput->pPic->fill(COLOUR(0.0, 0.0, 0.0));
 
+  // Initialize policy class
+  CuPolicy *policy = new CuPolicy(*g_params); 
+
   //a new pic object residing in ti that will carry the result
   arr2<COLOUR> pic(pInfoOutput->pPic->size1(), pInfoOutput->pPic->size2());
   ti.pPic = &pic;
 
   // num particles to manage at once
-  int len = cu_get_chunk_particle_count(*g_params); 
-  if (len == -1)
+  int len = cu_get_chunk_particle_count(*g_params, policy); 
+  if (len == 0)
     {
     printf("\nGraphics memory setting error\n");
     mpiMgr.abort();
     }
 
   //CUDA Init
-  cu_init(pInfoOutput->devID);
+  cu_gpu_vars gv; //for each gpu/thread a variable pack is needed
+  memset(&gv, 0, sizeof(cu_gpu_vars));
+  gv.policy = policy;
+  // enable device and allocate arrays
+  cu_init(pInfoOutput->devID, len, &gv);
+  //init exp table
+  cu_init_exptab(MAX_EXP, &gv);
+  //CUDA Coloring
+  setup_colormap(ptypes, &gv);
 
-  int curEnd = 0;
   int endP = ti.endP;
-
   ti.endP = ti.startP;
   while(ti.endP < endP)
     {
     ti.endP =ti.startP + len - 1;   //set range
-    if (ti.endP > endP) ti.endP = endP;
-    cu_draw_chunk(&ti);
+    if (ti.endP > endP) ti.endP = endP; 
+    cu_draw_chunk(&ti, &gv);
     // combine results of chunks
+    pInfoOutput->times.start("gcombine");
     for (int x=0; x<pic.size1(); x++)
       for (int y=0; y<pic.size2(); y++)
         (*(pInfoOutput->pPic))[x][y] += pic[x][y];
+    pInfoOutput->times.stop("gcombine");
     ti.startP = ti.endP + 1;
-    pInfoOutput->times = ti.times;
     }
-  }
+  pInfoOutput->times = ti.times;
+
+  cu_end(&gv);
+ }
 
 
-THREADFUNC cu_draw_chunk(void *pinfo)
+void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv)
   {
 
   //get the input info
@@ -182,28 +195,24 @@ THREADFUNC cu_draw_chunk(void *pinfo)
   tInfo->times.start("gpu_thread");
 
   int nParticle = tInfo->endP - tInfo->startP + 1;
-  printf("Rank %d - GPU %d : Processing %d particles\n", mpiMgr.rank(), tInfo->devID, nParticle);
+  printf("Rank %d - GPU %d : Processing %d particles\n", mpiMgr.rank(), tInfo->devID, nParticle); fflush(stdout);
 
   paramfile &params(*g_params);
 
-  //for each gpu/thread a variable pack is needed
-  cu_gpu_vars gv;
-  memset(&gv, 0, sizeof(cu_gpu_vars));
-  gv.policy = new CuPolicy(params); // Initialize gv.policy class
-
   //copy data address to local C-like array pointer d_particle_data
+  tInfo->times.start("gcopy");
   cu_particle_sim *d_particle_data = &(particle_data[tInfo->startP]);
-  cu_copy_particles_to_device(d_particle_data, nParticle, &gv);
-
+  cu_copy_particles_to_device(d_particle_data, nParticle, gv);
+  tInfo->times.stop("gcopy");
   //here we analyse how to divide the whole task for large data handling
   //CUDA Ranging
   tInfo->times.start("grange");
-  cu_range(params, d_particle_data, nParticle, &gv);
+  cu_range(params, d_particle_data, nParticle, gv);
   tInfo->times.stop("grange");
 
   //CUDA Transformation
   tInfo->times.start("gtransform");
-  cu_transform(params, nParticle, campos, lookat, sky, d_particle_data, &gv);
+  cu_transform(params, nParticle, campos, lookat, sky, d_particle_data, gv);
   tInfo->times.stop("gtransform");
 
 /* temporarily ignore sorting 191109.
@@ -232,7 +241,243 @@ PROBLEM HERE!
 
   //CUDA Coloring
   tInfo->times.start("gcoloring");
-  //init C style colormap
+
+  //init cu_particle_splotch array memory
+  cu_particle_splotch *cu_ps;
+  cu_ps = new cu_particle_splotch[nParticle];
+  memset(cu_ps, 0, nParticle);
+
+  //Colorize with device
+  cu_colorize(params, cu_ps, nParticle, gv);
+  tInfo->times.stop("gcoloring");
+
+// ----------------------------------
+// ----------- Rendering ------------
+// ----------------------------------
+
+  //get parameters for rendering
+  int res = params.find<int>("resolution",200);
+//  long nsplotch=pFiltered;
+//  long nsplotch_all=nsplotch;
+//  mpiMgr.allreduce(nsplotch_all,MPI_Manager::Sum);
+  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+  bool a_eq_e = params.find<bool>("a_eq_e",true);
+
+  //prepare fragment buffer memory space first
+  void *fragBuf;
+  size_t nFBufInByte = gv->policy->GetFBufSize() <<20;
+  int nFBufInCell;
+  if (a_eq_e)
+    {
+    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AeqE);
+    fragBuf = new cu_fragment_AeqE[nFBufInCell];
+    }
+  else
+    {
+    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AneqE);
+    fragBuf = new cu_fragment_AneqE[nFBufInCell];
+    }
+
+  int maxRegion = gv->policy->GetMaxRegion();
+  int chunk_dim = nParticle;
+  // new array of particles produced after filter and splitting
+  cu_particle_splotch *cu_ps_filtered;
+  cu_ps_filtered = new cu_particle_splotch[chunk_dim];
+
+
+  //clear the output pic
+  tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
+
+  int End_cu_ps = 0, Start_cu_ps=0;
+  while (End_cu_ps < nParticle)
+  {
+   //filter and split particles to a cu_ps_filtered
+   tInfo->times.start("gfilter");
+   int pFiltered = filter_chunk(Start_cu_ps, chunk_dim, nParticle, maxRegion, 
+                                cu_ps, cu_ps_filtered, &End_cu_ps);
+   tInfo->times.stop("gfilter");
+
+   tInfo->times.start("gcopy");
+   cu_copy_particles_to_render(cu_ps_filtered, pFiltered, gv);
+   tInfo->times.start("gcopy");
+
+   // render chunks of pFiltered particles
+   render_chunk(pFiltered, nFBufInCell, cu_ps_filtered,
+                fragBuf, gv, a_eq_e, grayabsorb, *(tInfo->pPic), tInfo->times);
+   printf("Rank %d - GPU %d : Rendered %d/%d particles \n",  mpiMgr.rank(), tInfo->devID, End_cu_ps, nParticle); 
+   
+   Start_cu_ps = End_cu_ps;
+  }
+
+/////////////////////////////////////////////////////////////////////
+
+
+  delete []cu_ps;
+  delete []cu_ps_filtered;
+  delete []fragBuf;
+
+  tInfo->times.stop("gpu_thread");
+  }
+
+
+//filter and split particles to a cu_ps_filtered of size nParticles
+int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion, 
+                 cu_particle_splotch *cu_ps, 
+                 cu_particle_splotch *cu_ps_filtered, int *End_cu_ps)
+{
+  cu_particle_splotch p, pNew;
+  int region, nsplit;
+  bool finished = false;
+
+  unsigned long posInFragBuf = 0; 
+  int pFiltered = 0;
+  int i=StartP;  // start chunk position in cu_ps
+
+  // filter particles until cu_ps is finished or cu_ps_filtered array is full
+  while(!finished && (i < nParticle))
+   {
+     //select valid ones
+     p = cu_ps[i];
+     if (p.isValid)
+     {
+       int h = p.maxy - p.miny;
+       int w = p.maxx - p.minx;
+       region = h*w;
+
+       if (region < maxRegion)
+       {
+         // set the start position of the particle in fragment buffer
+         if (pFiltered + 1 < chunk_dim)
+         {
+           p.posInFragBuf = posInFragBuf;
+           cu_ps_filtered[pFiltered] = p;
+           pFiltered++;
+           posInFragBuf += region;
+         }
+         else finished = true; 
+       }
+       else
+       { //particle too big -> split along y direction
+         pNew = p;
+         int w1 = (maxRegion%h == 0) ? (maxRegion/h):(maxRegion/h + 1);
+         nsplit = w/w1 + 1;
+         if (pFiltered + nsplit < chunk_dim)
+         {
+           for (int minx = p.minx; minx < p.maxx; minx += w1)
+           {
+             pNew.minx = minx;  //minx,maxx of pNew need to be set
+             pNew.maxx = (minx+w1 >= p.maxx) ? p.maxx : minx+w1; 
+             // set the start position of the particle in fragment buffer
+             pNew.posInFragBuf = posInFragBuf; 
+             cu_ps_filtered[pFiltered] = pNew;
+
+             pFiltered++;
+             region = (pNew.maxx - pNew.minx) * (pNew.maxy - pNew.miny);
+             posInFragBuf += region;
+           }
+         }
+         else finished = true; 
+       }
+      }
+      i++;
+    }
+   if (finished) i--;
+   *End_cu_ps = i;
+   return pFiltered;  // return chunk position reached in cu_ps
+}
+
+void render_chunk(int EndP, int nFBufInCell, cu_particle_splotch *cu_ps_filtered, 
+                  void *fragBuf, cu_gpu_vars *gv, bool a_eq_e, float64 grayabsorb,
+                  arr2<COLOUR> &pPic, wallTimerSet &times)
+{
+
+  int renderStartP, renderEndP, inc;
+  renderEndP = 0;
+  while (renderEndP < EndP) 
+  {
+    //find a chunk: compute number of fragments needed to render this chunk
+    times.start("grender");
+    int nFragments2Render = 0;
+    renderStartP =renderEndP;
+    while (renderEndP<EndP && nFragments2Render < nFBufInCell)
+      {
+       inc =(cu_ps_filtered[renderEndP].maxx - cu_ps_filtered[renderEndP].minx) *
+                (cu_ps_filtered[renderEndP].maxy - cu_ps_filtered[renderEndP].miny);
+       nFragments2Render += inc;
+       renderEndP++;
+      }
+    if (nFragments2Render>nFBufInCell)
+    {
+      nFragments2Render -= inc; renderEndP--;
+    }
+    else if (renderEndP>EndP) renderEndP--; 
+
+    //render it
+    cu_render1(renderStartP, renderEndP, a_eq_e, grayabsorb, gv);
+    times.stop("grender");
+
+    //collect result
+    times.start("gcopy-fbuf");
+    cu_get_fbuf(fragBuf, a_eq_e, nFragments2Render, gv);
+    times.stop("gcopy-fbuf");
+ 
+    //combine chunks  
+    //cu_ps_filtered:       the particle array
+    times.start("gcombine");
+    combine_chunk(renderStartP, renderEndP, cu_ps_filtered, fragBuf, a_eq_e, grayabsorb, pPic );
+    times.stop("gcombine");
+
+  }
+
+}
+
+
+void combine_chunk(int StartP, int EndP, cu_particle_splotch *cu_ps_filtered, 
+                  void *fragBuf, bool a_eq_e, float64 grayabsorb, arr2<COLOUR> &pPic)
+{
+
+    if (a_eq_e)
+    {
+      cu_fragment_AeqE *fragBufAeqE = (cu_fragment_AeqE *)fragBuf;
+      for (int pPos=StartP, fPos=0; pPos<EndP; pPos++)
+      {
+        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
+        {
+          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++)
+          {
+            pPic[x][y].r += fragBufAeqE[fPos].aR;
+            pPic[x][y].g += fragBufAeqE[fPos].aG;
+            pPic[x][y].b += fragBufAeqE[fPos].aB;
+            fPos ++;
+          }
+        }
+      }
+    }
+    else
+    {
+      cu_fragment_AneqE *fragBufAneqE = (cu_fragment_AneqE *)fragBuf;
+      for (int pPos=StartP, fPos=0; pPos<EndP; pPos++)
+      {
+        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
+        {
+          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++) 
+          {
+            pPic[x][y].r += fragBufAneqE[fPos].aR *
+				   (pPic[x][y].r - fragBufAneqE[fPos].qR);
+            pPic[x][y].g += fragBufAneqE[fPos].aG *
+				   (pPic[x][y].g - fragBufAneqE[fPos].qG); 
+            pPic[x][y].b += fragBufAneqE[fPos].aB *
+                                   (pPic[x][y].b - fragBufAneqE[fPos].qB);
+            fPos ++;
+          }
+        }
+      }
+    }
+}
+
+void setup_colormap(int ptypes, cu_gpu_vars* gv)
+{
+//init C style colormap
   cu_color_map_entry *amapD;//amap for Device
   int *amapDTypeStartPos; //begin indexes of ptypes in the linear amapD[]
   amapDTypeStartPos =new int[ptypes];
@@ -265,190 +510,12 @@ PROBLEM HERE!
   clmp_info.mapSize =size;
   clmp_info.ptype_points =amapDTypeStartPos;
   clmp_info.ptypes =ptypes;
-  cu_init_colormap(clmp_info, &gv);
-
-  //init cu_particle_splotch array memory
-  cu_particle_splotch *cu_ps;
-  size = nParticle;
-  cu_ps = new cu_particle_splotch[size];
-  memset(cu_ps, 0, size);
-
-  //Colorize with device
-  cu_colorize(params, cu_ps, size, &gv);
-  tInfo->times.stop("gcoloring");
-
-//////////////////////////////////////////////////////////////////////
- 
-  //filter particle_splotch array to a cu_ps_filtered
-  tInfo->times.start("gfilter");
-
-  unsigned long posInFragBuf =0;
-  int minx=1e6,miny=1e6, maxx=-1,maxy=-1;
-  int maxRegion = cu_get_max_region(&gv);
-
-  //for select and splitting
-  vector <cu_particle_splotch> v_ps;
-  cu_particle_splotch p, pNew;
-  
-  for (int i=0; i<size; i++)
-   {
-     //select valid ones
-     p = cu_ps[i];
-     if (p.isValid)
-     {
-       int h = p.maxy - p.miny;
-       int w = p.maxx - p.minx;
-
-       if (h*w < maxRegion)
-       {
-         v_ps.push_back(p);
-       }
-       else
-       { //particle too big -> split
-         pNew = p;
-         int w1 = (maxRegion%h == 0) ? (maxRegion/h):(maxRegion/h + 1);
-         for (int minx = p.minx; minx < p.maxx; minx += w1)
-         {
-           pNew.minx = minx;  //minx,maxx of pNew need to be set
-           pNew.maxx = (minx+w1 >= p.maxx) ? p.maxx : minx+w1;
-           v_ps.push_back(pNew);
-         }
-       }
-      }
-    }
-
-  int pFiltered = v_ps.size();
-  cu_particle_splotch *cu_ps_filtered;
-  cu_ps_filtered = new cu_particle_splotch[pFiltered];
-  for (int i=0; i< pFiltered; i++)
-   {
-    //IMPORTANT: set the start position of the particle in fragment buffer
-    v_ps[i].posInFragBuf = posInFragBuf;
-    int     region = (v_ps[i].maxx - v_ps[i].minx) *
-                     (v_ps[i].maxy - v_ps[i].miny);  //SHOULD DO AFTER SORTING!
-    posInFragBuf += region;
-    cu_ps_filtered[i] = v_ps[i];
-   }
-
-  v_ps.clear();
-  tInfo->times.stop("gfilter");
-
-// ----------------------------------
-// ----------- Rendering ------------
-// ----------------------------------
-
-  //get parameters for rendering
-  int res = params.find<int>("resolution",200);
-  long nsplotch=pFiltered;
-  long nsplotch_all=nsplotch;
-  mpiMgr.allreduce(nsplotch_all,MPI_Manager::Sum);
-  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
-  bool a_eq_e = params.find<bool>("a_eq_e",true);
-
-  tInfo->times.start("grender");
-  //prepare fragment buffer memory space first
-  cu_fragment_AeqE  *fragBufAeqE;
-  cu_fragment_AneqE *fragBufAneqE;
-  int nFBufInByte = cu_get_fbuf_size(&gv);
-  int nFBufInCell;
-  if (a_eq_e)
-    {
-    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AeqE);
-    fragBufAeqE = new cu_fragment_AeqE[nFBufInCell];
-    }
-  else
-    {
-    nFBufInCell = nFBufInByte/sizeof(cu_fragment_AneqE);
-    fragBufAneqE = new cu_fragment_AneqE[nFBufInCell];
-    }
-
-  //allocate particles and buffer on device
-  cu_prepare_render(&(cu_ps_filtered[0]), pFiltered, &gv);
-
-  //clear the output pic
-  tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
-
-  int renderStartP, renderEndP;
-  renderEndP = 0;
-  do {
-    //find a chunk: compute number of fragments needed to render this chunk
-    int nFragments2Render = 0;
-    renderStartP =renderEndP;
-    while (renderEndP<pFiltered && nFragments2Render < nFBufInCell)
-      {
-       int inc =(cu_ps_filtered[renderEndP].maxx - cu_ps_filtered[renderEndP].minx) *
-                (cu_ps_filtered[renderEndP].maxy - cu_ps_filtered[renderEndP].miny);
-       nFragments2Render += inc;
-       renderEndP++;
-      }
-
-    //render it
-    cu_render1(renderStartP, renderEndP, a_eq_e, grayabsorb, &gv);
-
-    //combine chunks
-    //cu_ps_filtered:       the particle array
-    //pFiltered:            length of particle array
-    tInfo->times.start("gcombine");
-    if (a_eq_e)
-    {
-      //collect result
-      cu_get_fbuf(fragBufAeqE, a_eq_e, nFragments2Render, &gv);
-      for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
-      {
-        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
-        {
-          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++)
-          {
-           (*tInfo->pPic)[x][y].r += fragBufAeqE[fPos].aR;
-           (*tInfo->pPic)[x][y].g += fragBufAeqE[fPos].aG;
-           (*tInfo->pPic)[x][y].b += fragBufAeqE[fPos].aB;
-           fPos ++;
-          }
-        }
-      }
-    }
-    else
-    {
-      //collect result
-      cu_get_fbuf(fragBufAneqE, a_eq_e, nFragments2Render, &gv);
-      for (int pPos=renderStartP, fPos=0; pPos<renderEndP; pPos++)
-      {
-        for (int x =cu_ps_filtered[pPos].minx; x <cu_ps_filtered[pPos].maxx; x++)
-        {
-          for (int y =cu_ps_filtered[pPos].miny; y <cu_ps_filtered[pPos].maxy; y++) 
-          {
-           (*tInfo->pPic)[x][y].r += fragBufAneqE[fPos].aR *
-				   ((*tInfo->pPic)[x][y].r - fragBufAneqE[fPos].qR);
-           (*tInfo->pPic)[x][y].g += fragBufAneqE[fPos].aG *
-				   ((*tInfo->pPic)[x][y].g - fragBufAneqE[fPos].qG); 
-           (*tInfo->pPic)[x][y].b += fragBufAneqE[fPos].aB *
-                                   ((*tInfo->pPic)[x][y].b - fragBufAneqE[fPos].qB);
-           fPos ++;
-          }
-        }
-      }
-    }
-    tInfo->times.stop("gcombine");
-
-  } while (renderEndP < pFiltered);
-
-  tInfo->times.stop("grender");
-
-/////////////////////////////////////////////////////////////////////
-
-  cu_end(&gv);
+  cu_init_colormap(clmp_info, gv);
 
   delete []amapD;
   delete []amapDTypeStartPos;
-  delete []cu_ps;
-  delete []cu_ps_filtered;
-  if (a_eq_e)
-    delete []fragBufAeqE;
-  else
-    delete []fragBufAneqE;
+}
 
-  tInfo->times.stop("gpu_thread");
-  }
 
 
 THREADFUNC host_thread_func(void *p)
@@ -466,12 +533,15 @@ THREADFUNC host_thread_func(void *p)
 
 void GPUReport(wallTimerSet &cuTimers)
   {
+    cout << "Copy  (secs)               : " << cuTimers.acc("gcopy") << endl;
+    cout << "Copy-fbuf  (secs)          : " << cuTimers.acc("gcopy-fbuf") << endl;
     cout << "Ranging Data (secs)        : " << cuTimers.acc("grange") << endl;
     cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
 //    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;
     cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
     cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
     cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
+    cout << "Combine Sub-image (secs)   : " << cuTimers.acc("gcombine") << endl;
     cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl;
   }
 

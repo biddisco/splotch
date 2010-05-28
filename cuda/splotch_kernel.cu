@@ -1,10 +1,9 @@
-#ifndef SPLOTCH_KERNEL_H
-#define SPLOTCH_KERNEL_H
 /*
 Try accelerating splotch with CUDA. July 2009.
 Copyright things go here.
 */
 
+//#include "splotch_kernel.h"
 #include "splotch_cuda.h"
 
 //MACROs
@@ -296,6 +295,7 @@ __global__ void k_colorize
   float posx=p[m].x, posy=p[m].y;
   float rfacr=params->rfac*r;
 
+  // compute region occupied by the partile
   int minx=int(posx-rfacr+1);
   if (minx>=params->res) return;
   minx=max(minx,0);
@@ -330,13 +330,13 @@ __global__ void k_colorize
   intensity *= params->brightness[p[m].type];
 
   cu_color e;
-  if (params->col_vector[p[m].type])
+  if (params->col_vector[p[m].type])   // color from file
     {
     e.r=col1*intensity;
     e.g=col2*intensity;
     e.b=col3*intensity;
     }
-  else
+  else   // get color, associated from physical quantity contained in C1, from lookup table
     {
     e=get_color(p[m].type, col1, info);
     e.r *= intensity;
@@ -457,4 +457,4 @@ __global__ void k_transform
       }
   }
 
-#endif // #ifndef SPLOTCH_KERNEL_H
+

@@ -111,33 +111,28 @@ struct cu_gpu_vars //variables used by each gpu
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;             //device_particle_data
   cu_colormap_info    d_colormap_info;   //device pointers
-  cu_particle_splotch *d_ps_colorize;
   cu_exptable_info    d_exp_info;        //device pointers
   cu_particle_splotch *d_ps_render;
- // cu_fragment_AeqE    *d_fbuf;
   void                *d_fbuf;
   cu_color            *d_pic;
   };
 
 //functions
 
-void cu_init(int devID);
+void cu_init(int devID, int nP, cu_gpu_vars* pgv);
 void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-void cu_range
-  (paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
+void cu_range(paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
 void cu_transform (paramfile &fparams, unsigned int n,
   vec3 &campos, vec3 &lookat, vec3 &sky, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
-void cu_colorize
-  (paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
-int cu_get_max_region( cu_gpu_vars* pgv);
-int cu_get_fbuf_size( cu_gpu_vars* pgv);
-void cu_prepare_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
-void cu_render1
-  (int startP, int endP, bool a_eq_e, double grayabsorb, cu_gpu_vars* pgv);
+void cu_colorize(paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
+void cu_init_exptab(double maxexp, cu_gpu_vars* pgv);
+void cu_realloc_particles_to_render(int n, cu_gpu_vars* pgv);
+void cu_copy_particles_to_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
+void cu_render1(int startP, int endP, bool a_eq_e, double grayabsorb, cu_gpu_vars* pgv);
 void cu_get_fbuf (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void cu_end (cu_gpu_vars* pgv);
-int cu_get_chunk_particle_count(paramfile &params);
+int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy);
 void getCuTransformParams(cu_param_transform &para_trans,
 paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
 
