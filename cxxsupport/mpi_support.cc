@@ -1,12 +1,11 @@
-#include "mpi_support.h"
-
-MPI_Manager mpiMgr;
-
 #ifdef USE_MPI
 #include "mpi.h"
 #else
 #include <cstring>
 #endif
+#include "mpi_support.h"
+
+MPI_Manager mpiMgr;
 
 using namespace std;
 
