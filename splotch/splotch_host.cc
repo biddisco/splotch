@@ -454,7 +454,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
       COLOUR a(pp.e);
 #ifdef SPLOTCH_SSE
-      v4sf va={a.r,a.g,a.b,0.f};
+      V4SF va;
+      va.f[0]=a.r;va.f[1]=a.g;va.f[2]=a.b;va.f[3]=0.f;
 #endif
 
       float32 radsq = r*r;
@@ -476,7 +477,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
             float32 att = pre1[y]*pre2;
 #ifdef SPLOTCH_SSE
             v4sf tmpatt=_mm_load1_ps(&att);
-            tmpatt=_mm_mul_ps(tmpatt,va);
+            tmpatt=_mm_mul_ps(tmpatt,va.v);
             lpic[x][y].v=_mm_add_ps(tmpatt,lpic[x][y].v);
 #else
             lpic[x][y].r += att*a.r;
@@ -491,7 +492,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         COLOUR q(pp.C1,pp.C2,pp.C3);
 #ifdef SPLOTCH_SSE
         float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
-        v4sf vq = {q.r,q.g,q.b,0.f};
+        V4SF vq;
+        vq.f[0]=q.r;vq.f[1]=q.g;vq.f[2]=q.b;vq.f[3]=0.f;
 #endif
 
         for (int x=minx; x<maxx; ++x)
@@ -508,8 +510,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
             if ((maxa*att)<taylorlimit)
               {
               v4sf tmpatt=_mm_load1_ps(&att);
-              tmpatt=_mm_mul_ps(tmpatt,va);
-              v4sf tlpic=_mm_sub_ps(lpic[x][y].v,vq);
+              tmpatt=_mm_mul_ps(tmpatt,va.v);
+              v4sf tlpic=_mm_sub_ps(lpic[x][y].v,vq.v);
               tlpic=_mm_mul_ps(tmpatt,tlpic);
               lpic[x][y].v=_mm_add_ps(tlpic,lpic[x][y].v);
               }
