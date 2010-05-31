@@ -1,18 +1,17 @@
 ############################
 # Input Options
 ############################
-infile=/afs/mpa/home/kdolag/HydroSims/Salacious/snap_136.0
-ptypes=1
+infile=/afs/mpa/home/kdolag/HydroSims/Salacious/snap_136
+ptypes=3
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio, 6: mesh reader, 7: hdf7
 simtype=2
 
 # In case of interpolating between snaps
 snap_start = 90
-snap_interpol = 8
 
 # Additional flags for Gadget
-numfiles=1
+numfiles=2
 readparallel=1
 swap_endian=TRUE
 id_label=IDU
@@ -54,28 +53,24 @@ color_is_vector2=FALSE
 intensity_label2=XXXX
 intensity_present2=16
 
-
-# Additinal flags for Enzo
-
 ############################
 # Output Options
 ############################
 pictype=0
 outfile=test_vel.tga
-resolution=800
+resolution=1100
 #ycut0=100
 #ycut1=700
 
 colorbar=TRUE
 
 ############################
-# Vizualization properties
+# Visualization properties
 ############################
-boostcolors=FALSE
-a_eq_e=TRUE
+a_eq_e=f
 # 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size 
-sort_type=0
-
+sort_type=1
+gray_absorption=0.01
 intensity_log0=FALSE
 color_log0=TRUE
 color_asinh0=FALSE
@@ -83,7 +78,6 @@ color_asinh0=FALSE
 #color_max0=16.0
 palette0=palettes/OldSplotch.pal
 brightness0=3.0                # 3.0
-gray_absorption0=0.5
 
 intensity_log1=FALSE
 color_log1=FALSE
@@ -92,7 +86,6 @@ color_asinh1=TRUE
 #color_max1=4.0
 palette1=palettes/OldSplotch.pal
 brightness1=5.0                # 5.0
-gray_absorption1=0.5
 
 intensity_log2=FALSE
 color_log2=FALSE
@@ -101,9 +94,6 @@ color_min2=0.1
 color_max2=0.5
 palette2=palettes/OrionNew1.pal
 brightness2=10.0                # 10.0
-gray_absorption2=0.5
-
-
 
 
 ############################
@@ -111,16 +101,16 @@ gray_absorption2=0.5
 ############################
 
 #increases small HSML values to at least pixel size
-minhsmlpixel = FALSE
+minhsmlpixel = true
 
 #enables projection
 projection = TRUE
 
-#alternative read values from file
-geometry_file=mygeometry_r.dat
-geometry_start=0
-geometry_incr=1
-#or take give values explicitely
+#either read values from file
+#geometry_file=mygeometry_r.dat
+#geometry_start=0
+#geometry_incr=1
+#or use values specified here
 camera_x=      120000.0
 camera_y=      360000.0
 camera_z=      120000.0
