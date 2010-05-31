@@ -28,6 +28,31 @@
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
 
+#ifndef __SSE__
+#undef SPLOTCH_SSE
+#endif
+
+#ifdef SPLOTCH_SSE
+
+#include <xmmintrin.h>
+
+typedef __m128 v4sf;  // vector of 4 floats (sse1)
+
+#ifdef _MSC_VER /* visual c++ */
+# define ALIGN16_BEG __declspec(align(16))
+# define ALIGN16_END 
+#else /* gcc or icc */
+# define ALIGN16_BEG
+# define ALIGN16_END __attribute__((aligned(16)))
+#endif
+
+typedef ALIGN16_BEG union {
+  float f[4];
+  v4sf  v;
+} ALIGN16_END V4SF;
+
+#endif
+
 using namespace std;
 
 namespace {
@@ -332,14 +357,17 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   int ncx=(xres+chunkdim-1)/chunkdim, ncy=(yres+chunkdim-1)/chunkdim;
 
   arr2<vector<uint32> > idx(ncx,ncy);
-  double rcell=sqrt(2.)*(chunkdim*0.5-0.5);
-  double cmid0=0.5*(chunkdim-1);
+  float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
+  float32 cmid0=0.5f*(chunkdim-1);
 
-  const float64 rfac=1.5;
-  const float64 powtmp = pow(pi,1./3.);
-  const float64 sigma0 = powtmp/sqrt(2*pi);
-  const float64 bfak=1./(2*sqrt(pi)*powtmp);
+  const float32 rfac=1.5f;
+  const float32 powtmp = pow(pi,1./3.);
+  const float32 sigma0 = powtmp/sqrt(2*pi);
+  const float32 bfak=1./(2*sqrt(pi)*powtmp);
   exptable xexp(-20.);
+#ifdef SPLOTCH_SSE
+  const float32 taylorlimit=xexp.taylorLimit();
+#endif
 
   pic.fill(COLOUR(0,0,0));
 
@@ -348,8 +376,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     particle_sim &pp(p[i]);
     if (pp.active)
       {
-      double pr = rfac*pp.r;
-      pp.I = -0.5/(pp.r*pp.r*sigma0*sigma0);
+      float32 pr = rfac*pp.r;
+      pp.I = -0.5f/(pp.r*pp.r*sigma0*sigma0);
       pp.r=pr;
       if (!a_eq_e)
         {
@@ -357,22 +385,22 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         pp.C2=pp.e.g/(pp.e.g+grayabsorb);
         pp.C3=pp.e.b/(pp.e.b+grayabsorb);
         }
-      float64 intens = -0.5*bfak;
+      float32 intens = -0.5f*bfak;
       pp.e.r*=intens; pp.e.g*=intens; pp.e.b*=intens;
 
       int minx=max(0,int(pp.x-pr+1)/chunkdim);
       int maxx=min(ncx-1,int(pp.x+pr)/chunkdim);
       int miny=max(0,int(pp.y-pr+1)/chunkdim);
       int maxy=min(ncy-1,int(pp.y+pr)/chunkdim);
-      double px=pp.x, py=pp.y;
-      double sumsq=(rcell+pr)*(rcell+pr);
+      float32 px=pp.x, py=pp.y;
+      float32 sumsq=(rcell+pr)*(rcell+pr);
       for (int ix=minx; ix<=maxx; ++ix)
         {
-        double cx=cmid0+ix*chunkdim;
+        float32 cx=cmid0+ix*chunkdim;
         for (int iy=miny; iy<=maxy; ++iy)
           {
-          double cy=cmid0+iy*chunkdim;
-          double rtot2 = (px-cx)*(px-cx) + (py-cy)*(py-cy);
+          float32 cy=cmid0+iy*chunkdim;
+          float32 rtot2 = (px-cx)*(px-cx) + (py-cy)*(py-cy);
           if (rtot2<sumsq)
             idx[ix][iy].push_back(i);
           }
@@ -383,18 +411,28 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   work_distributor wd (xres,yres,chunkdim,chunkdim);
 #pragma omp parallel
 {
-  arr<float64> pre1(chunkdim);
-  arr2<COLOUR8> lpic(chunkdim,chunkdim);
+  arr<float32> pre1(chunkdim);
+#ifdef SPLOTCH_SSE
+  arr2<V4SF> lpic(chunkdim,chunkdim);
+#else
+  arr2<COLOUR> lpic(chunkdim,chunkdim);
+#endif
   int chunk;
 #pragma omp for schedule(dynamic,1)
   for (chunk=0; chunk<wd.nchunks(); ++chunk)
     {
     int x0, x1, y0, y1;
     wd.chunk_info(chunk,x0,x1,y0,y1);
-    lpic.fast_alloc(x1-x0,y1-y0);
-    lpic.fill(COLOUR8(0,0,0));
     int x0s=x0, y0s=y0;
     x1-=x0; x0=0; y1-=y0; y0=0;
+    lpic.fast_alloc(x1-x0,y1-y0);
+#ifdef SPLOTCH_SSE
+    for (int ix=0;ix<x1;ix++)
+      for (int iy=0;iy<y1;iy++)
+         lpic[ix][iy].v=_mm_setzero_ps();
+#else
+    lpic.fill(COLOUR(0,0,0));
+#endif
     int cx, cy;
     wd.chunk_info_idx(chunk,cx,cy);
     const vector<uint32> &v(idx[cx][cy]);
@@ -402,8 +440,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     for (tsize m=0; m<v.size(); ++m)
       {
       const particle_sim &pp(p[v[m]]);
-      float64 r=pp.r;
-      float64 posx=pp.x, posy=pp.y;
+      float32 r=pp.r;
+      float32 posx=pp.x, posy=pp.y;
       posx-=x0s; posy-=y0s;
       int minx=int(posx-r+1);
       minx=max(minx,x0);
@@ -414,10 +452,13 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       int maxy=int(posy+r+1);
       maxy=min(maxy,y1);
 
-      COLOUR8 a=pp.e;
+      COLOUR a(pp.e);
+#ifdef SPLOTCH_SSE
+      v4sf va={a.r,a.g,a.b,0.f};
+#endif
 
-      float64 radsq = r*r;
-      float64 stp = pp.I;
+      float32 radsq = r*r;
+      float32 stp = pp.I;
       for (int y=miny; y<maxy; ++y)
         pre1[y]=xexp(stp*(y-posy)*(y-posy));
 
@@ -425,37 +466,64 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         {
         for (int x=minx; x<maxx; ++x)
           {
-          double dxsq=(x-posx)*(x-posx);
-          double dy=sqrt(radsq-dxsq);
+          float32 dxsq=(x-posx)*(x-posx);
+          float32 dy=sqrt(radsq-dxsq);
           int miny2=max(miny,int(posy-dy+1)),
               maxy2=min(maxy,int(posy+dy+1));
-          double pre2 = xexp(stp*dxsq);
+          float32 pre2 = xexp(stp*dxsq);
           for (int y=miny2; y<maxy2; ++y)
             {
-            float64 att = pre1[y]*pre2;
+            float32 att = pre1[y]*pre2;
+#ifdef SPLOTCH_SSE
+            v4sf tmpatt=_mm_load1_ps(&att);
+            tmpatt=_mm_mul_ps(tmpatt,va);
+            lpic[x][y].v=_mm_add_ps(tmpatt,lpic[x][y].v);
+#else
             lpic[x][y].r += att*a.r;
             lpic[x][y].g += att*a.g;
             lpic[x][y].b += att*a.b;
+#endif
             }
           }
         }
       else
         {
-        COLOUR8 q(pp.C1,pp.C2,pp.C3);
+        COLOUR q(pp.C1,pp.C2,pp.C3);
+#ifdef SPLOTCH_SSE
+        float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
+        v4sf vq = {q.r,q.g,q.b,0.f};
+#endif
 
         for (int x=minx; x<maxx; ++x)
           {
-          double dxsq=(x-posx)*(x-posx);
-          double dy=sqrt(radsq-dxsq);
+          float32 dxsq=(x-posx)*(x-posx);
+          float32 dy=sqrt(radsq-dxsq);
           int miny2=max(miny,int(posy-dy+1)),
               maxy2=min(maxy,int(posy+dy+1));
-          double pre2 = xexp(stp*dxsq);
+          float32 pre2 = xexp(stp*dxsq);
           for (int y=miny2; y<maxy2; ++y)
             {
-            float64 att = pre1[y]*pre2;
+            float32 att = pre1[y]*pre2;
+#ifdef SPLOTCH_SSE
+            if ((maxa*att)<taylorlimit)
+              {
+              v4sf tmpatt=_mm_load1_ps(&att);
+              tmpatt=_mm_mul_ps(tmpatt,va);
+              v4sf tlpic=_mm_sub_ps(lpic[x][y].v,vq);
+              tlpic=_mm_mul_ps(tmpatt,tlpic);
+              lpic[x][y].v=_mm_add_ps(tlpic,lpic[x][y].v);
+              }
+            else
+              {
+              lpic[x][y].f[0] += xexp.expm1(att*a.r)*(lpic[x][y].f[0]-q.r);
+              lpic[x][y].f[1] += xexp.expm1(att*a.g)*(lpic[x][y].f[1]-q.g);
+              lpic[x][y].f[2] += xexp.expm1(att*a.b)*(lpic[x][y].f[2]-q.b);
+              }
+#else
             lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
             lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
             lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
+#endif
             }
           }
         }
@@ -463,7 +531,12 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
+#ifdef SPLOTCH_SSE
+        pic[ix+x0s][iy+y0s].Set
+          (lpic[ix][iy].f[0],lpic[ix][iy].f[1],lpic[ix][iy].f[2]);
+#else
         pic[ix+x0s][iy+y0s]=lpic[ix][iy];
+#endif
     } // for this chunk
 } // #pragma omp parallel
 

@@ -28,26 +28,6 @@
 #include "kernel/colourmap.h"
 #include "cxxsupport/walltimer.h"
 
-class COLOUR8
-  {
-  public:
-    float64 r, g, b;
-
-    COLOUR8 () {}
-    COLOUR8 (float64 rv, float64 gv, float64 bv)
-      : r (rv), g (gv), b (bv) {}
-    COLOUR8 (const COLOUR &orig)
-      : r (orig.r), g (orig.g), b (orig.b) {}
-    operator COLOUR()
-      { return COLOUR (r,g,b); }
-
-    COLOUR8 &operator=(const COLOUR &orig)
-      {
-      r=orig.r; g=orig.g; b=orig.b;
-      return *this;
-      }
-  };
-
 struct particle_sim
   {
   float32 x,y,z,r,I,C1,C2,C3;
@@ -116,12 +96,11 @@ template<typename T> void my_normalize (T minv, T maxv, T &val)
 template<typename T> void clamp (T minv, T maxv, T &val)
   { val = min(maxv, max(minv, val)); }
 
-
 class exptable
   {
   private:
-    float64 expfac, taylorlimit;
-    arr<float64> tab1, tab2;
+    float32 expfac, taylorlimit;
+    arr<float32> tab1, tab2;
     enum {
       nbits=10,
       dim1=1<<nbits,
@@ -132,7 +111,7 @@ class exptable
       };
 
   public:
-    exptable (float64 maxexp)
+    exptable (float32 maxexp)
       : expfac(dim2/maxexp), tab1(dim1), tab2(dim1)
       {
       using namespace std;
@@ -141,20 +120,22 @@ class exptable
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
         }
-      taylorlimit = sqrt(2.*abs(maxexp)/dim2);
+      taylorlimit = sqrt(2.f*abs(maxexp)/dim2);
       }
 
-    float64 operator() (float64 arg) const
+    float32 taylorLimit() const { return taylorlimit; }
+
+    float32 operator() (float32 arg) const
       {
       int iarg= int(arg*expfac);
       if (iarg&mask3)
-        return (iarg<0) ? 1. : 0.;
+        return (iarg<0) ? 1.f : 0.f;
       return tab1[iarg>>nbits]*tab2[iarg&mask1];
       }
-    float64 expm1(float64 arg) const
+    float32 expm1(float32 arg) const
       {
       if (std::abs(arg)<taylorlimit) return arg;
-      return operator()(arg)-1.;
+      return operator()(arg)-1.f;
       }
   };
 
