@@ -25,6 +25,9 @@ OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
+# SSE support, if available (safe to leave switched on)
+OPT     +=  -DSPLOTCH_SSE
+
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 SYSTYPE="PLX"
@@ -61,9 +64,12 @@ endif
 
 ifeq ($(SYSTYPE),"GP")
 CC       =  nvcc -g
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       =  mpicxx -g -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/inc -I$(CUDA_HOME)/include
+endif
 NVCC       =  nvcc -g 
 OPTIMIZE = -O2
-LIB_OPT  = 
+LIB_OPT  =  -L$(CUDA_HOME)/lib -lcudart
 OMP =  
 #-Xcompiler -openmp
 SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/inc # -I$(CUDA_HOME)/include  -Icuda
