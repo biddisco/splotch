@@ -25,42 +25,34 @@
 
 #include "cxxsupport/datatypes.h"
 
-/** \class COLOUR kernel/colour.h kernel/colour.h
-    A class for storing RGB colour information. */
-class COLOUR
+template<typename T> class RGB_tuple
   {
   public:
-    /*! */
-    float32 r, g, b;
+    T r, g, b;
 
-    /*! */
-    COLOUR () {}
-    /*! */
-    COLOUR (float32 rv, float32 gv, float32 bv)
+    RGB_tuple () {}
+    RGB_tuple (T rv, T gv, T bv)
       : r (rv), g (gv), b (bv) {}
 
-    /*! */
-    const COLOUR &operator+= (const COLOUR &Col2)
+    template<typename T2> const RGB_tuple &operator+= (const RGB_tuple<T2> &Col2)
       { r+=Col2.r; g+=Col2.g; b+=Col2.b; return *this; }
-    /*! */
-    COLOUR operator+ (const COLOUR &Col2) const
-      { return COLOUR (r+Col2.r, g+Col2.g, b+Col2.b); }
-    /*! */
-    COLOUR operator- (const COLOUR &Col2) const
-      { return COLOUR (r-Col2.r, g-Col2.g, b-Col2.b); }
-    /*! */
-    COLOUR operator* (float32 factor) const
-      { return COLOUR (r*factor, g*factor, b*factor); }
-    /*! */
-    friend inline COLOUR operator* (float32 factor, const COLOUR &Col)
-      { return COLOUR (Col.r*factor, Col.g*factor, Col.b*factor); }
+    RGB_tuple operator+ (const RGB_tuple &Col2) const
+      { return RGB_tuple (r+Col2.r, g+Col2.g, b+Col2.b); }
+    RGB_tuple operator- (const RGB_tuple &Col2) const
+      { return RGB_tuple (r-Col2.r, g-Col2.g, b-Col2.b); }
+    template<typename T2> RGB_tuple operator* (T2 factor) const
+      { return RGB_tuple (r*factor, g*factor, b*factor); }
+    template<typename T2> friend inline RGB_tuple operator* (T2 factor, const RGB_tuple &Col)
+      { return RGB_tuple (Col.r*factor, Col.g*factor, Col.b*factor); }
 
     /*! */
-    friend std::ostream &operator<< (std::ostream &os, const COLOUR &c)
+    friend std::ostream &operator<< (std::ostream &os, const RGB_tuple &c)
       {
       os << "(" << c.r << ", " << c.g << ", " << c.b << ")";
       return os;
       }
   };
+
+typedef RGB_tuple<float> COLOUR;
 
 #endif
