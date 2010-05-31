@@ -40,6 +40,8 @@ template<typename T> class RGB_tuple
       { r=Col2.r; g=Col2.g; b=Col2.b; return *this; }
     const RGB_tuple &operator+= (const RGB_tuple &Col2)
       { r+=Col2.r; g+=Col2.g; b+=Col2.b; return *this; }
+    const RGB_tuple &operator*= (T fac)
+      { r*=fac; g*=fac; b*=fac; return *this; }
     RGB_tuple operator+ (const RGB_tuple &Col2) const
       { return RGB_tuple (r+Col2.r, g+Col2.g, b+Col2.b); }
     RGB_tuple operator- (const RGB_tuple &Col2) const
