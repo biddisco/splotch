@@ -86,15 +86,31 @@ struct hcmp
     { return p1.r>p2.r; }
   };
 
+struct Normalizer
+  {
+  float32 minv, maxv;
 
-template<typename T> void get_minmax (T &minv, T &maxv, T val)
-  { minv=min(minv,val); maxv=max(maxv,val); }
+  Normalizer ()
+    : minv(1e37), maxv(-1e37) {}
 
-template<typename T> void my_normalize (T minv, T maxv, T &val)
-  { if (minv!=maxv) val=(val-minv)/(maxv-minv); }
+  void collect (float32 val)
+    {
+    using namespace std;
+    minv=min(minv,val); maxv=max(maxv,val);
+    }
 
-template<typename T> void clamp (T minv, T maxv, T &val)
-  { val = min(maxv, max(minv, val)); }
+  void collect (const Normalizer &other)
+    {
+    using namespace std;
+    minv=min(minv,other.minv); maxv=max(maxv,other.maxv);
+    }
+
+  void normAndClamp (float32 &val) const
+    {
+    using namespace std;
+    val = (max(minv,min(maxv,val))-minv)/(maxv-minv);
+    }
+  };
 
 class exptable
   {

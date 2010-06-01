@@ -25,9 +25,6 @@ OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
-# SSE support, if available (safe to leave switched on)
-OPT     +=  -DSPLOTCH_SSE
-
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 SYSTYPE="PLX"

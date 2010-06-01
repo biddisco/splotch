@@ -27,31 +27,7 @@
 #include "kernel/transform.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
-
-#ifndef __SSE__
-#undef SPLOTCH_SSE
-#endif
-
-#ifdef SPLOTCH_SSE
-
-#include <xmmintrin.h>
-
-typedef __m128 v4sf;  // vector of 4 floats (sse1)
-
-#ifdef _MSC_VER /* visual c++ */
-# define ALIGN16_BEG __declspec(align(16))
-# define ALIGN16_END 
-#else /* gcc or icc */
-# define ALIGN16_BEG
-# define ALIGN16_END __attribute__((aligned(16)))
-#endif
-
-typedef ALIGN16_BEG union {
-  float f[4];
-  v4sf  v;
-} ALIGN16_END V4SF;
-
-#endif
+#include "cxxsupport/sse_utils.h"
 
 using namespace std;
 
@@ -61,10 +37,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
   {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
-  arr<float32> mincol(nt,1e30),maxcol(nt,-1e30),
-               minint(nt,1e30),maxint(nt,-1e30);
-  arr<float32> minval_col(nt,1e30),maxval_col(nt,-1e30),
-               minval_int(nt,1e30),maxval_int(nt,-1e30);
+  arr<Normalizer> intnorm(nt), colnorm(nt);
 
   for(int t=0;t<nt;t++)
     {
@@ -78,8 +51,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
 #pragma omp parallel
 {
-  arr<float32> minc(nt,1e30),maxc(nt,-1e30),
-               mini(nt,1e30),maxi(nt,-1e30);
+  arr<Normalizer> inorm(nt), cnorm(nt);
   int m;
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m) // do log calculations if requested
@@ -88,13 +60,13 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
     if (log_int[t])
       p[m].I = log10(p[m].I);
-    get_minmax(mini[t], maxi[t], p[m].I);
+    inorm[t].collect(p[m].I);
 
     if (log_col[t])
       p[m].C1 = log10(p[m].C1);
     if (asinh_col[t])
       p[m].C1 = my_asinh(p[m].C1);
-    get_minmax(minc[t], maxc[t], p[m].C1);
+    cnorm[t].collect(p[m].C1);
     if (col_vector[t])
       {
       if (log_col[t])
@@ -107,46 +79,52 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
         p[m].C2 = my_asinh(p[m].C2);
         p[m].C3 = my_asinh(p[m].C3);
         }
-      get_minmax(minc[t], maxc[t], p[m].C2);
-      get_minmax(minc[t], maxc[t], p[m].C3);
+      cnorm[t].collect(p[m].C2);
+      cnorm[t].collect(p[m].C3);
       }
     }
 #pragma omp critical
   for(int t=0;t<nt;t++)
     {
-    mincol[t]=min(mincol[t],minc[t]);
-    maxcol[t]=max(maxcol[t],maxc[t]);
-    minint[t]=min(minint[t],mini[t]);
-    maxint[t]=max(maxint[t],maxi[t]);
+    intnorm[t].collect(inorm[t]);
+    colnorm[t].collect(cnorm[t]);
     }
 
 }
 
   for(int t=0;t<nt;t++)
     {
-    mpiMgr.allreduce(minint[t],MPI_Manager::Min);
-    mpiMgr.allreduce(mincol[t],MPI_Manager::Min);
-    mpiMgr.allreduce(maxint[t],MPI_Manager::Max);
-    mpiMgr.allreduce(maxcol[t],MPI_Manager::Max);
-
-    minval_int[t] = params.find<float>("intensity_min"+dataToString(t),minint[t]);
-    maxval_int[t] = params.find<float>("intensity_max"+dataToString(t),maxint[t]);
-    minval_col[t] = params.find<float>("color_min"+dataToString(t),mincol[t]);
-    maxval_col[t] = params.find<float>("color_max"+dataToString(t),maxcol[t]);
+    mpiMgr.allreduce(intnorm[t].minv,MPI_Manager::Min);
+    mpiMgr.allreduce(colnorm[t].minv,MPI_Manager::Min);
+    mpiMgr.allreduce(intnorm[t].maxv,MPI_Manager::Max);
+    mpiMgr.allreduce(colnorm[t].maxv,MPI_Manager::Max);
 
     if (verbose && mpiMgr.master())
       {
       cout << " For particles of type " << t << " : " << endl;
       cout << " From data: " << endl;
-      cout << " Color Range:     " << mincol[t] << " (min) , " <<
-                                      maxcol[t] << " (max) " << endl;
-      cout << " Intensity Range: " << minint[t] << " (min) , " <<
-                                      maxint[t] << " (max) " << endl;
+      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
+                                      colnorm[t].maxv << " (max) " << endl;
+      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
+                                      intnorm[t].maxv << " (max) " << endl;
+      }
+
+    intnorm[t].minv = params.find<float>
+      ("intensity_min"+dataToString(t),intnorm[t].minv);
+    intnorm[t].maxv = params.find<float>
+      ("intensity_max"+dataToString(t),intnorm[t].maxv);
+    colnorm[t].minv = params.find<float>
+      ("color_min"+dataToString(t),colnorm[t].minv);
+    colnorm[t].maxv = params.find<float>
+      ("color_max"+dataToString(t),colnorm[t].maxv);
+
+    if (verbose && mpiMgr.master())
+      {
       cout << " Restricted to: " << endl;
-      cout << " Color Range:     " << minval_col[t] << " (min) , " <<
-                                      maxval_col[t] << " (max) " << endl;
-      cout << " Intensity Range: " << minval_int[t] << " (min) , " <<
-                                      maxval_int[t] << " (max) " << endl;
+      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
+                                      colnorm[t].maxv << " (max) " << endl;
+      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
+                                      intnorm[t].maxv << " (max) " << endl;
       }
     }
 
@@ -157,12 +135,12 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
   for(m=0; m<npart; ++m)
     {
     int t=p[m].type;
-    my_normalize(minval_int[t],maxval_int[t],p[m].I);
-    my_normalize(minval_col[t],maxval_col[t],p[m].C1);
+    intnorm[t].normAndClamp(p[m].I);
+    colnorm[t].normAndClamp(p[m].C1);
     if (col_vector[t])
       {
-      my_normalize(minval_col[t],maxval_col[t],p[m].C2);
-      my_normalize(minval_col[t],maxval_col[t],p[m].C3);
+      colnorm[t].normAndClamp(p[m].C2);
+      colnorm[t].normAndClamp(p[m].C3);
       }
     }
 }
@@ -286,14 +264,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     if (miny>=maxy) continue;
 
     float64 col1=p[m].C1,col2=p[m].C2,col3=p[m].C3;
-    clamp (0.0000001,0.9999999,col1);
-    if (col_vector[p[m].type])
-      {
-      clamp (0.0000001,0.9999999,col2);
-      clamp (0.0000001,0.9999999,col3);
-      }
     float64 intensity=p[m].I;
-    clamp (0.0000001,0.9999999,intensity);
     intensity *= brightness[p[m].type];
     COLOUR e;
     if (col_vector[p[m].type])
@@ -365,7 +336,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   const float32 sigma0 = powtmp/sqrt(2*pi);
   const float32 bfak=1./(2*sqrt(pi)*powtmp);
   exptable xexp(-20.);
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
   const float32 taylorlimit=xexp.taylorLimit();
 #endif
 
@@ -412,7 +383,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #pragma omp parallel
 {
   arr<float32> pre1(chunkdim);
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
   arr2<V4SF> lpic(chunkdim,chunkdim);
 #else
   arr2<COLOUR> lpic(chunkdim,chunkdim);
@@ -426,7 +397,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     int x0s=x0, y0s=y0;
     x1-=x0; x0=0; y1-=y0; y0=0;
     lpic.fast_alloc(x1-x0,y1-y0);
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
          lpic[ix][iy].v=_mm_setzero_ps();
@@ -453,7 +424,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       maxy=min(maxy,y1);
 
       COLOUR a(pp.e);
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
       V4SF va;
       va.f[0]=a.r;va.f[1]=a.g;va.f[2]=a.b;va.f[3]=0.f;
 #endif
@@ -475,7 +446,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           for (int y=miny2; y<maxy2; ++y)
             {
             float32 att = pre1[y]*pre2;
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
             v4sf tmpatt=_mm_load1_ps(&att);
             tmpatt=_mm_mul_ps(tmpatt,va.v);
             lpic[x][y].v=_mm_add_ps(tmpatt,lpic[x][y].v);
@@ -490,7 +461,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       else
         {
         COLOUR q(pp.C1,pp.C2,pp.C3);
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
         float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
         V4SF vq;
         vq.f[0]=q.r;vq.f[1]=q.g;vq.f[2]=q.b;vq.f[3]=0.f;
@@ -506,7 +477,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           for (int y=miny2; y<maxy2; ++y)
             {
             float32 att = pre1[y]*pre2;
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
             if ((maxa*att)<taylorlimit)
               {
               v4sf tmpatt=_mm_load1_ps(&att);
@@ -533,7 +504,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
-#ifdef SPLOTCH_SSE
+#ifdef PLANCK_HAVE_SSE2
         pic[ix+x0s][iy+y0s].Set
           (lpic[ix][iy].f[0],lpic[ix][iy].f[1],lpic[ix][iy].f[2]);
 #else
