@@ -1,6 +1,3 @@
-#ifdef USE_MPI
-#include "mpi.h"
-#endif
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -14,17 +11,6 @@
 #include "splotch/splotchutils.h"
 
 using namespace std;
-
-#define TAG_POSX        11
-#define TAG_POSY        12
-#define TAG_POSZ        13
-#define TAG_SIZE        14
-#define TAG_INT         15
-#define TAG_COL1        16
-#define TAG_COL2        17
-#define TAG_COL3        18
-#define TAG_TYPE        19
-#define TAG_ID          20
 
 #ifdef INTERPOLATE
 
@@ -108,22 +94,18 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
   arr<long> NPartThisTask(NTasks);
 
-#ifdef USE_MPI
-  MPI_Status status;
-#endif
-
 #ifdef INTERPOLATE
   infilename += intToString(snr,3);
 #endif
 
   planck_assert(numfiles >= readparallel,
-                "Number of files must be larger or equal number of parallel reads ...");
+    "Number of files must be larger or equal number of parallel reads ...");
   planck_assert(numfiles%readparallel == 0,
-                "Number of files must be a multiple of number of parallel reads ...");
+    "Number of files must be a multiple of number of parallel reads ...");
   planck_assert(NTasks >= readparallel,
-                "Number of tasks must be larger or equal number of parallel reads ...");
+    "Number of tasks must be larger or equal number of parallel reads ...");
   planck_assert(NTasks%readparallel == 0,
-                "Number of tasks must be a multiple of number of parallel reads ...");
+    "Number of tasks must be a multiple of number of parallel reads ...");
 
   // Figure out who will read what
   int NTaskPerRead=NTasks/readparallel;
@@ -180,7 +162,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
       }
     }
 
-  mpiMgr.bcastRaw(&NPartThisTask[0],NTasks,0);
+  mpiMgr.bcast(NPartThisTask,0);
 
   if(mpiMgr.master())
     {
@@ -257,7 +239,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
             v1_tmp[ncount]=ftmp[3*m];
             v2_tmp[ncount]=ftmp[3*m+1];
             v3_tmp[ncount]=ftmp[3*m+2];
@@ -265,31 +246,27 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD);
-              MPI_Ssend(&v2_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD);
-              MPI_Ssend(&v3_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
-              MPI_Ssend(&i1_tmp[0], NPartThisTask[ToTask], MPI_INT, ToTask, TAG_TYPE, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_fail("Should not be executed without MPI support !!!");
-#endif
             }
           }
         LastType=type;
         }
       infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Positions ...");
+    planck_assert(ncount == 0,"Some particles were left when reading positions ...");
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
-    MPI_Recv(&i1_tmp[0], NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_TYPE, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
       p[m].x=v1_tmp[m];
@@ -297,9 +274,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
       p[m].z=v3_tmp[m];
       p[m].type=i1_tmp[m];
       }
-#else
-    planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
     }
 
 #ifdef INTERPOLATE
@@ -347,45 +321,37 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
             v1_tmp[ncount]=ftmp[3*m];
             v2_tmp[ncount]=ftmp[3*m+1];
             v3_tmp[ncount]=ftmp[3*m+2];
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSX, MPI_COMM_WORLD);
-              MPI_Ssend(&v2_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSY, MPI_COMM_WORLD);
-              MPI_Ssend(&v3_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_POSZ, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_fail("Should not be executed without MPI support !!!");
-#endif
             }
           }
         LastType=type;
         }
       infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Positions ...");
+    planck_assert(ncount == 0,"Some particles were left when reading positions ...");
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSX, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSY, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_POSZ, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
       p[m].vx=v1_tmp[m];
       p[m].vy=v2_tmp[m];
       p[m].vz=v3_tmp[m];
       }
-#else
-    planck_fail("Should not be executed without MPI support !!!");
-#endif
     }
 #endif
 
@@ -431,30 +397,25 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
             i1_tmp[ncount]=ftmp[m];
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&i1_tmp[0], NPartThisTask[ToTask], MPI_INT, ToTask, TAG_ID, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_fail("Should not be executed without MPI support !!!");
-#endif
             }
           }
         LastType=type;
         }
         infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading IDs ...");
+    planck_assert(ncount == 0,"Some particles were left when reading IDs ...");
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&i1_tmp[0], NPartThisTask[ThisTask], MPI_INT, DataFromTask[ThisTask], TAG_ID, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
       p[m].x=v1_tmp[m];
@@ -462,9 +423,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
       p[m].z=v3_tmp[m];
       p[m].type=i1_tmp[m];
       }
-#else
-    planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
     }
 #endif
 
@@ -473,7 +431,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
   if(ThisTaskReads[ThisTask] >= 0)
     {
     int ToTask=ThisTask;
-    // int NPartThis=NPartThisTask[ThisTask];
     long ncount=0;
 
     for(int f=0;f<NFilePerRead;f++)
@@ -507,14 +464,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
           {
           if(ThisTask == ToTask)
             {
-            if (fix_size == 0.0)
-              {
-              p[ncount].r=ftmp[m];
-              p[ncount].r *= size_fac;
-              }
-            else
-              p[ncount].r = fix_size;
-            ncount++;
+            p[ncount++].r = (fix_size==0.0) ? ftmp[m]*size_fac : fix_size;
             if(ncount == NPartThisTask[ToTask])
               {
               ToTask++;
@@ -523,41 +473,26 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
-            if (fix_size == 0.0)
-              {
-              v1_tmp[ncount]=ftmp[m];
-              v1_tmp[ncount] *= size_fac;
-              }
-            else
-              v1_tmp[ncount] = fix_size;
-            ncount++;
+            v1_tmp[ncount++] = (fix_size==0.0) ? ftmp[m]*size_fac : fix_size;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_SIZE, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_fail("Should not be executed without MPI support !!!");
-#endif
             }
           }
           LastType=type;
         }
         infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Sizes ...");
+    planck_assert(ncount == 0,"Some particles were left when reading sizes ...");
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_SIZE, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].r=v1_tmp[m];
-#else
-    planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
     }
 
 
@@ -566,7 +501,6 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
   if(ThisTaskReads[ThisTask] >= 0)
     {
     int ToTask=ThisTask;
-    // int NPartThis=NPartThisTask[ThisTask];
     long ncount=0;
 
     for(int f=0;f<NFilePerRead;f++)
@@ -614,22 +548,16 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             if (read_col > 0)
               {
               tsize ofs = col_vector ? 3*m : m;
-              p[ncount].C1 = ftmp[ofs];
-              p[ncount].C1 *= col_fac;
+              p[ncount].C1 = ftmp[ofs]*col_fac;
               if(col_vector)
                 {
-                p[ncount].C2 = ftmp[ofs+1];
-                p[ncount].C3 = ftmp[ofs+2];
-                p[ncount].C2 *= col_fac;
-                p[ncount].C3 *= col_fac;
+                p[ncount].C2 = ftmp[ofs+1]*col_fac;
+                p[ncount].C3 = ftmp[ofs+2]*col_fac;
                 }
               }
             else
-              {
-              p[ncount].C1 = 1;
-              p[ncount].C2 = 1;
-              p[ncount].C3 = 1;
-              }
+              p[ncount].C1 = p[ncount].C2 = p[ncount].C3 = 1;
+
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
@@ -639,61 +567,45 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
             if (read_col > 0)
               {
               tsize ofs = col_vector ? 3*m : m;
-              v1_tmp[ncount] = ftmp[ofs];
-              v1_tmp[ncount] *= col_fac;
+              v1_tmp[ncount] = ftmp[ofs]*col_fac;
               if(col_vector)
                 {
-                v2_tmp[ncount] = ftmp[ofs+1];
-                v3_tmp[ncount] = ftmp[ofs+2];
-                v2_tmp[ncount] *= col_fac;
-                v3_tmp[ncount] *= col_fac;
+                v2_tmp[ncount] = ftmp[ofs+1]*col_fac;
+                v3_tmp[ncount] = ftmp[ofs+2]*col_fac;
                 }
               }
             else
-              {
-              v1_tmp[ncount] = 1;
-              v2_tmp[ncount] = 1;
-              v3_tmp[ncount] = 1;
-              }
+              v1_tmp[ncount] = v2_tmp[ncount] = v3_tmp[ncount] = 1;
+
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL1, MPI_COMM_WORLD);
-              MPI_Ssend(&v2_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL2, MPI_COMM_WORLD);
-              MPI_Ssend(&v3_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_COL3, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_fail("Should not be executed without MPI support !!!");
-#endif
             }
           }
         LastType=type;
         }
       infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Colors ...");
+    planck_assert(ncount == 0,"Some particles were left when reading colors ...");
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL1, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL2, MPI_COMM_WORLD, &status);
-    MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL3, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
-      p[m].C1=v1_tmp[m];
-      p[m].C2=v2_tmp[m];
-      p[m].C3=v3_tmp[m];
+      p[m].C1=v1_tmp[m]; p[m].C2=v2_tmp[m]; p[m].C3=v3_tmp[m];
       }
-#else
-    planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
     }
 
 
@@ -735,11 +647,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
           {
           if(ThisTask == ToTask)
             {
-            if (read_int > 0)
-              p[ncount].I=ftmp[m];
-            else
-              p[ncount].I = 1;
-            ncount++;
+            p[ncount++].I = (read_int>0) ? ftmp[m] : 1;
             if(ncount == NPartThisTask[ToTask])
               {
               ToTask++;
@@ -748,21 +656,13 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
             }
           else
             {
-#ifdef USE_MPI
-            if (read_int > 0)
-              v1_tmp[ncount]=ftmp[m];
-            else
-              v1_tmp[ncount] = 1;
-            ncount++;
+            v1_tmp[ncount++] = (read_int>0) ? ftmp[m] : 1;
             if(ncount == NPartThisTask[ToTask])
               {
-              MPI_Ssend(&v1_tmp[0], NPartThisTask[ToTask], MPI_FLOAT, ToTask, TAG_INT, MPI_COMM_WORLD);
+              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
               }
-#else
-            planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
             }
           }
         LastType=type;
@@ -773,20 +673,16 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
     }
   else
     {
-#ifdef USE_MPI
-    MPI_Recv(&v1_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_INT, MPI_COMM_WORLD, &status);
+    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].I=v1_tmp[m];
-#else
-    planck_assert(false,"Should not be executed without MPI support !!!");
-#endif
     }
 
 #ifdef INTERPOLATE
   //   parallel_sort(p, npart, sizeof(struct particle_sim), io_compare_P_ID);
 
   planck_assert(mpiMgr.num_ranks()==1,
-     "sorry, interpolating between files is not yet MPI parellelized ...");
+     "sorry, interpolating between files is not yet MPI parallelized ...");
   if(mpiMgr.master())
     cout << " sorting particles by ID ..." << endl;
 
