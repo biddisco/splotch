@@ -199,7 +199,7 @@ class MPI_Manager
     void bcastRawVoid (void *data, NDT type, tsize num, int root) const;
     template<typename T> void bcastRaw (T *data, tsize num, int root) const
       { bcastRawVoid (data, nativeType<T>(), num, root); }
-    template<typename T> void bcast (arr<T> &data, tsize num, int root) const
+    template<typename T> void bcast (arr<T> &data, int root) const
       { bcastRaw (&data[0], data.size(), root); }
     template<typename T> void bcast (T &data, int root) const
       { bcastRaw (&data, 1, root); }
