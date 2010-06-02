@@ -29,15 +29,32 @@
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils.h"
 
+#define SPLOTCH_CLASSIC
+
 using namespace std;
 
 namespace {
+
+const float32 h2sigma = 0.5*pow(pi,-1./6.);
+const float32 sqrtpi = sqrt(pi);
+
+#ifdef SPLOTCH_CLASSIC
+const float32 powtmp = pow(pi,1./3.);
+const float32 sigma0 = powtmp/sqrt(2*pi);
+const float32 bfak=1./(2*sqrt(pi)*powtmp);
+#endif
+
+#ifdef SPLOTCH_CLASSIC
+const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
+#else
+const float32 rfac=1.;
+#endif
 
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
   {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
-  arr<Normalizer> intnorm(nt), colnorm(nt);
+  arr<Normalizer<float32> > intnorm(nt), colnorm(nt);
 
   for(int t=0;t<nt;t++)
     {
@@ -51,7 +68,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
 #pragma omp parallel
 {
-  arr<Normalizer> inorm(nt), cnorm(nt);
+  arr<Normalizer<float32> > inorm(nt), cnorm(nt);
   int m;
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m) // do log calculations if requested
@@ -89,7 +106,6 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     intnorm[t].collect(inorm[t]);
     colnorm[t].collect(cnorm[t]);
     }
-
 }
 
   for(int t=0;t<nt;t++)
@@ -150,9 +166,9 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
   int res = params.find<int>("resolution",200);
-  double res2=0.5*res;
-  double fov = params.find<double>("fov",45); //in degrees
-  double fovfct = tan(fov*0.5*degr2rad);
+  float32 res2=0.5f*res;
+  float32 fov = params.find<float32>("fov",45); //in degrees
+  float32 fovfct = tan(fov*0.5f*degr2rad);
   int npart=p.size();
 
   sky.Normalize();
@@ -173,16 +189,16 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
   bool projection = params.find<bool>("projection",true);
 
-  float64 dist = (campos-lookat).Length();
-  float64 xfac = 1./(fovfct*dist);
+  float32 dist = (campos-lookat).Length();
+  float32 xfac = 1./(fovfct*dist);
   if (!projection)
     cout << " Field of fiew: " << 1./xfac*2. << endl;
 
-  bool minhsmlpixel = params.find<bool>("minhsmlpixel",false);
+  float32 minrad_pix = params.find<float32>("minrad_pix",1.);
 
 #pragma omp parallel
 {
-  float64 xfac2=xfac;
+  float32 xfac2=xfac;
   long m;
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m)
@@ -198,18 +214,27 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
       }
     else
       {
-      xfac2=1./(fovfct*p[m].z);
+      xfac2=1.f/(fovfct*p[m].z);
       p[m].x = res2*(p[m].x+fovfct*p[m].z)*xfac2;
       p[m].y = res2*(p[m].y+fovfct*p[m].z)*xfac2;
       }
-    p[m].I /= p[m].r;
+
+#ifdef SPLOTCH_CLASSIC
+    p[m].I *= 0.5f*bfak/p[m].r;
+    p[m].r*=sqrt(2.f)*sigma0/h2sigma;
+#else
+    p[m].I *= 8.f/(pi*p[m].r*p[m].r*p[m].r); // SPH kernel normalisation
+    p[m].I *= (h2sigma*sqrtpi*p[m].r); // integral through the center
+#endif
     p[m].r *= res2*xfac2;
-    if (minhsmlpixel && (p[m].r>0.0))
-      {
-      double rfac=sqrt(p[m].r*p[m].r + .5*.5)/p[m].r;
-      p[m].r *=rfac;
-      p[m].I /= rfac;
-      }
+
+    float32 rcorr = sqrt(p[m].r*p[m].r + minrad_pix*minrad_pix)/p[m].r;
+    p[m].r*=rcorr;
+#ifdef SPLOTCH_CLASSIC
+    p[m].I/=rcorr;
+#else
+    p[m].I/=rcorr*rcorr;
+#endif
     }
 }
   }
@@ -220,18 +245,18 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   int res = params.find<int>("resolution",200);
   int ycut0 = params.find<int>("ycut0",0);
   int ycut1 = params.find<int>("ycut1",res);
-  float zmaxval = params.find<float>("zmax",1.e23);
-  float zminval = params.find<float>("zmin",0.0);
+  float32 zmaxval = params.find<float32>("zmax",1.e23);
+  float32 zminval = params.find<float32>("zmin",0.0);
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt);
-  arr<float64> brightness(nt);
+  arr<float32> brightness(nt);
 
   for(int t=0;t<nt;t++)
     {
-    brightness[t] = params.find<double>("brightness"+dataToString(t),1.);
+    brightness[t] = params.find<float32>("brightness"+dataToString(t),1.f);
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
-  float64 rfac=1.5;
+
   int npart=p.size();
 
 #pragma omp parallel
@@ -244,9 +269,9 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     if (p[m].z<=0) continue;
     if (p[m].z<=zminval) continue;
     if (p[m].z>=zmaxval) continue;
-    float64 r=p[m].r;
-    float64 posx=p[m].x, posy=p[m].y;
-    float64 rfacr=rfac*r;
+    float32 r=p[m].r;
+    float32 posx=p[m].x, posy=p[m].y;
+    float32 rfacr=rfac*r;
 
     int minx=int(posx-rfacr+1);
     if (minx>=res) continue;
@@ -263,18 +288,15 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     maxy=min(maxy,ycut1);
     if (miny>=maxy) continue;
 
-    float64 col1=p[m].C1,col2=p[m].C2,col3=p[m].C3;
-    float64 intensity=p[m].I;
-    intensity *= brightness[p[m].type];
     COLOUR e;
     if (col_vector[p[m].type])
-      {
-      e.r=col1*intensity;
-      e.g=col2*intensity;
-      e.b=col3*intensity;
-      }
+      e.Set(p[m].C1,p[m].C2,p[m].C3);
     else
-      e=amap[p[m].type].getVal_const(col1)*intensity;
+      e=amap[p[m].type].getVal_const(p[m].C1);
+
+    e *= p[m].I * brightness[p[m].type];
+
+//    if ((e.r==0.f) && (e.g==0.f) && (e.g==0.f)) continue;
 
     p[m].active = true;
     p[m].e = e;
@@ -319,7 +341,7 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 const int chunkdim=100;
 
 void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
-  bool a_eq_e, double grayabsorb)
+  bool a_eq_e, float32 grayabsorb)
   {
   planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
     "MPI only supported for A==E so far");
@@ -331,11 +353,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
   float32 cmid0=0.5f*(chunkdim-1);
 
-  const float32 rfac=1.5f;
-  const float32 powtmp = pow(pi,1./3.);
-  const float32 sigma0 = powtmp/sqrt(2*pi);
-  const float32 bfak=1./(2*sqrt(pi)*powtmp);
-  exptable xexp(-20.);
+  exptable<float32> xexp(-20.);
 #ifdef PLANCK_HAVE_SSE2
   const float32 taylorlimit=xexp.taylorLimit();
 #endif
@@ -345,33 +363,28 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   for (tsize i=0; i<p.size(); ++i)
     {
     particle_sim &pp(p[i]);
+    float32 rfacr = rfac*pp.r;
     if (pp.active)
       {
-      float32 pr = rfac*pp.r;
-      pp.I = -0.5f/(pp.r*pp.r*sigma0*sigma0);
-      pp.r=pr;
       if (!a_eq_e)
         {
         pp.C1=pp.e.r/(pp.e.r+grayabsorb);
         pp.C2=pp.e.g/(pp.e.g+grayabsorb);
         pp.C3=pp.e.b/(pp.e.b+grayabsorb);
         }
-      float32 intens = -0.5f*bfak;
-      pp.e.r*=intens; pp.e.g*=intens; pp.e.b*=intens;
 
-      int minx=max(0,int(pp.x-pr+1)/chunkdim);
-      int maxx=min(ncx-1,int(pp.x+pr)/chunkdim);
-      int miny=max(0,int(pp.y-pr+1)/chunkdim);
-      int maxy=min(ncy-1,int(pp.y+pr)/chunkdim);
-      float32 px=pp.x, py=pp.y;
-      float32 sumsq=(rcell+pr)*(rcell+pr);
+      int minx=max(0,int(pp.x-rfacr+1)/chunkdim);
+      int maxx=min(ncx-1,int(pp.x+rfacr)/chunkdim);
+      int miny=max(0,int(pp.y-rfacr+1)/chunkdim);
+      int maxy=min(ncy-1,int(pp.y+rfacr)/chunkdim);
+      float32 sumsq=(rcell+rfacr)*(rcell+rfacr);
       for (int ix=minx; ix<=maxx; ++ix)
         {
         float32 cx=cmid0+ix*chunkdim;
         for (int iy=miny; iy<=maxy; ++iy)
           {
           float32 cy=cmid0+iy*chunkdim;
-          float32 rtot2 = (px-cx)*(px-cx) + (py-cy)*(py-cy);
+          float32 rtot2 = (pp.x-cx)*(pp.x-cx) + (pp.y-cy)*(pp.y-cy);
           if (rtot2<sumsq)
             idx[ix][iy].push_back(i);
           }
@@ -411,26 +424,28 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     for (tsize m=0; m<v.size(); ++m)
       {
       const particle_sim &pp(p[v[m]]);
-      float32 r=pp.r;
+      float32 rfacr=pp.r*rfac;
       float32 posx=pp.x, posy=pp.y;
       posx-=x0s; posy-=y0s;
-      int minx=int(posx-r+1);
+      int minx=int(posx-rfacr+1);
       minx=max(minx,x0);
-      int maxx=int(posx+r+1);
+      int maxx=int(posx+rfacr+1);
       maxx=min(maxx,x1);
-      int miny=int(posy-r+1);
+      int miny=int(posy-rfacr+1);
       miny=max(miny,y0);
-      int maxy=int(posy+r+1);
+      int maxy=int(posy+rfacr+1);
       maxy=min(maxy,y1);
 
-      COLOUR a(pp.e);
+      float32 radsq = rfacr*rfacr;
+      float32 sigma = h2sigma*pp.r;
+      float32 stp = -1.f/(sigma*sigma);
+
+      COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
+
 #ifdef PLANCK_HAVE_SSE2
       V4SF va;
       va.f[0]=a.r;va.f[1]=a.g;va.f[2]=a.b;va.f[3]=0.f;
 #endif
-
-      float32 radsq = r*r;
-      float32 stp = pp.I;
       for (int y=miny; y<maxy; ++y)
         pre1[y]=xexp(stp*(y-posy)*(y-posy));
 
@@ -572,7 +587,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
     cout << endl << "host: rendering (" << npart_all << "/" << npart_all << ")..." << endl;
 
   bool a_eq_e = params.find<bool>("a_eq_e",true);
-  float64 grayabsorb = params.find<float>("gray_absorption",0.2);
+  float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
 
   wallTimers.start("render");
   render_new (particles,pic,a_eq_e,grayabsorb);

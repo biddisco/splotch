@@ -103,7 +103,7 @@ int main (int argc, const char **argv)
     mpiMgr.allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
-    exptable xexp(-20.0);
+    exptable<float32> xexp(-20.0);
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)

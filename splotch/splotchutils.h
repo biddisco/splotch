@@ -86,14 +86,14 @@ struct hcmp
     { return p1.r>p2.r; }
   };
 
-struct Normalizer
+template<typename T> struct Normalizer
   {
-  float32 minv, maxv;
+  T minv, maxv;
 
   Normalizer ()
     : minv(1e37), maxv(-1e37) {}
 
-  void collect (float32 val)
+  void collect (T val)
     {
     using namespace std;
     minv=min(minv,val); maxv=max(maxv,val);
@@ -105,18 +105,18 @@ struct Normalizer
     minv=min(minv,other.minv); maxv=max(maxv,other.maxv);
     }
 
-  void normAndClamp (float32 &val) const
+  void normAndClamp (T &val) const
     {
     using namespace std;
     val = (max(minv,min(maxv,val))-minv)/(maxv-minv);
     }
   };
 
-class exptable
+template<typename T> class exptable
   {
   private:
-    float32 expfac, taylorlimit;
-    arr<float32> tab1, tab2;
+    T expfac, taylorlimit;
+    arr<T> tab1, tab2;
     enum {
       nbits=10,
       dim1=1<<nbits,
@@ -127,7 +127,7 @@ class exptable
       };
 
   public:
-    exptable (float32 maxexp)
+    exptable (T maxexp)
       : expfac(dim2/maxexp), tab1(dim1), tab2(dim1)
       {
       using namespace std;
@@ -136,22 +136,22 @@ class exptable
         tab1[m]=exp(m*dim1/expfac);
         tab2[m]=exp(m/expfac);
         }
-      taylorlimit = sqrt(2.f*abs(maxexp)/dim2);
+      taylorlimit = sqrt(T(2)*abs(maxexp)/dim2);
       }
 
-    float32 taylorLimit() const { return taylorlimit; }
+    T taylorLimit() const { return taylorlimit; }
 
-    float32 operator() (float32 arg) const
+    T operator() (T arg) const
       {
       int iarg= int(arg*expfac);
       if (iarg&mask3)
-        return (iarg<0) ? 1.f : 0.f;
+        return (iarg<0) ? T(1) : T(0);
       return tab1[iarg>>nbits]*tab2[iarg&mask1];
       }
-    float32 expm1(float32 arg) const
+    T expm1(T arg) const
       {
       if (std::abs(arg)<taylorlimit) return arg;
-      return operator()(arg)-1.f;
+      return operator()(arg)-T(1);
       }
   };
 
