@@ -178,33 +178,33 @@ template<typename It, typename Comp> class IdxComp__
       { return comp(*(begin+a),*(begin+b)); }
   };
 
-template<typename It, typename Comp> inline void buildIndex (It begin, It end,
-  std::vector<std::size_t> &idx, Comp comp)
+template<typename It, typename T2, typename Comp>
+  inline void buildIndex (It begin, It end, std::vector<T2> &idx, Comp comp)
   {
   using namespace std;
-  size_t num=end-begin;
+  T2 num=end-begin;
   idx.resize(num);
-  for (size_t i=0; i<num; ++i) idx[i] = i;
+  for (T2 i=0; i<num; ++i) idx[i] = i;
   sort (idx.begin(),idx.end(),IdxComp__<It,Comp>(begin,comp));
   }
 
-template<typename It> inline void buildIndex (It begin, It end,
-  std::vector<size_t> &idx)
+template<typename It, typename T2> inline void buildIndex (It begin, It end,
+  std::vector<T2> &idx)
   {
   using namespace std;
   typedef typename iterator_traits<It>::value_type T;
   buildIndex(begin,end,idx,less<T>());
   }
 
-template<typename It> inline void sortByIndex (It begin, It end,
-  const std::vector<std::size_t> &idx)
+template<typename It, typename T2> inline void sortByIndex (It begin, It end,
+  const std::vector<T2> &idx)
   {
   using namespace std;
   typedef typename iterator_traits<It>::value_type T;
-  size_t num=end-begin;
+  T2 num=end-begin;
   T *tmp= new T[num];
-  for (size_t i=0; i<num; ++i) tmp[i]=*(begin+i);
-  for (size_t i=0; i<num; ++i) *(begin+i) = tmp[idx[i]];
+  for (T2 i=0; i<num; ++i) tmp[i]=*(begin+i);
+  for (T2 i=0; i<num; ++i) *(begin+i) = tmp[idx[i]];
   delete[] tmp;
   }
 

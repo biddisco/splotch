@@ -35,31 +35,13 @@ struct particle_sim
   bool active;
   COLOUR e;
 
-#ifdef INTERPOLATE
-  unsigned int id;
-#ifdef HIGH_ORDER_INTERPOLATION
-  float32 vx,vy,vz;
-#endif
-#endif
   particle_sim (float32 x_, float32 y_, float32 z_, float32 r_,
                 float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_,
-                int active_, const COLOUR &e_
-#ifdef INTERPOLATE
-                , unsigned int id_
-#ifdef HIGH_ORDER_INTERPOLATION
-                , float32 vx_, float32 vy_, float32 vz_
-#endif
-#endif
-                ): x(x_), y(y_), z(z_), r(r_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_), active(active_), e(e_)
-#ifdef INTERPOLATE
-                , id(id_)
-#ifdef HIGH_ORDER_INTERPOLATION
-                , vx(vx_), vy(vy_), vz(vz_)
-#endif
-#endif
-                 {}
-  particle_sim () {}
+                int active_, const COLOUR &e_)
+    : x(x_), y(y_), z(z_), r(r_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_),
+      active(active_), e(e_) {}
 
+  particle_sim () {}
   };
 
 struct zcmp
@@ -108,7 +90,10 @@ template<typename T> struct Normalizer
   void normAndClamp (T &val) const
     {
     using namespace std;
-    val = (max(minv,min(maxv,val))-minv)/(maxv-minv);
+    if (maxv==minv)
+      val=T(1);
+    else
+      val = (max(minv,min(maxv,val))-minv)/(maxv-minv);
     }
   };
 

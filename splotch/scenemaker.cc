@@ -26,8 +26,6 @@ using namespace std;
 
 #ifdef INTERPOLATE
 
-namespace {
-
 // Higher order interpolation would be:
 // Time between snapshots (cosmology!)
 //    dt=(z2t(h1.redshift)-z2t(h0.redshift))*0.7
@@ -43,9 +41,7 @@ namespace {
 // Interpolated velocities:
 //    v=v0+t*(v1-v0)
 
-void particle_interpolate(paramfile &params, vector<particle_sim> &p,
-  const vector<particle_sim> &p1, const vector<particle_sim> &p2, double frac,
-  double time1, double time2)
+void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   {
   cout << " Time1/2 = " << time1 << "," << time2 << endl;
 
@@ -63,20 +59,20 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
   double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
 #endif
 
-  vector<pair<uint32,uint32> >v;
+  vector<pair<uint32,uint32> > v;
   v.reserve(min(p1.size(),p2.size()));
   {
   tsize i1=0,i2=0;
   while(i1<p1.size() && i2<p2.size())
     {
-    if (p1[i1].id==p2[i2].id)
+    if (id1[idx1[i1]]==id2[idx2[i2]])
       {
-      v.push_back(pair<uint32,uint32>(i1,i2));
+      v.push_back(pair<uint32,uint32>(idx1[i1],idx2[i2]));
       i1++; i2++;
       }
-    else if (p1[i1].id<p2[i2].id)
+    else if (id1[idx1[i1]]<id2[idx2[i2]])
       i1++;
-    else if (p1[i1].id>p2[i2].id)
+    else if (id1[idx1[i1]]>id2[idx2[i2]])
       i2++;
     }
   }
@@ -86,7 +82,7 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
 
 #pragma omp parallel
 {
-  int i;
+  tsize i;
 #pragma omp for schedule(guided,1000)
   for (i=0; i<npart; ++i)
     {
@@ -94,18 +90,18 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
     planck_assert (p1[i1].type==p2[i2].type,
       "interpolate: can not interpolate between different types !");
 #ifdef HIGH_ORDER_INTERPOLATION
-    double vda_x = 2 * (p2[i2].x-p1[i1].x) - (p1[i1].vx*v_unit1 + p2[i2].vx*v_unit2);
-    double vda_y = 2 * (p2[i2].y-p1[i1].y) - (p1[i1].vy*v_unit1 + p2[i2].vy*v_unit2);
-    double vda_z = 2 * (p2[i2].z-p1[i1].z) - (p1[i1].vz*v_unit1 + p2[i2].vz*v_unit2);
+    double vda_x = 2 * (p2[i2].x-p1[i1].x) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
+    double vda_y = 2 * (p2[i2].y-p1[i1].y) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
+    double vda_z = 2 * (p2[i2].z-p1[i1].z) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
 #endif
     p[i]=particle_sim(
 #ifdef HIGH_ORDER_INTERPOLATION
-         p1[i1].x + p1[i1].vx * v_unit1 * frac
-           + 0.5 * (p2[i2].vx * v_unit2 - p1[i1].vx * v_unit1 + vda_x) * frac * frac,
-         p1[i1].y + p1[i1].vy * v_unit1 * frac
-           + 0.5 * (p2[i2].vy * v_unit2 - p1[i1].vy * v_unit1 + vda_y) * frac * frac,
-         p1[i1].z + p1[i1].vz * v_unit1 * frac
-           + 0.5 * (p2[i2].vz * v_unit2 - p1[i1].vz * v_unit1 + vda_z) * frac * frac,
+         p1[i1].x + vel1[i1].x * v_unit1 * frac
+           + 0.5 * (vel2[i2].x * v_unit2 - vel1[i1].x * v_unit1 + vda_x) * frac * frac,
+         p1[i1].y + vel1[i1].y * v_unit1 * frac
+           + 0.5 * (vel2[i2].y * v_unit2 - vel1[i1].y * v_unit1 + vda_y) * frac * frac,
+         p1[i1].z + vel1[i1].z * v_unit1 * frac
+           + 0.5 * (vel2[i2].z * v_unit2 - vel1[i1].z * v_unit1 + vda_z) * frac * frac,
 #else
          (1-frac) * p1[i1].x  + frac*p2[i2].x,
          (1-frac) * p1[i1].y  + frac*p2[i2].y,
@@ -116,21 +112,13 @@ void particle_interpolate(paramfile &params, vector<particle_sim> &p,
          (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
          (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
          (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
-         p1[i1].type,p1[i1].active,p1[i1].e,p1[i1].id
-#ifdef HIGH_ORDER_INTERPOLATION
-        ,(1-frac) * p1[i1].vx  + frac*p2[i2].vx,
-         (1-frac) * p1[i1].vy  + frac*p2[i2].vy,
-         (1-frac) * p1[i1].vz  + frac*p2[i2].vz
-#endif
-         );
+         p1[i1].type,p1[i1].active,p1[i1].e);
     }
 }
 
   if(mpiMgr.master())
     cout << " found " << p.size() << " common particles ..." << endl;
   }
-
-} // unnamed namespace
 
 #endif
 
@@ -141,7 +129,10 @@ sceneMaker::sceneMaker (paramfile &par)
   geomfile = (geometry_file!="");
   done=false;
 #ifdef INTERPOLATE
-  snr_start = params.find<int>("snap_start",10);
+  planck_assert(mpiMgr.num_ranks()==1,
+     "Sorry, interpolating between files is not yet MPI parallelized ...");
+
+  int snr_start = params.find<int>("snap_start",10);
   snr1=snr_start;
   snr2=snr_start+1;
   snr1_now=snr2_now=-1;
@@ -246,24 +237,41 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
         if (snr1==snr2_now)
           {
           cout << " old2 = new1!" << endl;
-          particle_data1=particle_data2;
+          p1.swap(p2);
+          id1.swap(id2);
+          idx1.swap(idx2);
+#ifdef HIGH_ORDER_INTERPOLATION
+          vel1.swap(vel2);
+#endif
           snr1_now = snr1;
           time1 = time2;
           }
         if (snr1_now!=snr1)
           {
           cout << " reading new1 " << snr1 << endl;
-          gadget_reader(params,particle_data1,snr1,&time1);
+#ifdef HIGH_ORDER_INTERPOLATION
+          gadget_reader(params,p1,id1,vel1,snr1,time1);
+#else
+          gadget_reader(params,p1,id1,snr1,time1);
+#endif
+          buildIndex(id1.begin(),id1.end(),idx1);
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
-          gadget_reader(params,particle_data2,snr2,&time2);
+#ifdef HIGH_ORDER_INTERPOLATION
+          gadget_reader(params,p2,id2,vel2,snr2,time2);
+#else
+          gadget_reader(params,p2,id2,snr2,time2);
+#endif
+cout <<"building index..."<<endl;
+          buildIndex(id2.begin(),id2.end(),idx2);
+cout <<"done"<<endl;
           snr2_now = snr2;
           }
 #else
-        gadget_reader(params,particle_data,0,&dummy);
+        gadget_reader(params,particle_data,dummy);
         if (geomfile)
           p_orig = particle_data;
 #endif
@@ -306,9 +314,9 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 
 #ifdef INTERPOLATE
   if (master)
-    cout << "Interpolating between " << particle_data1.size() << " and " <<
-      particle_data2.size() << " particles ..." << endl;
-  particle_interpolate(params,particle_data,particle_data1,particle_data2,frac,time1,time2);
+    cout << "Interpolating between " << p1.size() << " and " <<
+      p2.size() << " particles ..." << endl;
+  particle_interpolate(particle_data,frac);
 #endif
   outfile = params.find<string>("outfile");
   if (geomfile)

@@ -15,10 +15,15 @@ class sceneMaker
 
     bool geomfile;
 #ifdef INTERPOLATE
-    std::vector<particle_sim> particle_data1,particle_data2;
-    int snr_start;
+    std::vector<particle_sim> p1,p2;
+    std::vector<uint32> id1,id2,idx1,idx2;
+#ifdef HIGH_ORDER_INTERPOLATION
+    std::vector<vec3f> vel1,vel2;
+#endif
     int snr1,snr2,snr1_now,snr2_now;
     double time1,time2;
+
+    void particle_interpolate(std::vector<particle_sim> &p, double frac);
 #endif
 
     // only used if geomfile==true

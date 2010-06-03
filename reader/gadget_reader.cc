@@ -12,16 +12,6 @@
 
 using namespace std;
 
-#ifdef INTERPOLATE
-
-struct idcmp
-  {
-  bool operator()(const particle_sim &p1, const particle_sim &p2)
-    { return p1.id<p2.id; }
-  };
-
-#endif
-
 int gadget_find_block (bifstream &file,const string &label)
   {
   int i;
@@ -62,23 +52,29 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
   }
 
-int gadget_read_header(bifstream &file, int32 *npart, double *time)
+int gadget_read_header(bifstream &file, int32 *npart, double &time)
   {
   int blocksize = gadget_find_block (file,"HEAD");
   planck_assert (blocksize>0, "Header block not found");
   file.skip(4);
   file.get(npart,6);
   file.skip(6*8);
-  file >> *time;
+  file >> time;
   file.skip(8+8+6*4);
 
   return blocksize;
   }
 
 #ifdef INTERPOLATE
-void gadget_reader(paramfile &params, vector<particle_sim> &p, int snr, double *time)
+#ifdef HIGH_ORDER_INTERPOLATION
+void gadget_reader(paramfile &params, vector<particle_sim> &p,
+  vector<uint32> &id, vector<vec3f> &vel, int snr, double &time)
 #else
-void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, double *time)
+void gadget_reader(paramfile &params, vector<particle_sim> &p,
+  vector<uint32> &id, int snr, double &time)
+#endif
+#else
+void gadget_reader(paramfile &params, vector<particle_sim> &p, double &time)
 #endif
   {
   int numfiles = params.find<int>("numfiles",1);
@@ -143,7 +139,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
         planck_assert (infile,"could not open input file! <" + filename + ">");
         gadget_read_header(infile,npartthis,time);
         infile.close();
-        cout << " Timestamp from file : " << *time << endl;
+        cout << " Timestamp from file : " << time << endl;
         for(int itype=0;itype<ptypes;itype++)
           {
           int type = params.find<int>("ptype"+dataToString(itype),0);
@@ -186,13 +182,19 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
 
   long npart=NPartThisTask[ThisTask],nmax=0;
   p.resize(npart);
+#ifdef INTERPOLATE
+  id.resize(npart);
+#ifdef HIGH_ORDER_INTERPOLATION
+  vel.resize(npart);
+#endif
+#endif
 
   for(int i=0;i<NTasks;i++)
     if(NPartThisTask[i] > nmax)
       nmax = NPartThisTask[i];
 
   arr<float> v1_tmp(nmax), v2_tmp(nmax), v3_tmp(nmax);
-  arr<int> i1_tmp(nmax);
+  arr<uint32> i1_tmp(nmax);
 
   if(mpiMgr.master())
     cout << " Reading positions ..." << endl;
@@ -309,9 +311,9 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
           {
           if(ThisTask == ToTask)
             {
-            p[ncount].vx=ftmp[3*m];
-            p[ncount].vy=ftmp[3*m+1];
-            p[ncount].vz=ftmp[3*m+2];
+            vel[ncount].x=ftmp[3*m];
+            vel[ncount].y=ftmp[3*m+1];
+            vel[ncount].z=ftmp[3*m+2];
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
@@ -348,9 +350,9 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
     mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       {
-      p[m].vx=v1_tmp[m];
-      p[m].vy=v2_tmp[m];
-      p[m].vz=v3_tmp[m];
+      vel[m].x=v1_tmp[m];
+      vel[m].y=v2_tmp[m];
+      vel[m].z=v3_tmp[m];
       }
     }
 #endif
@@ -387,7 +389,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
           {
           if(ThisTask == ToTask)
             {
-            p[ncount].id=ftmp[m];
+            id[ncount]=ftmp[m];
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
@@ -417,12 +419,7 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
     {
     mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      {
-      p[m].x=v1_tmp[m];
-      p[m].y=v2_tmp[m];
-      p[m].z=v3_tmp[m];
-      p[m].type=i1_tmp[m];
-      }
+      id[m]=i1_tmp[m];
     }
 #endif
 
@@ -677,15 +674,4 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, int /*snr*/, doub
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].I=v1_tmp[m];
     }
-
-#ifdef INTERPOLATE
-  //   parallel_sort(p, npart, sizeof(struct particle_sim), io_compare_P_ID);
-
-  planck_assert(mpiMgr.num_ranks()==1,
-     "sorry, interpolating between files is not yet MPI parallelized ...");
-  if(mpiMgr.master())
-    cout << " sorting particles by ID ..." << endl;
-
-  sort(p.begin(), p.end(), idcmp());
-#endif
   }

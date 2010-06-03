@@ -3,7 +3,16 @@
 
 #include "splotch/splotchutils.h"
 
-void gadget_reader(paramfile &params, std::vector<particle_sim> &p, int snr, double *time);
+#ifdef INTERPOLATE
+void gadget_reader(paramfile &params, std::vector<particle_sim> &p,
+  std::vector<uint32> &id, int snr, double &time);
+#ifdef HIGH_ORDER_INTERPOLATION
+void gadget_reader(paramfile &params, std::vector<particle_sim> &p,
+  std::vector<uint32> &id, std::vector<vec3f> &vel, int snr, double &time);
+#endif
+#else
+void gadget_reader(paramfile &params, std::vector<particle_sim> &p, double &time);
+#endif
 void gadget_millenium_reader(paramfile &params, std::vector<particle_sim> &p, int snr, double *time);
 void bin_reader_tab (paramfile &params, std::vector<particle_sim> &points);
 void bin_reader_block (paramfile &params, std::vector<particle_sim> &points);
