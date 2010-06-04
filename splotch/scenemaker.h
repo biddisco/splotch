@@ -14,17 +14,18 @@ class sceneMaker
     paramfile &params;
 
     bool geomfile;
-#ifdef INTERPOLATE
+    int interpol_mode;
+
+// only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
     std::vector<uint32> id1,id2,idx1,idx2;
-#ifdef HIGH_ORDER_INTERPOLATION
-    std::vector<vec3f> vel1,vel2;
-#endif
     int snr1,snr2,snr1_now,snr2_now;
     double time1,time2;
+// only used if interpol_mode>1
+    std::vector<vec3f> vel1,vel2;
 
+// only used if interpol_mode>0
     void particle_interpolate(std::vector<particle_sim> &p, double frac);
-#endif
 
     // only used if geomfile==true
     std::vector<particle_sim> p_orig;
@@ -33,6 +34,8 @@ class sceneMaker
     int geometry_incr, geometry_skip;
     // only used if geomfile==false
     bool done;
+
+    void fetchFiles(std::vector<particle_sim> &particle_data, double &frac);
 
   public:
     sceneMaker (paramfile &par);

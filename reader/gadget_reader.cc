@@ -65,17 +65,9 @@ int gadget_read_header(bifstream &file, int32 *npart, double &time)
   return blocksize;
   }
 
-#ifdef INTERPOLATE
-#ifdef HIGH_ORDER_INTERPOLATION
-void gadget_reader(paramfile &params, vector<particle_sim> &p,
-  vector<uint32> &id, vector<vec3f> &vel, int snr, double &time)
-#else
-void gadget_reader(paramfile &params, vector<particle_sim> &p,
-  vector<uint32> &id, int snr, double &time)
-#endif
-#else
-void gadget_reader(paramfile &params, vector<particle_sim> &p, double &time)
-#endif
+void gadget_reader(paramfile &params, int interpol_mode,
+  vector<particle_sim> &p, vector<uint32> &id, vector<vec3f> &vel, int snr,
+  double &time)
   {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",true);
@@ -90,9 +82,8 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, double &time)
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
   arr<long> NPartThisTask(NTasks);
 
-#ifdef INTERPOLATE
-  infilename += intToString(snr,3);
-#endif
+  if (interpol_mode>0)
+    infilename += intToString(snr,3);
 
   planck_assert(numfiles >= readparallel,
     "Number of files must be larger or equal number of parallel reads ...");
@@ -182,12 +173,10 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, double &time)
 
   long npart=NPartThisTask[ThisTask],nmax=0;
   p.resize(npart);
-#ifdef INTERPOLATE
-  id.resize(npart);
-#ifdef HIGH_ORDER_INTERPOLATION
-  vel.resize(npart);
-#endif
-#endif
+  if (interpol_mode>0)
+    id.resize(npart);
+  if (interpol_mode>1)
+    vel.resize(npart);
 
   for(int i=0;i<NTasks;i++)
     if(NPartThisTask[i] > nmax)
@@ -278,150 +267,152 @@ void gadget_reader(paramfile &params, vector<particle_sim> &p, double &time)
       }
     }
 
-#ifdef INTERPOLATE
-#ifdef HIGH_ORDER_INTERPOLATION
-  if(mpiMgr.master())
-    cout << " Reading velocities ..." << endl;
-  if(ThisTaskReads[ThisTask] >= 0)
+  if (interpol_mode>0)
     {
-    int ToTask=ThisTask;
-    long ncount=0;
-
-    for(int f=0;f<NFilePerRead;f++)
+    if (interpol_mode>1)
       {
-      int npartthis[6];
-      int present=1+2+4+8+16+32;
-      int LastType=-1;
-      filename=infilename;
-      if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
-      infile.open(filename.c_str(),doswap);
-      planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
-      gadget_find_block(infile,"VEL");
-      infile.skip(4);
-      for(int itype=0;itype<ptypes;itype++)
+      if(mpiMgr.master())
+        cout << " Reading velocities ..." << endl;
+      if(ThisTaskReads[ThisTask] >= 0)
         {
-        int type = params.find<int>("ptype"+dataToString(itype),0);
-        for(int s=LastType+1; s<type; s++)
-          if(npartthis[s]>0 && (1<<s & present))
-            infile.skip(4*3*npartthis[s]);
-        arr<float32> ftmp(3*npartthis[type]);
-        infile.get(&ftmp[0],ftmp.size());
-        for(int m=0; m<npartthis[type]; ++m)
+        int ToTask=ThisTask;
+        long ncount=0;
+
+        for(int f=0;f<NFilePerRead;f++)
           {
-          if(ThisTask == ToTask)
+          int npartthis[6];
+          int present=1+2+4+8+16+32;
+          int LastType=-1;
+          filename=infilename;
+          if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+          infile.open(filename.c_str(),doswap);
+          planck_assert (infile,"could not open input file! <" + filename + ">");
+          gadget_read_header(infile,npartthis,time);
+          gadget_find_block(infile,"VEL");
+          infile.skip(4);
+          for(int itype=0;itype<ptypes;itype++)
             {
-            vel[ncount].x=ftmp[3*m];
-            vel[ncount].y=ftmp[3*m+1];
-            vel[ncount].z=ftmp[3*m+2];
-            ncount++;
-            if(ncount == NPartThisTask[ToTask])
+            int type = params.find<int>("ptype"+dataToString(itype),0);
+            for(int s=LastType+1; s<type; s++)
+              if(npartthis[s]>0 && (1<<s & present))
+                infile.skip(4*3*npartthis[s]);
+            arr<float32> ftmp(3*npartthis[type]);
+            infile.get(&ftmp[0],ftmp.size());
+            for(int m=0; m<npartthis[type]; ++m)
               {
-              ToTask++;
-              ncount=0;
+              if(ThisTask == ToTask)
+                {
+                vel[ncount].x=ftmp[3*m];
+                vel[ncount].y=ftmp[3*m+1];
+                vel[ncount].z=ftmp[3*m+2];
+                ncount++;
+                if(ncount == NPartThisTask[ToTask])
+                  {
+                  ToTask++;
+                  ncount=0;
+                  }
+                }
+              else
+                {
+                v1_tmp[ncount]=ftmp[3*m];
+                v2_tmp[ncount]=ftmp[3*m+1];
+                v3_tmp[ncount]=ftmp[3*m+2];
+                ncount++;
+                if(ncount == NPartThisTask[ToTask])
+                  {
+                  mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+                  mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+                  mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
+                  ToTask++;
+                  ncount=0;
+                  }
+                }
               }
+            LastType=type;
             }
-          else
-            {
-            v1_tmp[ncount]=ftmp[3*m];
-            v2_tmp[ncount]=ftmp[3*m+1];
-            v3_tmp[ncount]=ftmp[3*m+2];
-            ncount++;
-            if(ncount == NPartThisTask[ToTask])
-              {
-              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
-              ToTask++;
-              ncount=0;
-              }
-            }
+          infile.close();
           }
-        LastType=type;
+        planck_assert(ncount == 0,"Some particles were left when reading positions ...");
         }
-      infile.close();
-      }
-    planck_assert(ncount == 0,"Some particles were left when reading positions ...");
-    }
-  else
-    {
-    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      {
-      vel[m].x=v1_tmp[m];
-      vel[m].y=v2_tmp[m];
-      vel[m].z=v3_tmp[m];
-      }
-    }
-#endif
-
-  if(mpiMgr.master())
-    cout << " Reading ids ..." << endl;
-  if(ThisTaskReads[ThisTask] >= 0)
-    {
-    int ToTask=ThisTask;
-    long ncount=0;
-
-    for(int f=0;f<NFilePerRead;f++)
-      {
-      int npartthis[6];
-      int present=1+2+4+8+16+32;
-      int LastType=-1;
-      filename=infilename;
-      if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
-      infile.open(filename.c_str(),doswap);
-      planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
-      string label_id = params.find<string>("id_label","ID");
-      gadget_find_block(infile,label_id);
-      infile.skip(4);
-      for(int itype=0;itype<ptypes;itype++)
+      else
         {
-        int type = params.find<int>("ptype"+dataToString(itype),0);
-        for(int s=LastType+1; s<type; s++)
-          if(npartthis[s]>0 && (1<<s & present))
-            infile.skip(4*npartthis[s]);
-        arr<unsigned int> ftmp(npartthis[type]);
-        infile.get(&ftmp[0],ftmp.size());
-        for(int m=0; m<npartthis[type]; ++m)
+        mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        for (int m=0; m<NPartThisTask[ThisTask]; ++m)
           {
-          if(ThisTask == ToTask)
-            {
-            id[ncount]=ftmp[m];
-            ncount++;
-            if(ncount == NPartThisTask[ToTask])
-              {
-              ToTask++;
-              ncount=0;
-              }
-            }
-          else
-            {
-            i1_tmp[ncount]=ftmp[m];
-            ncount++;
-            if(ncount == NPartThisTask[ToTask])
-              {
-              mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
-              ToTask++;
-              ncount=0;
-              }
-            }
+          vel[m].x=v1_tmp[m];
+          vel[m].y=v2_tmp[m];
+          vel[m].z=v3_tmp[m];
           }
-        LastType=type;
         }
-        infile.close();
       }
-    planck_assert(ncount == 0,"Some particles were left when reading IDs ...");
+
+    if(mpiMgr.master())
+      cout << " Reading ids ..." << endl;
+    if(ThisTaskReads[ThisTask] >= 0)
+      {
+      int ToTask=ThisTask;
+      long ncount=0;
+
+      for(int f=0;f<NFilePerRead;f++)
+        {
+        int npartthis[6];
+        int present=1+2+4+8+16+32;
+        int LastType=-1;
+        filename=infilename;
+        if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+        infile.open(filename.c_str(),doswap);
+        planck_assert (infile,"could not open input file! <" + filename + ">");
+        gadget_read_header(infile,npartthis,time);
+        string label_id = params.find<string>("id_label","ID");
+        gadget_find_block(infile,label_id);
+        infile.skip(4);
+        for(int itype=0;itype<ptypes;itype++)
+          {
+          int type = params.find<int>("ptype"+dataToString(itype),0);
+          for(int s=LastType+1; s<type; s++)
+            if(npartthis[s]>0 && (1<<s & present))
+              infile.skip(4*npartthis[s]);
+          arr<unsigned int> ftmp(npartthis[type]);
+          infile.get(&ftmp[0],ftmp.size());
+          for(int m=0; m<npartthis[type]; ++m)
+            {
+            if(ThisTask == ToTask)
+              {
+              id[ncount]=ftmp[m];
+              ncount++;
+              if(ncount == NPartThisTask[ToTask])
+                {
+                ToTask++;
+                ncount=0;
+                }
+              }
+            else
+              {
+              i1_tmp[ncount]=ftmp[m];
+              ncount++;
+              if(ncount == NPartThisTask[ToTask])
+                {
+                mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
+                ToTask++;
+                ncount=0;
+                }
+              }
+            }
+          LastType=type;
+          }
+          infile.close();
+        }
+      planck_assert(ncount == 0,"Some particles were left when reading IDs ...");
+      }
+    else
+      {
+      mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+        id[m]=i1_tmp[m];
+      }
     }
-  else
-    {
-    mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      id[m]=i1_tmp[m];
-    }
-#endif
 
   if(mpiMgr.master())
     cout << " Reading smoothing ..." << endl;

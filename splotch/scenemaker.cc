@@ -24,8 +24,6 @@
 
 using namespace std;
 
-#ifdef INTERPOLATE
-
 // Higher order interpolation would be:
 // Time between snapshots (cosmology!)
 //    dt=(z2t(h1.redshift)-z2t(h0.redshift))*0.7
@@ -45,19 +43,21 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   {
   cout << " Time1/2 = " << time1 << "," << time2 << endl;
 
-#ifdef HIGH_ORDER_INTERPOLATION
-  double h = params.find<double>("hubble",0.7);
-  double O = params.find<double>("omega",0.3);
-  double L = params.find<double>("lambda",0.7);
-  double mparsck = 3.0856780e+24;
-  double l_unit = params.find<double>("l_unit",3.0856780e+21);
-  double v_unit = params.find<double>("v_unit",100000.00);
-  double t1 = log(sqrt(L/O*time1*time1*time1)+sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
-  double t2 = log(sqrt(L/O*time2*time2*time2)+sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
-  double dt = (t2 - t1) * h;
-  double v_unit1=v_unit/l_unit/sqrt(time1)*dt;
-  double v_unit2=v_unit/l_unit/sqrt(time2)*dt;
-#endif
+  double v_unit1, v_unit2;
+  if (interpol_mode>1)
+    {
+    double h = params.find<double>("hubble",0.7);
+    double O = params.find<double>("omega",0.3);
+    double L = params.find<double>("lambda",0.7);
+    double mparsck = 3.0856780e+24;
+    double l_unit = params.find<double>("l_unit",3.0856780e+21);
+    double v_unit = params.find<double>("v_unit",100000.00);
+    double t1 = log(sqrt(L/O*time1*time1*time1)+sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+    double t2 = log(sqrt(L/O*time2*time2*time2)+sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+    double dt = (t2 - t1) * h;
+    v_unit1=v_unit/l_unit/sqrt(time1)*dt;
+    v_unit2=v_unit/l_unit/sqrt(time2)*dt;
+    }
 
   vector<pair<uint32,uint32> > v;
   v.reserve(min(p1.size(),p2.size()));
@@ -89,24 +89,29 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     tsize i1=v[i].first, i2=v[i].second;
     planck_assert (p1[i1].type==p2[i2].type,
       "interpolate: can not interpolate between different types !");
-#ifdef HIGH_ORDER_INTERPOLATION
-    double vda_x = 2 * (p2[i2].x-p1[i1].x) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
-    double vda_y = 2 * (p2[i2].y-p1[i1].y) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
-    double vda_z = 2 * (p2[i2].z-p1[i1].z) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
-#endif
+
+    vec3f pos;
+    if (interpol_mode>1)
+      {
+      double vda_x = 2 * (p2[i2].x-p1[i1].x) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
+      double vda_y = 2 * (p2[i2].y-p1[i1].y) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
+      double vda_z = 2 * (p2[i2].z-p1[i1].z) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
+      pos.x = p1[i1].x + vel1[i1].x * v_unit1 * frac
+           + 0.5 * (vel2[i2].x * v_unit2 - vel1[i1].x * v_unit1 + vda_x) * frac * frac;
+      pos.y = p1[i1].y + vel1[i1].y * v_unit1 * frac
+           + 0.5 * (vel2[i2].y * v_unit2 - vel1[i1].y * v_unit1 + vda_y) * frac * frac;
+      pos.z = p1[i1].z + vel1[i1].z * v_unit1 * frac
+           + 0.5 * (vel2[i2].z * v_unit2 - vel1[i1].z * v_unit1 + vda_z) * frac * frac;
+      }
+    else
+      {
+      pos.x = (1-frac) * p1[i1].x  + frac*p2[i2].x;
+      pos.y = (1-frac) * p1[i1].y  + frac*p2[i2].y;
+      pos.z = (1-frac) * p1[i1].z  + frac*p2[i2].z;
+      }
+
     p[i]=particle_sim(
-#ifdef HIGH_ORDER_INTERPOLATION
-         p1[i1].x + vel1[i1].x * v_unit1 * frac
-           + 0.5 * (vel2[i2].x * v_unit2 - vel1[i1].x * v_unit1 + vda_x) * frac * frac,
-         p1[i1].y + vel1[i1].y * v_unit1 * frac
-           + 0.5 * (vel2[i2].y * v_unit2 - vel1[i1].y * v_unit1 + vda_y) * frac * frac,
-         p1[i1].z + vel1[i1].z * v_unit1 * frac
-           + 0.5 * (vel2[i2].z * v_unit2 - vel1[i1].z * v_unit1 + vda_z) * frac * frac,
-#else
-         (1-frac) * p1[i1].x  + frac*p2[i2].x,
-         (1-frac) * p1[i1].y  + frac*p2[i2].y,
-         (1-frac) * p1[i1].z  + frac*p2[i2].z,
-#endif
+         pos.x,pos.y,pos.z,
          (1-frac) * p1[i1].r  + frac*p2[i2].r,
          (1-frac) * p1[i1].I  + frac*p2[i2].I,
          (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
@@ -120,23 +125,24 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     cout << " found " << p.size() << " common particles ..." << endl;
   }
 
-#endif
-
 sceneMaker::sceneMaker (paramfile &par)
   : params(par)
   {
   string geometry_file = params.find<string>("geometry_file","");
   geomfile = (geometry_file!="");
   done=false;
-#ifdef INTERPOLATE
-  planck_assert(mpiMgr.num_ranks()==1,
-     "Sorry, interpolating between files is not yet MPI parallelized ...");
 
-  int snr_start = params.find<int>("snap_start",10);
-  snr1=snr_start;
-  snr2=snr_start+1;
-  snr1_now=snr2_now=-1;
-#endif
+  interpol_mode = params.find<int>("interpolation_mode",0);
+  if (interpol_mode>0)
+    {
+    planck_assert(mpiMgr.num_ranks()==1,
+       "Sorry, interpolating between files is not yet MPI parallelized ...");
+
+    int snr_start = params.find<int>("snap_start",10);
+    snr1=snr_start;
+    snr2=snr_start+1;
+    snr1_now=snr2_now=-1;
+    }
 
   if (geomfile)
     {
@@ -150,15 +156,106 @@ sceneMaker::sceneMaker (paramfile &par)
     for(int i=0; i<geometry_skip; i++, linecount++)
       {
       getline(inp, line);
-#ifdef INTERPOLATE
-      if (linecount==nextfile)
+      if (interpol_mode>0)
         {
-        nextfile=linecount+ninterpol;
-        snr1=snr2;
-        snr2++;
+        if (linecount==nextfile)
+          {
+          nextfile=linecount+ninterpol;
+          snr1=snr2;
+          snr2++;
+          }
         }
-#endif
       }
+    }
+  }
+
+void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double &frac)
+  {
+  if (mpiMgr.master())
+    cout << endl << "reading data ..." << endl;
+  int simtype = params.find<int>("simtype");
+  frac=0;
+  if (interpol_mode>0) frac = (linecount-(nextfile-ninterpol))/double(ninterpol);
+  switch (simtype)
+    {
+    case 0:
+      bin_reader_tab(params,particle_data);
+      break;
+    case 1:
+      bin_reader_block(params,particle_data);
+      break;
+    case 2:
+      if (interpol_mode>0) // Here only the two datasets are prepared, interpolation will be done later
+        {
+        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
+        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+        cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
+        if (snr1==snr2_now)
+          {
+          cout << " old2 = new1!" << endl;
+          p1.swap(p2);
+          id1.swap(id2);
+          idx1.swap(idx2);
+          vel1.swap(vel2);
+
+          snr1_now = snr1;
+          time1 = time2;
+          }
+        if (snr1_now!=snr1)
+          {
+          cout << " reading new1 " << snr1 << endl;
+          gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1);
+          buildIndex(id1.begin(),id1.end(),idx1);
+          snr1_now = snr1;
+          }
+        if (snr2_now!=snr2)
+          {
+          cout << " reading new2 " << snr2 << endl;
+          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2);
+          buildIndex(id2.begin(),id2.end(),idx2);
+          snr2_now = snr2;
+          }
+        }
+      else
+        {
+        double dummy;
+        gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy);
+        if (geomfile)
+          p_orig = particle_data;
+        }
+      break;
+#if 0
+    case 3:
+      enzo_reader(params,particle_data);
+      break;
+#endif
+    case 4:
+      {
+      double dummy;
+      gadget_millenium_reader(params,particle_data,0,&dummy);
+      break;
+      }
+    case 5:
+#if defined(USE_MPIIO)
+      {
+      float maxr, minr;
+      bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+      }
+#else
+      planck_fail("mpi reader not available in non MPI compiled version !");
+#endif
+      break;
+    case 6:
+      mesh_reader(params,particle_data);
+      break;
+#ifdef HDF5
+    case 7:
+      hdf5_reader(params,particle_data);
+      break;
+#endif
+    default:
+      planck_fail("No valid file type given ...");
+      break;
     }
   }
 
@@ -185,14 +282,11 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
       cout << " Camera:    " << campos << endl;
       cout << " Lookat:    " << lookat << endl;
       cout << " Sky:       " << sky << endl;
-#ifdef INTERPOLATE
-      cout << " ninterpol: " << ninterpol << endl;
-#endif
+      if (interpol_mode>0)
+        cout << " ninterpol: " << ninterpol << endl;
       }
-#ifdef INTERPOLATE
-    if(linecount == 0 && nextfile == 0)
+    if ((interpol_mode>0) && (linecount==0) && (nextfile==0))
       nextfile=linecount+ninterpol;
-#endif
     }
   else
     {
@@ -211,140 +305,47 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 // ----------- Reading ---------------
 // -----------------------------------
 
-#ifndef INTERPOLATE
-  if ((!geomfile) || (geomfile&&(linecount==geometry_skip))) // read only once if no interpolation is chosen
+  double frac;
+  if (interpol_mode==0)
     {
-#endif
-    if (master)
-      cout << endl << "reading data ..." << endl;
-    int simtype = params.find<int>("simtype"); // 2:Gadget2
-#ifdef INTERPOLATE
-    double frac=(linecount-(nextfile-ninterpol))/double(ninterpol);
-#endif
-    switch (simtype)
-      {
-      case 0:
-        bin_reader_tab(params,particle_data);
-        break;
-      case 1:
-        bin_reader_block(params,particle_data);
-        break;
-      case 2:
-#ifdef INTERPOLATE // Here only the two datasets are prepared, interpolation will be done later
-        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
-        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
-        cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
-        if (snr1==snr2_now)
-          {
-          cout << " old2 = new1!" << endl;
-          p1.swap(p2);
-          id1.swap(id2);
-          idx1.swap(idx2);
-#ifdef HIGH_ORDER_INTERPOLATION
-          vel1.swap(vel2);
-#endif
-          snr1_now = snr1;
-          time1 = time2;
-          }
-        if (snr1_now!=snr1)
-          {
-          cout << " reading new1 " << snr1 << endl;
-#ifdef HIGH_ORDER_INTERPOLATION
-          gadget_reader(params,p1,id1,vel1,snr1,time1);
-#else
-          gadget_reader(params,p1,id1,snr1,time1);
-#endif
-          buildIndex(id1.begin(),id1.end(),idx1);
-          snr1_now = snr1;
-          }
-        if (snr2_now!=snr2)
-          {
-          cout << " reading new2 " << snr2 << endl;
-#ifdef HIGH_ORDER_INTERPOLATION
-          gadget_reader(params,p2,id2,vel2,snr2,time2);
-#else
-          gadget_reader(params,p2,id2,snr2,time2);
-#endif
-cout <<"building index..."<<endl;
-          buildIndex(id2.begin(),id2.end(),idx2);
-cout <<"done"<<endl;
-          snr2_now = snr2;
-          }
-#else
-        gadget_reader(params,particle_data,dummy);
-        if (geomfile)
-          p_orig = particle_data;
-#endif
-        break;
-#if 0
-      case 3:
-        enzo_reader(params,particle_data);
-        break;
-#endif
-      case 4:
-        gadget_millenium_reader(params,particle_data,0,&dummy);
-        break;
-      case 5:
-#if defined(USE_MPIIO)
-        {
-        float maxr, minr;
-        bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-        }
-#else
-        planck_fail("mpi reader not available in non MPI compiled version !");
-#endif
-        break;
-      case 6:
-        mesh_reader(params,particle_data);
-        break;
-#ifdef HDF5
-      case 7:
-        hdf5_reader(params,particle_data);
-        break;
-#endif
-      default:
-        planck_fail("No valid file type given ...");
-        break;
-      }
-#ifndef INTERPOLATE
+    if ((!geomfile) || (geomfile&&(linecount==geometry_skip))) // read only once if no interpolation is chosen
+      fetchFiles(particle_data,frac);
+    else
+      if (geomfile) particle_data = p_orig;
     }
   else
-    if (geomfile) particle_data = p_orig;
-#endif
+    fetchFiles(particle_data,frac);
 
-#ifdef INTERPOLATE
-  if (master)
-    cout << "Interpolating between " << p1.size() << " and " <<
-      p2.size() << " particles ..." << endl;
-  particle_interpolate(particle_data,frac);
-#endif
+  if (interpol_mode>0)
+    {
+    if (master)
+      cout << "Interpolating between " << p1.size() << " and " <<
+        p2.size() << " particles ..." << endl;
+    particle_interpolate(particle_data,frac);
+    }
   outfile = params.find<string>("outfile");
   if (geomfile)
     {
     outfile += intToString(linecount,4) + ".tga";
     linecount++;
-#ifdef INTERPOLATE
-    if (linecount==nextfile)
+    if ((interpol_mode>0) && (linecount==nextfile))
       {
       nextfile=linecount+ninterpol;
       snr1=snr2;
       snr2++;
       }
-#endif
 
     string line;
     for (int i=1; i<geometry_incr; i++)
       {
       getline(inp, line);
       linecount++;
-#ifdef INTERPOLATE
-      if (linecount==nextfile)
+      if ((interpol_mode>0) && (linecount==nextfile))
         {
         nextfile=linecount+ninterpol;
         snr1=snr2;
         snr2++;
         }
-#endif
       }
     }
 

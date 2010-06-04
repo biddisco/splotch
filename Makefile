@@ -2,11 +2,6 @@
 #  Splotch V4.1                                                       #
 #######################################################################
 
-#--------------------------------------- Basic operation mode of code
-#OPT	+=  -DINTERPOLATE
-#OPT	+=  -DHIGH_ORDER_INTERPOLATION
-
-
 #--------------------------------------- Switch on MPI
 OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
