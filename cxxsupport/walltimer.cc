@@ -27,8 +27,6 @@ double wallTime()
 #endif
   }
 
-double wallTime0 = wallTime();
-
 } // unnamed namespace
 
 void wallTimer::start()
@@ -54,8 +52,5 @@ void wallTimerSet::report() const
     printf("  %-15s: %10.5fs\n", it->first.c_str(), it->second.acc());
   cout << "End wall clock timer report\n" << endl;
   }
-
-double elapsedWallTime()
-  { return wallTime()-wallTime0; }
 
 wallTimerSet wallTimers;

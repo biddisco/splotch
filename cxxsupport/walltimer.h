@@ -32,8 +32,6 @@ class wallTimerSet
     void report() const;
   };
 
-double elapsedWallTime();
-
 extern wallTimerSet wallTimers;
 
 #endif
