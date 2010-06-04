@@ -35,7 +35,7 @@ class sceneMaker
     // only used if geomfile==false
     bool done;
 
-    void fetchFiles(std::vector<particle_sim> &particle_data, double &frac);
+    void fetchFiles(std::vector<particle_sim> &particle_data);
 
   public:
     sceneMaker (paramfile &par);

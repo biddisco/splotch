@@ -88,7 +88,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     {
     tsize i1=v[i].first, i2=v[i].second;
     planck_assert (p1[i1].type==p2[i2].type,
-      "interpolate: can not interpolate between different types !");
+      "interpolate: cannot interpolate between different particle types!");
 
     vec3f pos;
     if (interpol_mode>1)
@@ -133,14 +133,16 @@ sceneMaker::sceneMaker (paramfile &par)
   done=false;
 
   interpol_mode = params.find<int>("interpolation_mode",0);
+  planck_assert((geomfile) || (interpol_mode==0),
+    "geometry file needed when interpolation is requested!");
+
   if (interpol_mode>0)
     {
     planck_assert(mpiMgr.num_ranks()==1,
        "Sorry, interpolating between files is not yet MPI parallelized ...");
 
-    int snr_start = params.find<int>("snap_start",10);
-    snr1=snr_start;
-    snr2=snr_start+1;
+    snr1 = params.find<int>("snap_start",10);
+    snr2 = snr1+1;
     snr1_now=snr2_now=-1;
     }
 
@@ -169,12 +171,18 @@ sceneMaker::sceneMaker (paramfile &par)
     }
   }
 
-void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double &frac)
+void sceneMaker::fetchFiles(vector<particle_sim> &particle_data)
   {
+  if (geomfile&&(linecount!=geometry_skip)&&(interpol_mode==0))
+    {
+    particle_data=p_orig;
+    return;
+    }
+
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
   int simtype = params.find<int>("simtype");
-  frac=0;
+  double frac=0;
   if (interpol_mode>0) frac = (linecount-(nextfile-ninterpol))/double(ninterpol);
   switch (simtype)
     {
@@ -187,7 +195,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double &frac)
     case 2:
       if (interpol_mode>0) // Here only the two datasets are prepared, interpolation will be done later
         {
-        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fac: " << frac << endl;
+        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
         cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
         cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
         if (snr1==snr2_now)
@@ -242,7 +250,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double &frac)
       bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
       }
 #else
-      planck_fail("mpi reader not available in non MPI compiled version !");
+      planck_fail("mpi reader not available in non MPI compiled version!");
 #endif
       break;
     case 6:
@@ -256,6 +264,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double &frac)
     default:
       planck_fail("No valid file type given ...");
       break;
+    }
+
+  if (interpol_mode>0)
+    {
+    if (mpiMgr.master())
+      cout << "Interpolating between " << p1.size() << " and " <<
+        p2.size() << " particles ..." << endl;
+    particle_interpolate(particle_data,frac);
     }
   }
 
@@ -304,24 +320,8 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 // ----------- Reading ---------------
 // -----------------------------------
 
-  double frac;
-  if (interpol_mode==0)
-    {
-    if ((!geomfile) || (geomfile&&(linecount==geometry_skip))) // read only once if no interpolation is chosen
-      fetchFiles(particle_data,frac);
-    else
-      if (geomfile) particle_data = p_orig;
-    }
-  else
-    fetchFiles(particle_data,frac);
+  fetchFiles(particle_data);
 
-  if (interpol_mode>0)
-    {
-    if (master)
-      cout << "Interpolating between " << p1.size() << " and " <<
-        p2.size() << " particles ..." << endl;
-    particle_interpolate(particle_data,frac);
-    }
   outfile = params.find<string>("outfile");
   if (geomfile)
     {
