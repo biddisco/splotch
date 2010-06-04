@@ -43,6 +43,8 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   {
   cout << " Time1/2 = " << time1 << "," << time2 << endl;
 
+  releaseMemory(p);
+
   double v_unit1, v_unit2;
   if (interpol_mode>1)
     {
@@ -232,11 +234,13 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data)
           p_orig = particle_data;
         }
       break;
-#if 0
     case 3:
+#if 0
       enzo_reader(params,particle_data);
-      break;
+#else
+      planck_fail("Enzo reader not available in this version!");
 #endif
+      break;
     case 4:
       {
       double dummy;
