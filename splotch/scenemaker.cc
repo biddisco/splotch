@@ -111,13 +111,13 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
       }
 
     p[i]=particle_sim(
+         COLOUR((1-frac) * p1[i1].e.r + frac*p2[i2].e.r,
+                (1-frac) * p1[i1].e.g + frac*p2[i2].e.g,
+                (1-frac) * p1[i1].e.b + frac*p2[i2].e.b),
          pos.x,pos.y,pos.z,
          (1-frac) * p1[i1].r  + frac*p2[i2].r,
          (1-frac) * p1[i1].I  + frac*p2[i2].I,
-         (1-frac) * p1[i1].C1 + frac*p2[i2].C1,
-         (1-frac) * p1[i1].C2 + frac*p2[i2].C2,
-         (1-frac) * p1[i1].C3 + frac*p2[i2].C3,
-         p1[i1].type,p1[i1].active,p1[i1].e);
+         p1[i1].type,p1[i1].active);
     }
 }
 
@@ -266,7 +266,6 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   if ((!geomfile)&&done) return false;
 
   bool master = mpiMgr.master();
-  double dummy;
 
   if (geomfile)
     {

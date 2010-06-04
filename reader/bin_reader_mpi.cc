@@ -166,41 +166,41 @@ which_fields[7] = color 3 (B)
      {
      case 0:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).x=readarray[n_fields_eff*pe_size+index];
+                 points[index].x=readarray[n_fields_eff*pe_size+index];
        break;
      case 1:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).y=readarray[n_fields_eff*pe_size+index];
+                 points[index].y=readarray[n_fields_eff*pe_size+index];
        break;
      case 2:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).z=readarray[n_fields_eff*pe_size+index];
+                 points[index].z=readarray[n_fields_eff*pe_size+index];
        break;
      case 3:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).r=readarray[n_fields_eff*pe_size+index];
+                 points[index].r=readarray[n_fields_eff*pe_size+index];
        break;
      case 4:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).I=readarray[n_fields_eff*pe_size+index];
+                 points[index].I=readarray[n_fields_eff*pe_size+index];
        break;
      case 5:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).C1=readarray[n_fields_eff*pe_size+index];
+                 points[index].e.r=readarray[n_fields_eff*pe_size+index];
        break;
      case 6:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).C2=readarray[n_fields_eff*pe_size+index];
+                 points[index].e.g=readarray[n_fields_eff*pe_size+index];
        break;
      case 7:
        for(long index=0; index<pe_size; index++)
-                 points.at(index).C3=readarray[n_fields_eff*pe_size+index];
+                 points[index].e.b=readarray[n_fields_eff*pe_size+index];
        break;
      }
      for(long index=0; index<pe_size; index++)
      {
-       points.at(index).type=0;
-       float smooth = points.at(index).r;      
+       points[index].type=0;
+       float smooth = points[index].r;
 
        minradius = (minradius <= smooth ? minradius : smooth);
        maxradius = (maxradius >= smooth ? maxradius : smooth);
@@ -211,7 +211,7 @@ which_fields[7] = color 3 (B)
 
 
    if(which_fields[4] < 0)
-       for(long index=0; index<pe_size; index++)points.at(index).I=0.5;
+       for(long index=0; index<pe_size; index++)points[index].I=0.5;
 
    //maxradius = 1.0;
    *maxr=maxradius;

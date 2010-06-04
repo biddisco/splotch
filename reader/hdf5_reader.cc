@@ -97,7 +97,7 @@ void hdf5_reader_finish (vector<particle_sim> &points, float thresh)
   float maxz=-1e30;
   for (tsize i=0; i<points.size(); ++i)
     {
-    points[i].C1=points[i].C1+thresh;
+    points[i].e.r+=thresh;
     //points[i].active = 1;
     points[i].type=0;
     minr = min(minr,points[i].r);
@@ -216,9 +216,9 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points)
       CASEMACRO__(0,x)
       CASEMACRO__(1,y)
       CASEMACRO__(2,z)
-      CASEMACRO__(3,C1)
-      CASEMACRO__(4,C2)
-      CASEMACRO__(5,C3)
+      CASEMACRO__(3,e.r)
+      CASEMACRO__(4,e.g)
+      CASEMACRO__(5,e.b)
       CASEMACRO__(6,r)
       }
 
@@ -253,7 +253,7 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points)
         points[i].x = (float)(i1+start_local);
         points[i].y = (float)i2;
         points[i].z = (float)i3;
-        //if(points[i].C1 > 1e-10)cout << mpiMgr.rank() << " " << i << " " << points[i].x << " " << points[i].y << " " << points[i].z << " " <<  points[i].C1 << "\n";
+        //if(points[i].e.r > 1e-10)cout << mpiMgr.rank() << " " << i << " " << points[i].x << " " << points[i].y << " " << points[i].z << " " <<  points[i].e.r << "\n";
         
       }
 // end if

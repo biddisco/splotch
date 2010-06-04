@@ -30,16 +30,15 @@
 
 struct particle_sim
   {
-  float32 x,y,z,r,I,C1,C2,C3;
+  COLOUR e;
+  float32 x,y,z,r,I;
   unsigned short type;
   bool active;
-  COLOUR e;
 
-  particle_sim (float32 x_, float32 y_, float32 z_, float32 r_,
-                float32 I_, float32 C1_, float32 C2_, float32 C3_, int type_,
-                int active_, const COLOUR &e_)
-    : x(x_), y(y_), z(z_), r(r_), I(I_), C1(C1_), C2(C2_), C3(C3_), type(type_),
-      active(active_), e(e_) {}
+  particle_sim (const COLOUR &e_, float32 x_, float32 y_, float32 z_, float32 r_,
+                float32 I_, int type_, bool active_)
+    : e(e_), x(x_), y(y_), z(z_), r(r_), I(I_), type(type_),
+      active(active_) {}
 
   particle_sim () {}
   };
@@ -53,13 +52,13 @@ struct zcmp
 struct vcmp1
   {
   bool operator()(const particle_sim &p1, const particle_sim &p2) const
-    { return p1.C1>p2.C1; }
+    { return p1.e.r>p2.e.r; }
   };
 
 struct vcmp2
   {
   bool operator()(const particle_sim &p1, const particle_sim &p2) const
-    { return p1.C1<p2.C1; }
+    { return p1.e.r<p2.e.r; }
   };
 
 struct hcmp

@@ -132,9 +132,9 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points)
       CASEMACRO__(2,z)
       CASEMACRO__(3,r)
       CASEMACRO__(4,I)
-      CASEMACRO__(5,C1)
-      CASEMACRO__(6,C2)
-      CASEMACRO__(7,C3)
+      CASEMACRO__(5,e.r)
+      CASEMACRO__(6,e.g)
+      CASEMACRO__(7,e.b)
       }
     }
 

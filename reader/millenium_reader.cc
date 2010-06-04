@@ -550,15 +550,15 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
             {
             if (read_col > 0)
               {
-              p[ncount].C1 = fdummy[nread++] * col_fac;
+              p[ncount].e.r = fdummy[nread++] * col_fac;
               if(col_vector)
                 {
-                p[ncount].C2 = fdummy[nread++] * col_fac;
-                p[ncount].C3 = fdummy[nread++] * col_fac;
+                p[ncount].e.g = fdummy[nread++] * col_fac;
+                p[ncount].e.b = fdummy[nread++] * col_fac;
                 }
               }
             else
-              p[ncount].C1 = p[ncount].C2 = p[ncount].C3 = 1;
+              p[ncount].e.Set(1,1,1);
             ncount++;
             if(ncount == NPartThisTask[ToTask])
               {
@@ -607,18 +607,14 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
     MPI_Recv(&v2_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL2, MPI_COMM_WORLD, &status);
     MPI_Recv(&v3_tmp[0], NPartThisTask[ThisTask], MPI_FLOAT, DataFromTask[ThisTask], TAG_COL3, MPI_COMM_WORLD, &status);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      {
-      p[m].C1=v1_tmp[m];
-      p[m].C2=v2_tmp[m];
-      p[m].C3=v3_tmp[m];
-      }
+      p[m].e.Set(v1_tmp[m],v2_tmp[m],v3_tmp[m]);
 #else
     planck_fail("Should not be executed without MPI support !!!");
 #endif
     }
 
-  cout << "   -> " << p[0].C1 << "," << p[0].C2 << "," << p[0].C3 << endl;
-  cout << "   -> " << p[npart-1].C1 << "," << p[npart-1].C2 << "," << p[npart-1].C3 << endl;
+  cout << "   -> " << p[0].e.r << "," << p[0].e.g << "," << p[0].e.b << endl;
+  cout << "   -> " << p[npart-1].e.r << "," << p[npart-1].e.g << "," << p[npart-1].e.b << endl;
 
  if(mpiMgr.master())
     cout << " Reading intensity ..." << endl;

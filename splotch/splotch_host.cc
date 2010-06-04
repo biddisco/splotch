@@ -80,24 +80,24 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     inorm[t].collect(p[m].I);
 
     if (log_col[t])
-      p[m].C1 = log10(p[m].C1);
+      p[m].e.r = log10(p[m].e.r);
     if (asinh_col[t])
-      p[m].C1 = my_asinh(p[m].C1);
-    cnorm[t].collect(p[m].C1);
+      p[m].e.r = my_asinh(p[m].e.r);
+    cnorm[t].collect(p[m].e.r);
     if (col_vector[t])
       {
       if (log_col[t])
         {
-        p[m].C2 = log10(p[m].C2);
-        p[m].C3 = log10(p[m].C3);
+        p[m].e.g = log10(p[m].e.g);
+        p[m].e.b = log10(p[m].e.b);
         }
       if (asinh_col[t])
         {
-        p[m].C2 = my_asinh(p[m].C2);
-        p[m].C3 = my_asinh(p[m].C3);
+        p[m].e.g = my_asinh(p[m].e.g);
+        p[m].e.b = my_asinh(p[m].e.b);
         }
-      cnorm[t].collect(p[m].C2);
-      cnorm[t].collect(p[m].C3);
+      cnorm[t].collect(p[m].e.g);
+      cnorm[t].collect(p[m].e.b);
       }
     }
 #pragma omp critical
@@ -152,11 +152,11 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     {
     int t=p[m].type;
     intnorm[t].normAndClamp(p[m].I);
-    colnorm[t].normAndClamp(p[m].C1);
+    colnorm[t].normAndClamp(p[m].e.r);
     if (col_vector[t])
       {
-      colnorm[t].normAndClamp(p[m].C2);
-      colnorm[t].normAndClamp(p[m].C3);
+      colnorm[t].normAndClamp(p[m].e.g);
+      colnorm[t].normAndClamp(p[m].e.b);
       }
     }
 }
@@ -269,9 +269,8 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     if (p[m].z<=0) continue;
     if (p[m].z<=zminval) continue;
     if (p[m].z>=zmaxval) continue;
-    float32 r=p[m].r;
     float32 posx=p[m].x, posy=p[m].y;
-    float32 rfacr=rfac*r;
+    float32 rfacr=rfac*p[m].r;
 
     int minx=int(posx-rfacr+1);
     if (minx>=res) continue;
@@ -288,18 +287,14 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     maxy=min(maxy,ycut1);
     if (miny>=maxy) continue;
 
-    COLOUR e;
-    if (col_vector[p[m].type])
-      e.Set(p[m].C1,p[m].C2,p[m].C3);
-    else
-      e=amap[p[m].type].getVal_const(p[m].C1);
+    if (!col_vector[p[m].type])
+      p[m].e=amap[p[m].type].getVal_const(p[m].e.r);
 
-    e *= p[m].I * brightness[p[m].type];
+    p[m].e *= p[m].I * brightness[p[m].type];
 
 //    if ((e.r==0.f) && (e.g==0.f) && (e.g==0.f)) continue;
 
     p[m].active = true;
-    p[m].e = e;
     }
 }
   }
@@ -366,13 +361,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     float32 rfacr = rfac*pp.r;
     if (pp.active)
       {
-      if (!a_eq_e)
-        {
-        pp.C1=pp.e.r/(pp.e.r+grayabsorb);
-        pp.C2=pp.e.g/(pp.e.g+grayabsorb);
-        pp.C3=pp.e.b/(pp.e.b+grayabsorb);
-        }
-
       int minx=max(0,int(pp.x-rfacr+1)/chunkdim);
       int maxx=min(ncx-1,int(pp.x+rfacr)/chunkdim);
       int miny=max(0,int(pp.y-rfacr+1)/chunkdim);
@@ -475,7 +463,9 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         }
       else
         {
-        COLOUR q(pp.C1,pp.C2,pp.C3);
+        COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
+                 pp.e.g/(pp.e.g+grayabsorb),
+                 pp.e.b/(pp.e.b+grayabsorb));
 #ifdef PLANCK_HAVE_SSE2
         float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
         V4SF vq;

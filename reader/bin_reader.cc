@@ -108,9 +108,9 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
     points[i].z = buffer[qty_idx[2]];
     points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : 1.0;
     points[i].I = (qty_idx[4]>=0) ? buffer[qty_idx[4]] : 0.5;
-    points[i].C1= buffer[qty_idx[5]];
-    points[i].C2= have_c2c3 ? buffer[qty_idx[6]] : 0.0;
-    points[i].C3= have_c2c3 ? buffer[qty_idx[7]] : 0.0;
+    points[i].e.r = buffer[qty_idx[5]];
+    points[i].e.g = have_c2c3 ? buffer[qty_idx[6]] : 0.0;
+    points[i].e.b = have_c2c3 ? buffer[qty_idx[7]] : 0.0;
     }
 
   bin_reader_finish (points);
@@ -154,9 +154,9 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points)
       CASEMACRO__(2,z,0)
       CASEMACRO__(3,r,1.)
       CASEMACRO__(4,I,.5)
-      CASEMACRO__(5,C1,0)
-      CASEMACRO__(6,C2,0)
-      CASEMACRO__(7,C3,0)
+      CASEMACRO__(5,e.r,0)
+      CASEMACRO__(6,e.g,0)
+      CASEMACRO__(7,e.b,0)
       }
     }
 

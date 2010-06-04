@@ -318,7 +318,7 @@ __global__ void k_colorize
   p2[m].minx =minx;  p2[m].miny =miny;
   p2[m].maxx =maxx;  p2[m].maxy =maxy;
 
-  float col1=p[m].C1,col2=p[m].C2,col3=p[m].C3;
+  float col1=p[m].e.r,col2=p[m].e.g,col3=p[m].e.b;
   clamp (0.0000001,0.9999999,col1);
   if (params->col_vector[p[m].type])
     {
@@ -336,7 +336,7 @@ __global__ void k_colorize
     e.g=col2*intensity;
     e.b=col3*intensity;
     }
-  else   // get color, associated from physical quantity contained in C1, from lookup table
+  else   // get color, associated from physical quantity contained in e.r, from lookup table
     {
     e=get_color(p[m].type, col1, info);
     e.r *= intensity;
@@ -364,28 +364,28 @@ __global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
     p[m].I = log10(p[m].I);
   get_minmax(pr->minint[p[m].type], pr->maxint[p[m].type], p[m].I);
 
-  //C1, mincol, maxcol
+  //e.r, mincol, maxcol
   if (pr->log_col[p[m].type])
-  p[m].C1 = log10(p[m].C1);
+  p[m].e.r = log10(p[m].e.r);
   if (pr->asinh_col[p[m].type])
-    p[m].C1 = my_asinh(p[m].C1);
-  get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C1);
+    p[m].e.r = my_asinh(p[m].e.r);
+  get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.r);
 
   //C2, C3, mincol, maxcol
   if (pr->col_vector[p[m].type])
     {
     if (pr->log_col[p[m].type])
       {
-      p[m].C2 = log10(p[m].C2);
-      p[m].C3 = log10(p[m].C3);
+      p[m].e.g = log10(p[m].e.g);
+      p[m].e.b = log10(p[m].e.b);
       }
     if (pr->asinh_col[p[m].type])
       {
-      p[m].C2 = my_asinh(p[m].C2);
-      p[m].C3 = my_asinh(p[m].C3);
+      p[m].e.g = my_asinh(p[m].e.g);
+      p[m].e.b = my_asinh(p[m].e.b);
       }
-    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C2);
-    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].C3);
+    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.g);
+    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.b);
     }
   }
 
@@ -403,11 +403,11 @@ __global__ void k_range2
   if(p[m].type == itype)///clamp into (min,max)
     {
     my_normalize(minval_int,maxval_int,p[m].I);
-    my_normalize(minval_col,maxval_col,p[m].C1);
+    my_normalize(minval_col,maxval_col,p[m].e.r);
     if (pr->col_vector[p[m].type])
       {
-      my_normalize(minval_col,maxval_col,p[m].C2);
-      my_normalize(minval_col,maxval_col,p[m].C3);
+      my_normalize(minval_col,maxval_col,p[m].e.g);
+      my_normalize(minval_col,maxval_col,p[m].e.b);
       }
     }
   }

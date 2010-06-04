@@ -536,15 +536,15 @@ void gadget_reader(paramfile &params, int interpol_mode,
             if (read_col > 0)
               {
               tsize ofs = col_vector ? 3*m : m;
-              p[ncount].C1 = ftmp[ofs]*col_fac;
+              p[ncount].e.r = ftmp[ofs]*col_fac;
               if(col_vector)
                 {
-                p[ncount].C2 = ftmp[ofs+1]*col_fac;
-                p[ncount].C3 = ftmp[ofs+2]*col_fac;
+                p[ncount].e.g = ftmp[ofs+1]*col_fac;
+                p[ncount].e.b = ftmp[ofs+2]*col_fac;
                 }
               }
             else
-              p[ncount].C1 = p[ncount].C2 = p[ncount].C3 = 1;
+              p[ncount].e.Set(1,1,1);
 
             ncount++;
             if(ncount == NPartThisTask[ToTask])
@@ -591,9 +591,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      {
-      p[m].C1=v1_tmp[m]; p[m].C2=v2_tmp[m]; p[m].C3=v3_tmp[m];
-      }
+      p[m].e.Set(v1_tmp[m],v2_tmp[m],v3_tmp[m]);
     }
 
 
