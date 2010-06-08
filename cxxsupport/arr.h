@@ -275,6 +275,12 @@ template <typename T> class arr2
       s1=sz1; s2=sz2;
       }
     /*! Allocates space for an array with \a sz1*sz2 elements.
+        All elements are set to \a inival.
+        \a sz1 or \a sz2 can be 0. If \a sz1*sz2 is the same as the
+        currently allocated space, no reallocation is performed. */
+    void allocAndFill (tsize sz1, tsize sz2, const T &inival)
+      { alloc(sz1,sz2); fill(inival); }
+    /*! Allocates space for an array with \a sz1*sz2 elements.
         The content of the array is undefined on exit.
         \a sz1 or \a sz2 can be 0. If \a sz1*sz2 is smaller than the
         currently allocated space, no reallocation is performed. */
