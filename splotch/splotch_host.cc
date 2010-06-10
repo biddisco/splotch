@@ -349,7 +349,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   float32 cmid0=0.5f*(chunkdim-1);
 
   exptable<float32> xexp(-20.);
-#ifdef PLANCK_HAVE_SSE2
+#ifdef PLANCK_HAVE_SSE
   const float32 taylorlimit=xexp.taylorLimit();
 #endif
 
@@ -384,8 +384,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #pragma omp parallel
 {
   arr<float32> pre1(chunkdim);
-#ifdef PLANCK_HAVE_SSE2
-  arr2<V4SF> lpic(chunkdim,chunkdim);
+#ifdef PLANCK_HAVE_SSE
+  arr2_align<v4sf,16> lpic(chunkdim,chunkdim);
 #else
   arr2<COLOUR> lpic(chunkdim,chunkdim);
 #endif
@@ -398,10 +398,10 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     int x0s=x0, y0s=y0;
     x1-=x0; x0=0; y1-=y0; y0=0;
     lpic.fast_alloc(x1-x0,y1-y0);
-#ifdef PLANCK_HAVE_SSE2
+#ifdef PLANCK_HAVE_SSE
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
-         lpic[ix][iy].v=_mm_setzero_ps();
+         lpic[ix][iy]=_mm_setzero_ps();
 #else
     lpic.fill(COLOUR(0,0,0));
 #endif
@@ -430,9 +430,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
       COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
 
-#ifdef PLANCK_HAVE_SSE2
-      V4SF va;
-      va.f[0]=a.r;va.f[1]=a.g;va.f[2]=a.b;va.f[3]=0.f;
+#ifdef PLANCK_HAVE_SSE
+      v4sf va=build_v4sf(a.r,a.g,a.b,0.f);
 #endif
       for (int y=miny; y<maxy; ++y)
         pre1[y]=xexp(stp*(y-posy)*(y-posy));
@@ -449,10 +448,10 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           for (int y=miny2; y<maxy2; ++y)
             {
             float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE2
+#ifdef PLANCK_HAVE_SSE
             v4sf tmpatt=_mm_load1_ps(&att);
-            tmpatt=_mm_mul_ps(tmpatt,va.v);
-            lpic[x][y].v=_mm_add_ps(tmpatt,lpic[x][y].v);
+            tmpatt=_mm_mul_ps(tmpatt,va);
+            lpic[x][y]=_mm_add_ps(tmpatt,lpic[x][y]);
 #else
             lpic[x][y].r += att*a.r;
             lpic[x][y].g += att*a.g;
@@ -466,10 +465,9 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
                  pp.e.g/(pp.e.g+grayabsorb),
                  pp.e.b/(pp.e.b+grayabsorb));
-#ifdef PLANCK_HAVE_SSE2
+#ifdef PLANCK_HAVE_SSE
         float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
-        V4SF vq;
-        vq.f[0]=q.r;vq.f[1]=q.g;vq.f[2]=q.b;vq.f[3]=0.f;
+        v4sf vq=build_v4sf(q.r,q.g,q.b,0.f);
 #endif
 
         for (int x=minx; x<maxx; ++x)
@@ -482,20 +480,23 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           for (int y=miny2; y<maxy2; ++y)
             {
             float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE2
+#ifdef PLANCK_HAVE_SSE
             if ((maxa*att)<taylorlimit)
               {
               v4sf tmpatt=_mm_load1_ps(&att);
-              tmpatt=_mm_mul_ps(tmpatt,va.v);
-              v4sf tlpic=_mm_sub_ps(lpic[x][y].v,vq.v);
+              tmpatt=_mm_mul_ps(tmpatt,va);
+              v4sf tlpic=_mm_sub_ps(lpic[x][y],vq);
               tlpic=_mm_mul_ps(tmpatt,tlpic);
-              lpic[x][y].v=_mm_add_ps(tlpic,lpic[x][y].v);
+              lpic[x][y]=_mm_add_ps(tlpic,lpic[x][y]);
               }
             else
               {
-              lpic[x][y].f[0] += xexp.expm1(att*a.r)*(lpic[x][y].f[0]-q.r);
-              lpic[x][y].f[1] += xexp.expm1(att*a.g)*(lpic[x][y].f[1]-q.g);
-              lpic[x][y].f[2] += xexp.expm1(att*a.b)*(lpic[x][y].f[2]-q.b);
+              V4SF tmp;
+              tmp.v=lpic[x][y];
+              tmp.f[0] += xexp.expm1(att*a.r)*(tmp.f[0]-q.r);
+              tmp.f[1] += xexp.expm1(att*a.g)*(tmp.f[1]-q.g);
+              tmp.f[2] += xexp.expm1(att*a.b)*(tmp.f[2]-q.b);
+              lpic[x][y]=tmp.v;
               }
 #else
             lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
@@ -509,9 +510,11 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
-#ifdef PLANCK_HAVE_SSE2
-        pic[ix+x0s][iy+y0s].Set
-          (lpic[ix][iy].f[0],lpic[ix][iy].f[1],lpic[ix][iy].f[2]);
+#ifdef PLANCK_HAVE_SSE
+        {
+        COLOUR &c(pic[ix+x0s][iy+y0s]);
+        read_v4sf(lpic[ix][iy],&c.r,&c.g,&c.b,0);
+        }
 #else
         pic[ix+x0s][iy+y0s]=lpic[ix][iy];
 #endif
