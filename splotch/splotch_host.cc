@@ -399,9 +399,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     x1-=x0; x0=0; y1-=y0; y0=0;
     lpic.fast_alloc(x1-x0,y1-y0);
 #ifdef PLANCK_HAVE_SSE
-    for (int ix=0;ix<x1;ix++)
-      for (int iy=0;iy<y1;iy++)
-         lpic[ix][iy]=_mm_setzero_ps();
+    lpic.fill(_mm_setzero_ps());
 #else
     lpic.fill(COLOUR(0,0,0));
 #endif
@@ -429,10 +427,10 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       float32 stp = -1.f/(sigma*sigma);
 
       COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
-
 #ifdef PLANCK_HAVE_SSE
       v4sf va=build_v4sf(a.r,a.g,a.b,0.f);
 #endif
+
       for (int y=miny; y<maxy; ++y)
         pre1[y]=xexp(stp*(y-posy)*(y-posy));
 

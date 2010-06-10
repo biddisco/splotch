@@ -74,9 +74,8 @@ template <typename T> class arr_ref
     T *d;
 
   public:
-
     arr_ref(T *d_, tsize s_) : s(s_),d(d_) {}
-    void rebind (T *d_, tsize s_) { s=s_; d=d_; }
+
     /*! Returns the current array size. */
     tsize size() const { return s; }
 
@@ -195,7 +194,7 @@ template <typename T, typename storageManager> class arrT: public arr_ref<T>
     bool own;
 
     void reset()
-      { this->rebind(0,0); own=true; }
+      { this->d=0; this->s=0; own=true; }
 
   public:
     /*! Creates a zero-sized array. */
