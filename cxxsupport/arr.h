@@ -33,103 +33,56 @@
 #define PLANCK_ARR_H
 
 #include <algorithm>
+#include <cstdlib>
 #include "cxxutils.h"
 
 /*! \defgroup arraygroup Array classes */
 /*! \{ */
 
-/*! An array whose size is known at compile time. Very useful for storing
-    small arrays on the stack, without need for \a new and \a delete(). */
-template <typename T, tsize sz> class fix_arr
+template <typename T> class normalAlloc__
   {
-  private:
-    T d[sz];
-
   public:
-    /*! Returns the size of the array. */
-    tsize size() const { return sz; }
+    T *alloc(tsize sz) const { return (sz>0) ? new T[sz] : 0; }
+    void dealloc (T *ptr) const { delete[] ptr; }
+  };
 
-    /*! Returns a reference to element \a #n */
-    template<typename T2> T &operator[] (T2 n) {return d[n];}
-    /*! Returns a constant reference to element \a #n */
-    template<typename T2> const T &operator[] (T2 n) const {return d[n];}
+template <typename T, int align> class alignAlloc__
+  {
+  public:
+    T *alloc(tsize sz) const
+      {
+      using namespace std;
+      if (sz==0) return 0;
+      void *res;
+      planck_assert(posix_memalign(&res,align,sz*sizeof(T))==0,
+        "error in posix_memalign()");
+      return static_cast<T *>(res);
+      }
+    void dealloc(T *ptr) const
+      {
+      using namespace std;
+      if (ptr) free(ptr);
+      }
   };
 
 
-/*! One-dimensional array type. */
-template <typename T> class arr
+/*! View of a 1D array */
+template <typename T> class arr_ref
   {
-  private:
+  protected:
     tsize s;
     T *d;
-    bool own;
-
-    void reset()
-      { s=0; d=0; own=true; }
 
   public:
-    /*! Creates a zero-sized array. */
-    arr() : s(0), d(0), own(true) {}
-    /*! Creates an array with \a sz entries. */
-    arr(tsize sz) : s(sz), d (s>0 ? new T[s] : 0), own(true) {}
-    /*! Creates an array with \a sz entries, and initializes them with
-        \a inival. */
-    arr(tsize sz, const T &inival) : s(sz), d (s>0 ? new T[s] : 0), own(true)
-      { fill(inival); }
-    /*! Creates an array with \a sz entries, which uses the memory pointed
-        to by \a ptr.
-        \note \a ptr will <i>not</i> be deallocated by the destructor.
-        \warning Only use this if you REALLY know what you are doing.
-        In particular, this is only safely usable if
-          <ul>
-          <li>\a T is a POD type</li>
-          <li>\a ptr survives during the lifetime of the array object</li>
-          <li>\a ptr is not subject to garbage collection</li>
-          </ul>
-        Other restrictions may apply. You have been warned. */
-    arr (T *ptr, tsize sz): s(sz), d(ptr), own(false) {}
-    /*! Creates an array which is a copy of \a orig. The data in \a orig
-        is duplicated. */
-    arr (const arr &orig): s(orig.s), d (s>0 ? new T[s] : 0), own(true)
-      { for (tsize m=0; m<s; ++m) d[m] = orig.d[m]; }
-    /*! Frees the memory allocated by the object. */
-    ~arr() { if (own) delete[] d; }
 
+    arr_ref(T *d_, tsize s_) : s(s_),d(d_) {}
+    void rebind (T *d_, tsize s_) { s=s_; d=d_; }
     /*! Returns the current array size. */
     tsize size() const { return s; }
-
-    /*! Allocates space for \a sz elements. The content of the array is
-        undefined on exit. \a sz can be 0. If \a sz is the
-        same as the current size, no reallocation is performed. */
-    void alloc (tsize sz)
-      {
-      if (sz==s) return;
-      if (own) delete[] d;
-      s = sz;
-      d = s>0 ? new T[sz] : 0;
-      own = true;
-      }
-    /*! Allocates space for \a sz elements. If \a sz is the
-        same as the current size, no reallocation is performed.
-        All elements are set to \a inival. */
-    void allocAndFill (tsize sz, const T &inival)
-      { alloc(sz); fill(inival); }
-    /*! Deallocates the memory held by the array, and sets the array size
-        to 0. */
-    void dealloc () {if (own) delete[] d; reset();}
 
     /*! Writes \a val into every element of the array. */
     void fill (const T &val)
       { for (tsize m=0; m<s; ++m) d[m]=val; }
-
-    /*! Changes the array to be a copy of \a orig. */
-    arr &operator= (const arr &orig)
-      {
-      if (this==&orig) return *this;
-      alloc (orig.s);
-      for (tsize m=0; m<s; ++m) d[m] = orig.d[m];
-      return *this;
-      }
 
     /*! Returns a reference to element \a #n */
     template<typename T2> T &operator[] (T2 n) {return d[n];}
@@ -149,13 +102,6 @@ template <typename T> class arr
         if the array is zero-sized. */
     const T *end() const { return d+s; }
 
-    /*! Reserves space for \a sz elements, then copies \a sz elements
-        from \a ptr into the array. */
-    template<typename T2> void copyFromPtr (const T2 *ptr, tsize sz)
-      {
-      alloc(sz);
-      for (tsize m=0; m<s; ++m) d[m]=ptr[m];
-      }
     /*! Copies all array elements to \a ptr. */
     template<typename T2> void copyToPtr (T *ptr) const
       { for (tsize m=0; m<s; ++m) ptr[m]=d[m]; }
@@ -221,41 +167,184 @@ template <typename T> class arr
         if (d[m]==val) return m;
       planck_fail ("entry '"+dataToString(val)+"' not found in array");
       }
+  };
+
+/*! An array whose size is known at compile time. Very useful for storing
+    small arrays on the stack, without need for \a new and \a delete(). */
+template <typename T, tsize sz> class fix_arr
+  {
+  private:
+    T d[sz];
+
+  public:
+    /*! Returns the size of the array. */
+    tsize size() const { return sz; }
+
+    /*! Returns a reference to element \a #n */
+    template<typename T2> T &operator[] (T2 n) {return d[n];}
+    /*! Returns a constant reference to element \a #n */
+    template<typename T2> const T &operator[] (T2 n) const {return d[n];}
+  };
+
+
+/*! One-dimensional array type. */
+template <typename T, typename storageManager> class arrT: public arr_ref<T>
+  {
+  private:
+    storageManager stm;
+    bool own;
+
+    void reset()
+      { this->rebind(0,0); own=true; }
+
+  public:
+    /*! Creates a zero-sized array. */
+    arrT() : arr_ref<T>(0,0), own(true) {}
+    /*! Creates an array with \a sz entries. */
+    arrT(tsize sz) : arr_ref<T>(stm.alloc(sz),sz), own(true) {}
+    /*! Creates an array with \a sz entries, and initializes them with
+        \a inival. */
+    arrT(tsize sz, const T &inival) : arr_ref<T>(stm.alloc(sz),sz), own(true)
+      { fill(inival); }
+    /*! Creates an array with \a sz entries, which uses the memory pointed
+        to by \a ptr.
+        \note \a ptr will <i>not</i> be deallocated by the destructor.
+        \warning Only use this if you REALLY know what you are doing.
+        In particular, this is only safely usable if
+          <ul>
+          <li>\a T is a POD type</li>
+          <li>\a ptr survives during the lifetime of the array object</li>
+          <li>\a ptr is not subject to garbage collection</li>
+          </ul>
+        Other restrictions may apply. You have been warned. */
+    arrT (T *ptr, tsize sz): arr_ref<T>(ptr,sz), own(false) {}
+    /*! Creates an array which is a copy of \a orig. The data in \a orig
+        is duplicated. */
+    arrT (const arrT &orig): arr_ref<T>(stm.alloc(orig.s),orig.s), own(true)
+      { for (tsize m=0; m<this->s; ++m) this->d[m] = orig.d[m]; }
+    /*! Frees the memory allocated by the object. */
+    ~arrT() { if (own) stm.dealloc(this->d); }
+
+    /*! Allocates space for \a sz elements. The content of the array is
+        undefined on exit. \a sz can be 0. If \a sz is the
+        same as the current size, no reallocation is performed. */
+    void alloc (tsize sz)
+      {
+      if (sz==this->s) return;
+      if (own) stm.dealloc(this->d);
+      this->s = sz;
+      this->d = stm.alloc(sz);
+      own = true;
+      }
+    /*! Allocates space for \a sz elements. If \a sz is the
+        same as the current size, no reallocation is performed.
+        All elements are set to \a inival. */
+    void allocAndFill (tsize sz, const T &inival)
+      { alloc(sz); fill(inival); }
+    /*! Deallocates the memory held by the array, and sets the array size
+        to 0. */
+    void dealloc() {if (own) stm.dealloc(this->d); reset();}
+
+    /*! Changes the array to be a copy of \a orig. */
+    arrT &operator= (const arrT &orig)
+      {
+      if (this==&orig) return *this;
+      alloc (orig.s);
+      for (tsize m=0; m<this->s; ++m) this->d[m] = orig.d[m];
+      return *this;
+      }
+
+    /*! Reserves space for \a sz elements, then copies \a sz elements
+        from \a ptr into the array. */
+    template<typename T2> void copyFromPtr (const T2 *ptr, tsize sz)
+      {
+      alloc(sz);
+      for (tsize m=0; m<this->s; ++m) this->d[m]=ptr[m];
+      }
 
     /*! Assigns the contents and size of \a other to the array.
         \note On exit, \a other is zero-sized! */
-    void transfer (arr &other)
-      { if (own) delete[] d; d=other.d; s=other.s; own=other.own; other.reset(); }
+    void transfer (arrT &other)
+      {
+      if (own) stm.dealloc(this->d);
+      this->d=other.d;
+      this->s=other.s;
+      own=other.own;
+      other.reset();
+      }
     /*! Swaps contents and size with \a other. */
-    void swap (arr &other)
-      { std::swap(d,other.d); std::swap(s,other.s); std::swap(own,other.own);}
+    void swap (arrT &other)
+      {
+      std::swap(this->d,other.d);
+      std::swap(this->s,other.s);
+      std::swap(own,other.own);
+      }
   };
+
+template <typename T>
+  class arr: public arrT<T,normalAlloc__<T> >
+  {
+  public:
+    /*! Creates a zero-sized array. */
+    arr() : arrT<T,normalAlloc__<T> >() {}
+    /*! Creates an array with \a sz entries. */
+    arr(tsize sz) : arrT<T,normalAlloc__<T> >(sz) {}
+    /*! Creates an array with \a sz entries, and initializes them with
+        \a inival. */
+    arr(tsize sz, const T &inival) : arrT<T,normalAlloc__<T> >(sz,inival) {}
+    /*! Creates an array with \a sz entries, which uses the memory pointed
+        to by \a ptr.
+        \note \a ptr will <i>not</i> be deallocated by the destructor.
+        \warning Only use this if you REALLY know what you are doing.
+        In particular, this is only safely usable if
+          <ul>
+          <li>\a T is a POD type</li>
+          <li>\a ptr survives during the lifetime of the array object</li>
+          <li>\a ptr is not subject to garbage collection</li>
+          </ul>
+        Other restrictions may apply. You have been warned. */
+    arr (T *ptr, tsize sz): arrT<T,normalAlloc__<T> >(ptr,sz) {}
+  };
+
+template <typename T, int align>
+  class arr_align: public arrT<T,alignAlloc__<T,align> >
+  {
+  public:
+    /*! Creates a zero-sized array. */
+    arr_align() : arrT<T,alignAlloc__<T,align> >() {}
+    /*! Creates an array with \a sz entries. */
+    arr_align(tsize sz) : arrT<T,alignAlloc__<T,align> >(sz) {}
+    /*! Creates an array with \a sz entries, and initializes them with
+        \a inival. */
+    arr_align(tsize sz, const T &inival) : arrT<T,alignAlloc__<T,align> >(sz,inival) {}
+  };
+
 
 /*! Two-dimensional array type. The storage ordering is the same as in C.
     An entry is located by address arithmetic, not by double dereferencing.
     The indices start at zero. */
-template <typename T> class arr2
+template <typename T, typename storageManager> class arr2T
   {
   private:
     tsize s1, s2;
-    arr<T> d;
+    arrT<T, storageManager> d;
 
   public:
     /*! Creates a zero-sized array. */
-    arr2() : s1(0), s2(0) {}
+    arr2T() : s1(0), s2(0) {}
     /*! Creates an array with the dimensions \a sz1 and \a sz2. */
-    arr2(tsize sz1, tsize sz2)
+    arr2T(tsize sz1, tsize sz2)
       : s1(sz1), s2(sz2), d(s1*s2) {}
     /*! Creates an array with the dimensions  \a sz1 and \a sz2
         and initializes them with \a inival. */
-    arr2(tsize sz1, tsize sz2, const T &inival)
+    arr2T(tsize sz1, tsize sz2, const T &inival)
       : s1(sz1), s2(sz2), d (s1*s2)
       { fill(inival); }
     /*! Creates the array as a copy of \a orig. */
-    arr2(const arr2 &orig)
+    arr2T(const arr2T &orig)
       : s1(orig.s1), s2(orig.s2), d(orig.d) {}
     /*! Frees the memory associated with the array. */
-    ~arr2() {}
+    ~arr2T() {}
 
     /*! Returns the first array dimension. */
     tsize size1() const { return s1; }
@@ -299,7 +388,7 @@ template <typename T> class arr2
       { for (tsize m=0; m<s1*s2; ++m) d[m]=val; }
 
     /*! Changes the array to be a copy of \a orig. */
-    arr2 &operator= (const arr2 &orig)
+    arr2T &operator= (const arr2T &orig)
       {
       if (this==&orig) return *this;
       alloc (orig.s1, orig.s2);
@@ -336,12 +425,41 @@ template <typename T> class arr2
       }
 
     /*! Swaps contents and sizes with \a other. */
-    void swap (arr2 &other)
+    void swap (arr2T &other)
       {
       d.swap(other.d);
       std::swap(s1,other.s1);
       std::swap(s2,other.s2);
       }
+  };
+
+template <typename T>
+  class arr2: public arr2T<T,normalAlloc__<T> >
+  {
+  public:
+    /*! Creates a zero-sized array. */
+    arr2() : arr2T<T,normalAlloc__<T> > () {}
+    /*! Creates an array with the dimensions \a sz1 and \a sz2. */
+    arr2(tsize sz1, tsize sz2) : arr2T<T,normalAlloc__<T> > (sz1,sz2) {}
+    /*! Creates an array with the dimensions  \a sz1 and \a sz2
+        and initializes them with \a inival. */
+    arr2(tsize sz1, tsize sz2, const T &inival)
+      : arr2T<T,normalAlloc__<T> > (sz1,sz2,inival) {}
+  };
+
+template <typename T, int align>
+  class arr2_align: public arr2T<T,alignAlloc__<T,align> >
+  {
+  public:
+    /*! Creates a zero-sized array. */
+    arr2_align() : arr2T<T,alignAlloc__<T,align> > () {}
+    /*! Creates an array with the dimensions \a sz1 and \a sz2. */
+    arr2_align(tsize sz1, tsize sz2)
+      : arr2T<T,alignAlloc__<T,align> > (sz1,sz2) {}
+    /*! Creates an array with the dimensions  \a sz1 and \a sz2
+        and initializes them with \a inival. */
+    arr2_align(tsize sz1, tsize sz2, const T &inival)
+      : arr2T<T,alignAlloc__<T,align> > (sz1,sz2,inival) {}
   };
 
 /*! Two-dimensional array type. An entry is located by double dereferencing,
