@@ -34,6 +34,7 @@
 
 #include <cmath>
 #include <iostream>
+#include "datatypes.h"
 
 /*! \defgroup vec3group 3D vectors */
 /*! \{ */
@@ -138,7 +139,9 @@ template<typename T> inline std::ostream &operator<<
   return os;
   }
 
+/*! Specialisation of vec3_t for 64-bit floating point components */
 typedef vec3_t<float64> vec3;
+/*! Specialisation of vec3_t for 32-bit floating point components */
 typedef vec3_t<float32> vec3f;
 
 /*! \} */
