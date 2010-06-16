@@ -314,7 +314,10 @@ PROBLEM HERE!
 
   delete []cu_ps;
   delete []cu_ps_filtered;
-  delete []fragBuf;
+  if (a_eq_e)
+    delete [] ((cu_fragment_AeqE *) fragBuf);
+  else
+    delete [] ((cu_fragment_AneqE *) fragBuf);
 
   tInfo->times.stop("gpu_thread");
   }
