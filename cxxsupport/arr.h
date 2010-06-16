@@ -186,7 +186,7 @@ template <typename T, tsize sz> class fix_arr
   };
 
 
-/*! One-dimensional array type. */
+/*! One-dimensional array type, with selectable storage management. */
 template <typename T, typename storageManager> class arrT: public arr_ref<T>
   {
   private:
@@ -280,6 +280,7 @@ template <typename T, typename storageManager> class arrT: public arr_ref<T>
       }
   };
 
+/*! One-dimensional array type. */
 template <typename T>
   class arr: public arrT<T,normalAlloc__<T> >
   {
@@ -305,6 +306,7 @@ template <typename T>
     arr (T *ptr, tsize sz): arrT<T,normalAlloc__<T> >(ptr,sz) {}
   };
 
+/*! One-dimensional array type, with selectable storage alignment. */
 template <typename T, int align>
   class arr_align: public arrT<T,alignAlloc__<T,align> >
   {
@@ -319,7 +321,8 @@ template <typename T, int align>
   };
 
 
-/*! Two-dimensional array type. The storage ordering is the same as in C.
+/*! Two-dimensional array type, with selectable storage management.
+    The storage ordering is the same as in C.
     An entry is located by address arithmetic, not by double dereferencing.
     The indices start at zero. */
 template <typename T, typename storageManager> class arr2T
@@ -432,6 +435,9 @@ template <typename T, typename storageManager> class arr2T
       }
   };
 
+/*! Two-dimensional array type. The storage ordering is the same as in C.
+    An entry is located by address arithmetic, not by double dereferencing.
+    The indices start at zero. */
 template <typename T>
   class arr2: public arr2T<T,normalAlloc__<T> >
   {
@@ -446,6 +452,10 @@ template <typename T>
       : arr2T<T,normalAlloc__<T> > (sz1,sz2,inival) {}
   };
 
+/*! Two-dimensional array type, with selectable storage alignment.
+    The storage ordering is the same as in C.
+    An entry is located by address arithmetic, not by double dereferencing.
+    The indices start at zero. */
 template <typename T, int align>
   class arr2_align: public arr2T<T,alignAlloc__<T,align> >
   {
