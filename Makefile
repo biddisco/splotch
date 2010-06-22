@@ -3,7 +3,7 @@
 #######################################################################
 
 #--------------------------------------- Switch on MPI
-OPT	+=  -DUSE_MPI
+#OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -15,14 +15,14 @@ OPT	+=  -DUSE_MPI
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT     +=  -DCUDA
-OPT     +=  -DNO_WIN_THREAD
+#OPT     +=  -DCUDA
+#OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-SYSTYPE="PLX"
+#SYSTYPE="PLX"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
