@@ -554,12 +554,15 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 // ----------- Sorting ------------
 // --------------------------------
   wallTimers.start("sort");
-  if (master)
-    (mpiMgr.num_ranks()>1) ?
-      cout << endl << "host: applying local sort ..." << endl :
-      cout << endl << "host: applying sort (" << npart << ") ..." << endl;
-  int sort_type = params.find<int>("sort_type",1);
-  particle_sort(particles,sort_type,true);
+  if (!params.find<bool>("a_eq_e",true))
+    {
+    if (master)
+      (mpiMgr.num_ranks()>1) ?
+        cout << endl << "host: applying local sort ..." << endl :
+        cout << endl << "host: applying sort (" << npart << ") ..." << endl;
+    int sort_type = params.find<int>("sort_type",1);
+    particle_sort(particles,sort_type,true);
+    }
   wallTimers.stop("sort");
 
 // ------------------------------------
