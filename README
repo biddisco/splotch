@@ -13,36 +13,36 @@
 
     Zhefan.Jin        Zhefan.Jin@port.ac.uk
 
-Splotch is written in the C++ language. To install it you have just to 
-1) unpack the tar.gz 
+Splotch is written in the C++ language. To install it you have just to
+1) unpack the tar.gz
 2) Edit the Makefile
 3) "make"
 
-Please Check your compiler for the OpenMP flags if you want to use 
+Please Check your compiler for the OpenMP flags if you want to use
 OpenMP functionality (-fopenmp for g++).
 
-If you have an MPI environment installed, you can also turn
-on the USE_MPI option.
+If you have an MPI environment installed, you can also enable
+the USE_MPI option.
 
-To run it on your simulations, have a look into the splotch.par
+To run it on your simulations, have a look into the demo.par
 file and set the parameters you prefer.
 
 As Splotch reads simulation data in binary format, you have to
-write your simulations using Gadget 
-(http://www.mpa-garching.mpg.de/~volker/gadget/index.html) 
-and choosing SnapFormat = 2. 
-Endian conversion will be done automaticly.
+write your simulations using Gadget
+(http://www.mpa-garching.mpg.de/~volker/gadget/index.html)
+and choosing SnapFormat = 2.
+Endian conversion will be performed if requested in the parameter file.
 
 
 Copyrights and Acknowledgements
 
-Splotch is free software, distributed under the GNU General Public License. 
+Splotch is free software, distributed under the GNU General Public License.
 This implies that you may freely distribute and copy the software.
-You may also modify it as you wish, and distribute these modified 
+You may also modify it as you wish, and distribute these modified
 versions as long as you indicate prominently any changes you made in the
-original code, and as long as you leave the copyright notices, and 
-the no-warranty notice intact. Please read the General Public License 
-for more details. Note that the authors retain their copyright on the code. 
+original code, and as long as you leave the copyright notices, and
+the no-warranty notice intact. Please read the General Public License
+for more details. Note that the authors retain their copyright on the code.
 
 Splotch uses parts of the Ray++ ray tracing library, which is distributed
 under the GNU Library (or Lesser) General Public License.
@@ -50,13 +50,12 @@ under the GNU Library (or Lesser) General Public License.
 Requested Acknowledgement
 
 The authors kindly ask you to acknowledge the use of the Splotch package
-in your publications in the following form: 
+in your publications in the following form:
 
-At the first image produced with Splotch, a footnote placed in the main 
-body of the paper referring to the Splotch web-site - currently
+At the first image produced with Splotch, a footnote placed in the main
+body of the paper referring to the Splotch web site - currently
 http://www.mpa-garching.mpg.de/~kdolag/splotch
 Please also refere to the paper
 K. Dolag, M. Reinecke, C. Gheller and S. Imboden:
-"Splotch:  Visualizing Cosmological Simulations ",
+"Splotch:  Visualizing Cosmological Simulations",
 NJP, Volume 10, Issue 12, pp. 125006 (2008)
-
