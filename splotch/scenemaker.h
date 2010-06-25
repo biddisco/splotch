@@ -19,7 +19,7 @@ class sceneMaker
 // only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
     std::vector<uint32> id1,id2,idx1,idx2;
-    int snr1,snr2,snr1_now,snr2_now;
+    int snr1_now,snr2_now;
     double time1,time2;
 // only used if interpol_mode>1
     std::vector<vec3f> vel1,vel2;
@@ -27,15 +27,14 @@ class sceneMaker
 // only used if interpol_mode>0
     void particle_interpolate(std::vector<particle_sim> &p, double frac);
 
-    // only used if geomfile==true
+// only used if geomfile==true
     std::vector<particle_sim> p_orig;
     std::ifstream inp;
-    int linecount,ninterpol,nextfile;
-    int geometry_incr, geometry_skip;
-    // only used if geomfile==false
+    int scene_incr, current_scene;
+// only used if geomfile==false
     bool done;
 
-    void fetchFiles(std::vector<particle_sim> &particle_data);
+    void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 
   public:
     sceneMaker (paramfile &par);

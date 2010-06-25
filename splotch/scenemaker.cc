@@ -128,54 +128,35 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   }
 
 sceneMaker::sceneMaker (paramfile &par)
-  : params(par)
+  : params(par),snr1_now(-1),snr2_now(-1),done(false)
   {
   string geometry_file = params.find<string>("geometry_file","");
   geomfile = (geometry_file!="");
-  done=false;
 
   interpol_mode = params.find<int>("interpolation_mode",0);
   planck_assert((geomfile) || (interpol_mode==0),
     "geometry file needed when interpolation is requested!");
 
   if (interpol_mode>0)
-    {
     planck_assert(mpiMgr.num_ranks()==1,
        "Sorry, interpolating between files is not yet MPI parallelized ...");
-
-    snr1 = params.find<int>("snap_start",10);
-    snr2 = snr1+1;
-    snr1_now=snr2_now=-1;
-    }
 
   if (geomfile)
     {
     inp.open(geometry_file.c_str());
     planck_assert (inp, "could not open geometry file '" + geometry_file +"'");
-    linecount=ninterpol=nextfile=0;
-    geometry_skip = params.find<int>("geometry_start",0);
-    geometry_incr = params.find<int>("geometry_incr",1);
+    current_scene = params.find<int>("geometry_start",0);
+    scene_incr = params.find<int>("geometry_incr",1);
 
     string line;
-    for(int i=0; i<geometry_skip; i++, linecount++)
-      {
+    for (int i=0; i<current_scene; ++i)
       getline(inp, line);
-      if (interpol_mode>0)
-        {
-        if (linecount==nextfile)
-          {
-          nextfile=linecount+ninterpol;
-          snr1=snr2;
-          snr2++;
-          }
-        }
-      }
     }
   }
 
-void sceneMaker::fetchFiles(vector<particle_sim> &particle_data)
+void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   {
-  if (geomfile&&(linecount!=geometry_skip)&&(interpol_mode==0))
+  if (geomfile&&(interpol_mode==0))
     {
     particle_data=p_orig;
     return;
@@ -185,7 +166,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data)
     cout << endl << "reading data ..." << endl;
   int simtype = params.find<int>("simtype");
   double frac=0;
-  if (interpol_mode>0) frac = (linecount-(nextfile-ninterpol))/double(ninterpol);
+  int snr1 = int(fidx), snr2=snr1+1;
+  frac = fidx-snr1;
   switch (simtype)
     {
     case 0:
@@ -199,7 +181,6 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data)
         {
         cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
         cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
-        cout << " (pos: " << linecount << " , " << nextfile << " , " << ninterpol << ")" << endl;
         if (snr1==snr2_now)
           {
           cout << " old2 = new1!" << endl;
@@ -286,26 +267,31 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   if ((!geomfile)&&done) return false;
 
   bool master = mpiMgr.master();
+  double fidx=0;
+
+  outfile = params.find<string>("outfile");
 
   if (geomfile)
     {
     string line;
     if (!getline(inp, line)) return false;
-    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %i",
+    sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
       &campos.x,&campos.y,&campos.z,
       &lookat.x,&lookat.y,&lookat.z,
-      &sky.x,&sky.y,&sky.z,&ninterpol);
+      &sky.x,&sky.y,&sky.z,&fidx);
     if (master)
       {
-      cout << endl << "Next entry <" << linecount << "> in geometry file ..." << endl;
+      cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
       cout << " Camera:    " << campos << endl;
       cout << " Lookat:    " << lookat << endl;
       cout << " Sky:       " << sky << endl;
       if (interpol_mode>0)
-        cout << " ninterpol: " << ninterpol << endl;
+        cout << " file index: " << fidx << endl;
       }
-    if ((interpol_mode>0) && (linecount==0) && (nextfile==0))
-      nextfile=linecount+ninterpol;
+    outfile += intToString(current_scene,4) + ".tga";
+    current_scene += scene_incr;
+    for (int i=0; i<scene_incr-1; ++i)
+      getline(inp, line);
     }
   else
     {
@@ -324,33 +310,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 // ----------- Reading ---------------
 // -----------------------------------
 
-  fetchFiles(particle_data);
-
-  outfile = params.find<string>("outfile");
-  if (geomfile)
-    {
-    outfile += intToString(linecount,4) + ".tga";
-    linecount++;
-    if ((interpol_mode>0) && (linecount==nextfile))
-      {
-      nextfile=linecount+ninterpol;
-      snr1=snr2;
-      snr2++;
-      }
-
-    string line;
-    for (int i=1; i<geometry_incr; i++)
-      {
-      getline(inp, line);
-      linecount++;
-      if ((interpol_mode>0) && (linecount==nextfile))
-        {
-        nextfile=linecount+ninterpol;
-        snr1=snr2;
-        snr2++;
-        }
-      }
-    }
+  fetchFiles(particle_data,fidx);
 
   done=true;
 
