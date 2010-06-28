@@ -41,16 +41,21 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 
   endif
 
-  ptype<n> =              ## integer defining particle type <n>
-  size_fix<n> =
-  size_label<n> =HSML
-  size_present<n> = 1
-  size_fac<n> = 0.5
-  color_label<n> = U
-  color_present<n> = 1
-  color_fac<n> = 1e5
-  intensity_label<n> = XXXX
-  intensity_present<n> = 1
+  ptype<n> =                 ## integer defining particle type <n>
+  size_fix<n> =              ## float to define particle size
+  if (size_fix<n> == 0)
+     size_label<n> = HSML    ## label for block that contains particle size
+     size_present<n> =       ## bit-coded 2^ptype for which types this block contains data
+  endif
+  size_fac<n> = 0.5          ## factor to multiply size with
+
+  color_is_vector = TRUR/FALSE  ## indicates if color is a vector or a scalar quantity
+  color_label<n> = U            ## label for block that contains particle color
+  color_present<n> = 1          ## bit-coded 2^ptype for which types this block contains data
+  color_fac<n> = 1e5            ## factor to multiply color with
+
+  intensity_label<n> = XXXX  ## label for block that contains particle intensity
+  intensity_present<n> = 1   ## bit-coded 2^ptype for which types this block contains data
 
 endif
 
@@ -141,8 +146,8 @@ intensity_max<n>=
 brightness<n>=           ## multiplicative factor of the intensity  (default: 1.)
 gray_absorption<n>=      ## ????? (default: 0.2)
 palette<n> =             ## name of the file containing the colormap
-color_is_vector<n> =     ## for particles of ptype=n color is given in C1,C2,C3 fields, so no
-                            colormap to load: true/false (default: false)
+                         ## only used for particles of ptype=n which are vectors, otherwhise
+                         ## color is given in C1,C2,C3 fields
 
 ##---------------
 ## Output Options
