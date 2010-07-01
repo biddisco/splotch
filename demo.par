@@ -25,9 +25,13 @@ size_present0=1
 size_fac0=0.5
 intensity_label0=RHO
 intensity_present0=0
+intensity_min0=-11.8784
+intensity_max0=-1.44456
 color_label0=U
 color_present0=1
 color_is_vector0=FALSE
+color_min0=0.152815
+color_max0=6.29244
 
 size_fix1=0
 size_label1=HSMS
@@ -35,9 +39,13 @@ size_present1=1
 size_fac1=0.5
 intensity_label1=RHO
 intensity_present1=0
+intensity_min1=-11.8359
+intensity_max1=-1.44703
 color_label1=AGE
 color_present1=1
 color_is_vector1=FALSE
+color_min1=-1.34248
+color_max1=0
 
 ############################
 # Output Options
@@ -47,7 +55,7 @@ outfile=demo.tga
 resolution=800
 #ycut0=100
 #ycut1=700
-gray_absorption=0.002
+gray_absorption=0.0001
 colorbar=TRUE
 
 ############################
@@ -58,7 +66,7 @@ a_eq_e=f
 # 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size
 sort_type=1
 
-minrad_pix = 2
+minrad_pix = 1
 
 palette0=palettes/OldSplotch.pal
 brightness0=10.5
