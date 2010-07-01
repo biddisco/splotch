@@ -60,7 +60,7 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 endif
 
 swap_endian (bool, defaul=false):
-  if true, the input data are swapped directly after reading
+  if true, values read from binary input files are swapped directly after reading
 
 
 if (simtype==0,1,5) (i.e. only for binary files)
@@ -90,8 +90,9 @@ endif
 ##------------------
 ## Geometrical setup
 ##------------------
-minhsmlpixel =     ## increases small HSML values to at least pixel size: true/false (default: false)
-projection =       ## enables perspective projection: true/false (default: true)
+minrad_pix =     ## minimum radius (in pixels) that a particle can have
+                 ## smaller particles are automatically enlarged (default: 1)
+projection =     ## enables perspective projection: true/false (default: true)
 
 geometry_file (string, default=""):
   name of the geometry file, if any
@@ -118,7 +119,7 @@ else
 endif
 
 fov (double, default=45):
-  field of view in degrees
+  horizontal field of view in degrees
 
 ## define z-coordinate range of particles to be visualized
 zmin (double, default=0):
@@ -144,9 +145,8 @@ intensity_log<n>=        ## apply logarithmic function to the intensity value: t
 intensity_min<n>=        ## intensity range
 intensity_max<n>=
 brightness<n>=           ## multiplicative factor of the intensity  (default: 1.)
-gray_absorption<n>=      ## ????? (default: 0.2)
 palette<n> =             ## name of the file containing the colormap
-                         ## only used for particles of ptype=n which are vectors, otherwhise
+                         ## only used for particles of ptype=n which are vectors, otherwise
                          ## color is given in C1,C2,C3 fields
 
 ##---------------
@@ -165,12 +165,12 @@ ycut1 =          ## default: resolution
 ##-----------
 ## CUDA SETUP
 ##-----------
-max_region =     ## the maximun pixels used to visualize a particle (default: 1024), if the particle
+max_region =     ## the maximum pixels used to visualize a particle (default: 1024), if the particle
                     occupies a larger region then split (split strategy optimization for access
                     of the device memory)
-gpu_info =       ## enable print detailed information about gpus available: true/flase (default: false)
+gpu_info =       ## if true, print detailed information about GPUs (default: false)
 
-gpu_number =     ## number of GPUs to use only on Windows  (default: 1)
+gpu_number =     ## number of GPUs to use (Windows only)  (default: 1)
 
 use_host_as_thread =   ## enable host (cpu) as a cuda thread: true/false (default: false)
 host_load =            ## percentage of load for host (default 0) if it is enabled as a thread
