@@ -221,7 +221,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
 #ifdef SPLOTCH_CLASSIC
     p[m].I *= 0.5f*bfak/p[m].r;
-    p[m].r*=sqrt(2.f)*sigma0/h2sigma;
+    p[m].r*=sqrt(2.f)*sigma0/h2sigma; //  *= 2 ;)
 #else
     p[m].I *= 8.f/(pi*p[m].r*p[m].r*p[m].r); // SPH kernel normalisation
     p[m].I *= (h2sigma*sqrtpi*p[m].r); // integral through the center
