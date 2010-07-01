@@ -449,7 +449,7 @@ __global__ void k_transform
   p[m].I /= p[m].r;
   p[m].r = p[m].r *res2*xfac;
 
-  double rfac= sqrt(p[m].r*p[m].r + ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
+  double rfac= sqrt(p[m].r*p[m].r + 0.25*ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
   p[m].r *=rfac;
   p[m].I /= rfac;
   }
