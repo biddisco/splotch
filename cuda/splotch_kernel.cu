@@ -449,12 +449,9 @@ __global__ void k_transform
   p[m].I /= p[m].r;
   p[m].r = p[m].r *res2*xfac;
 
-  if (ptrans->minhsmlpixel && (p[m].r > 0.0))
-      {
-      double rfac=sqrt(p[m].r*p[m].r + .5*.5)/p[m].r;
-      p[m].r *=rfac;
-      p[m].I /= rfac;
-      }
+  double rfac= sqrt(p[m].r*p[m].r + ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
+  p[m].r *=rfac;
+  p[m].I /= rfac;
   }
 
 

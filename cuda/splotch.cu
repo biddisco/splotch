@@ -61,7 +61,7 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
     cout << " Field of fiew: " << 1./xfac*2. << endl;
     }
 
-  bool minhsmlpixel = params.find<bool>("minhsmlpixel",false);
+  float minrad_pix = params.find<float>("minrad_pix",1.);
 
   //retrieve the parameters for transformation
   for (int i=0; i<12; i++)
@@ -71,7 +71,7 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   para_trans.fovfct=fovfct;
   para_trans.dist=dist;
   para_trans.xfac=xfac;
-  para_trans.minhsmlpixel=minhsmlpixel;
+  para_trans.minrad_pix=minrad_pix;
   }
 
 

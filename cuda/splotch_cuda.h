@@ -40,7 +40,7 @@ struct cu_param_transform
   bool  projection;
   int   res;
   float fovfct, dist, xfac;
-  bool  minhsmlpixel;
+  float minrad_pix;
   };
 
 struct cu_color
