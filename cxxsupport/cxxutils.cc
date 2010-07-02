@@ -47,6 +47,7 @@
 #include "datatypes.h"
 #include "openmp_support.h"
 #include "mpi_support.h"
+#include "sse_utils.h"
 
 using namespace std;
 
@@ -181,6 +182,20 @@ void MPI_status()
     cout << "MPI active with " << tasks << " tasks. " << endl;
   }
 
+void SSE_status()
+  {
+#if(defined(PLANCK_HAVE_SSE)||defined(PLANCK_HAVE_SSE2))
+  cout << "Processor features detected: ";
+#if(defined(PLANCK_HAVE_SSE)&&defined(PLANCK_HAVE_SSE2))
+  cout << "SSE, SSE2" << endl;
+#elif(defined(PLANCK_HAVE_SSE))
+  cout << "SSE" << endl;
+#else
+  cout << "SSE2" << endl;
+#endif
+#endif
+  }
+
 } //unnamed namespace
 
 void announce (const string &name)
@@ -192,6 +207,7 @@ void announce (const string &name)
   cout << "+-";
   for (tsize m=0; m<name.length(); ++m) cout << "-";
   cout << "-+" << endl << endl;
+  SSE_status();
   openmp_status();
   MPI_status();
   cout << endl;

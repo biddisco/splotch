@@ -361,7 +361,7 @@ void parallel_sort (RAIter first, RAIter last, Tcomp comp)
   }
 
 template<typename RAIter>
-void parallel_sort (RAIter first, RAIter last)
+inline void parallel_sort (RAIter first, RAIter last)
   {
   typedef typename iterator_traits<RAIter>::value_type T;
   parallel_sort (first, last, less<T>());

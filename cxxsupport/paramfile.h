@@ -71,8 +71,8 @@ class paramfile
         for (params_type::const_iterator loc=params.begin();
              loc!=params.end(); ++loc)
           if (param_unread(loc->first))
-            std::cout << "Parser warning: unused parameter "
-                      << loc->first << std::endl;
+            std::cout << "Parser warning: unused parameter '"
+                      << loc->first << "'" << std::endl;
       }
 
     void setVerbosity (bool verbose_)

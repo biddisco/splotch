@@ -313,13 +313,13 @@ template<typename T> void split (const std::string &inp, std::vector<T> &list);
 /*! Resizes \a container to zero and releases its memory. Typically used for
     std::vector.
     Taken from http://www.gotw.ca/gotw/054.htm */
-template<typename T> void releaseMemory (T &container)
+template<typename T> inline void releaseMemory (T &container)
   { T().swap(container); }
 
 /*! Releases all unused memory that \a container might have. Typically used for
     std::vector.
     Taken from http://www.gotw.ca/gotw/054.htm */
-template<typename T> void shrinkToFit (T &container)
+template<typename T> inline void shrinkToFit (T &container)
   { T(container).swap(container); }
 
 #endif

@@ -403,13 +403,12 @@ template <typename T, typename storageManager> class arr2T
     /*! Returns a constant pointer to the beginning of slice \a #n. */
     template<typename T2> const T *operator[] (T2 n) const {return &d[n*s2];}
 
-    /*! Returns a reference to the element with the indices \a n1 and
-        \a n2. */
-    template<typename T2> T &operator() (T2 n1, T2 n2)
+    /*! Returns a reference to the element with the indices \a n1 and \a n2. */
+    template<typename T2, typename T3> T &operator() (T2 n1, T3 n2)
       {return d[n1*s2 + n2];}
     /*! Returns a constant reference to the element with the indices
         \a n1 and \a n2. */
-    template<typename T2> const T &operator() (T2 n1, T2 n2) const
+    template<typename T2, typename T3> const T &operator() (T2 n1, T3 n2) const
       {return d[n1*s2 + n2];}
 
     /*! Returns the minimum and maximum entry in \a minv and \a maxv,
@@ -595,11 +594,13 @@ template <typename T> class arr3
 
     /*! Returns a reference to the element with the indices
         \a n1, \a n2 and \a n3. */
-    template<typename T2> T &operator() (T2 n1, T2 n2, T2 n3)
+    template<typename T2, typename T3, typename T4> T &operator()
+      (T2 n1, T3 n2, T4 n3)
       {return d[n1*s2s3 + n2*s3 + n3];}
     /*! Returns a constant reference to the element with the indices
         \a n1, \a n2 and \a n3. */
-    template<typename T2> const T &operator() (T2 n1, T2 n2, T2 n3) const
+    template<typename T2, typename T3, typename T4> const T &operator()
+      (T2 n1, T3 n2, T4 n3) const
       {return d[n1*s2s3 + n2*s3 + n3];}
 
     /*! Swaps contents and sizes with \a other. */
