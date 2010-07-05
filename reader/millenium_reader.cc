@@ -504,7 +504,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
         {
         int type = params.find<int>("ptype"+dataToString(itype),1);
         int col = params.find<int>("color_field"+dataToString(itype),0);
-        bool col_vector = params.find<bool>("color_is_vector"+dataToString(itype),true);
+        bool col_vector = params.find<bool>("color_is_vector"+dataToString(itype),false);
         float col_fac = params.find<float>("color_fac"+dataToString(itype),1.0);
         int read_col = 1;
 

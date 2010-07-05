@@ -6,7 +6,7 @@
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
 
-void write_tga(paramfile &params, const arr2<COLOUR> &pic, tsize res,
+void write_tga(paramfile &params, const arr2<COLOUR> &pic,
   const std::string &frame_name);
 
 #endif

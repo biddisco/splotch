@@ -38,7 +38,7 @@ struct cu_param_transform
   {
   float p[12];
   bool  projection;
-  int   res;
+  int   xres, yres;
   float fovfct, dist, xfac;
   float minrad_pix;
   };
@@ -73,7 +73,7 @@ struct cu_particle_splotch
 
 struct cu_param_colorize
   {
-  int res, ycut0, ycut1, ptypes;
+  int xres, yres, ptypes;
   float zmaxval, zminval;
   bool col_vector[MAX_P_TYPE];
   float brightness[MAX_P_TYPE];

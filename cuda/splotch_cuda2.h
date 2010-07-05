@@ -30,7 +30,7 @@ extern wallTimerSet cuWallTimers;
 int check_device(int rank);
 void print_device_info(int rank, int dev);
 
-void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic);
+void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic);
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv);
 int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion,

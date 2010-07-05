@@ -42,9 +42,7 @@ intensity_present1=16
 ############################
 pictype=0
 outfile=D:\SplotchData\Hutt\g696\CUDA2Cards.tga
-resolution=1024
-#ycut0=100
-#ycut1=700
+xres=1024
 
 colorbar=TRUE
 

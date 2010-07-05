@@ -52,9 +52,8 @@ color_max1=0
 ############################
 pictype=0
 outfile=demo.tga
-resolution=800
-#ycut0=100
-#ycut1=700
+xres=800
+
 gray_absorption=0.0001
 colorbar=TRUE
 

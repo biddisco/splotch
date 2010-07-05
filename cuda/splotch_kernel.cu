@@ -297,21 +297,21 @@ __global__ void k_colorize
 
   // compute region occupied by the partile
   int minx=int(posx-rfacr+1);
-  if (minx>=params->res) return;
+  if (minx>=params->xres) return;
   minx=max(minx,0);
 
   int maxx=int(posx+rfacr+1);
   if (maxx<=0) return;
-  maxx=min(maxx,params->res);
+  maxx=min(maxx,params->xres);
   if (minx>=maxx) return;
 
   int miny=int(posy-rfacr+1);
-  if (miny>=params->ycut1) return;
-  miny=max(miny,params->ycut0);
+  if (miny>=params->yres) return;
+  miny=max(miny,0);
 
   int maxy=int(posy+rfacr+1);
-  if (maxy<=params->ycut0) return;
-  maxy=min(maxy,params->ycut1);
+  if (maxy<=0) return;
+  maxy=min(maxy,params->yres);
   if (miny>=maxy) return;
 
   //set region info to output the p2
@@ -433,17 +433,18 @@ __global__ void k_transform
 
   //do r
   float   xfac = ptrans->xfac;
-  float   res2 = 0.5*ptrans->res;
+  float   res2 = 0.5*ptrans->xres;
+  float   ycorr = .5f*(ptrans->yres-ptrans->xres);
   if (!ptrans->projection)
     {
     p[m].x = res2 * (p[m].x+ptrans->fovfct*ptrans->dist)*xfac;
-    p[m].y = res2 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac;
+    p[m].y = res2 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac + ycorr;
     }
     else
     {
     xfac=1./(ptrans->fovfct*p[m].z);
     p[m].x = res2 * (p[m].x+ptrans->fovfct*p[m].z)*xfac;
-    p[m].y = res2 * (p[m].y+ptrans->fovfct*p[m].z)*xfac;
+    p[m].y = res2 * (p[m].y+ptrans->fovfct*p[m].z)*xfac + ycorr;
     }
 
   p[m].I /= p[m].r;

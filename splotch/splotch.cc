@@ -88,18 +88,18 @@ int main (int argc, const char **argv)
   while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
-    int res = params.find<int>("resolution",200);
-    arr2<COLOUR> pic(res,res);
+    int xres = params.find<int>("xres",800),
+        yres = params.find<int>("yres",xres);
+    arr2<COLOUR> pic(xres,yres);
 
 #ifndef CUDA
     host_rendering(params, particle_data, pic,
                    campos, lookat, sky, amap);
 #else
-    cuda_rendering(mydevID, nDevProc, res, pic);
+    cuda_rendering(mydevID, nDevProc, pic);
 #endif
 
     wallTimers.start("postproc");
-    int xres = pic.size1(), yres=pic.size2();
     mpiMgr.allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
@@ -130,7 +130,7 @@ int main (int argc, const char **argv)
     switch(pictype)
       {
       case 0:
-        if (master) write_tga(params,pic,res,outfile);
+        if (master) write_tga(params,pic,outfile);
         break;
       default:
         planck_fail("No valid image file type given ...");

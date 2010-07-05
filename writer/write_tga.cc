@@ -5,23 +5,20 @@
 
 using namespace std;
 
-void write_tga(paramfile &params, const arr2<COLOUR> &pic, tsize res,
+void write_tga(paramfile &params, const arr2<COLOUR> &pic,
   const string &frame_name)
   {
-  tsize ycut0 = params.find<int>("ycut0",0);
-  tsize ycut1 = params.find<int>("ycut1",res);
-
   cout << " writing tga file '" << frame_name << "'" << endl;
-  tsize yres=ycut1-ycut0;
+  tsize xres=pic.size1(), yres=pic.size2();
   const uint8 header[18] = { 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    res%256, res/256, yres%256, yres/256, 24, 32 };
+    xres%256, xres/256, yres%256, yres/256, 24, 32 };
 
   bofstream file(frame_name.c_str(),file_is_natural);
 
   file.put(&header[0],18);
-  for (tsize y=ycut0; y<ycut1; ++y)
+  for (tsize y=0; y<xres; ++y)
     {
-    for (tsize x=0; x<res; ++x)
+    for (tsize x=0; x<xres; ++x)
       {
       uint8 pix[3];
       pix[0] = uint8(min(255,int(256*pic[x][y].b)));

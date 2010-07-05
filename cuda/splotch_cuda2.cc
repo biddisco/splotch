@@ -14,7 +14,7 @@ vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
 wallTimerSet cuWallTimers;
 
-void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
+void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic)
   {
   //see if host must be a working thread
   bool bHostThread = g_params->find<bool>("use_host_as_thread", false);
@@ -28,7 +28,7 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
     {
     tInfo[i].devID = mydevID+i;
 //    tInfo[i].npart_all = npart_all;
-    tInfo[i].pPic = new arr2<COLOUR>(res, res);
+    tInfo[i].pPic = new arr2<COLOUR>(pic.size1(), pic.size2());
     }
   //make the last one work for host thread
   if (bHostThread)
@@ -36,7 +36,7 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
     tInfo[nThread-1].devID =-1;
 //    tInfo[nThread-1].npart_all = npart_all;
     if (nThread-1 != 0)
-      tInfo[nThread-1].pPic = new arr2<COLOUR>(res, res);
+      tInfo[nThread-1].pPic = new arr2<COLOUR>(pic.size1(), pic.size2());
     }
   //decide how to divide particles range by another function
   DevideThreadsTasks(tInfo, nThread, bHostThread);
@@ -68,8 +68,8 @@ void cuda_rendering(int mydevID, int nDev, int res, arr2<COLOUR> &pic)
 
   // combine the results of multiple threads(devices + host) to pic
   for (int i=1; i<nThread; i++)
-      for (int x=0; x<res; x++) 
-        for (int y=0; y<res; y++)
+      for (int x=0; x<pic.size1(); x++)
+        for (int y=0; y<pic.size2(); y++)
               pic[x][y] = pic[x][y] + (*tInfo[i].pPic)[x][y];
 
   if (g_params->getVerbosity())
@@ -256,7 +256,8 @@ PROBLEM HERE!
 // ----------------------------------
 
   //get parameters for rendering
-  int res = params.find<int>("resolution",200);
+  int xres = params.find<int>("xres",800),
+      yres = params.find<int>("yres",xres);
 //  long nsplotch=pFiltered;
 //  long nsplotch_all=nsplotch;
 //  mpiMgr.allreduce(nsplotch_all,MPI_Manager::Sum);

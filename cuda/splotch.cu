@@ -32,7 +32,8 @@ template<typename T> T findParamWithoutChange
 void getCuTransformParams(cu_param_transform &para_trans,
 paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   {
-  int res = params.find<int>("resolution",200);
+  int xres = params.find<int>("xres",800),
+      yres = params.find<int>("yres",xres);
   double fov = params.find<double>("fov",45); //in degrees
   double fovfct = tan(fov*0.5*degr2rad);
   float64 xfac=0.0, dist=0.0;
@@ -67,7 +68,8 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   for (int i=0; i<12; i++)
     para_trans.p[i] =trans.Matrix().p[i];
   para_trans.projection=projection;
-  para_trans.res=res;
+  para_trans.xres=xres;
+  para_trans.yres=yres;
   para_trans.fovfct=fovfct;
   para_trans.dist=dist;
   para_trans.xfac=xfac;
@@ -214,9 +216,8 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
   {
   //fetch parameters for device calling first
   cu_param_colorize   pcolorize;
-  pcolorize.res       = params.find<int>("resolution",200);
-  pcolorize.ycut0     = params.find<int>("ycut0",0);
-  pcolorize.ycut1     = params.find<int>("ycut1",pcolorize.res);
+  pcolorize.xres       = params.find<int>("xres",800);
+  pcolorize.yres       = params.find<int>("yres",pcolorize.xres);
   pcolorize.zmaxval   = params.find<float>("zmax",1.e23);
   pcolorize.zminval   = params.find<float>("zmin",0.0);
   pcolorize.ptypes    = params.find<int>("ptypes",1);

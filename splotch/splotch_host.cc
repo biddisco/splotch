@@ -165,8 +165,11 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
-  int res = params.find<int>("resolution",200);
-  float32 res2=0.5f*res;
+  int xres = params.find<int>("xres",800),
+      yres = params.find<int>("yres",xres);
+
+  float32 ycorr = .5f*(yres-xres);
+  float32 res2 = 0.5f*xres;
   float32 fov = params.find<float32>("fov",45); //in degrees
   float32 fovfct = tan(fov*0.5f*degr2rad);
   int npart=p.size();
@@ -192,7 +195,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   float32 dist = (campos-lookat).Length();
   float32 xfac = 1./(fovfct*dist);
   if (!projection)
-    cout << " Field of fiew: " << 1./xfac*2. << endl;
+    cout << " Horizontal field of fiew: " << 1./xfac*2. << endl;
 
   float32 minrad_pix = params.find<float32>("minrad_pix",1.);
 
@@ -210,13 +213,13 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
     if (!projection)
       {
       p[m].x = res2*(p[m].x+fovfct*dist)*xfac2;
-      p[m].y = res2*(p[m].y+fovfct*dist)*xfac2;
+      p[m].y = res2*(p[m].y+fovfct*dist)*xfac2 + ycorr;
       }
     else
       {
       xfac2=1.f/(fovfct*p[m].z);
       p[m].x = res2*(p[m].x+fovfct*p[m].z)*xfac2;
-      p[m].y = res2*(p[m].y+fovfct*p[m].z)*xfac2;
+      p[m].y = res2*(p[m].y+fovfct*p[m].z)*xfac2 + ycorr;
       }
 
 #ifdef SPLOTCH_CLASSIC
@@ -242,9 +245,8 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
   vector<COLOURMAP> &amap)
   {
-  int res = params.find<int>("resolution",200);
-  int ycut0 = params.find<int>("ycut0",0);
-  int ycut1 = params.find<int>("ycut1",res);
+  int xres = params.find<int>("xres",800),
+      yres = params.find<int>("yres",xres);
   float32 zmaxval = params.find<float32>("zmax",1.e23);
   float32 zminval = params.find<float32>("zmin",0.0);
   int nt = params.find<int>("ptypes",1);
@@ -273,18 +275,18 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     float32 rfacr=rfac*p[m].r;
 
     int minx=int(posx-rfacr+1);
-    if (minx>=res) continue;
+    if (minx>=xres) continue;
     minx=max(minx,0);
     int maxx=int(posx+rfacr+1);
     if (maxx<=0) continue;
-    maxx=min(maxx,res);
+    maxx=min(maxx,xres);
     if (minx>=maxx) continue;
     int miny=int(posy-rfacr+1);
-    if (miny>=ycut1) continue;
-    miny=max(miny,ycut0);
+    if (miny>=yres) continue;
+    miny=max(miny,0);
     int maxy=int(posy+rfacr+1);
-    if (maxy<=ycut0) continue;
-    maxy=min(maxy,ycut1);
+    if (maxy<=0) continue;
+    maxy=min(maxy,yres);
     if (miny>=maxy) continue;
 
     if (!col_vector[p[m].type])
