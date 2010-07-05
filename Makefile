@@ -61,7 +61,7 @@ CC       =  mpicxx -g -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/
 endif
 NVCC       =  nvcc -g 
 OPTIMIZE = -O2
-LIB_OPT  =  -L$(CUDA_HOME)/lib -lcudart
+LIB_OPT  =  -L$(CUDA_HOME)/lib -L$(CUDA_HOME)/lib64 -lcudart
 OMP =  
 #-Xcompiler -openmp
 SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/inc # -I$(CUDA_HOME)/include  -Icuda
