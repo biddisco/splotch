@@ -41,26 +41,41 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 
   endif
 
-  ptype<n> =                 ## integer defining particle type <n>
-  size_fix<n> =              ## float to define particle size
+  ptype<n> (integer, n=[0..ptypes-1]):
+    Gadget type of the nth kind of particles to render
+
+  size_fix<n> (float, n=[0..ptypes-1], default=0):
+    if >0, use this value as radius for particles of kind n
+
   if (size_fix<n> == 0)
-     size_label<n> = HSML    ## label for block that contains particle size
-     size_present<n> =       ## bit-coded 2^ptype for which types this block contains data
+    size_label<n> (string):
+      name os the quantity to use for particle size (HSML is a good choice)
+    size_present<n> (integer):
+      bit-coded 2^ptype for which types this block contains data
   endif
-  size_fac<n> = 0.5          ## factor to multiply size with
 
-  color_is_vector = TRUR/FALSE  ## indicates if color is a vector or a scalar quantity
-  color_label<n> = U            ## label for block that contains particle color
-  color_present<n> = 1          ## bit-coded 2^ptype for which types this block contains data
-  color_fac<n> = 1e5            ## factor to multiply color with
+  size_fac<n> (float, default=1):
+    factor applied to particle sizes
 
-  intensity_label<n> = XXXX  ## label for block that contains particle intensity
-  intensity_present<n> = 1   ## bit-coded 2^ptype for which types this block contains data
+  color_is_vector<n> (bool, default=false):
+    indicates if color is a vector or a scalar quantity
+  color_label<n> (string, default="XXXX"):
+    label for block that contains particle color
+  color_present<n> (integer):
+    bit-coded 2^ptype for which types this block contains data
+  color_fac<n> = (float, default=1):
+    factor to multiply color with
+
+  intensity_label<n> = (string, default="XXXX"):
+    label for block that contains particle intensity
+  intensity_present<n> (integer):
+    bit-coded 2^ptype for which types this block contains data
 
 endif
 
 swap_endian (bool, defaul=false):
-  if true, values read from binary input files are swapped directly after reading
+  if true, values read from binary input files are byte-swapped directly
+  after reading
 
 
 if (simtype==0,1,5) (i.e. only for binary files)
@@ -90,9 +105,11 @@ endif
 ##------------------
 ## Geometrical setup
 ##------------------
-minrad_pix =     ## minimum radius (in pixels) that a particle can have
-                 ## smaller particles are automatically enlarged (default: 1)
-projection =     ## enables perspective projection: true/false (default: true)
+minrad_pix (float, default=1):
+  minimum radius (in pixels) that a particle can have; smaller particles are
+  automatically enlarged
+projection (bool, default=true):
+  enables perspective projection
 
 geometry_file (string, default=""):
   name of the geometry file, if any
@@ -131,8 +148,12 @@ zmax (double, default=1e23):
 ##-------------------------
 ## Visualization properties
 ##-------------------------
-a_eq_e =       ## condition A = E in the radiative transfer equation: true/false (default: true)
-sort_type =    ## 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size
+a_eq_e (bool, default=true):
+  condition A = E in the radiative transfer equation
+
+sort_type (integer, default=0):
+  0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size
+  (sorting only makes a difference if a_eq_t==false)
 
 ## visualization properties for particles of type <n> :
 color_log<n>=       ## apply logarithmic function to the physical quantities
@@ -152,15 +173,17 @@ palette<n> =             ## name of the file containing the colormap
 ##---------------
 ## Output Options
 ##---------------
-pictype =        ## format output image: 0 = tga  (default: 0)
-outfile =        ## output file name
-colorbar=        ## add colorbar: true/false
-resolution =     ## image resolution, i.e. number of pixels defining image dimension (default: 200)
+pictype (integer, default=0):
+  format of the output image: 0 = tga
 
-## define y-coordinate range of pixels to visualize
-ycut0 =          ## default: 0
-ycut1 =          ## default: resolution
-
+outfile (string):
+  output file name (partial name if multiple outputs are written)
+colorbar (bool, default=false):
+  if true, add a colorbar
+xres (integer, default=800):
+  number of image pixels in x direction
+yres (integer, default=xres):
+  number of image pixels in y direction
 
 ##-----------
 ## CUDA SETUP
