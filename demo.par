@@ -61,7 +61,7 @@ colorbar=TRUE
 ############################
 # Visualization properties
 ############################
-a_eq_e=f
+a_eq_e=t
 
 # 0: nosort, 1: by z, 2: by value, 3: by reversed value, 4: by size
 sort_type=1
