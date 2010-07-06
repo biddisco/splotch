@@ -32,7 +32,8 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
     number of files containing one data set
 
   readparallel (integer, default=1):
-    number of tasks reading the input data set
+    number of tasks reading the input data set.
+    numfiles must be a multiple of readparallel
 
   if (interpolation_mode>0)
 
@@ -156,19 +157,31 @@ sort_type (integer, default=0):
   (sorting only makes a difference if a_eq_t==false)
 
 ## visualization properties for particles of type <n> :
-color_log<n>=       ## apply logarithmic function to the physical quantities
-                       associated to the colors: true/false (default: true)
-color_asinh<n>=     ## apply hyperbolic arcsin function to the physical quantities
-                       associated to the colors: true/false (default: false)
-color_min<n>=       ## color range
-color_max<n>=
-intensity_log<n>=        ## apply logarithmic function to the intensity value: true/false (default: true)
-intensity_min<n>=        ## intensity range
-intensity_max<n>=
-brightness<n>=           ## multiplicative factor of the intensity  (default: 1.)
-palette<n> =             ## name of the file containing the colormap
-                         ## only used for particles of ptype=n which are vectors, otherwise
-                         ## color is given in C1,C2,C3 fields
+color_log<n> (bool, default=true):
+  if true, apply the log10() function to the physical quantity
+  associated to the color
+color_asinh<n> (bool, default=false):
+  apply hyperbolic arcsine function to the physical quantity
+  associated to the color
+color_min<n> (float, optional):
+  if provided, use this as lower limit for the color values (after application
+  of logarithm and/or asinh)
+color_max<n> (float, optional):
+  if provided, use this as upper limit for the color values (after application
+  of logarithm and/or asinh)
+intensity_log<n> (bool, default=true):
+  if true, apply the log10 function to the intensity value
+intensity_min<n> (float, optional):
+  if provided, use this as lower limit for the intensity values (after
+  application of the logarithm)
+intensity_max<n> (float, optional):
+  if provided, use this as upper limit for the intensity values (after
+  application of the logarithm)
+brightness<n> (float, default=1):
+  multiplicative factor of the intensity
+palette<n> (string):
+  name of the file containing the colormap
+  only used if color_is_vector<n> == false
 
 ##---------------
 ## Output Options
