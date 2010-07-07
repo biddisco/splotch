@@ -5,13 +5,15 @@
 
   Authors of Splotch:
 
-    Martin Reinecke:  martin@mpa-garching.mpg.de
+    Martin Reinecke:  martin <at> mpa-garching<dot>mpg<dot>de
 
-    Klaus Dolag:      kdolag@mpa-garching.mpg.de
+    Klaus Dolag:      kdolag <at> mpa-garching<dot>mpg<dot>de
 
-    Claudio Gheller   c.gheller@cineca.it
+    Claudio Gheller:  c<dot>gheller <at> cineca<dot>it
 
-    Zhefan.Jin        Zhefan.Jin@port.ac.uk
+    Zhefan.Jin:       zhefan<dot>jin <at> gmail<dot>com
+
+    Marzia Rivi:      m<dot>rivi <at> cineca<dot>it
 
 Splotch is written in the C++ language. To install it you have just to
 1) unpack the tar.gz
@@ -27,11 +29,10 @@ the USE_MPI option.
 To run it on your simulations, have a look into the demo.par
 file and set the parameters you prefer.
 
-As Splotch reads simulation data in binary format, you have to
-write your simulations using Gadget
-(http://www.mpa-garching.mpg.de/~volker/gadget/index.html)
-and choosing SnapFormat = 2.
-Endian conversion will be performed if requested in the parameter file.
+If you want to visualize simulations created by the Gadget code
+(http://www.mpa-garching.mpg.de/~volker/gadget/index.html),
+you will have to set the Gadget parameter SnapFormat = 2.
+Endian conversion will be performed if requested in the Splotch parameter file.
 
 
 Copyrights and Acknowledgements
