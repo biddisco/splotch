@@ -277,6 +277,8 @@ __global__ void k_render1
     }//x
   }
  }
+
+
 //colorize by kernel
 __global__ void k_colorize
   (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2,
