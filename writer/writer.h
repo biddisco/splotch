@@ -9,4 +9,7 @@
 void write_tga(paramfile &params, const arr2<COLOUR> &pic,
   const std::string &frame_name);
 
+void write_ppm(paramfile &params, const arr2<COLOUR> &pic,
+  const std::string &frame_name);
+
 #endif

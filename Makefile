@@ -91,7 +91,8 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	writer/write_tga.o splotch/splotchutils.o splotch/splotch.o splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o
+	writer/write_tga.o writer/write_ppm.o splotch/splotchutils.o splotch/splotch.o \
+	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 

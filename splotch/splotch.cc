@@ -106,6 +106,7 @@ int main (int argc, const char **argv)
     exptable<float32> xexp(-20.0);
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
+//      for (int ix=mpiMgr.rank()*xres/mpiMgr.num_ranks();ix<(mpiMgr.rank()+1)*xres/mpiMgr.num_ranks();ix++)
         for (int iy=0;iy<yres;iy++)
           {
           pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
@@ -131,6 +132,9 @@ int main (int argc, const char **argv)
       {
       case 0:
         if (master) write_tga(params,pic,outfile);
+        break;
+      case 1:
+        if (master) write_ppm(params,pic,outfile);
         break;
       default:
         planck_fail("No valid image file type given ...");
