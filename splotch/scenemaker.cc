@@ -156,7 +156,7 @@ sceneMaker::sceneMaker (paramfile &par)
 
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   {
-  if (geomfile&&(interpol_mode==0))
+  if (geomfile&&(interpol_mode==0)&&(p_orig.size()>0))
     {
     particle_data=p_orig;
     return;
