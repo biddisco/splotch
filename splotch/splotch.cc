@@ -133,7 +133,10 @@ int main (int argc, const char **argv)
         if (master) write_tga(params,pic,outfile);
         break;
       case 1:
-        if (master) write_ppm(params,pic,outfile);
+        if (master) write_ppm_ascii(params,pic,outfile);
+        break;
+      case 2:
+        if (master) write_ppm_bin(params,pic,outfile);
         break;
       default:
         planck_fail("No valid image file type given ...");

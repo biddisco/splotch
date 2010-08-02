@@ -188,7 +188,8 @@ palette<n> (string):
 ##---------------
 pictype (integer, default=0):
   format of the output image: 0 = tga
-                              1 = ppm
+                              1 = ASCII PPM (very large)
+                              2 = binary PPM
 
 outfile (string):
   output file name (partial name if multiple outputs are written)
