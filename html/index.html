@@ -29,10 +29,19 @@ in your publications in the following form: <p>
 At the first image produced with <b>Splotch</b>, a footnote placed in the main
 body of the paper referring to the <b>Splotch</b> web-site - currently
 <i>http://www.mpa-garching.mpg.de/~kdolag/Splotch</i>
+</UL>
+
+<h2> Code Papers </h2>
+<UL>
+<LI> <a href="http://adsabs.harvard.edu/abs/2008NJPh...10l5006D">Splotch: visualizing cosmological simulations</a>
+(New Journal of Physics, Volume 10, Issue 12, pp. 125006 (2008)).
+<LI> <a href="http://adsabs.harvard.edu/abs/2010arXiv1004.1302J">High-performance astrophysical visualization using Splotch</a>
+(ICCS 2010 conference).
+</UL>
 
 <h2> Download source code </h2>
 <b>Splotch</b> is written in the C++ language. To install it you just have
-to unpack <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.0.tar.gz">splotch_4.0.tar.gz</a>, edit the <b>Makefile</b>
+to unpack <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.1a.tar.gz">splotch_4.1a.tar.gz</a>, edit the <b>Makefile</b>
 to suit your needs and type <b>make</b>.<br>
 <p>
 Please check your compiler for the OpenMP flags if you want to use
@@ -58,14 +67,19 @@ the MPI implementation.
         is fully MPI/OpenMP parallelized and allows to utilize GPUs (via CUDA).<br>
         <b>Note that the format of the parameter file has changed!</b><br>
    <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.0.tar.gz">v 4.0</a>
+   <LI> 12.7.2010: Further code reorganization to seperate scene maker from the renderer. Additional speed up of the renderer. 
+GPU support (via CUDA) still preliminary. Patched on 22.7.2010.<br>
+        <b>Note that the format of the parameter file has been updated again!</b><br>
+   <a href="http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/splotch_4.1a.tar.gz">v 4.1a</a>
 </UL>
 
-<h2>Test Example</h2>
+<h2>Test Example and Documentation</h2>
 <UL>
    <LI> Binary <a href="Source/snap_092.gz">file</a> of a small
    cosmological simulation.
    <LI> Example <a href="Source/splotch.par">parameter</a> file to
    test <i>Splotch</i>.
+   <LI> <a href="Source/parameters.txt">Description</a> of the parameter file.
 </UL>
 
 <h2>Example Images</h2>
