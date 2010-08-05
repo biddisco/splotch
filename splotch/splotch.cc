@@ -138,6 +138,9 @@ int main (int argc, const char **argv)
       case 2:
         if (master) write_ppm_bin(params,pic,outfile);
         break;
+      case 3:
+        if (master) write_tga_rle(params,pic,outfile);
+        break;
       default:
         planck_fail("No valid image file type given ...");
         break;

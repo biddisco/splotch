@@ -187,9 +187,10 @@ palette<n> (string):
 ## Output Options
 ##---------------
 pictype (integer, default=0):
-  format of the output image: 0 = tga
+  format of the output image: 0 = TGA (uncompressed)
                               1 = ASCII PPM (very large)
                               2 = binary PPM
+                              3 = TGA (run length encoded)
 
 outfile (string):
   output file name (partial name if multiple outputs are written)
