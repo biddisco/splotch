@@ -449,7 +449,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
             {
             float32 att = pre1[y]*pre2;
 #ifdef PLANCK_HAVE_SSE
-            v4sf tmpatt=_mm_load1_ps(&att);
+            v4sf tmpatt=_mm_set1_ps(att);
             tmpatt=_mm_mul_ps(tmpatt,va);
             lpic[x][y]=_mm_add_ps(tmpatt,lpic[x][y]);
 #else
@@ -483,7 +483,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #ifdef PLANCK_HAVE_SSE
             if ((maxa*att)<taylorlimit)
               {
-              v4sf tmpatt=_mm_load1_ps(&att);
+              v4sf tmpatt=_mm_set1_ps(att);
               tmpatt=_mm_mul_ps(tmpatt,va);
               v4sf tlpic=_mm_sub_ps(lpic[x][y],vq);
               tlpic=_mm_mul_ps(tmpatt,tlpic);
