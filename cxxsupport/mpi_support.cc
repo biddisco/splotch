@@ -176,6 +176,17 @@ void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
 void MPI_Manager::bcastRawVoid (void *data, NDT type, tsize num, int root) const
   { MPI_Bcast (data,num,ndt2mpi(type),root,MPI_COMM_WORLD); }
 
+void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
+  tsize num) const
+  {
+  tsize nranks = num_ranks();
+  planck_assert (num%nranks==0,
+    "array size is not divisible by number of ranks");
+  MPI_Datatype tp = ndt2mpi(type);
+  MPI_Alltoall (const_cast<void *>(in),num/nranks,tp,out,num/nranks,tp,
+    MPI_COMM_WORLD);
+  }
+
 #else
 
 void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
@@ -210,5 +221,9 @@ void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
 
 void MPI_Manager::bcastRawVoid (void *, NDT, tsize, int) const
   {}
+
+void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
+  tsize num) const
+  { memcpy (out, in, num*ndt2size(type)); }
 
 #endif

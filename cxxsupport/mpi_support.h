@@ -203,6 +203,15 @@ class MPI_Manager
       { bcastRaw (&data[0], data.size(), root); }
     template<typename T> void bcast (T &data, int root) const
       { bcastRaw (&data, 1, root); }
+
+    void all2allRawVoid (const void *in, void *out, NDT type, tsize num) const;
+    template<typename T> void all2allRaw (const T *in, T *out, tsize num) const
+      { all2allRawVoid (in, out, nativeType<T>(), num); }
+    template<typename T> void all2all (const arr<T> &in, arr<T> &out) const
+      {
+      out.alloc(in.size());
+      all2allRaw (&in[0], &out[0], in.size());
+      }
   };
 
 extern MPI_Manager mpiMgr;
