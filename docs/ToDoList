@@ -1,0 +1,42 @@
+1) Improvements needed (regarding the functionality with MPI)
+
+* Usage of a parallel sort (psort ?)
+  -> Sort of particles (z,hsml,...)
+
+* Interpolating
+  -> Sort by ID
+  -> rearrange particles among CPU bounds
+
+* Combination of Images on large CPU numbers
+  -> Tree combination
+  -> Packing individual images for communication
+  -> Combine images in correct order (sort)
+
+2) Steps for visualising large simulations
+
+* Domain decomposition
+  -> Find (x,y,z) -> SubIndex  (ca. 1000 sub-cubes per CPU)
+  -> Use psort on SubIndex to perform domain decomposition
+
+* Build Tree
+  -> After Domain decomposition trees can be build fully local
+  -> Find correct formulation of <C> for tree nodes
+
+3) Additional (supplemental) tools needed
+
+* Guesser
+  -> Small, command line (interactive) tool to produce a template parameter file
+     from a given simulation (which produces a 'reasonable' image).
+
+* Interactive Scene Maker
+  -> Allows to interactively produce a geometry file
+  -> Should be a plug in to existing tools (e.g. Blender ?)
+  -> Should be able to allow post processing results for defining the scene
+
+4) GPU development, frozen till new person (with Mel) arrives in October
+
+* Port to OpenCL
+
+* Explore more efficient algorithm using less data transfer
+  (multiple fragment buffers) 
+
