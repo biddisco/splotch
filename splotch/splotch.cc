@@ -93,8 +93,9 @@ int main (int argc, const char **argv)
     arr2<COLOUR> pic(xres,yres);
 
 #ifndef CUDA
-    host_rendering(params, particle_data, pic,
-                   campos, lookat, sky, amap);
+    if(particle_data.size()>0)
+      host_rendering(params, particle_data, pic,
+		     campos, lookat, sky, amap);
 #else
     cuda_rendering(mydevID, nDevProc, pic);
 #endif
