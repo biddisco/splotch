@@ -52,7 +52,7 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
   }
 
-int gadget_read_header(bifstream &file, int32 *npart, double &time)
+int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal)
   {
   int blocksize = gadget_find_block (file,"HEAD");
   planck_assert (blocksize>0, "Header block not found");
@@ -60,7 +60,8 @@ int gadget_read_header(bifstream &file, int32 *npart, double &time)
   file.get(npart,6);
   file.skip(6*8);
   file >> time;
-  file.skip(8+8+6*4);
+  file.skip(8+4+4);
+  file.get(nparttotal,6);
 
   return blocksize;
   }
@@ -74,6 +75,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   string infilename = params.find<string>("infile");
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
+  int ptype_found = -1;
 
   string filename;
   bifstream infile;
@@ -123,17 +125,62 @@ void gadget_reader(paramfile &params, int interpol_mode,
       for(int f=0;f<NFilePerRead;f++)
         {
         int file=rt*NFilePerRead+f;
-        int npartthis[6];
+        int npartthis[6],nparttotal[6];
         filename=infilename;
         if(numfiles>1) filename+="."+dataToString(file);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time);
+        gadget_read_header(infile,npartthis,time,nparttotal);
         infile.close();
-        cout << " Timestamp from file : " << time << endl;
+        cout << "    Timestamp from file : t=" << time << endl;
+	if(rt==0 && f==0)
+	  {
+	    cout << "    Total number of particles in file :" << endl;
+	    cout << "    Type 0 (gas):   " << nparttotal[0] << endl;
+ 	    cout << "    Type 1 (dm):    " << nparttotal[1] << endl;
+	    cout << "    Type 2 (bndry): " << nparttotal[2] << endl;
+	    cout << "    Type 3 (bndry): " << nparttotal[3] << endl;
+	    cout << "    Type 4 (stars): " << nparttotal[4] << endl;
+	    cout << "    Type 5 (BHs):   " << nparttotal[5] << endl;
+	    if(params.find<bool>("AnalyzeSimulationOnly"))
+	      {
+		if(nparttotal[0] > 0)
+		  {
+		    cout << "To vizualize the gas particles add/change the following lines to the parameter file:" << endl;
+		    cout << "ptypes=1" << endl;
+		    cout << "AnalyzeSimulationOnly=FALSE" << endl;
+		    cout << "ptype0=0" << endl;
+		    cout << "size_fix0=0" << endl;
+		    cout << "size_label0=HSML" << endl;
+		    cout << "color_label0=U" << endl;
+		    ptype_found = 0;
+		    ptypes = 1;
+		  }
+		else
+		  {
+		    if(nparttotal[1] > 0)
+		      {
+			cout << "To vizualize the dm particles add/change following lines to the parameter file:" << endl;
+			cout << "ptypes=1" << endl;
+			cout << "AnalyzeSimulationOnly=FALSE" << endl;
+			cout << "ptype0=1" << endl;
+			cout << "size_fix0=1.0" << endl;
+			cout << "color_label0=VEL" << endl;
+			cout << "color_present0=63" << endl;
+			cout << "color_is_vector0=TRUE" << endl;
+			cout << "color_log0=FALSE" << endl;
+			cout << "color_asinh0=TRUE" << endl;
+			ptype_found = 1;
+			ptypes = 1;
+		      }
+		  }
+	      }
+	  }
         for(int itype=0;itype<ptypes;itype++)
           {
           int type = params.find<int>("ptype"+dataToString(itype),0);
+	  if(params.find<bool>("AnalyzeSimulationOnly") && ptype_found >= 0)
+	    type = ptype_found;
           NPartThisReadTask += npartthis[type];
           }
         }
@@ -151,7 +198,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
   mpiMgr.bcast(NPartThisTask,0);
 
-  if(mpiMgr.master())
+  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     {
     cout << " Reading " << numfiles << " files by " << readparallel << " tasks ... " << endl;
     cout << " Task " << ThisTask << "/" << NTasks << endl;
@@ -185,7 +232,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   arr<float> v1_tmp(nmax), v2_tmp(nmax), v3_tmp(nmax);
   arr<uint32> i1_tmp(nmax);
 
-  if(mpiMgr.master())
+  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -194,20 +241,23 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6];
+      int npartthis[6],nparttotal[6];
       int present=1+2+4+8+16+32;
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
-      cout << " Task: " << ThisTask << " reading file " << filename << endl;
+      if(!params.find<bool>("AnalyzeSimulationOnly"))
+	cout << " Task: " << ThisTask << " reading file " << filename << endl;
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
+      gadget_read_header(infile,npartthis,time,nparttotal);
       gadget_find_block(infile,"POS");
       infile.skip(4);
       for(int itype=0;itype<ptypes;itype++)
         {
         int type = params.find<int>("ptype"+dataToString(itype),0);
+        if(params.find<bool>("AnalyzeSimulationOnly") && ptype_found >= 0)
+	   type = ptype_found;
         for(int s=LastType+1; s<type; s++)
           if(npartthis[s]>0 && (1<<s & present))
             infile.skip(4*3*npartthis[s]);
@@ -267,11 +317,51 @@ void gadget_reader(paramfile &params, int interpol_mode,
       }
     }
 
+  if(params.find<bool>("AnalyzeSimulationOnly"))
+    {
+      arr<Normalizer<float32> > posnorm(3);
+      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+	{
+	  posnorm[0].collect(p[m].x);
+	  posnorm[1].collect(p[m].y);
+	  posnorm[2].collect(p[m].z);
+	}
+
+      mpiMgr.allreduce(posnorm[0].minv,MPI_Manager::Min);
+      mpiMgr.allreduce(posnorm[1].minv,MPI_Manager::Min);
+      mpiMgr.allreduce(posnorm[2].minv,MPI_Manager::Min);
+      mpiMgr.allreduce(posnorm[0].maxv,MPI_Manager::Max);
+      mpiMgr.allreduce(posnorm[1].maxv,MPI_Manager::Max);
+      mpiMgr.allreduce(posnorm[2].maxv,MPI_Manager::Max);
+      if(mpiMgr.master())
+	{
+	  cout << "camera_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
+	  cout << "camera_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 + (posnorm[1].maxv - posnorm[1].minv) *1.5 << endl;
+	  cout << "camera_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
+	  cout << "lookat_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
+	  cout << "lookat_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 << endl;
+	  cout << "lookat_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
+	  cout << "sky_x=0" << endl;
+	  cout << "sky_y=0" << endl;
+	  cout << "sky_z=1" << endl;
+	  cout << "fov=30" << endl;
+	  cout << "pictype=0" << endl;
+	  cout << "outfile=demo.tga" << endl;
+	  cout << "xres=800" << endl;
+	  cout << "colorbar=TRUE" << endl;
+	  if(ptype_found == 0)
+	    cout << "palette0=palettes/OldSplotch.pal" << endl;
+          cout << "brightness0=2.0" << endl;
+	}
+      ptypes=0;
+      p.resize(0);
+    }
+
   if (interpol_mode>0)
     {
     if (interpol_mode>1)
       {
-      if(mpiMgr.master())
+      if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
         cout << " Reading velocities ..." << endl;
       if(ThisTaskReads[ThisTask] >= 0)
         {
@@ -280,14 +370,14 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
         for(int f=0;f<NFilePerRead;f++)
           {
-          int npartthis[6];
+	  int npartthis[6],nparttotal[6];
           int present=1+2+4+8+16+32;
           int LastType=-1;
           filename=infilename;
           if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
           infile.open(filename.c_str(),doswap);
           planck_assert (infile,"could not open input file! <" + filename + ">");
-          gadget_read_header(infile,npartthis,time);
+          gadget_read_header(infile,npartthis,time,nparttotal);
           gadget_find_block(infile,"VEL");
           infile.skip(4);
           for(int itype=0;itype<ptypes;itype++)
@@ -348,7 +438,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         }
       }
 
-    if(mpiMgr.master())
+    if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
       cout << " Reading ids ..." << endl;
     if(ThisTaskReads[ThisTask] >= 0)
       {
@@ -357,14 +447,14 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
       for(int f=0;f<NFilePerRead;f++)
         {
-        int npartthis[6];
+	int npartthis[6],nparttotal[6];
         int present=1+2+4+8+16+32;
         int LastType=-1;
         filename=infilename;
         if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time);
+        gadget_read_header(infile,npartthis,time,nparttotal);
         string label_id = params.find<string>("id_label","ID");
         gadget_find_block(infile,label_id);
         infile.skip(4);
@@ -414,7 +504,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       }
     }
 
-  if(mpiMgr.master())
+  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading smoothing ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -423,13 +513,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6];
+      int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
+      gadget_read_header(infile,npartthis,time,nparttotal);
 
       for(int itype=0;itype<ptypes;itype++)
         {
@@ -484,7 +574,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
 
 
-  if(mpiMgr.master())
+  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading colors ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -493,13 +583,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6];
+      int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
+      gadget_read_header(infile,npartthis,time,nparttotal);
 
       for(int itype=0;itype<ptypes;itype++)
         {
@@ -595,7 +685,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
 
 
-  if(mpiMgr.master())
+  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading intensity ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -604,13 +694,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6];
+      int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time);
+      gadget_read_header(infile,npartthis,time,nparttotal);
       for(int itype=0;itype<ptypes;itype++)
         {
         int type = params.find<int>("ptype"+dataToString(itype),0);
