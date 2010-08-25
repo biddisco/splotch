@@ -28,6 +28,9 @@
   -> Small, command line (interactive) tool to produce a template parameter file
      from a given simulation (which produces a 'reasonable' image).
 
+* Palette viewer
+  -> Something to visualize the colors of a give palette
+
 * Interactive Scene Maker
   -> Allows to interactively produce a geometry file
   -> Should be a plug in to existing tools (e.g. Blender ?)
