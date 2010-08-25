@@ -75,7 +75,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   string infilename = params.find<string>("infile");
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
-  int ptype_found = -1;
+  int ptype_found = -1, ntot = 1;
 
   string filename;
   bifstream infile;
@@ -132,7 +132,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
         planck_assert (infile,"could not open input file! <" + filename + ">");
         gadget_read_header(infile,npartthis,time,nparttotal);
         infile.close();
-        cout << "    Timestamp from file : t=" << time << endl;
+	if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
+	  cout << "    Timestamp from file : t=" << time << endl;
 	if(rt==0 && f==0)
 	  {
 	    cout << "    Total number of particles in file :" << endl;
@@ -155,6 +156,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 		    cout << "color_label0=U" << endl;
 		    ptype_found = 0;
 		    ptypes = 1;
+		    ntot = nparttotal[0];
 		  }
 		else
 		  {
@@ -164,7 +166,6 @@ void gadget_reader(paramfile &params, int interpol_mode,
 			cout << "ptypes=1" << endl;
 			cout << "AnalyzeSimulationOnly=FALSE" << endl;
 			cout << "ptype0=1" << endl;
-			cout << "size_fix0=1.0" << endl;
 			cout << "color_label0=VEL" << endl;
 			cout << "color_present0=63" << endl;
 			cout << "color_is_vector0=TRUE" << endl;
@@ -172,6 +173,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 			cout << "color_asinh0=TRUE" << endl;
 			ptype_found = 1;
 			ptypes = 1;
+			ntot = nparttotal[1];
 		      }
 		  }
 	      }
@@ -335,6 +337,15 @@ void gadget_reader(paramfile &params, int interpol_mode,
       mpiMgr.allreduce(posnorm[2].maxv,MPI_Manager::Max);
       if(mpiMgr.master())
 	{
+	  if(ptype_found == 1)
+	    {
+	      double dx=(posnorm[0].maxv - posnorm[0].minv);
+	      double dy=(posnorm[1].maxv - posnorm[1].minv);
+	      double dz=(posnorm[2].maxv - posnorm[2].minv);
+              double l;
+              l = pow(dx * dy * dz / ntot,1./3.) / 5;
+	      cout << "size_fix0=" << l << endl;
+	    }
 	  cout << "camera_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
 	  cout << "camera_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 + (posnorm[1].maxv - posnorm[1].minv) *1.5 << endl;
 	  cout << "camera_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
