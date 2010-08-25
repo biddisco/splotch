@@ -269,45 +269,47 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   bool master = mpiMgr.master();
   double fidx=0;
 
-  outfile = params.find<string>("outfile");
+  outfile = params.find<string>("outfile","demo");
 
   if (params.find<int>("simtype") > -1)
-    { 
-      if (geomfile)
+    {
+      if(!params.find<bool>("AnalyzeSimulationOnly",false))
 	{
-	  string line;
-	  if (!getline(inp, line)) return false;
-	  sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-		 &campos.x,&campos.y,&campos.z,
-		 &lookat.x,&lookat.y,&lookat.z,
-		 &sky.x,&sky.y,&sky.z,&fidx);
-	  if (master)
+	  if (geomfile)
 	    {
-	      cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
-	      cout << " Camera:    " << campos << endl;
-	      cout << " Lookat:    " << lookat << endl;
-	      cout << " Sky:       " << sky << endl;
-	      if (interpol_mode>0)
-		cout << " file index: " << fidx << endl;
+	      string line;
+	      if (!getline(inp, line)) return false;
+	      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+		     &campos.x,&campos.y,&campos.z,
+		     &lookat.x,&lookat.y,&lookat.z,
+		     &sky.x,&sky.y,&sky.z,&fidx);
+	      if (master)
+		{
+		  cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
+		  cout << " Camera:    " << campos << endl;
+		  cout << " Lookat:    " << lookat << endl;
+		  cout << " Sky:       " << sky << endl;
+		  if (interpol_mode>0)
+		    cout << " file index: " << fidx << endl;
+		}
+	      outfile += intToString(current_scene,4) + ".tga";
+	      current_scene += scene_incr;
+	      for (int i=0; i<scene_incr-1; ++i)
+		getline(inp, line);
 	    }
-	  outfile += intToString(current_scene,4) + ".tga";
-	  current_scene += scene_incr;
-	  for (int i=0; i<scene_incr-1; ++i)
-	    getline(inp, line);
+	  else
+	    {
+	      campos.x=params.find<double>("camera_x");
+	      campos.y=params.find<double>("camera_y");
+	      campos.z=params.find<double>("camera_z");
+	      lookat.x=params.find<double>("lookat_x");
+	      lookat.y=params.find<double>("lookat_y");
+	      lookat.z=params.find<double>("lookat_z");
+	      sky.x=params.find<double>("sky_x",0);
+	      sky.y=params.find<double>("sky_y",0);
+	      sky.z=params.find<double>("sky_z",0);
+	    }
 	}
-      else
-	{
-	  campos.x=params.find<double>("camera_x");
-	  campos.y=params.find<double>("camera_y");
-	  campos.z=params.find<double>("camera_z");
-	  lookat.x=params.find<double>("lookat_x");
-	  lookat.y=params.find<double>("lookat_y");
-	  lookat.z=params.find<double>("lookat_z");
-	  sky.x=params.find<double>("sky_x",0);
-	  sky.y=params.find<double>("sky_y",0);
-	  sky.z=params.find<double>("sky_z",0);
-	}
-
 // -----------------------------------
 // ----------- Reading ---------------
 // -----------------------------------

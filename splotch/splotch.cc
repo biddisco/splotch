@@ -123,28 +123,32 @@ int main (int argc, const char **argv)
       add_colorbar(params,pic,amap);
     }
 
-    if (master)
-      cout << endl << "saving file ..." << endl;
-
-    int pictype = params.find<int>("pictype",0);
-
-    switch(pictype)
+    if(!params.find<bool>("AnalyzeSimulationOnly"))
       {
-      case 0:
-        if (master) write_tga(params,pic,outfile);
-        break;
-      case 1:
-        if (master) write_ppm_ascii(params,pic,outfile);
-        break;
-      case 2:
-        if (master) write_ppm_bin(params,pic,outfile);
-        break;
-      case 3:
-        if (master) write_tga_rle(params,pic,outfile);
-        break;
-      default:
-        planck_fail("No valid image file type given ...");
-        break;
+
+	if (master)
+	  cout << endl << "saving file ..." << endl;
+
+	int pictype = params.find<int>("pictype",0);
+	
+	switch(pictype)
+	  {
+	  case 0:
+	    if (master) write_tga(params,pic,outfile);
+	    break;
+	  case 1:
+	    if (master) write_ppm_ascii(params,pic,outfile);
+	    break;
+	  case 2:
+	    if (master) write_ppm_bin(params,pic,outfile);
+	    break;
+	  case 3:
+	    if (master) write_tga_rle(params,pic,outfile);
+	    break;
+	  default:
+	    planck_fail("No valid image file type given ...");
+	    break;
+	  }
       }
 
     wallTimers.stop("write");
