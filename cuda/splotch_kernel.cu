@@ -67,7 +67,7 @@ __device__ cu_color get_color
   while ((val>map[i+1].val) && (i<end))
     ++i;
 
-  float fract = (val-map[i].val)/(map[i+1].val-map[i].val);
+  const float fract = (val-map[i].val)/(map[i+1].val-map[i].val);
   cu_color clr1=map[i].color, clr2=map[i+1].color;
   clr.r =clr1.r + fract*(clr2.r-clr1.r);
   clr.g =clr1.g + fract*(clr2.g-clr1.g);
@@ -168,16 +168,15 @@ __global__ void k_combine
 
 //device render function k_render1
 __global__ void k_render1
-  (cu_particle_splotch *p,  int startP,  int endP,
+  (cu_particle_splotch *p, int nP,
   void *buf, bool a_eq_e, float grayabsorb,
   cu_exptable_info d_exp_info)
   {
   //first get the index m of this thread
-  int m, n=endP-startP;
+  int m;
   m =blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >=n)//m goes from 0 to n-1
+  if (m >=nP)//m goes from 0 to nP-1
     return;
-  m +=startP;
 
   //make fbuf the right type
   cu_fragment_AeqE        *fbuf;
@@ -189,12 +188,11 @@ __global__ void k_render1
 
   //now do the calc
   const float powtmp = pow(Pi,1./3.);
-  const float sigma0=powtmp/sqrt(2*Pi);
-  const float bfak=1./(2*sqrt(Pi)*powtmp);
+  const float sigma0 = powtmp/sqrt(2*Pi);
 
-  int x0s=0, y0s=0;
-  float posx=p[m].x, posy=p[m].y;
-  posx-=x0s; posy-=y0s;
+  const float r = p[m].r;
+  const float radsq = 2.25*r*r;
+  const float stp = -0.5/(r*r*sigma0*sigma0);
 
   cu_color e=p[m].e, q;
   if (!a_eq_e)
@@ -203,16 +201,11 @@ __global__ void k_render1
      q.g = e.g/(e.g+grayabsorb);
      q.b = e.b/(e.b+grayabsorb);
    }
-  float intens = -0.5*bfak;
+  const float intens = -0.5/(2*sqrt(Pi)*powtmp);
   e.r*=intens; e.g*=intens; e.b*=intens;
 
-  const float rfac=1.5;
-  float r=p[m].r;
-  float rfacr=rfac*r;
-  float radsq = rfacr*rfacr;
-  float stp = -0.5/(r*r*sigma0*sigma0);
-
-  unsigned int fpos =p[m].posInFragBuf -p[startP].posInFragBuf;
+  const float posx=p[m].x, posy=p[m].y;
+  unsigned int fpos =p[m].posInFragBuf;
 
   if (a_eq_e)
   {
@@ -293,9 +286,8 @@ __global__ void k_colorize
   if (p[m].z<=0 || p[m].z<=params->zminval || p[m].z>=params->zmaxval)
     return;
 
-  float r=p[m].r;
-  float posx=p[m].x, posy=p[m].y;
-  float rfacr=params->rfac*r;
+  const float posx=p[m].x, posy=p[m].y;
+  const float rfacr=params->rfac*p[m].r;
 
   // compute region occupied by the partile
   int minx=int(posx-rfacr+1);
@@ -340,7 +332,7 @@ __global__ void k_colorize
     }
   else   // get color, associated from physical quantity contained in e.r, from lookup table
     {
-    e=get_color(p[m].type, col1, info);
+    e = get_color(p[m].type, col1, info);
     e.r *= intensity;
     e.g *= intensity;
     e.b *= intensity;
@@ -434,15 +426,15 @@ __global__ void k_transform
   p[m].z =z;
 
   //do r
-  float   xfac = ptrans->xfac;
-  float   res2 = 0.5*ptrans->xres;
-  float   ycorr = .5f*(ptrans->yres-ptrans->xres);
+  float xfac = ptrans->xfac;
+  const float   res2 = 0.5*ptrans->xres;
+  const float   ycorr = .5f*(ptrans->yres-ptrans->xres);
   if (!ptrans->projection)
     {
     p[m].x = res2 * (p[m].x+ptrans->fovfct*ptrans->dist)*xfac;
     p[m].y = res2 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac + ycorr;
     }
-    else
+  else
     {
     xfac=1./(ptrans->fovfct*p[m].z);
     p[m].x = res2 * (p[m].x+ptrans->fovfct*p[m].z)*xfac;
@@ -452,8 +444,8 @@ __global__ void k_transform
   p[m].I /= p[m].r;
   p[m].r = p[m].r *res2*xfac;
 
-  double rfac= sqrt(p[m].r*p[m].r + 0.25*ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
-  p[m].r *=rfac;
+  const float rfac= sqrt(p[m].r*p[m].r + 0.25*ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
+  p[m].r *= rfac;
   p[m].I /= rfac;
   }
 

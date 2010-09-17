@@ -91,9 +91,8 @@ void cu_init(int devID, int nP, cu_gpu_vars* pgv)
   s = nP* sizeof(cu_particle_splotch);
   cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, s+sizeof(cu_particle_splotch)));
 
-  //allocate fragment buffer memory on device
   size_t size = pgv->policy->GetFBufSize() <<20;
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size));
+  cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size)); 
   }
 
 
@@ -103,7 +102,6 @@ void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_v
   size_t s = pgv->policy->GetSizeDPD(n);
   cutilSafeCall(cudaMemcpy(pgv->d_pd, h_pd, s, cudaMemcpyHostToDevice) );
   }
-
 
 void cu_range(paramfile &params ,cu_particle_sim* h_pd,
   unsigned int n, cu_gpu_vars* pgv)
@@ -291,15 +289,15 @@ void cu_copy_particles_to_render(cu_particle_splotch *p,
   }
 
 void cu_render1
-  (int startP, int endP, bool a_eq_e, double grayabsorb, cu_gpu_vars* pgv)
+  (int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
   {
   //endP actually exceed the last one to render
   //get dims from pgv->policy object first
   dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(endP-startP, &dimGrid, &dimBlock);
+  pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
 
   //call device
-  k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, startP, endP,
+  k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, nP,
     pgv->d_fbuf, a_eq_e, grayabsorb,pgv->d_exp_info);
   }
 
@@ -317,7 +315,7 @@ void cu_get_fbuf
     cudaMemcpyDeviceToHost)) ;
   }
 
-void    cu_end(cu_gpu_vars* pgv)
+void cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
   CLEAR_MEM((pgv->d_ps_render));
@@ -340,7 +338,7 @@ int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy)
 
    float factor =params.find<float>("particle_mem_factor", 3);
    int spareMem = 10;
-   int arrayParticleSize = gMemSize -fBufSize -spareMem;
+   int arrayParticleSize = gMemSize - fBufSize - spareMem;
 
-   return (arrayParticleSize/sizeof(cu_particle_sim)/factor)*(1<<20);
+   return (int) (arrayParticleSize/sizeof(cu_particle_sim)/factor)*(1<<20);
   }

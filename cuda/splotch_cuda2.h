@@ -34,8 +34,9 @@ void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic);
 void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv);
 int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion,
-                 cu_particle_splotch *cu_ps,
-                 cu_particle_splotch *cu_ps_filtered, int *End_cu_ps);
+                 int nFBufInCell, cu_particle_splotch *cu_ps,
+                 cu_particle_splotch *cu_ps_filtered, int *End_cu_ps, 
+                 int *nFragments2Render);
 void render_chunk(int EndP, int nFBufInCell, cu_particle_splotch *cu_ps_filtered,                           void *fragBuf, cu_gpu_vars *gv, bool a_eq_e, float64 grayabsorb,
                   arr2<COLOUR> &pPic, wallTimerSet &times);
 void combine_chunk(int StartP, int EndP, cu_particle_splotch *cu_ps_filtered, 

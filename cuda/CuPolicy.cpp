@@ -21,7 +21,9 @@ int CuPolicy::GetMaxRegion()
   { return maxregion; }
 
 int CuPolicy::GetFBufSize() // return dimension in terms of Megabytes
-  { return fbsize; }
+  {
+     return fbsize; 
+  }
 
 int CuPolicy::GetGMemSize() // return dimension in terms of Megabytes
   { 
