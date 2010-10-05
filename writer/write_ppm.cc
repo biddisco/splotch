@@ -17,11 +17,9 @@ void write_ppm_ascii(paramfile &params, const arr2<COLOUR> &pic,
   for (tsize y=0; y<pic.size2(); ++y)
     {
     for (tsize x=0; x<pic.size1(); ++x)
-      {
       file << min(255,int(256*pic[x][y].r)) << " "
            << min(255,int(256*pic[x][y].g)) << " "
            << min(255,int(256*pic[x][y].b)) << "   ";
-      }
     file << endl;
     }
   }
@@ -40,7 +38,6 @@ void write_ppm_bin(paramfile &params, const arr2<COLOUR> &pic,
   file.put(hdrdata.c_str(),hdrdata.size());
 
   for (tsize y=0; y<pic.size2(); ++y)
-    {
     for (tsize x=0; x<pic.size1(); ++x)
       {
       uint8 pix[3];
@@ -49,5 +46,4 @@ void write_ppm_bin(paramfile &params, const arr2<COLOUR> &pic,
       pix[2] = uint8(min(255,int(256*pic[x][y].b)));
       file.put(&pix[0],3);
       }
-    }
   }
