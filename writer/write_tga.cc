@@ -61,8 +61,7 @@ void write_tga(paramfile &params, const arr2<COLOUR> &pic,
   bofstream file(frame_name.c_str(),file_is_natural);
 
   file.put(&header[0],18);
-  for (tsize y=0; y<xres; ++y)
-    {
+  for (tsize y=0; y<yres; ++y)
     for (tsize x=0; x<xres; ++x)
       {
       uint8 pix[3];
@@ -71,7 +70,6 @@ void write_tga(paramfile &params, const arr2<COLOUR> &pic,
       pix[2] = uint8(min(255,int(256*pic[x][y].r)));
       file.put(&pix[0],3);
       }
-    }
   }
 
 void write_tga_rle(paramfile &params, const arr2<COLOUR> &pic,
@@ -85,7 +83,7 @@ void write_tga_rle(paramfile &params, const arr2<COLOUR> &pic,
   bofstream file(frame_name.c_str(),file_is_natural);
 
   file.put(&header[0],18);
-  for (tsize y=0; y<xres; ++y)
+  for (tsize y=0; y<yres; ++y)
     {
     arr<pixel> px(xres);
     for (tsize x=0; x<xres; ++x) px[x] = pic[x][y];
