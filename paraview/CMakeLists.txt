@@ -72,7 +72,7 @@ ADD_PARAVIEW_PLUGIN(
   "1.0" 
 
   SERVER_MANAGER_XML 
-    ${CMAKE_CURRENT_SOURCE_DIR}/splotch_plugin_server.xml
+#    ${CMAKE_CURRENT_SOURCE_DIR}/splotch_plugin_server.xml
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkSplotchRaytraceRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${splotch_plugin_WRAPPED_SRCS}

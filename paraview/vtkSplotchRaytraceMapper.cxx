@@ -12,6 +12,8 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+#include "vtkgl.h"
+
 #include "vtkSplotchRaytraceMapper.h"
 
 #include "vtkActor.h"
@@ -50,13 +52,6 @@
 
 vtkInstantiatorNewMacro(vtkSplotchRaytraceMapper);
 
-template <class T>
-static T vtkClamp(T val, T min, T max)
-{
-  val = val < min? min : val;
-  val = val > max? max : val;
-  return val;
-}
 //----------------------------------------------------------------------------
 // return the correct type of vtkSplotchRaytraceMapper 
 vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
@@ -98,19 +93,30 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   vtkPoints *pts = input->GetPoints();
   //
   std::vector<particle_sim> particle_data; // raw data 
-  vec3 campos, lookat, sky(0.0, 0.0, 1.0);
+  vec3 campos, lookat, sky;
   ren->GetActiveCamera()->GetPosition(&campos.x);
   ren->GetActiveCamera()->GetFocalPoint(&lookat.x);
+  ren->GetActiveCamera()->GetViewUp(&sky.x);
+  double FOV = ren->GetActiveCamera()->GetViewAngle();
   std::vector<COLOURMAP> amap;
   amap.resize(1);
   //
-  int N = pts->GetNumberOfPoints();
+  double N = pts->GetNumberOfPoints();
   particle_data.assign(N, particle_sim());
-  for (int i=0; i<N; i++) {
+  double imax = 0;
+  for (double i=0; i<N; i++) {
     double *p = pts->GetPoint(i);
     particle_data[i].x = p[0];
     particle_data[i].y = p[1];
     particle_data[i].z = p[2];
+    particle_data[i].type = 0;
+    particle_data[i].e.r = 0.25 + 0.5*(i/N);
+    particle_data[i].e.g = 0.25 + 0.75*(i/N);
+    particle_data[i].e.b = 0.25 + 0.25*(i/N);
+    particle_data[i].I   = 0.25 + 0.5*(i/N);
+    particle_data[i].r   = 0.05;
+
+    if (particle_data[i].I>imax) imax = particle_data[i].I;
   }
   arr2<COLOUR> pic(X,Y);
   paramfile params;
@@ -123,9 +129,80 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   amap[0].addVal(2*step,COLOUR(col[2].x,col[2].y,col[2].z));
   amap[0].sortMap();
 
+/*
+Parser: intensity_log0 = T <default>
+Parser: color_log0 = T <default>
+Parser: color_asinh0 = F <default>
+Parser: color_is_vector0 = F <default>
+*/
+
+  params.find("intensity_log0", false);
+  params.find("color_log0", false);
+  params.find("color_asinh0", false);
+  params.find("color_is_vector0", false);
+  params.find("xres", X);
+  params.find("yres", Y);
+
+  params.find("fov", FOV);
+  params.find("projection", true);
+  params.find("minrad_pix", 1);
+  params.find("a_eq_e", true);
+  params.find("zmin", 0.1);
+  params.find("zmax", 50);
+  params.find("brightness0", 1);
+
+  params.find("intensity_max0", imax);
+  params.find("intensity_min0", 0.0);
+
   if(particle_data.size()>0) {
     host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
   }
 
-  cerr << "Calling wrong render method!!\n";
+  bool master = true;
+  bool a_eq_e = true;
+//    mpiMgr.allreduceRaw
+//      (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
+
+    exptable<float32> xexp(-20.0);
+    if (master && a_eq_e)
+      for (int ix=0;ix<X;ix++)
+        for (int iy=0;iy<Y;iy++)
+          {
+          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          }
+/*
+  for (int i=0; i<X; i++) {
+    for (int j=0; j<Y; j++) {
+      if (i==j) pic(i,j) = COLOUR(1,1,1);
+    }
+  }
+*/
+
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+  for (int i=0; i<X; i++) {
+    glRasterPos2i(X-1-i, 0);
+    COLOUR *ptr = &pic[i][0];
+    float *x0 = &ptr->r;
+    glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
+  }
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );   
+    glPopMatrix();
+
+
+
+ 	
+
+//  cerr << "Calling wrong render method!!\n";
 }
