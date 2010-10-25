@@ -2,6 +2,19 @@ PROJECT(splotch)
 cmake_minimum_required(VERSION 2.8)
   
 #-----------------------------------------------------------------------------
+# Setup output Directories
+#-----------------------------------------------------------------------------
+SET (CMAKE_RUNTIME_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Executables."
+)
+SET (CMAKE_LIBRARY_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all Libraries"
+)
+SET (CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+    ${PROJECT_BINARY_DIR}/bin CACHE PATH "Single Directory for all static libraries."
+)
+
+#-----------------------------------------------------------------------------
 # OpenMP
 #-----------------------------------------------------------------------------
 OPTION(SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
@@ -10,7 +23,6 @@ IF (SPLOTCH_USE_OPENMP)
   SET(OpenMP_CXX_FLAGS "")
   IF (WIN32 AND MSVC) 
     SET(OpenMP_CXX_FLAGS "/openmp")
-    MESSAGE("I just set flags here")
   ENDIF (WIN32 AND MSVC) 
 ENDIF (SPLOTCH_USE_OPENMP)
 
@@ -24,7 +36,10 @@ IF (SPLOTCH_USE_MPI)
   FIND_PACKAGE(MPI)
   ADD_DEFINITIONS(-DUSE_MPI)
   INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH}) 
-  SET(SPLOTCH_MPI_LIBS "${MPI_LIBRARY};${MPI_EXTRA_LIBRARY}")
+  SET(SPLOTCH_MPI_LIBS "${MPI_LIBRARY}")
+  IF (MPI_EXTRA_LIBRARY)
+    SET(SPLOTCH_MPI_LIBS "${MPI_LIBRARY};${MPI_EXTRA_LIBRARY}")
+  ENDIF (MPI_EXTRA_LIBRARY)
 ENDIF (SPLOTCH_USE_MPI)
 
 #-----------------------------------------------------------------------------
@@ -40,32 +55,53 @@ INCLUDE_DIRECTORIES(
 )
 
 #-----------------------------------------------------------------------------
-# Source files
+# Source files for splotch lib
 #-----------------------------------------------------------------------------
-SET(SPLOTCH_SRCS
-	kernel/transform.cxx
-	cxxsupport/error_handling.cc
-	cxxsupport/walltimer.cc
-	reader/mesh_reader.cc
-	cxxsupport/mpi_support.cc
-	cxxsupport/cxxutils.cc
-	reader/gadget_reader.cc
-	reader/millenium_reader.cc
-	reader/bin_reader.cc
-	reader/bin_reader_mpi.cc
-	writer/write_tga.cc
-	writer/write_bmp.cc
-	writer/write_ppm.cc
-	splotch/splotchutils.cc
-	splotch/splotch.cc
-	splotch/scenemaker.cc
-	splotch/splotch_host.cc
+SET(SPLOTCH_LIB_SRCS
+	${CMAKE_CURRENT_SOURCE_DIR}/kernel/transform.cxx
+	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/error_handling.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/walltimer.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/reader/mesh_reader.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/mpi_support.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/cxxutils.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/reader/gadget_reader.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/reader/millenium_reader.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader_mpi.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_tga.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_bmp.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_ppm.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotchutils.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/splotch/scenemaker.cc
+	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch_host.cc
 )
 
+ADD_LIBRARY(splotchlib STATIC ${SPLOTCH_LIB_SRCS})
+SET_TARGET_PROPERTIES(splotchlib PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+
 #-----------------------------------------------------------------------------
-# Define the Executable and any properties
+# ParaView plugin
 #-----------------------------------------------------------------------------
+OPTION(SPLOTCH_BUILD_PARAVIEW_PLUGIN "Build a plugin for rendering with splotch inside paraview" OFF)
+
+IF (SPLOTCH_BUILD_PARAVIEW_PLUGIN)
+  FIND_PACKAGE(ParaView REQUIRED)
+  INCLUDE(${PARAVIEW_USE_FILE})
+  INCLUDE(${PARAVIEW_VTK_DIR}/VTKConfig.cmake)
+
+  IF (ParaView_FOUND)
+    ADD_SUBDIRECTORY(paraview)
+  ENDIF (ParaView_FOUND)
+ENDIF (SPLOTCH_BUILD_PARAVIEW_PLUGIN)
+
+#-----------------------------------------------------------------------------
+# Define the Executable and set properties
+#-----------------------------------------------------------------------------
+SET(SPLOTCH_SRCS
+	splotch/splotch.cc
+)
+
 ADD_EXECUTABLE(splotch ${SPLOTCH_SRCS})
-TARGET_LINK_LIBRARIES(splotch ${SPLOTCH_MPI_LIBS})
+TARGET_LINK_LIBRARIES(splotch splotchlib ${SPLOTCH_MPI_LIBS})
 SET_TARGET_PROPERTIES(splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
-MESSAGE("The flags are ${OpenMP_CXX_FLAGS}")

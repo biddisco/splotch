@@ -51,6 +51,7 @@ class paramfile
       bool deflt) const;
 
   public:
+    paramfile () {};
     paramfile (const std::string &filename, bool verbose_=true);
     paramfile (const params_type &par, bool verbose_=true);
     ~paramfile();

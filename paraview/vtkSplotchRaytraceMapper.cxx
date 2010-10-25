@@ -98,10 +98,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   vtkPoints *pts = input->GetPoints();
   //
   std::vector<particle_sim> particle_data; // raw data 
-  vec3 campos, lookat, sky(0.0, 0.0, 0.0);
+  vec3 campos, lookat, sky(0.0, 0.0, 1.0);
   ren->GetActiveCamera()->GetPosition(&campos.x);
   ren->GetActiveCamera()->GetFocalPoint(&lookat.x);
   std::vector<COLOURMAP> amap;
+  amap.resize(1);
   //
   int N = pts->GetNumberOfPoints();
   particle_data.assign(N, particle_sim());
@@ -120,11 +121,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   amap[0].addVal(0*step,COLOUR(col[0].x,col[0].y,col[0].z));
   amap[0].addVal(1*step,COLOUR(col[1].x,col[1].y,col[1].z));
   amap[0].addVal(2*step,COLOUR(col[2].x,col[2].y,col[2].z));
+  amap[0].sortMap();
 
   if(particle_data.size()>0) {
     host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
   }
-
 
   cerr << "Calling wrong render method!!\n";
 }

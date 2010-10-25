@@ -216,7 +216,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
 
 #pragma omp parallel
 {
-  tsize i;
+  int i;
 #pragma omp for schedule(guided,1000)
   for (i=0; i<npart; ++i)
     {

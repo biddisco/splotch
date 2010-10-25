@@ -48,11 +48,11 @@ SET(splotch_plugin_SRCS
 #  vtkSplotchRaytraceProperty.h
 #  vtkSMSplotchRepresentation.cxx
 
-  framebufferObject.cpp          
-  glErrorUtil.cpp                
-  renderbuffer.cpp               
-  vtkPointSpriteMapper.cxx            
-  vtkPointSpriteDepthSort.cxx  
+#  framebufferObject.cpp          
+#  glErrorUtil.cpp                
+#  renderbuffer.cpp               
+#  vtkPointSpriteMapper.cxx            
+#  vtkPointSpriteDepthSort.cxx  
 )
 
 #--------------------------------------------------
@@ -77,7 +77,7 @@ ADD_PARAVIEW_PLUGIN(
   SERVER_MANAGER_SOURCES
     ${splotch_plugin_WRAPPED_SRCS}
   SERVER_SOURCES
-    ${splotch_plugin_SRCS}  
+    ${splotch_plugin_SRCS} 
   GUI_RESOURCE_FILES
     ${splotch_plugin_CLIENT_XML}
 )
