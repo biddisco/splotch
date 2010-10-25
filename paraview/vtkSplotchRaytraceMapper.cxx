@@ -92,16 +92,23 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   vtkPointSet *input = this->GetInput();
   vtkPoints *pts = input->GetPoints();
   //
+  double N = pts->GetNumberOfPoints();
+  double bounds[6];
+  input->GetBounds(bounds);
+  double length = input->GetLength();
+  double radius = length/N;
+  //
   std::vector<particle_sim> particle_data; // raw data 
   vec3 campos, lookat, sky;
+  double zmin,zmax;
   ren->GetActiveCamera()->GetPosition(&campos.x);
   ren->GetActiveCamera()->GetFocalPoint(&lookat.x);
   ren->GetActiveCamera()->GetViewUp(&sky.x);
+  ren->GetActiveCamera()->GetClippingRange(zmin, zmax);
   double FOV = ren->GetActiveCamera()->GetViewAngle();
   std::vector<COLOURMAP> amap;
   amap.resize(1);
   //
-  double N = pts->GetNumberOfPoints();
   particle_data.assign(N, particle_sim());
   double imax = 0;
   for (double i=0; i<N; i++) {
@@ -114,7 +121,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
     particle_data[i].e.g = 0.25 + 0.75*(i/N);
     particle_data[i].e.b = 0.25 + 0.25*(i/N);
     particle_data[i].I   = 0.25 + 0.5*(i/N);
-    particle_data[i].r   = 0.05;
+    particle_data[i].r   = radius;
 
     if (particle_data[i].I>imax) imax = particle_data[i].I;
   }
@@ -129,13 +136,6 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   amap[0].addVal(2*step,COLOUR(col[2].x,col[2].y,col[2].z));
   amap[0].sortMap();
 
-/*
-Parser: intensity_log0 = T <default>
-Parser: color_log0 = T <default>
-Parser: color_asinh0 = F <default>
-Parser: color_is_vector0 = F <default>
-*/
-
   params.find("intensity_log0", false);
   params.find("color_log0", false);
   params.find("color_asinh0", false);
@@ -147,8 +147,8 @@ Parser: color_is_vector0 = F <default>
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
-  params.find("zmin", 0.1);
-  params.find("zmax", 50);
+  params.find("zmin", zmin);
+  params.find("zmax", zmax);
   params.find("brightness0", 1);
 
   params.find("intensity_max0", imax);

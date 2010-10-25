@@ -62,10 +62,34 @@ SET( splotch_plugin_WRAPPED_SRCS
   vtkSplotchRaytraceMapper.cxx
   vtkSplotchRaytraceRepresentation.cxx
 )
+
+#--------------------------------------------------
+# Qt .ui files that are wrapped and added to plugin
+#--------------------------------------------------
+set(UI_FORMS
+  pqSplotchRaytraceDisplayPanelDecorator.ui
+)
+    
+qt4_wrap_ui(UI_SRCS 
+  ${UI_FORMS}
+)
+
+qt4_wrap_cpp(MOC_SRCS 
+  pqSplotchRaytraceDisplayPanelDecorator.h
+#  pqDisplayArrayWidget.h
+  )
+   
+set(Plugin_SRCS
+  pqSplotchRaytraceDisplayPanelDecorator.cxx
+#  pqDisplayArrayWidget.cxx
+  )
+
+
 #--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
 SET(LIBRARY_TARGET_NAME splotch_plugin)
+
 
 ADD_PARAVIEW_PLUGIN(
   ${LIBRARY_TARGET_NAME}
@@ -80,6 +104,10 @@ ADD_PARAVIEW_PLUGIN(
     ${splotch_plugin_SRCS} 
   GUI_RESOURCE_FILES
     ${splotch_plugin_CLIENT_XML}
+  GUI_SOURCES 
+    ${Plugin_SRCS} 
+    ${MOC_SRCS} 
+    ${UI_SRCS} 
 )
 
 TARGET_LINK_LIBRARIES(splotch_plugin splotchlib)

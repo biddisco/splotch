@@ -11,7 +11,7 @@
       <!-- this adds to what is already defined in PVRepresentationBase -->
       <RepresentationType subproxy="SplotchRaytraceRepresentation" 
                           text="Splotch particles"
-                          subtype="2" /> 
+                          subtype="0" /> 
       <!-- subtype 0 for the Default Geometry Representation is points -->
 
       <SubProxy>
@@ -39,7 +39,7 @@
     
     <!-- ================================================================= -->
     <!-- Add to "GeometryRepresentation" -->
-    <!-- this adds to what is already defined in PVRepresentationBase 
+    <!-- this adds to what is already defined in PVRepresentationBase -->
     <Extension name="UnstructuredGridRepresentation">
 
       <RepresentationType subproxy="SplotchRaytraceRepresentation" 
@@ -58,7 +58,7 @@
         </ExposedProperties>
       </SubProxy>
     </Extension>
--->
+
     <!-- ================================================================= -->
     <RepresentationProxy name="SplotchRaytraceRepresentation"    
                            base_proxygroup="representations"      
