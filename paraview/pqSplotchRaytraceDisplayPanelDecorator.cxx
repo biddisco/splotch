@@ -112,7 +112,8 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
   // This is not advisable, but we do it nonetheless since that's what the old
   // code was doing. At some point we need to clean this up.
   vtkSMSplotchRaytraceRepresentationProxy::InitializeDefaultValues(reprProxy);
-
+*/
+  
   this->Internals = new pqInternals(this);
   QVBoxLayout* vlayout = dynamic_cast<QVBoxLayout*> (panel->layout());
   if (vlayout)
@@ -124,8 +125,8 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
     panel->layout()->addWidget(this);
     }
   this->Internals->setupUi(this);
-  this->Internals->RepresentationProxy = reprProxy;
-
+  this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
+/*
   // setup the scaleBy and radiusBy menus
   this->Internals->ScaleBy->setConstantVariableName("Constant Radius");
   this->Internals->ScaleBy->setPropertyArrayName("RadiusArray");

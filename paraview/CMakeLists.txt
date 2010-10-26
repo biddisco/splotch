@@ -76,27 +76,30 @@ qt4_wrap_ui(UI_SRCS
 
 qt4_wrap_cpp(MOC_SRCS 
   pqSplotchRaytraceDisplayPanelDecorator.h
-#  pqDisplayArrayWidget.h
+  pqDisplayArrayWidget.h
   )
    
 set(Plugin_SRCS
   pqSplotchRaytraceDisplayPanelDecorator.cxx
-#  pqDisplayArrayWidget.cxx
+  pqDisplayArrayWidget.cxx
   )
 
+    add_paraview_display_panel_decorator(
+      IFACES
+      IFACE_SRCS
+      CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
+      PANEL_TYPES pqDisplayProxyEditor)
 
 #--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
 SET(LIBRARY_TARGET_NAME splotch_plugin)
 
-
 ADD_PARAVIEW_PLUGIN(
   ${LIBRARY_TARGET_NAME}
   "1.0" 
 
   SERVER_MANAGER_XML 
-#    ${CMAKE_CURRENT_SOURCE_DIR}/splotch_plugin_server.xml
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkSplotchRaytraceRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${splotch_plugin_WRAPPED_SRCS}
@@ -104,10 +107,13 @@ ADD_PARAVIEW_PLUGIN(
     ${splotch_plugin_SRCS} 
   GUI_RESOURCE_FILES
     ${splotch_plugin_CLIENT_XML}
+  GUI_INTERFACES 
+    ${IFACES} 
   GUI_SOURCES 
     ${Plugin_SRCS} 
     ${MOC_SRCS} 
     ${UI_SRCS} 
+    ${IFACE_SRCS}
 )
 
 TARGET_LINK_LIBRARIES(splotch_plugin splotchlib)
