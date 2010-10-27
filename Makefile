@@ -3,7 +3,7 @@
 #######################################################################
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
+OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -15,14 +15,15 @@
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-#OPT     +=  -DCUDA
-#OPT     +=  -DNO_WIN_THREAD
+OPT     +=  -DCUDA
+OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-#SYSTYPE="PLX"
+SYSTYPE="PLX"
+#SYSTYPE="BGP"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -33,6 +34,7 @@ OMP      = -fopenmp
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport
+
 
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 SUP_INCL += -Impiio-1.0/include/
@@ -67,18 +69,33 @@ OMP =
 SUP_INCL += -I$(CUDA_HOME)/sdk/common/inc -I$(CUDA_HOME)/sdk/C/common/inc # -I$(CUDA_HOME)/include  -Icuda
 endif
 
+ifeq ($(SYSTYPE),"BGP")
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       = mpixlcxx_r
+else
+CC       = bgxlC_r
+endif
+OPTIMIZE = -O3 -qstrict -qarch=450d -qtune=450 # -qipa=inline
+LIB_OPT  =
+OMP =   -qsmp=omp -qthreaded
+
+endif
+
 ifeq ($(SYSTYPE),"PLX")
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       =  mpiCC -g 
 endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
 NVCC       =  nvcc -g 
-LIB_OPT  += -Xlinker -L$(NVCC_HOME)/lib -lcudart
-SUP_INCL += -I$(CUDASDK_HOME)/common/inc -I$(NVCC_HOME)/include #-Icuda
+# cuda/3.1 :
+LIB_OPT  += -Xlinker -L$(NVCC_HOME)/lib64 -lcudart
+SUP_INCL += -I$(CUDAUTIL_INC) -I$(NVCC_HOME)/include #-Icuda
+# nvcc/2.2 :
+#LIB_OPT  += -Xlinker -L$(NVCC_HOME)/lib -lcudart
+#SUP_INCL += -I$(CUDASDK_HOME)/common/inc -I$(NVCC_HOME)/include #-Icuda
 endif
- 
 OPTIMIZE = -O2 -DDEBUG
-OMP =
+OMP = -fopenmp
 endif
 
 #--------------------------------------- Here we go
