@@ -261,7 +261,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   }
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
-  vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
+  vec3 &campos, vec3 &lookat, vec3 &sky, vec3 &campos2, string &outfile)
   {
   wallTimers.start("read");
   if ((!geomfile)&&done) return false;
@@ -309,6 +309,28 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 	      sky.y=params.find<double>("sky_y",0);
 	      sky.z=params.find<double>("sky_z",0);
 	    }
+
+	  double eye_separation = params.find<double>("eye_separation",0);
+	  if(eye_separation > 0)
+	    {
+	      vec3 view = lookat - campos;
+
+	      // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
+	      // which lies orthogonal to the looking vector 'view', which connect the
+	      // camera 'campos' with the lootat point 'look'
+
+	      double cosa = dotprod (view,sky) / (view.Length() * sky.Length());
+
+	      vec3 sky_real = sky - view * cosa * sky.Length() / view.Length();
+	      vec3 right = crossprod (sky,view);
+
+	      double distance = eye_separation / 360 * 2 * M_PI * view.Length();
+
+	      campos2 = campos + right / right.Length() * distance;
+	    }
+	  else
+	    campos2 = vec3(0,0,0);
+
 	}
 // -----------------------------------
 // ----------- Reading ---------------

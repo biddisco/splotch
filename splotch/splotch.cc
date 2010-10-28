@@ -44,7 +44,7 @@ int main (int argc, const char **argv)
 
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
-  vec3 campos, lookat, sky;
+  vec3 campos, lookat, sky, campos2;
   vector<COLOURMAP> amap;
 #else //ifdef CUDA they will be global vars
   ptypes = params.find<int>("ptypes",1);
@@ -85,7 +85,7 @@ int main (int argc, const char **argv)
 
   sceneMaker sMaker(params);
   string outfile;
-  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
+  while (sMaker.getNextScene (particle_data, campos, lookat, sky, campos2, outfile))
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
     int xres = params.find<int>("xres",800),

@@ -40,7 +40,7 @@ class sceneMaker
     sceneMaker (paramfile &par);
 
     bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
-      vec3 &lookat, vec3 &sky, std::string &outfile);
+      vec3 &lookat, vec3 &sky, vec3 &campos2, std::string &outfile);
   };
 
 #endif
