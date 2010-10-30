@@ -139,6 +139,9 @@ endif
 fov (double, default=45):
   horizontal field of view in degrees
 
+EyeSeparation (double, default=0):
+  horizontal eye separation in degree. If set, turns on stereo mode
+
 ## define z-coordinate range of particles to be visualized
 zmin (double, default=0):
   near cutoff distance
