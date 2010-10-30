@@ -90,6 +90,8 @@ sky_z=1
 
 fov=30
 
+#EyeSeparation = 0.8
+
 # CUDA
 #use_host_as_thread =t
 #host_load=30
