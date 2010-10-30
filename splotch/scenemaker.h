@@ -16,6 +16,11 @@ class sceneMaker
     bool geomfile;
     int interpol_mode;
 
+// only used if EyeSeparation>0
+   vec3 campos_save, lookat_save, sky_save, campos_right;
+   double fidx_save;
+   std::string outfile_save;
+
 // only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
     std::vector<uint32> id1,id2,idx1,idx2;
@@ -40,7 +45,7 @@ class sceneMaker
     sceneMaker (paramfile &par);
 
     bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
-      vec3 &lookat, vec3 &sky, vec3 &campos2, std::string &outfile);
+      vec3 &lookat, vec3 &sky, std::string &outfile);
   };
 
 #endif
