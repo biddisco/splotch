@@ -50,7 +50,7 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 
   if (size_fix<n> == 0)
     size_label<n> (string):
-      name os the quantity to use for particle size (HSML is a good choice)
+      name of the quantity to use for particle size (HSML is a good choice)
     size_present<n> (integer):
       bit-coded 2^ptype for which types this block contains data
   endif
@@ -140,7 +140,7 @@ fov (double, default=45):
   horizontal field of view in degrees
 
 EyeSeparation (double, default=0):
-  horizontal eye separation in degree. If set, turns on stereo mode
+  horizontal eye separation in degrees. If set, turns on stereo mode
 
 ## define z-coordinate range of particles to be visualized
 zmin (double, default=0):

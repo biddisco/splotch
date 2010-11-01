@@ -281,86 +281,86 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 
   if (params.find<int>("simtype") > -1)
     {
-      if(!params.find<bool>("AnalyzeSimulationOnly",false))
-	{
-	  double eye_separation = params.find<double>("EyeSeparation",0);
+    if (!params.find<bool>("AnalyzeSimulationOnly",false))
+      {
+      double eye_separation = params.find<double>("EyeSeparation",0);
 
-	  if(eye_separation == 0 || campos_right.Length() == 0)
-	    {
-	      if (geomfile)
-		{
-		  string line;
-		  if (!getline(inp, line)) return false;
-		  sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-			 &campos.x,&campos.y,&campos.z,
-			 &lookat.x,&lookat.y,&lookat.z,
-			 &sky.x,&sky.y,&sky.z,&fidx);
-		  if (master)
-		    {
-		      cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
-		      cout << " Camera:    " << campos << endl;
-		      cout << " Lookat:    " << lookat << endl;
-		      cout << " Sky:       " << sky << endl;
-		      if (interpol_mode>0)
-			cout << " file index: " << fidx << endl;
-		    }
-		  outfile += intToString(current_scene,4) + ".tga";
-		  current_scene += scene_incr;
-		  for (int i=0; i<scene_incr-1; ++i)
-		    getline(inp, line);
-		}
-	      else
-		{
-		  campos.x=params.find<double>("camera_x");
-		  campos.y=params.find<double>("camera_y");
-		  campos.z=params.find<double>("camera_z");
-		  lookat.x=params.find<double>("lookat_x");
-		  lookat.y=params.find<double>("lookat_y");
-		  lookat.z=params.find<double>("lookat_z");
-		  sky.x=params.find<double>("sky_x",0);
-		  sky.y=params.find<double>("sky_y",0);
-		  sky.z=params.find<double>("sky_z",0);
-		}
-	      lookat_save = lookat;
-	      sky_save = sky;
-	      fidx_save = fidx;
-	      outfile_save = outfile;
+      if (eye_separation == 0 || campos_right.Length() == 0)
+        {
+        if (geomfile)
+          {
+          string line;
+          if (!getline(inp, line)) return false;
+          sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+            &campos.x,&campos.y,&campos.z,
+            &lookat.x,&lookat.y,&lookat.z,
+            &sky.x,&sky.y,&sky.z,&fidx);
+          if (master)
+            {
+            cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
+            cout << " Camera:    " << campos << endl;
+            cout << " Lookat:    " << lookat << endl;
+            cout << " Sky:       " << sky << endl;
+            if (interpol_mode>0)
+              cout << " file index: " << fidx << endl;
+            }
+          outfile += intToString(current_scene,4) + ".tga";
+          current_scene += scene_incr;
+          for (int i=0; i<scene_incr-1; ++i)
+            getline(inp, line);
+          }
+        else
+          {
+          campos.x=params.find<double>("camera_x");
+          campos.y=params.find<double>("camera_y");
+          campos.z=params.find<double>("camera_z");
+          lookat.x=params.find<double>("lookat_x");
+          lookat.y=params.find<double>("lookat_y");
+          lookat.z=params.find<double>("lookat_z");
+          sky.x=params.find<double>("sky_x",0);
+          sky.y=params.find<double>("sky_y",0);
+          sky.z=params.find<double>("sky_z",0);
+          }
+        lookat_save = lookat;
+        sky_save = sky;
+        fidx_save = fidx;
+        outfile_save = outfile;
 
-	      if(eye_separation > 0)
-		{
-		  vec3 view = lookat - campos;
+        if (eye_separation>0)
+          {
+          vec3 view = lookat - campos;
 
-		  // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
-		  // which lies orthogonal to the looking vector 'view', which connect the
-		  // camera 'campos' with the lootat point 'look'
+          // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
+          // which lies orthogonal to the looking vector 'view', which connects the
+          // camera 'campos' with the lookat point 'look'
 
-		  double cosa = dotprod (view,sky) / (view.Length() * sky.Length());
+          double cosa = dotprod (view,sky) / (view.Length() * sky.Length());
 
-		  vec3 sky_real = sky - view * cosa * sky.Length() / view.Length();
-		  vec3 right = crossprod (sky,view);
+          vec3 sky_real = sky - view * cosa * sky.Length() / view.Length();
+          vec3 right = crossprod (sky,view);
 
-		  double distance = eye_separation / 360 * 2 * M_PI * view.Length();
+          double distance = eye_separation / 360 * 2 * M_PI * view.Length();
 
-		  campos_right = campos + right / right.Length() * distance;
+          campos_right = campos + right / right.Length() * distance;
 
-		  done = false;
-		}
-	    }
-	  else
-	    {
-	      campos = campos_right;
-	      lookat = lookat_save;
-	      sky = sky_save;
-	      fidx = fidx_save;
-              campos_right = vec3 (0,0,0);
-              outfile = "right_" + outfile_save;
-	    }
-	}
+          done = false;
+          }
+        }
+      else
+        {
+        campos = campos_right;
+        lookat = lookat_save;
+        sky = sky_save;
+        fidx = fidx_save;
+        campos_right = vec3 (0,0,0);
+        outfile = "right_" + outfile_save;
+        }
+      }
 // -----------------------------------
 // ----------- Reading ---------------
 // -----------------------------------
 
-      fetchFiles(particle_data,fidx);
+    fetchFiles(particle_data,fidx);
     }
 
   wallTimers.stop("read");

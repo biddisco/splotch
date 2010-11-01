@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2008
+ * Copyright (c) 2004-2010
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -78,7 +78,7 @@ int main (int argc, const char **argv)
 
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) print_device_info(myID, mydevID);
-#endif // CUDA 
+#endif // CUDA
 
   get_colourmaps(params,amap);
   wallTimers.stop("setup");
@@ -94,8 +94,7 @@ int main (int argc, const char **argv)
 
 #ifndef CUDA
     if(particle_data.size()>0)
-      host_rendering(params, particle_data, pic,
-		     campos, lookat, sky, amap);
+      host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
 #else
     cuda_rendering(mydevID, nDevProc, pic);
 #endif
@@ -118,37 +117,36 @@ int main (int argc, const char **argv)
     wallTimers.start("write");
 
     if (master && params.find<bool>("colorbar",false))
-    {
+      {
       cout << endl << "creating color bar ..." << endl;
       add_colorbar(params,pic,amap);
-    }
+      }
 
     if(!params.find<bool>("AnalyzeSimulationOnly"))
       {
+      if (master)
+        cout << endl << "saving file ..." << endl;
 
-	if (master)
-	  cout << endl << "saving file ..." << endl;
+      int pictype = params.find<int>("pictype",0);
 
-	int pictype = params.find<int>("pictype",0);
-	
-	switch(pictype)
-	  {
-	  case 0:
-	    if (master) write_tga(params,pic,outfile);
-	    break;
-	  case 1:
-	    if (master) write_ppm_ascii(params,pic,outfile);
-	    break;
-	  case 2:
-	    if (master) write_ppm_bin(params,pic,outfile);
-	    break;
-	  case 3:
-	    if (master) write_tga_rle(params,pic,outfile);
-	    break;
-	  default:
-	    planck_fail("No valid image file type given ...");
-	    break;
-	  }
+      switch(pictype)
+        {
+        case 0:
+          if (master) write_tga(params,pic,outfile);
+          break;
+        case 1:
+          if (master) write_ppm_ascii(params,pic,outfile);
+          break;
+        case 2:
+          if (master) write_ppm_bin(params,pic,outfile);
+          break;
+        case 3:
+          if (master) write_tga_rle(params,pic,outfile);
+          break;
+        default:
+          planck_fail("No valid image file type given ...");
+          break;
+        }
       }
 
     wallTimers.stop("write");
