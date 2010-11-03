@@ -179,7 +179,7 @@ sceneMaker::sceneMaker (paramfile &par)
         getline(inp, line);
       }
     }
-  double eye_separation = params.find<double>("EyeSeparation",0);
+  double eye_separation = degr2rad * params.find<double>("EyeSeparation",0);
   if (eye_separation>0)
     {
     vector<scene> sc_orig;
@@ -201,9 +201,10 @@ sceneMaker::sceneMaker (paramfile &par)
       vec3 sky_real = sa.sky - view * cosa * sa.sky.Length() / view.Length();
       vec3 right = crossprod (sa.sky,view);
 
-      double distance = eye_separation / 360 * twopi * view.Length();
+      double distance = eye_separation * view.Length();
 
-      sb.campos = sa.campos + right / right.Length() * distance;
+      sa.campos -= right / right.Length() * distance*0.5;
+      sb.campos += right / right.Length() * distance*0.5;
       sa.outname = "left_"+sa.outname;
       sb.outname = "right_"+sb.outname;
       }
