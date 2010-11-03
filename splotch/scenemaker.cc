@@ -128,41 +128,93 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   }
 
 sceneMaker::sceneMaker (paramfile &par)
-  : params(par),snr1_now(-1),snr2_now(-1),done(false)
+  : cur_scene(0), params(par), snr1_now(-1), snr2_now(-1)
   {
+  // do nothing if we are only analyzing ...
+  if (params.find<bool>("AnalyzeSimulationOnly",false)) return;
+
+  vec3 campos, lookat, sky;
   string geometry_file = params.find<string>("geometry_file","");
-  geomfile = (geometry_file!="");
-
-  campos_right = vec3 (0,0,0);
-
+  string outfile = params.find<string>("outfile","demo");
   interpol_mode = params.find<int>("interpolation_mode",0);
-  planck_assert((geomfile) || (interpol_mode==0),
-    "geometry file needed when interpolation is requested!");
 
-  if (interpol_mode>0)
-    planck_assert(mpiMgr.num_ranks()==1,
-       "Sorry, interpolating between files is not yet MPI parallelized ...");
-
-  if (geomfile)
+  if (geometry_file=="")
     {
-    inp.open(geometry_file.c_str());
-    planck_assert (inp, "could not open geometry file '" + geometry_file +"'");
-    current_scene = params.find<int>("geometry_start",0);
-    scene_incr = params.find<int>("geometry_incr",1);
+    campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),
+                params.find<double>("camera_z"));
+    lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),
+                params.find<double>("lookat_z"));
+    sky=vec3(params.find<double>("sky_x",0),params.find<double>("sky_y",0),
+             params.find<double>("sky_z",0));
+    scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
+    }
+  else
+    {
+    if (interpol_mode>0)
+      planck_assert(mpiMgr.num_ranks()==1,
+        "Sorry, interpolating between files is not yet MPI parallelized ...");
 
+    ifstream inp(geometry_file.c_str());
+    planck_assert (inp, "could not open geometry file '" + geometry_file +"'");
+    int current_scene = params.find<int>("geometry_start",0);
+    int scene_incr = params.find<int>("geometry_incr",1);
     string line;
     for (int i=0; i<current_scene; ++i)
       getline(inp, line);
+    while (getline(inp, line))
+      {
+      double fidx;
+      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
+        &campos.x,&campos.y,&campos.z,
+        &lookat.x,&lookat.y,&lookat.z,
+        &sky.x,&sky.y,&sky.z,&fidx);
+      string outfilen = outfile+intToString(current_scene,4) + ".tga";
+      bool reuse=false;
+      if (scenes.size()>0)
+        if (approx(fidx,scenes[scenes.size()-1].fidx))
+          scenes[scenes.size()-1].keep_particles=reuse=true;
+      scenes.push_back(scene(campos,lookat,sky,fidx,outfilen,false,reuse));
+      current_scene += scene_incr;
+      for (int i=0; i<scene_incr-1; ++i)
+        getline(inp, line);
+      }
+    }
+  double eye_separation = params.find<double>("EyeSeparation",0);
+  if (eye_separation>0)
+    {
+cout<<"BLAAH" << endl;
+    vector<scene> sc_orig;
+    sc_orig.swap(scenes);
+    for (tsize i=0; i<sc_orig.size(); ++i)
+      {
+      scenes.push_back(sc_orig[i]);
+      scenes.push_back(sc_orig[i]);
+      scene &sa = scenes[scenes.size()-2], &sb = scenes[scenes.size()-1];
+      sa.keep_particles=true; sb.keep_particles=false; sb.reuse_particles=true;
+      vec3 view = sa.lookat - sa.campos;
+
+      // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
+      // which lies orthogonal to the looking vector 'view', which connects the
+      // camera 'campos' with the lookat point 'look'
+
+      double cosa = dotprod (view,sa.sky) / (view.Length() * sa.sky.Length());
+
+      vec3 sky_real = sa.sky - view * cosa * sa.sky.Length() / view.Length();
+      vec3 right = crossprod (sa.sky,view);
+
+      double distance = eye_separation / 360 * twopi * view.Length();
+
+      sb.campos = sa.campos + right / right.Length() * distance;
+      sa.outname = "left_"+sa.outname;
+      sb.outname = "right_"+sb.outname;
+      }
     }
   }
 
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   {
-  if ((geomfile&&(interpol_mode==0)||campos_right.Length()==0)&&(p_orig.size()>0))
-    {
-    particle_data=p_orig;
-    return;
-    }
+  if (scenes[cur_scene-1].reuse_particles)
+    { particle_data=p_orig; return; }
 
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
@@ -179,7 +231,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       bin_reader_block(params,particle_data);
       break;
     case 2:
-      if (interpol_mode>0) // Here only the two datasets are prepared, interpolation will be done later
+      if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
         {
         cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
         cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
@@ -213,8 +265,6 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
         {
         double dummy;
         gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy);
-        if (geomfile)
-          p_orig = particle_data;
         }
       break;
     case 3:
@@ -261,108 +311,23 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     particle_interpolate(particle_data,frac);
     }
 
-  if (campos_right.Length() > 0)
-    p_orig = particle_data;
-
+  if (scenes[cur_scene-1].keep_particles) p_orig = particle_data;
   }
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
   {
+  if (tsize(++cur_scene) > scenes.size()) return false;
+
+  const scene &scn=scenes[cur_scene-1];
+  campos=scn.campos;
+  lookat=scn.lookat;
+  sky=scn.sky;
+  outfile=scn.outname;
+
   wallTimers.start("read");
-  if ((!geomfile)&&done) return false;
-
-  bool master = mpiMgr.master();
-  double fidx=0;
-
-  outfile = params.find<string>("outfile","demo");
-
-  done = true;
-
-  if (params.find<int>("simtype") > -1)
-    {
-    if (!params.find<bool>("AnalyzeSimulationOnly",false))
-      {
-      double eye_separation = params.find<double>("EyeSeparation",0);
-
-      if (eye_separation == 0 || campos_right.Length() == 0)
-        {
-        if (geomfile)
-          {
-          string line;
-          if (!getline(inp, line)) return false;
-          sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-            &campos.x,&campos.y,&campos.z,
-            &lookat.x,&lookat.y,&lookat.z,
-            &sky.x,&sky.y,&sky.z,&fidx);
-          if (master)
-            {
-            cout << endl << "Next entry <" << current_scene << "> in geometry file ..." << endl;
-            cout << " Camera:    " << campos << endl;
-            cout << " Lookat:    " << lookat << endl;
-            cout << " Sky:       " << sky << endl;
-            if (interpol_mode>0)
-              cout << " file index: " << fidx << endl;
-            }
-          outfile += intToString(current_scene,4) + ".tga";
-          current_scene += scene_incr;
-          for (int i=0; i<scene_incr-1; ++i)
-            getline(inp, line);
-          }
-        else
-          {
-          campos.x=params.find<double>("camera_x");
-          campos.y=params.find<double>("camera_y");
-          campos.z=params.find<double>("camera_z");
-          lookat.x=params.find<double>("lookat_x");
-          lookat.y=params.find<double>("lookat_y");
-          lookat.z=params.find<double>("lookat_z");
-          sky.x=params.find<double>("sky_x",0);
-          sky.y=params.find<double>("sky_y",0);
-          sky.z=params.find<double>("sky_z",0);
-          }
-        lookat_save = lookat;
-        sky_save = sky;
-        fidx_save = fidx;
-        outfile_save = outfile;
-
-        if (eye_separation>0)
-          {
-          vec3 view = lookat - campos;
-
-          // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
-          // which lies orthogonal to the looking vector 'view', which connects the
-          // camera 'campos' with the lookat point 'look'
-
-          double cosa = dotprod (view,sky) / (view.Length() * sky.Length());
-
-          vec3 sky_real = sky - view * cosa * sky.Length() / view.Length();
-          vec3 right = crossprod (sky,view);
-
-          double distance = eye_separation / 360 * 2 * M_PI * view.Length();
-
-          campos_right = campos + right / right.Length() * distance;
-
-          done = false;
-          }
-        }
-      else
-        {
-        campos = campos_right;
-        lookat = lookat_save;
-        sky = sky_save;
-        fidx = fidx_save;
-        campos_right = vec3 (0,0,0);
-        outfile = "right_" + outfile_save;
-        }
-      }
-// -----------------------------------
-// ----------- Reading ---------------
-// -----------------------------------
-
-    fetchFiles(particle_data,fidx);
-    }
-
+  fetchFiles(particle_data,scn.fidx);
   wallTimers.stop("read");
+
   return true;
   }

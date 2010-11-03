@@ -11,15 +11,25 @@
 class sceneMaker
   {
   private:
+    struct scene
+      {
+      vec3 campos, lookat, sky;
+      double fidx;
+      std::string outname;
+      bool keep_particles, reuse_particles;
+
+      scene (const vec3 &c, const vec3 &l, const vec3 &s, double fdx,
+             const std::string &oname, bool keep, bool reuse)
+        : campos(c), lookat(l), sky(s), fidx(fdx), outname(oname),
+          keep_particles(keep), reuse_particles(reuse) {}
+      };
+
+    std::vector<scene> scenes;
+    int cur_scene;
+
     paramfile &params;
 
-    bool geomfile;
     int interpol_mode;
-
-// only used if EyeSeparation>0
-   vec3 campos_save, lookat_save, sky_save, campos_right;
-   double fidx_save;
-   std::string outfile_save;
 
 // only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
@@ -32,12 +42,8 @@ class sceneMaker
 // only used if interpol_mode>0
     void particle_interpolate(std::vector<particle_sim> &p, double frac);
 
-// only used if geomfile==true
+// only used if the same particles are used for more than one scene
     std::vector<particle_sim> p_orig;
-    std::ifstream inp;
-    int scene_incr, current_scene;
-// only used if geomfile==false
-    bool done;
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 
