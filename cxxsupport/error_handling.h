@@ -25,7 +25,7 @@
 /*
  *  Utilities for error reporting
  *
- *  Copyright (C) 2003 - 2009 Max-Planck-Society
+ *  Copyright (C) 2003 - 2010 Max-Planck-Society
  *  Authors: Reinhard Hell, Martin Reinecke
  */
 
@@ -45,6 +45,7 @@ void planck_failure__(const char *file, int line, const char *func,
   const std::string &msg);
 void planck_failure__(const char *file, int line, const char *func,
   const char *msg);
+void killjob__();
 
 class PlanckError
   {
@@ -64,29 +65,36 @@ class PlanckError
 /*! \defgroup errorgroup Error handling */
 /*! \{ */
 
-//! Writes diagnostic output and exits.
+/*! Writes diagnostic output and exits with an error status. */
 #define planck_fail(msg) \
 do { planck_failure__(__FILE__,__LINE__,PLANCK_FUNC_NAME__,msg); \
 throw PlanckError(msg); } while(0)
 
-//! Throws a PlanckError without diagnostic message.
+/*! Throws a PlanckError without diagnostic message. */
 #define planck_fail_quietly(msg) \
 do { throw PlanckError(msg); } while(0)
 
-//! Writes diagnostic output and exits if \a testval is false.
+/*! Writes diagnostic output and exits with an error status if \a testval
+    is \a false. */
 #define planck_assert(testval,msg) \
 do { if (testval); else planck_fail(msg); } while(0)
 
-/*! \} */
-
+/*! Macro for improving error diagnostics. Should be placed immediately
+    after the opening brace of \c main(). Must be used in conjunction with
+    \c PLANCK_DIAGNOSIS_END. */
 #define PLANCK_DIAGNOSIS_BEGIN try {
+/*! Macro for improving error diagnostics. Should be placed immediately
+    before the closing brace of \c main(). Must be used in conjunction with
+    \c PLANCK_DIAGNOSIS_BEGIN. */
 #define PLANCK_DIAGNOSIS_END \
 } \
 catch (PlanckError &) \
-  { return 1; /* no need for further diagnostics; they were shown already */ } \
+  { killjob__(); /* no need for further diagnostics; they were shown already */ } \
 catch (std::exception &e) \
-  { std::cerr << "std::exception: " << e.what() << std::endl; throw; } \
+  { std::cerr << "std::exception: " << e.what() << std::endl; killjob__(); } \
 catch (...) \
-  { std::cerr << "Unknown exception" << std::endl; throw; }
+  { std::cerr << "Unknown exception" << std::endl; killjob__(); }
+
+/*! \} */
 
 #endif

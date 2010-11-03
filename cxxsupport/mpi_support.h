@@ -204,13 +204,50 @@ class MPI_Manager
     template<typename T> void bcast (T &data, int root) const
       { bcastRaw (&data, 1, root); }
 
+    /*! NB: \a num refers to the <i>total</i> number of items in the arrays;
+        the individual message size is \a num/num_ranks(). */
     void all2allRawVoid (const void *in, void *out, NDT type, tsize num) const;
+    /*! NB: \a num refers to the <i>total</i> number of items in the arrays;
+        the individual message size is \a num/num_ranks(). */
     template<typename T> void all2allRaw (const T *in, T *out, tsize num) const
       { all2allRawVoid (in, out, nativeType<T>(), num); }
     template<typename T> void all2all (const arr<T> &in, arr<T> &out) const
       {
       out.alloc(in.size());
       all2allRaw (&in[0], &out[0], in.size());
+      }
+
+    void all2allvRawVoid (const void *in, const int *numin, const int *disin,
+      void *out, const int *numout, const int *disout, NDT type) const;
+    template<typename T> void all2allvRaw (const T *in, const int *numin,
+      const int *disin, T *out, const int *numout, const int *disout) const
+      { all2allvRawVoid (in,numin,disin,out,numout,disout,nativeType<T>()); }
+    /*!\deprecated */
+    template<typename T> void all2allv (const arr<T> &in, const arr<int> &numin,
+      const arr<int> &disin, arr<T> &out, const arr<int> &numout,
+      const arr<int> &disout, tsize outsize) const
+      {
+      out.alloc(outsize);
+      all2allvRaw (&in[0],&numin[0],&disin[0],&out[0],&numout[0],&disout[0]);
+      }
+    template<typename T> void all2allv_easy (const arr<T> &in,
+      const arr<int> &numin, arr<T> &out, arr<int> &numout) const
+      {
+      tsize n=num_ranks();
+      planck_assert (numin.size()==n,"array size mismatch");
+      numout.alloc(n);
+      all2all (numin,numout);
+      arr<int> disin(n), disout(n);
+      disin[0]=disout[0]=0;
+      for (tsize i=1; i<n; ++i)
+        {
+        disin [i]=disin [i-1]+numin [i-1];
+        disout[i]=disout[i-1]+numout[i-1];
+        }
+      planck_assert(in.size()==disin[n-1]+numin[n-1],"incorrect array size");
+      out.alloc(disout[n-1]+numout[n-1]);
+      all2allvRawVoid (&in[0], &numin[0], &disin[0], &out[0], &numout[0],
+        &disout[0], nativeType<T>());
       }
   };
 

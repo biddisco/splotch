@@ -88,9 +88,10 @@ class paramfile
       {
       T result;
       stringToData(get_valstr(key),result);
+      std::string output = dataToString(result);
+      if (planckType<T>()==PLANCK_STRING) output = "'"+output+"'";
       if (verbose && param_unread(key))
-        std::cout << "Parser: " << key << " = " << dataToString(result)
-                  << std::endl;
+        std::cout << "Parser: " << key << " = " << output << std::endl;
       read_params.insert(key);
       return result;
       }
@@ -98,8 +99,10 @@ class paramfile
       (const std::string &key, const T &deflt)
       {
       if (param_present(key)) return find<T>(key);
+      std::string output = dataToString(deflt);
+      if (planckType<T>()==PLANCK_STRING) output = "'"+output+"'";
       if (verbose && param_unread(key))
-        std::cout << "Parser: " << key << " = " << dataToString(deflt)
+        std::cout << "Parser: " << key << " = " << output
                   << " <default>" << std::endl;
       params[key]=dataToString(deflt);
       read_params.insert(key);

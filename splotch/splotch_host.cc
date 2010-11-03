@@ -25,6 +25,7 @@
 
 #include "splotch/splotch_host.h"
 #include "kernel/transform.h"
+#include "cxxsupport/lsconstants.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils.h"

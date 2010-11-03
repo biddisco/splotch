@@ -14,7 +14,6 @@
 #include "cxxsupport/arr.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
-#include "kernel/bstream.h"
 #include "kernel/colour.h"
 
 using namespace std;

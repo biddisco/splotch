@@ -2,6 +2,7 @@
 #include "mpi.h"
 #else
 #include <cstring>
+#include <cstdlib>
 #endif
 #include "mpi_support.h"
 
@@ -102,7 +103,7 @@ MPI_Manager::MPI_Manager () {}
 MPI_Manager::~MPI_Manager () {}
 
 void MPI_Manager::abort() const
-  { planck_fail("MPI abort requested"); }
+  { exit(1); }
 
 int MPI_Manager::num_ranks() const { return 1; }
 int MPI_Manager::rank() const { return 0; }
@@ -187,6 +188,16 @@ void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
     MPI_COMM_WORLD);
   }
 
+void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
+  const int *disin, void *out, const int *numout, const int *disout, NDT type)
+  const
+  {
+  MPI_Datatype tp = ndt2mpi(type);
+  MPI_Alltoallv (const_cast<void *>(in), const_cast<int *>(numin),
+    const_cast<int *>(disin), tp, out, const_cast<int *>(numout),
+    const_cast<int *>(disout), tp, MPI_COMM_WORLD);
+  }
+
 #else
 
 void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
@@ -225,5 +236,16 @@ void MPI_Manager::bcastRawVoid (void *, NDT, tsize, int) const
 void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
   tsize num) const
   { memcpy (out, in, num*ndt2size(type)); }
+
+void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
+  const int *disin, void *out, const int *numout, const int *disout, NDT type)
+  const
+  {
+  planck_assert (numin[0]==numout[0],"message size mismatch");
+  const char *in2 = static_cast<const char *>(in);
+  char *out2 = static_cast<char *>(out);
+  tsize st=ndt2size(type);
+  memcpy (out2+disout[0]*st,in2+disin[0]*st,numin[0]*st);
+  }
 
 #endif

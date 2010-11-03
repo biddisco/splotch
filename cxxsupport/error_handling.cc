@@ -25,11 +25,12 @@
 /*
  *  Utilities for error reporting
  *
- *  Copyright (C) 2003 - 2009 Max-Planck-Society
+ *  Copyright (C) 2003 - 2010 Max-Planck-Society
  *  Author: Martin Reinecke
  */
 
 #include "error_handling.h"
+#include "mpi_support.h"
 
 #include <iostream>
 #include <string>
@@ -51,3 +52,6 @@ void planck_failure__(const char *file, int line, const char *func,
 void planck_failure__(const char *file, int line, const char *func,
   const char *msg)
   { planck_failure__ (file,line,func,string(msg)); }
+
+void killjob__()
+  { mpiMgr.abort(); }

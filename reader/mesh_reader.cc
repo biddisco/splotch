@@ -6,7 +6,7 @@
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #include "cxxsupport/mpi_support.h"
-#include "kernel/bstream.h"
+#include "cxxsupport/bstream.h"
 #include "splotch/splotchutils.h"
 
 using namespace std;

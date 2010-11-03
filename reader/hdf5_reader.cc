@@ -9,7 +9,6 @@
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #include "cxxsupport/mpi_support.h"
-#include "kernel/bstream.h"
 #include "splotch/splotchutils.h"
 
 using namespace std;
@@ -130,7 +129,6 @@ void hdf5_reader_finish (vector<particle_sim> &points, float thresh)
 void hdf5_reader (paramfile &params, vector<particle_sim> &points)
   {
   hid_t file_id, dataset_id;
-  bifstream inp;
   float rrr;
   int nfields;
   string * field;

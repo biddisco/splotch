@@ -74,6 +74,7 @@ template <typename T> class arr_ref
     T *d;
 
   public:
+    /*! Constructs an \a arr_ref of size \a s_, starting at \a d_. */
     arr_ref(T *d_, tsize s_) : s(s_),d(d_) {}
 
     /*! Returns the current array size. */
@@ -83,9 +84,9 @@ template <typename T> class arr_ref
     void fill (const T &val)
       { for (tsize m=0; m<s; ++m) d[m]=val; }
 
-    /*! Returns a reference to element \a #n */
+    /*! Returns a reference to element \a n */
     template<typename T2> T &operator[] (T2 n) {return d[n];}
-    /*! Returns a constant reference to element \a #n */
+    /*! Returns a constant reference to element \a n */
     template<typename T2> const T &operator[] (T2 n) const {return d[n];}
 
     /*! Returns a pointer to the first array element, or NULL if the array
@@ -110,7 +111,7 @@ template <typename T> class arr_ref
       { std::sort (d,d+s); }
 
     /*! Sorts the elements in the array, such that \a comp(d[i],d[j])==true
-    for \a i<j. */
+        for \a i<j. */
     template<typename Comp> void sort(Comp comp)
       { std::sort (d,d+s,comp); }
 
@@ -179,9 +180,9 @@ template <typename T, tsize sz> class fix_arr
     /*! Returns the size of the array. */
     tsize size() const { return sz; }
 
-    /*! Returns a reference to element \a #n */
+    /*! Returns a reference to element \a n */
     template<typename T2> T &operator[] (T2 n) {return d[n];}
-    /*! Returns a constant reference to element \a #n */
+    /*! Returns a constant reference to element \a n */
     template<typename T2> const T &operator[] (T2 n) const {return d[n];}
   };
 
@@ -239,7 +240,7 @@ template <typename T, typename storageManager> class arrT: public arr_ref<T>
         same as the current size, no reallocation is performed.
         All elements are set to \a inival. */
     void allocAndFill (tsize sz, const T &inival)
-      { alloc(sz); fill(inival); }
+      { alloc(sz); this->fill(inival); }
     /*! Deallocates the memory held by the array, and sets the array size
         to 0. */
     void dealloc() {if (own) stm.dealloc(this->d); reset();}
@@ -317,7 +318,8 @@ template <typename T, int align>
     arr_align(tsize sz) : arrT<T,alignAlloc__<T,align> >(sz) {}
     /*! Creates an array with \a sz entries, and initializes them with
         \a inival. */
-    arr_align(tsize sz, const T &inival) : arrT<T,alignAlloc__<T,align> >(sz,inival) {}
+    arr_align(tsize sz, const T &inival)
+      : arrT<T,alignAlloc__<T,align> >(sz,inival) {}
   };
 
 
@@ -398,9 +400,9 @@ template <typename T, typename storageManager> class arr2T
       return *this;
       }
 
-    /*! Returns a pointer to the beginning of slice \a #n. */
+    /*! Returns a pointer to the beginning of slice \a n. */
     template<typename T2> T *operator[] (T2 n) {return &d[n*s2];}
-    /*! Returns a constant pointer to the beginning of slice \a #n. */
+    /*! Returns a constant pointer to the beginning of slice \a n. */
     template<typename T2> const T *operator[] (T2 n) const {return &d[n*s2];}
 
     /*! Returns a reference to the element with the indices \a n1 and \a n2. */
@@ -432,6 +434,12 @@ template <typename T, typename storageManager> class arr2T
       std::swap(s1,other.s1);
       std::swap(s2,other.s2);
       }
+
+    /*! Returns \c true if the array and \a other have the same dimensions,
+        else \c false. */
+    template<typename T2, typename T3> bool conformable
+      (const arr2T<T2,T3> &other) const
+      { return (other.size1()==s1) && (other.size2()==s2); }
   };
 
 /*! Two-dimensional array type. The storage ordering is the same as in C.
@@ -529,9 +537,9 @@ template <typename T> class arr2b
       return *this;
       }
 
-    /*! Returns a pointer to the beginning of slice \a #n. */
+    /*! Returns a pointer to the beginning of slice \a n. */
     template<typename T2> T *operator[] (T2 n) {return d1[n];}
-    /*! Returns a constant pointer to the beginning of slice \a #n. */
+    /*! Returns a constant pointer to the beginning of slice \a n. */
     template<typename T2> const T *operator[] (T2 n) const {return d1[n];}
 
     /*! Returns a pointer to the beginning of the pointer array. */
@@ -612,6 +620,11 @@ template <typename T> class arr3
       std::swap(s3,other.s3);
       std::swap(s2s3,other.s2s3);
       }
+
+    /*! Returns \c true if the array and \a other have the same dimensions,
+        else \c false. */
+    template<typename T2> bool conformable (const arr3<T2> &other) const
+      { return (other.size1()==s1)&&(other.size2()==s2)&&(other.size3()==s3); }
   };
 
 /*! \} */

@@ -90,9 +90,4 @@ const double sec_58_70 = 378691200.;
 
 /*! \} */
 
-// technical constants
-
-//! Healpix value representing "undefined"
-const double Healpix_undef=-1.6375e30;
-
 #endif

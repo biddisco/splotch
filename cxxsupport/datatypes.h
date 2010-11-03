@@ -22,13 +22,13 @@
  *  (DLR).
  */
 
-/*
+/*! \file datatypes.h
  *  This file defines various platform-independent data types.
  *  If any of the requested types is not available, compilation aborts
  *  with an error (unfortunately a rather obscure one).
  *
  *  Copyright (C) 2004, 2008, 2009, 2010 Max-Planck-Society
- *  Author: Martin Reinecke
+ *  \author Martin Reinecke
  */
 
 #ifndef PLANCK_DATATYPES_H
@@ -91,13 +91,13 @@ typedef sizeChooser__<4, float, double>::TYPE
 typedef sizeChooser__<8, double, long double>::TYPE
   float64;
 
-//! unsigned integer type which should be used for array sizes
+/*! unsigned integer type which should be used for array sizes */
 typedef std::size_t tsize;
-//! signed integer type which should be used for relative array indices
+/*! signed integer type which should be used for relative array indices */
 typedef std::ptrdiff_t tdiff;
 
-// mapping of types to integer constants
-enum PDT { // Planck data type
+/*! mapping of Planck data types to integer constants */
+enum PDT {
        PLANCK_INT8    =  0,
        PLANCK_UINT8   =  1,
        PLANCK_INT16   =  2,
@@ -112,6 +112,7 @@ enum PDT { // Planck data type
        PLANCK_STRING  = 11,
        PLANCK_INVALID = -1 };
 
+/*! Returns the \a PDT constant associated with \a T. */
 template<typename T> inline PDT planckType();
 template<> inline PDT planckType<int8>       () { return PLANCK_INT8;   }
 template<> inline PDT planckType<uint8>      () { return PLANCK_UINT8;  }
@@ -126,6 +127,7 @@ template<> inline PDT planckType<float64>    () { return PLANCK_FLOAT64;}
 template<> inline PDT planckType<bool>       () { return PLANCK_BOOL;   }
 template<> inline PDT planckType<std::string>() { return PLANCK_STRING; }
 
+/*! Returns the size (in bytes) of the Planck data type \a type. */
 inline int type2size (PDT type)
   {
   switch (type)
@@ -147,6 +149,7 @@ inline int type2size (PDT type)
     }
   }
 
+/*! Converts the string \a type to a \a PDT. */
 inline PDT string2type(const std::string &type)
   {
   if (type=="FLOAT64") return PLANCK_FLOAT64;
@@ -164,6 +167,7 @@ inline PDT string2type(const std::string &type)
   planck_fail ("string2type: unknown data type '"+type+"'");
   }
 
+/*! Converts the Planck data type \a type to a C string. */
 inline const char *type2string (PDT type)
   {
   switch (type)
@@ -185,6 +189,7 @@ inline const char *type2string (PDT type)
     }
   }
 
+/*! Returns a C string describing the data type \a T. */
 template<typename T> inline const char *type2typename ();
 template<> inline const char *type2typename<signed char> ()
   { return "signed char"; }
@@ -215,7 +220,8 @@ template<> inline const char *type2typename<bool> ()
 template<> inline const char *type2typename<std::string> ()
   { return "std::string"; }
 
-enum NDT { // Native data type
+/*! mapping of "native" data types to integer constants */
+enum NDT {
        NAT_CHAR,
        NAT_SCHAR,
        NAT_UCHAR,
@@ -232,6 +238,7 @@ enum NDT { // Native data type
        NAT_LONGDOUBLE,
        NAT_BOOL };
 
+/*! Returns the \a NDT constant associated with \a T. */
 template<typename T> inline NDT nativeType();
 template<> inline NDT nativeType<char>              () { return NAT_CHAR;      }
 template<> inline NDT nativeType<signed char>       () { return NAT_SCHAR;     }
@@ -249,6 +256,7 @@ template<> inline NDT nativeType<double>            () { return NAT_DOUBLE;    }
 template<> inline NDT nativeType<long double>       () { return NAT_LONGDOUBLE;}
 template<> inline NDT nativeType<bool>              () { return NAT_BOOL;      }
 
+/*! Returns the size (in bytes) of the native data type \a type. */
 inline int ndt2size (NDT type)
   {
   switch (type)
