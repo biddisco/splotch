@@ -10,6 +10,7 @@ Copyright things go here.
 #include <cuda.h>
 #include <cutil_inline.h>
 
+#include "cxxsupport/lsconstants.h"
 #include "splotch/splotchutils.h"
 #include "kernel/transform.h"
 
