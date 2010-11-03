@@ -128,7 +128,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   }
 
 sceneMaker::sceneMaker (paramfile &par)
-  : cur_scene(0), params(par), snr1_now(-1), snr2_now(-1)
+  : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
   {
   // do nothing if we are only analyzing ...
   if (params.find<bool>("AnalyzeSimulationOnly",false)) return;
@@ -182,7 +182,6 @@ sceneMaker::sceneMaker (paramfile &par)
   double eye_separation = params.find<double>("EyeSeparation",0);
   if (eye_separation>0)
     {
-cout<<"BLAAH" << endl;
     vector<scene> sc_orig;
     sc_orig.swap(scenes);
     for (tsize i=0; i<sc_orig.size(); ++i)
@@ -213,7 +212,7 @@ cout<<"BLAAH" << endl;
 
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   {
-  if (scenes[cur_scene-1].reuse_particles)
+  if (scenes[cur_scene].reuse_particles)
     { particle_data=p_orig; return; }
 
   if (mpiMgr.master())
@@ -311,15 +310,15 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     particle_interpolate(particle_data,frac);
     }
 
-  if (scenes[cur_scene-1].keep_particles) p_orig = particle_data;
+  if (scenes[cur_scene].keep_particles) p_orig = particle_data;
   }
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
   {
-  if (tsize(++cur_scene) > scenes.size()) return false;
+  if (tsize(++cur_scene) >= scenes.size()) return false;
 
-  const scene &scn=scenes[cur_scene-1];
+  const scene &scn=scenes[cur_scene];
   campos=scn.campos;
   lookat=scn.lookat;
   sky=scn.sky;
