@@ -132,11 +132,17 @@ sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
   {
   // do nothing if we are only analyzing ...
-  if (params.find<bool>("AnalyzeSimulationOnly",false)) return;
 
   vec3 campos, lookat, sky;
-  string geometry_file = params.find<string>("geometry_file","");
   string outfile = params.find<string>("outfile","demo");
+
+  if (params.find<bool>("AnalyzeSimulationOnly",false)) 
+    {
+      scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
+      return;
+    }
+
+  string geometry_file = params.find<string>("geometry_file","");
   interpol_mode = params.find<int>("interpolation_mode",0);
 
   if (geometry_file=="")
