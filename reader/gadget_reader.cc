@@ -71,7 +71,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   double &time)
   {
   int numfiles = params.find<int>("numfiles",1);
-  bool doswap = params.find<bool>("swap_endian",true);
+  bool doswap = params.find<bool>("swap_endian",false);
   string infilename = params.find<string>("infile");
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
@@ -128,6 +128,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
         int npartthis[6],nparttotal[6];
         filename=infilename;
         if(numfiles>1) filename+="."+dataToString(file);
+        if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
+	  cout << "(If reading failes, please try to add 'swap_endian=TRUE' to the parameter file ...)" << endl;
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
         gadget_read_header(infile,npartthis,time,nparttotal);
