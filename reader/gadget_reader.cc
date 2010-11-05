@@ -29,9 +29,15 @@ int gadget_find_block (bifstream &file,const string &label)
       blksize=-1;
       break;
       }
-    planck_assert(blksize==8,
-      "wrong structure in GADGET file: " +dataToString(blksize));
-
+    if(blksize != 8)
+      {
+	file.clear();
+	file.rewind();
+	file.flipSwap();
+	file >> blksize;
+	planck_assert(blksize==8,
+		      "wrong structure in GADGET file: " +dataToString(blksize));
+      }
     file.get(blocklabel,4);
     blocklabel[4] = '\0';
     i=3;
@@ -128,8 +134,6 @@ void gadget_reader(paramfile &params, int interpol_mode,
         int npartthis[6],nparttotal[6];
         filename=infilename;
         if(numfiles>1) filename+="."+dataToString(file);
-        if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
-	  cout << "(If reading failes, please try to add 'swap_endian=TRUE' to the parameter file ...)" << endl;
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
         gadget_read_header(infile,npartthis,time,nparttotal);
