@@ -62,17 +62,17 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 }
 
 // ---------------------------------------------------------------------------
-// Construct object with scaling on, scaling mode is by scalar value,
-// scale factor = 1.0, the range is (0,1), orient geometry is on, and
-// orientation is by vector. Clamping and indexing are turned off. No
-// initial sources are defined.
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
+  this->IntensityScalars = NULL;
+  this->RadiusScalars    = NULL;
 }
 
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
+  delete []IntensityScalars;
+  delete []RadiusScalars;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +91,10 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   int Y = ren->GetSize()[1];
   vtkPointSet *input = this->GetInput();
   vtkPoints *pts = input->GetPoints();
+  //
+  vtkDataArray *RadiusArray = this->RadiusScalars ? 
+    input->GetPointData()->GetArray(this->RadiusScalars) : NULL;
+
   //
   double N = pts->GetNumberOfPoints();
   double bounds[6];
@@ -121,7 +125,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
     particle_data[i].e.g = 0.25 + 0.75*(i/N);
     particle_data[i].e.b = 0.25 + 0.25*(i/N);
     particle_data[i].I   = 0.25 + 0.5*(i/N);
-    particle_data[i].r   = radius;
+    particle_data[i].r   = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
 
     if (particle_data[i].I>imax) imax = particle_data[i].I;
   }

@@ -38,6 +38,8 @@ public:
 
   //**************************************************************************
   // Forwarded to vtkSplotchRaytraceMapper
+  void SetIntensityScalars(const char *);
+  void SetRadiusScalars(const char *);
 
 //BTX
 protected:
@@ -48,11 +50,12 @@ protected:
   // Fill input port information.
   virtual int FillInputPortInformation(int port, vtkInformation* info);
 
-  virtual int RequestData(vtkInformation*,
-    vtkInformationVector**, vtkInformationVector*);
+  // Description:
+  // Execute
+  virtual int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
-  vtkSplotchRaytraceMapper              *SplotchMapper;
-  vtkSplotchRaytraceMapper              *LODSplotchMapper;
+  vtkSplotchRaytraceMapper  *SplotchMapper;
+  vtkSplotchRaytraceMapper  *LODSplotchMapper;
 
 private:
   vtkSplotchRaytraceRepresentation(const vtkSplotchRaytraceRepresentation&); // Not implemented

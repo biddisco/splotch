@@ -31,13 +31,20 @@ public:
 
   void Render(vtkRenderer *, vtkActor *);
 
+  vtkSetStringMacro(IntensityScalars);
+  vtkGetStringMacro(IntensityScalars);
+
+  vtkSetStringMacro(RadiusScalars);
+  vtkGetStringMacro(RadiusScalars);
+
 protected:
    vtkSplotchRaytraceMapper();
   ~vtkSplotchRaytraceMapper();
 
-  virtual int FillInputPortInformation(int port,
-    vtkInformation *info);
+  virtual int FillInputPortInformation(int port, vtkInformation *info);
 
+  char *IntensityScalars;
+  char *RadiusScalars;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

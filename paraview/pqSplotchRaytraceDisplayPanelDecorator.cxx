@@ -56,6 +56,7 @@
 #include "pqVariableType.h"
 #include "pqScalarsToColors.h"
 #include "pqWidgetRangeDomain.h"
+#include "pqFieldSelectionAdaptor.h"
 
 class pqSplotchRaytraceDisplayPanelDecorator::pqInternals: public Ui::pqSplotchRaytraceDisplayPanelDecorator
 {
@@ -87,33 +88,21 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
     pqDisplayPanel* disp_panel) :
   Superclass(disp_panel)
 {
-  pqDisplayProxyEditor* panel =
-      qobject_cast<pqDisplayProxyEditor*> (disp_panel);
-  pqRepresentation* repr = panel->getRepresentation();
-  vtkSMProxy* reprProxy = (repr) ? repr->getProxy() : NULL;
-  // vtkSMProperty* prop;
+  pqDisplayProxyEditor *panel = qobject_cast<pqDisplayProxyEditor*> (disp_panel);
+  pqRepresentation     *repr = panel->getRepresentation();
+  vtkSMProxy       *reprProxy = (repr) ? repr->getProxy() : NULL;
+
   this->Internals = NULL;
-/*
-  if (!reprProxy || 
-    !reprProxy->GetXMLName() ||
-    (strcmp(reprProxy->GetXMLName(), "GeometryRepresentation") != 0  &&
-     strcmp(reprProxy->GetXMLName(), "UnstructuredGridRepresentation") != 0  &&
-     strcmp(reprProxy->GetXMLName(), "UniformGridRepresentation") != 0))
-    {
-    return;
-    }
-
+  //
   if (!pqSMAdaptor::getEnumerationPropertyDomain(
-      reprProxy->GetProperty("Representation")).contains("Point Sprite"))
+      reprProxy->GetProperty("Representation")).contains("Splotch particles"))
     {
     return;
     }
 
-  // This is not advisable, but we do it nonetheless since that's what the old
-  // code was doing. At some point we need to clean this up.
-  vtkSMSplotchRaytraceRepresentationProxy::InitializeDefaultValues(reprProxy);
-*/
-  
+  //
+  // 
+  //
   this->Internals = new pqInternals(this);
   QVBoxLayout* vlayout = dynamic_cast<QVBoxLayout*> (panel->layout());
   if (vlayout)
@@ -126,6 +115,22 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
     }
   this->Internals->setupUi(this);
   this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
+
+  pqPipelineRepresentation *pr = qobject_cast<pqPipelineRepresentation*>(panel->getRepresentation());
+
+  vtkSMProperty *prop = this->Internals->RepresentationProxy->GetProperty("IntensityScalars");
+  pqFieldSelectionAdaptor *Ifsa = new pqFieldSelectionAdaptor(this->Internals->IntensityArray, prop);
+
+  prop = this->Internals->RepresentationProxy->GetProperty("RadiusScalars");
+  pqFieldSelectionAdaptor *Rfsa = new pqFieldSelectionAdaptor(this->Internals->RadiusArray, prop);
+  
+  this->Internals->Links.addPropertyLink(
+    Rfsa, "attributeMode", SIGNAL(selectionChanged()),
+    reprProxy, prop, 0);
+  this->Internals->Links.addPropertyLink(
+    Rfsa, "scalar", SIGNAL(selectionChanged()),
+    reprProxy, prop, 1);
+
 /*
   // setup the scaleBy and radiusBy menus
   this->Internals->ScaleBy->setConstantVariableName("Constant Radius");

@@ -65,21 +65,30 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
   keys->Delete();
 
 }
-
 //----------------------------------------------------------------------------
 vtkSplotchRaytraceRepresentation::~vtkSplotchRaytraceRepresentation()
 {
   this->SplotchMapper->Delete();
   this->LODSplotchMapper->Delete();
 }
-
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetVisibility(bool val)
 {
   this->Superclass::SetVisibility(val);
   this->Actor->SetVisibility(val);
 }
-
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetIntensityScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetIntensityScalars(s);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetRadiusScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetRadiusScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetRadiusScalars(s);
+}
 //----------------------------------------------------------------------------
 int vtkSplotchRaytraceRepresentation::FillInputPortInformation(int port,
   vtkInformation *info)
