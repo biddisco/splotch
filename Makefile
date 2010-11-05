@@ -1,5 +1,5 @@
 #######################################################################
-#  Splotch V4.1                                                       #
+#  Splotch V4.4                                                       #
 #######################################################################
 
 #--------------------------------------- Switch on MPI
@@ -15,14 +15,14 @@ OPT	+=  -DUSE_MPI
 #OPT	+=  -DVS
 
 #--------------------------------------- CUDA options
-OPT     +=  -DCUDA
-OPT     +=  -DNO_WIN_THREAD
+#OPT     +=  -DCUDA
+#OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Select target Computer
 
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-SYSTYPE="PLX"
+#SYSTYPE="PLX"
 #SYSTYPE="BGP"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
@@ -102,7 +102,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.1$(SYSTYPE)
+EXEC   = Splotch4.4$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o \
