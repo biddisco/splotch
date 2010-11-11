@@ -80,20 +80,6 @@ struct cu_param_colorize
   float rfac;
   };
 
-struct cu_exptable_info
-  {
-  float expfac, taylorlimit;
-  float *tab1, *tab2;
-  enum {
-    nbits=10,
-    dim1=1<<nbits,
-    mask1=dim1-1,
-    dim2=1<<nbits<<nbits,
-    mask2=dim2-1,
-    mask3=~mask2
-    };
-  };
-
 struct cu_fragment_AeqE
   {
   float aR, aG, aB;
@@ -110,11 +96,11 @@ struct cu_gpu_vars //variables used by each gpu
   {
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;             //device_particle_data
-  cu_colormap_info    d_colormap_info;   //device pointers
-  cu_exptable_info    d_exp_info;        //device pointers
   cu_particle_splotch *d_ps_render;
   void                *d_fbuf;
   cu_color            *d_pic;
+  int                 colormap_size;
+  int                 colormap_ptypes; 
   };
 
 //functions
@@ -127,15 +113,14 @@ void cu_transform (paramfile &fparams, unsigned int n,
   vec3 &campos, vec3 &lookat, vec3 &sky, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_colorize(paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
-void cu_init_exptab(double maxexp, cu_gpu_vars* pgv);
 void cu_realloc_particles_to_render(int n, cu_gpu_vars* pgv);
 void cu_copy_particles_to_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
-void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
+float cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
 void cu_get_fbuf (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void cu_end (cu_gpu_vars* pgv);
 int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy);
 void getCuTransformParams(cu_param_transform &para_trans,
-paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
+      paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
 
 
 #endif

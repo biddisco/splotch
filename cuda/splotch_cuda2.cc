@@ -156,8 +156,7 @@ THREADFUNC cu_thread_func(void *pinfo)
   gv.policy = policy;
   // enable device and allocate arrays
   cu_init(pInfoOutput->devID, len, &gv);
-  //init exp table
-  cu_init_exptab(MAX_EXP, &gv);
+
   //CUDA Coloring
   setup_colormap(ptypes, &gv);
 
@@ -285,7 +284,7 @@ PROBLEM HERE!
 
   //clear the output pic
   tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
-
+ 
   int End_cu_ps = 0, Start_cu_ps=0;
   while (End_cu_ps < nParticle)
   {
@@ -322,8 +321,6 @@ PROBLEM HERE!
    
    Start_cu_ps = End_cu_ps;
   }
-
-/////////////////////////////////////////////////////////////////////
 
   delete []cu_ps;
   delete []cu_ps_filtered;
@@ -404,51 +401,6 @@ int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion,
    return pFiltered;  // return chunk position reached in cu_ps
 }
 
-/*void render_chunk(int EndP, int nFBufInCell, cu_particle_splotch *cu_ps_filtered, 
-                  void *fragBuf, cu_gpu_vars *gv, bool a_eq_e, float64 grayabsorb,
-                  arr2<COLOUR> &pPic, wallTimerSet &times)
-{
-
-  int renderStartP, renderEndP, inc;
-  renderEndP = 0;
-  while (renderEndP < EndP) 
-  {
-    //find a chunk: compute number of fragments needed to render this chunk
-    times.start("grender");
-    int nFragments2Render = 0;
-    renderStartP =renderEndP;
-    while (renderEndP<EndP && nFragments2Render < nFBufInCell)
-      {
-       inc =(cu_ps_filtered[renderEndP].maxx - cu_ps_filtered[renderEndP].minx) *
-                (cu_ps_filtered[renderEndP].maxy - cu_ps_filtered[renderEndP].miny);
-       nFragments2Render += inc;
-       renderEndP++;
-      }
-    if (nFragments2Render>nFBufInCell)
-    {
-      nFragments2Render -= inc; renderEndP--;
-    }
-    else if (renderEndP>EndP) renderEndP--; 
-
-    //render it
-    cu_render1(renderStartP, renderEndP, a_eq_e, (float) grayabsorb, gv);
-    times.stop("grender");
-
-    //collect result
-    times.start("gcopy-fbuf");
-    cu_get_fbuf(fragBuf, a_eq_e, nFragments2Render, gv);
-    times.stop("gcopy-fbuf");
- 
-    //combine chunks  
-    //cu_ps_filtered:       the particle array
-    times.start("gcombine");
-    combine_chunk(renderStartP, renderEndP, cu_ps_filtered, fragBuf, a_eq_e, grayabsorb, pPic );
-    times.stop("gcombine");
-
-  }
-
-}
-*/
 
 void combine_chunk(int StartP, int EndP, cu_particle_splotch *cu_ps_filtered, 
                   void *fragBuf, bool a_eq_e, float64 grayabsorb, arr2<COLOUR> &pPic)
@@ -578,6 +530,7 @@ void cuda_timeReport(paramfile &params)
       {
       cout<< endl <<"Times of CPU HOST as threads:" <<endl;
       hostTimeReport(wallTimers);
+      cout << "Host thread (secs)         : " << wallTimers.acc("host_thread") << endl;
       cout << "--------------------------------------------" << endl;
       }
     cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;

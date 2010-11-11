@@ -195,19 +195,15 @@ void cu_transform (paramfile &fparams, unsigned int n,
 void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   {
   //allocate memories for colormap and ptype_points and dump host data into it
-  size_t size =sizeof(cu_color_map_entry) *h_info.mapSize;
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_colormap_info.map, size));
-  cutilSafeCall(cudaMemcpy(pgv->d_colormap_info.map, h_info.map,
-    size, cudaMemcpyHostToDevice) );
+  size_t size =sizeof(cu_color_map_entry)*h_info.mapSize;
+  cutilSafeCall(cudaMemcpyToSymbol(dmap, h_info.map, size) );
   //type
-  size =sizeof(int) *h_info.ptypes;
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_colormap_info.ptype_points, size));
-  cutilSafeCall(cudaMemcpy(pgv->d_colormap_info.ptype_points, h_info.ptype_points,
-    size, cudaMemcpyHostToDevice) );
+  size =sizeof(int)*h_info.ptypes;
+  cutilSafeCall(cudaMemcpyToSymbol(ptype_points, h_info.ptype_points, size) );
 
-  //set fields of global varible pgv->d_colormap_info
-  pgv->d_colormap_info.mapSize =h_info.mapSize;
-  pgv->d_colormap_info.ptypes  =h_info.ptypes;
+  //set fields of global variable pgv->d_colormap_info
+  pgv->colormap_size   = h_info.mapSize;
+  pgv->colormap_ptypes = h_info.ptypes;
   }
 
 void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
@@ -215,8 +211,8 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
   {
   //fetch parameters for device calling first
   cu_param_colorize   pcolorize;
-  pcolorize.xres       = params.find<int>("xres",800);
-  pcolorize.yres       = params.find<int>("yres",pcolorize.xres);
+  pcolorize.xres      = params.find<int>("xres",800);
+  pcolorize.yres      = params.find<int>("yres",pcolorize.xres);
   pcolorize.zmaxval   = params.find<float>("zmax",1.e23);
   pcolorize.zminval   = params.find<float>("zmin",0.0);
   pcolorize.ptypes    = params.find<int>("ptypes",1);
@@ -237,7 +233,7 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_render,pgv->d_colormap_info);
+  k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
 
   //copy the result out
   size_t size = n* sizeof(cu_particle_splotch);
@@ -248,37 +244,7 @@ void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
 
   //particle_splotch memory on device will be freed in cu_end
   }
- 
 
-void cu_init_exptab(double maxexp, cu_gpu_vars* pgv)
-  {
-  //set common fields of pgv->d_exp_info
-  pgv->d_exp_info.expfac =pgv->d_exp_info.dim2 / maxexp;
-  //now make up tab1 and tab2 in host
-  int dim1 =pgv->d_exp_info.dim1, dim2 =pgv->d_exp_info.dim2;
-  float *h_tab1 =new float[dim1];
-  float *h_tab2 =new float[dim2];
-  for (int m=0; m<dim1; ++m)
-    {
-    h_tab1[m]=exp(m*dim1/pgv->d_exp_info.expfac);
-    h_tab2[m]=exp(m/pgv->d_exp_info.expfac);
-    }
-  pgv->d_exp_info.taylorlimit = sqrt(2.*abs(maxexp)/dim2);
-
-  //allocate device memory and dump
-  size_t size =sizeof(float) *dim1;
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_exp_info.tab1, size));
-  cutilSafeCall( cudaMemcpy(pgv->d_exp_info.tab1, h_tab1, size,
-    cudaMemcpyHostToDevice));
-  size =sizeof(float) *dim2;
-  cutilSafeCall( cudaMalloc((void**) &pgv->d_exp_info.tab2, size));
-  cutilSafeCall( cudaMemcpy(pgv->d_exp_info.tab2, h_tab2, size,
-    cudaMemcpyHostToDevice));
-
-  //delete tab1 and tab2 in host
-  delete []h_tab1;
-  delete []h_tab2;
-  }
 
 void cu_copy_particles_to_render(cu_particle_splotch *p,
   int n, cu_gpu_vars* pgv)
@@ -289,9 +255,13 @@ void cu_copy_particles_to_render(cu_particle_splotch *p,
     cudaMemcpyHostToDevice) );
   }
 
-void cu_render1
+float cu_render1
   (int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
   {
+  cudaEvent_t start,stop;
+  cutilSafeCall( cudaEventCreate(&start));
+  cutilSafeCall( cudaEventCreate(&stop));
+  cutilSafeCall( cudaEventRecord( start, 0));
   //endP actually exceed the last one to render
   //get dims from pgv->policy object first
   dim3 dimGrid, dimBlock;
@@ -299,7 +269,15 @@ void cu_render1
 
   //call device
   k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, nP,
-    pgv->d_fbuf, a_eq_e, grayabsorb,pgv->d_exp_info);
+    pgv->d_fbuf, a_eq_e, grayabsorb);
+
+  cutilSafeCall( cudaEventRecord( stop, 0));
+  cutilSafeCall( cudaEventSynchronize(stop));
+  float elapsedTime;
+  cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
+  cutilSafeCall( cudaEventDestroy(start));
+  cutilSafeCall( cudaEventDestroy(stop));
+  return elapsedTime;
   }
 
 
@@ -320,10 +298,6 @@ void cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
   CLEAR_MEM((pgv->d_ps_render));
-  CLEAR_MEM((pgv->d_colormap_info.map));
-  CLEAR_MEM((pgv->d_colormap_info.ptype_points));
-  CLEAR_MEM((pgv->d_exp_info.tab1));
-  CLEAR_MEM((pgv->d_exp_info.tab2));
   CLEAR_MEM((pgv->d_fbuf));
 
   cudaThreadExit();

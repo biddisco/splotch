@@ -17,6 +17,11 @@ Copyright things go here.
 #define get_minmax(minv, maxv, val) \
          minv=min(minv,val); \
          maxv=max(maxv,val);
+#define MAXSIZE 1000
+
+/////////constant memory declaration /////////////////////
+__constant__ cu_color_map_entry dmap[MAXSIZE];
+__constant__ int ptype_points[10];
 
 /////////help functions///////////////////////////////////
 __device__ float    my_asinh(float val)
@@ -35,40 +40,28 @@ __device__ void clamp (float minv, float maxv, float &val)
   }
 
 //fetch a color from color table on device
-__device__ cu_color get_color
-  (int ptype, float val, cu_colormap_info info)
+__device__ cu_color get_color(int ptype, float val, int mapSize, int ptypes)
   {
-  //copy things to local block memory
-  __shared__ cu_color_map_entry *map;
-  __shared__ int      mapSize;
-  __shared__ int *ptype_points;
-  __shared__ int ptypes;
+  __shared__ int map_size;
+  __shared__ int map_ptypes;
 
-  map =info.map;
-  mapSize =info.mapSize;
-  ptype_points =info.ptype_points;
-  ptypes  =info.ptypes;
-
-  cu_color        clr;
-  clr.r =clr.g =clr.b =0.0;
-
+  map_size = mapSize;
+  map_ptypes = ptypes;
   //first find the right entry for this ptype
-  if (ptype>=ptypes)
-    return clr; //invalid input
   int     start, end;
   start =ptype_points[ptype];
-  if ( ptype == ptypes-1)//the last type
-    end =mapSize-1;
+  if ( ptype == map_ptypes-1)//the last type
+    end =map_size-1;
   else
     end =ptype_points[ptype+1]-1;
 
   //search the section of this type to find the val
   int i=start;
-  while ((val>map[i+1].val) && (i<end))
-    ++i;
+  while ((val>dmap[i+1].val) && (i<end)) ++i;
 
-  const float fract = (val-map[i].val)/(map[i+1].val-map[i].val);
-  cu_color clr1=map[i].color, clr2=map[i+1].color;
+  const float fract = (val-dmap[i].val)/(dmap[i+1].val-dmap[i].val);
+  cu_color clr1=dmap[i].color, clr2=dmap[i+1].color;
+  cu_color        clr;
   clr.r =clr1.r + fract*(clr2.r-clr1.r);
   clr.g =clr1.g + fract*(clr2.g-clr1.g);
   clr.b =clr1.b + fract*(clr2.b-clr1.b);
@@ -76,45 +69,7 @@ __device__ cu_color get_color
   return clr;
   }
 
-__device__  float get_exp(float arg, cu_exptable_info d_exp_info)
-  {
-#if 0
-  return exp(arg);
-#else
-  //fetch things to local
-  __shared__  float   expfac;
-  __shared__  float   *tab1, *tab2;
-  __shared__  int     mask1, mask3, nbits;
-  expfac  = d_exp_info.expfac;
-  tab1    = d_exp_info.tab1;
-  tab2    = d_exp_info.tab2;
-  mask1   = d_exp_info.mask1;
-  mask3   = d_exp_info.mask3;
-  nbits   = d_exp_info.nbits;
-
-  int iarg= (int)(arg*expfac);
-  //  for final device code
-  if (iarg&mask3)
-    return (iarg<0) ? 1. : 0.;
-  return tab1[iarg>>nbits]*tab2[iarg&mask1];
-#endif
-  }
-
-__device__  float get_expm1(float arg, cu_exptable_info d_exp_info)
-  {
-#if 0
-  return exp(arg)-1.0;
-#else
-  //fetch things to local
-  __shared__  float  taylorlimit;
-  taylorlimit = d_exp_info.taylorlimit;
-  
-  if(abs(arg) < taylorlimit) return arg;
-  return get_exp(arg, d_exp_info)-1.0;   // exp(x)-1~x
-#endif
-  }
-
-__global__ void k_post_process(cu_color *pic, int n, cu_exptable_info exp_info)
+__global__ void k_post_process(cu_color *pic, int n)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -122,9 +77,9 @@ __global__ void k_post_process(cu_color *pic, int n, cu_exptable_info exp_info)
     m =n;
 
   //each pic[m] should do the same calc, so sequence does not matter!
-  pic[m].r =1.0 -get_exp( pic[m].r, exp_info);
-  pic[m].g =1.0 -get_exp( pic[m].g, exp_info);
-  pic[m].b =1.0 -get_exp( pic[m].b, exp_info);
+  pic[m].r =1.0 - exp( pic[m].r);
+  pic[m].g =1.0 - exp( pic[m].g);
+  pic[m].b =1.0 - exp( pic[m].b);
   }
 
 __global__ void k_combine
@@ -169,8 +124,7 @@ __global__ void k_combine
 //device render function k_render1
 __global__ void k_render1
   (cu_particle_splotch *p, int nP,
-  void *buf, bool a_eq_e, float grayabsorb,
-  cu_exptable_info d_exp_info)
+  void *buf, bool a_eq_e, float grayabsorb)
   {
   //first get the index m of this thread
   int m;
@@ -217,7 +171,7 @@ __global__ void k_render1
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
-          float att = get_exp(stp*dsq, d_exp_info);
+          float att = exp(stp*dsq);
           fbuf[fpos].aR = att*e.r;
           fbuf[fpos].aG = att*e.g;
           fbuf[fpos].aB = att*e.b;
@@ -243,15 +197,15 @@ __global__ void k_render1
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
-          float att = get_exp(stp*dsq, d_exp_info);
+          float att = exp(stp*dsq);
           float   expm1;
-          expm1 =get_expm1(att*e.r, d_exp_info);
+          expm1 =exp(att*e.r)-1.0;
           fbuf1[fpos].aR = expm1;
           fbuf1[fpos].qR = q.r;
-          expm1 =get_expm1(att*e.g, d_exp_info);
+          expm1 =exp(att*e.g)-1.0;
           fbuf1[fpos].aG = expm1;
           fbuf1[fpos].qG = q.g;
-          expm1 =get_expm1(att*e.b, d_exp_info);
+          expm1 =exp(att*e.b)-1.0;
           fbuf1[fpos].aB = expm1;
           fbuf1[fpos].qB = q.b;
         }
@@ -274,8 +228,7 @@ __global__ void k_render1
 
 //colorize by kernel
 __global__ void k_colorize
-  (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2,
-  cu_colormap_info info)
+  (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2, int mapSize, int ptypes)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -332,10 +285,16 @@ __global__ void k_colorize
     }
   else   // get color, associated from physical quantity contained in e.r, from lookup table
     {
-    e = get_color(p[m].type, col1, info);
-    e.r *= intensity;
-    e.g *= intensity;
-    e.b *= intensity;
+  //first find the right entry for this ptype
+      if (p[m].type<ptypes)
+      {
+        e = get_color(p[m].type, col1, mapSize, ptypes);
+        e.r *= intensity;
+        e.g *= intensity;
+        e.b *= intensity;
+      }
+      else
+      { e.r =e.g =e.b =0.0; }
     }
 
   p2[m].isValid =true;
