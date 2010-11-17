@@ -51,118 +51,6 @@ const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
 const float32 rfac=1.;
 #endif
 
-void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
-  {
-  int nt = params.find<int>("ptypes",1);
-  arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
-  arr<Normalizer<float32> > intnorm(nt), colnorm(nt);
-
-  for(int t=0;t<nt;t++)
-    {
-    log_int[t] = params.find<bool>("intensity_log"+dataToString(t),true);
-    log_col[t] = params.find<bool>("color_log"+dataToString(t),true);
-    asinh_col[t] = params.find<bool>("color_asinh"+dataToString(t),false);
-    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
-    }
-
-  int npart=p.size();
-
-#pragma omp parallel
-{
-  arr<Normalizer<float32> > inorm(nt), cnorm(nt);
-  int m;
-#pragma omp for schedule(guided,1000)
-  for (m=0; m<npart; ++m) // do log calculations if requested
-    {
-    int t=p[m].type;
-
-    if (log_int[t])
-      p[m].I = log10(p[m].I);
-    inorm[t].collect(p[m].I);
-
-    if (log_col[t])
-      p[m].e.r = log10(p[m].e.r);
-    if (asinh_col[t])
-      p[m].e.r = my_asinh(p[m].e.r);
-    cnorm[t].collect(p[m].e.r);
-    if (col_vector[t])
-      {
-      if (log_col[t])
-        {
-        p[m].e.g = log10(p[m].e.g);
-        p[m].e.b = log10(p[m].e.b);
-        }
-      if (asinh_col[t])
-        {
-        p[m].e.g = my_asinh(p[m].e.g);
-        p[m].e.b = my_asinh(p[m].e.b);
-        }
-      cnorm[t].collect(p[m].e.g);
-      cnorm[t].collect(p[m].e.b);
-      }
-    }
-#pragma omp critical
-  for(int t=0;t<nt;t++)
-    {
-    intnorm[t].collect(inorm[t]);
-    colnorm[t].collect(cnorm[t]);
-    }
-}
-
-  for(int t=0;t<nt;t++)
-    {
-    mpiMgr.allreduce(intnorm[t].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(colnorm[t].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(intnorm[t].maxv,MPI_Manager::Max);
-    mpiMgr.allreduce(colnorm[t].maxv,MPI_Manager::Max);
-
-    if (verbose && mpiMgr.master())
-      {
-      cout << " For particles of type " << t << " : " << endl;
-      cout << " From data: " << endl;
-      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
-                                      colnorm[t].maxv << " (max) " << endl;
-      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
-                                      intnorm[t].maxv << " (max) " << endl;
-      }
-
-    intnorm[t].minv = params.find<float>
-      ("intensity_min"+dataToString(t),intnorm[t].minv);
-    intnorm[t].maxv = params.find<float>
-      ("intensity_max"+dataToString(t),intnorm[t].maxv);
-    colnorm[t].minv = params.find<float>
-      ("color_min"+dataToString(t),colnorm[t].minv);
-    colnorm[t].maxv = params.find<float>
-      ("color_max"+dataToString(t),colnorm[t].maxv);
-
-    if (verbose && mpiMgr.master())
-      {
-      cout << " Restricted to: " << endl;
-      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
-                                      colnorm[t].maxv << " (max) " << endl;
-      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
-                                      intnorm[t].maxv << " (max) " << endl;
-      }
-    }
-
-#pragma omp parallel
-{
-  int m;
-#pragma omp for schedule(guided,1000)
-  for(m=0; m<npart; ++m)
-    {
-    int t=p[m].type;
-    intnorm[t].normAndClamp(p[m].I);
-    colnorm[t].normAndClamp(p[m].e.r);
-    if (col_vector[t])
-      {
-      colnorm[t].normAndClamp(p[m].e.g);
-      colnorm[t].normAndClamp(p[m].e.b);
-      }
-    }
-}
-  }
-
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
@@ -534,15 +422,6 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   tsize npart = particles.size();
   tsize npart_all = npart;
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-
-// -----------------------------------
-// ----------- Ranging ---------------
-// -----------------------------------
-  wallTimers.start("range");
-  if (master)
-    cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
-  particle_normalize(params,particles,true); ///does log calculations and clamps data
-  wallTimers.stop("range");
 
 // -------------------------------------
 // ----------- Transforming ------------
