@@ -155,7 +155,7 @@ THREADFUNC cu_thread_func(void *pinfo)
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
   // enable device and allocate arrays
-  cu_init(pInfoOutput->devID, len, &gv);
+  cu_init(pInfoOutput->devID, len, &gv, *g_params, campos, lookat, sky);
 
   //CUDA Coloring
   setup_colormap(ptypes, &gv);
@@ -198,15 +198,10 @@ void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv)
   cu_particle_sim *d_particle_data = &(particle_data[tInfo->startP]);
   cu_copy_particles_to_device(d_particle_data, nParticle, gv);
   tInfo->times.stop("gcopy");
-  //here we analyse how to divide the whole task for large data handling
-  //CUDA Ranging
-  tInfo->times.start("grange");
-  cu_range(params, d_particle_data, nParticle, gv);
-  tInfo->times.stop("grange");
 
   //CUDA Transformation
   tInfo->times.start("gtransform");
-  cu_transform(params, nParticle, campos, lookat, sky, d_particle_data, gv);
+  cu_transform(nParticle, d_particle_data, gv);
   tInfo->times.stop("gtransform");
 
 /* temporarily ignore sorting 191109.
@@ -242,7 +237,7 @@ PROBLEM HERE!
   memset(cu_ps, 0, nParticle);
 
   //Colorize with device
-  cu_colorize(params, cu_ps, nParticle, gv);
+  cu_colorize(cu_ps, nParticle, gv);
   tInfo->times.stop("gcoloring");
  
 
@@ -505,7 +500,6 @@ void GPUReport(wallTimerSet &cuTimers)
   {
     cout << "Copy  (secs)               : " << cuTimers.acc("gcopy") << endl;
     cout << "Copy-fbuf  (secs)          : " << cuTimers.acc("gcopy-fbuf") << endl;
-    cout << "Ranging Data (secs)        : " << cuTimers.acc("grange") << endl;
     cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
 //    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;
     cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
@@ -535,6 +529,7 @@ void cuda_timeReport(paramfile &params)
       }
     cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
     cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
+    cout << "Ranging Data (secs)        : " << wallTimers.acc("range") << endl;
     cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc") << endl;
     cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
     cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
