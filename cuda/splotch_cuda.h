@@ -25,22 +25,18 @@ typedef particle_sim cu_particle_sim;
                                         //in mid of developing only
 #define MAX_EXP -20.0
 
-struct cu_param_range //parameters for range calculation
-  {
-  int ptypes; //meaning how many types
-  bool col_vector[MAX_P_TYPE], log_int[MAX_P_TYPE],
-    log_col[MAX_P_TYPE], asinh_col[MAX_P_TYPE];
-  float mincol[MAX_P_TYPE], maxcol[MAX_P_TYPE],
-    minint[MAX_P_TYPE], maxint[MAX_P_TYPE];
-  };
-
-struct cu_param_transform
+struct cu_param
   {
   float p[12];
   bool  projection;
   int   xres, yres;
   float fovfct, dist, xfac;
   float minrad_pix;
+  int ptypes;
+  float zmaxval, zminval;
+  bool col_vector[MAX_P_TYPE];
+  float brightness[MAX_P_TYPE];
+  float rfac;
   };
 
 struct cu_color
@@ -64,21 +60,13 @@ struct cu_colormap_info
 
 struct cu_particle_splotch
   {
-  float x,y,r,ro;
+  float x,y,r;
   cu_color e;
   bool isValid;
   unsigned short minx, miny, maxx, maxy;
   unsigned long posInFragBuf;
   };
 
-struct cu_param_colorize
-  {
-  int xres, yres, ptypes;
-  float zmaxval, zminval;
-  bool col_vector[MAX_P_TYPE];
-  float brightness[MAX_P_TYPE];
-  float rfac;
-  };
 
 struct cu_fragment_AeqE
   {
@@ -105,21 +93,19 @@ struct cu_gpu_vars //variables used by each gpu
 
 //functions
 
-void cu_init(int devID, int nP, cu_gpu_vars* pgv);
+void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky);
 void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
 size_t cu_allocate_fbuf(int nP, cu_gpu_vars* pgv);
-void cu_range(paramfile &params, cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv);
-void cu_transform (paramfile &fparams, unsigned int n,
-  vec3 &campos, vec3 &lookat, vec3 &sky, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
+void cu_transform (unsigned int n, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
-void cu_colorize(paramfile &params, cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
+void cu_colorize(cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
 void cu_realloc_particles_to_render(int n, cu_gpu_vars* pgv);
 void cu_copy_particles_to_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
-float cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
+void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
 void cu_get_fbuf (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void cu_end (cu_gpu_vars* pgv);
 int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy);
-void getCuTransformParams(cu_param_transform &para_trans,
+void getCuTransformParams(cu_param &para_trans,
       paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
 
 

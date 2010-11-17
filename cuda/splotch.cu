@@ -30,7 +30,7 @@ template<typename T> T findParamWithoutChange
 #define CLEAR_MEM(p) if(p) {cutilSafeCall(cudaFree(p)); p=0;}
 
 
-void getCuTransformParams(cu_param_transform &para_trans,
+void getCuTransformParams(cu_param &para_trans,
 paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   {
   int xres = params.find<int>("xres",800),
@@ -78,7 +78,7 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   }
 
 
-void cu_init(int devID, int nP, cu_gpu_vars* pgv)
+void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky)
   {
   cudaSetDevice (devID); // initialize cuda runtime
   
@@ -94,6 +94,24 @@ void cu_init(int devID, int nP, cu_gpu_vars* pgv)
 
   size_t size = pgv->policy->GetFBufSize() <<20;
   cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size)); 
+
+  //retrieve parameters
+  cu_param tparams;
+  getCuTransformParams(tparams,fparams,campos,lookat,sky);
+
+  tparams.zmaxval   = fparams.find<float>("zmax",1.e23);
+  tparams.zminval   = fparams.find<float>("zmin",0.0);
+  tparams.ptypes    = fparams.find<int>("ptypes",1);
+
+  for(int itype=0; itype<tparams.ptypes; itype++)
+    {
+    tparams.brightness[itype] = fparams.find<double>("brightness"+dataToString(itype),1.);
+    tparams.col_vector[itype] = fparams.find<bool>("color_is_vector"+dataToString(itype),false);
+    }
+  tparams.rfac=1.5;
+
+  //dump parameters to device
+  cutilSafeCall( cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param) ));
   }
 
 
@@ -104,92 +122,29 @@ void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_v
   cutilSafeCall(cudaMemcpy(pgv->d_pd, h_pd, s, cudaMemcpyHostToDevice) );
   }
 
-void cu_range(paramfile &params ,cu_particle_sim* h_pd,
-  unsigned int n, cu_gpu_vars* pgv)
+
+void cu_transform (unsigned int n, cu_particle_sim* h_pd, cu_gpu_vars* pgv)
   {
-
-  //prepare parameters for stage 1
-  cu_param_range pr;
-  pr.ptypes = params.find<int>("ptypes",1);
-  //now collect parameters from configuration
-  for(int itype=0;itype<pr.ptypes;itype++)
-    {
-    pr.log_int[itype] = params.find<bool>("intensity_log"+dataToString(itype),true);
-    pr.log_col[itype] = params.find<bool>("color_log"+dataToString(itype),true);
-    pr.asinh_col[itype] = params.find<bool>("color_asinh"+dataToString(itype),false);
-    pr.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
-    pr.mincol[itype]=1e30;
-    pr.maxcol[itype]=-1e30;
-    pr.minint[itype]=1e30;
-    pr.maxint[itype]=-1e30;
-    }
-  //allocate memory on device and dump parameters to it
-  cu_param_range  *d_pr = 0;
-  int s = sizeof(cu_param_range);
-  cutilSafeCall( cudaMalloc((void**) &d_pr, s) );
-  cutilSafeCall( cudaMemcpy(d_pr, &pr, s, cudaMemcpyHostToDevice) );
-
-  //ask for dims from pgv->policy
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  // call device for stage 1
-  k_range1<<<dimGrid,dimBlock>>>(d_pr, pgv->d_pd, n);
-
-  // call device for stage 2 ptypes times
-  // prepare parameters1 first
-  float minval_int, maxval_int, minval_col, maxval_col;
-  std::string tmp;
-  for(int itype=0;itype<pr.ptypes;itype++)
-    {
-    tmp = "intensity_min"+dataToString(itype);
-    minval_int =findParamWithoutChange<float>(&params,  //in mid of developing only
-      tmp, pr.minint[itype]);
-    tmp = "intensity_max"+dataToString(itype);
-    maxval_int = findParamWithoutChange<float>(&params, tmp, pr.maxint[itype]);
-    tmp = "color_min"+dataToString(itype);
-    minval_col = findParamWithoutChange<float>(&params, tmp, pr.mincol[itype]);
-    tmp = "color_max"+dataToString(itype);
-    maxval_col = findParamWithoutChange<float>(&params, tmp, pr.maxcol[itype]);
-
-    k_range2<<<dimGrid, dimBlock>>>(d_pr, pgv->d_pd, n, itype,
-      minval_int,maxval_int,minval_col,maxval_col);
-    }
-
-  // copy result out to host in mid of development only!!!
-  // s = pgv->policy->GetSizeDPD(n);
-  // cutilSafeCall(cudaMemcpy(h_pd, pgv->d_pd, s, cudaMemcpyDeviceToHost) );
-
-  //free parameters on device
-  CLEAR_MEM((d_pr));
-  }
-
-
-void cu_transform (paramfile &fparams, unsigned int n,
-  vec3 &campos, vec3 &lookat, vec3 &sky, cu_particle_sim* h_pd, cu_gpu_vars* pgv)
-  {
-  //retrieve parameters for transformation first
-  cu_param_transform tparams;
-  getCuTransformParams(tparams,fparams,campos,lookat,sky);
-
-  //arrange memory for the parameters and copy to device
-  cu_param_transform  *d_pt;
-  int size = sizeof(cu_param_transform);
-  cutilSafeCall( cudaMalloc((void**) &d_pt, size) );
-  cutilSafeCall(cudaMemcpy(d_pt, &tparams, size, cudaMemcpyHostToDevice) );
 
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
 
+  cudaEvent_t start,stop;
+  cutilSafeCall( cudaEventCreate(&start));
+  cutilSafeCall( cudaEventCreate(&stop));
+  cutilSafeCall( cudaEventRecord( start, 0));
+
   //call device transformation
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, n, d_pt);
+  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, n);
 
-  //free parameters' device memory
-  CLEAR_MEM((d_pt));
+  cutilSafeCall( cudaEventRecord( stop, 0));
+  cutilSafeCall( cudaEventSynchronize(stop));
+ // float elapsedTime;
+ // cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
+  cutilSafeCall( cudaEventDestroy(start));
+  cutilSafeCall( cudaEventDestroy(stop));
 
-  //copy result out to host in mid of development only!!!
-  //size =pgv->policy->GetSizeDPD(n);
-  //cutilSafeCall(cudaMemcpy(h_pd, pgv->d_pd, size, cudaMemcpyDeviceToHost) );
   }
 
 void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
@@ -206,41 +161,17 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   pgv->colormap_ptypes = h_info.ptypes;
   }
 
-void cu_colorize(paramfile &params, cu_particle_splotch *h_ps,
-  int n, cu_gpu_vars* pgv)
+void cu_colorize(cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv)
   {
-  //fetch parameters for device calling first
-  cu_param_colorize   pcolorize;
-  pcolorize.xres      = params.find<int>("xres",800);
-  pcolorize.yres      = params.find<int>("yres",pcolorize.xres);
-  pcolorize.zmaxval   = params.find<float>("zmax",1.e23);
-  pcolorize.zminval   = params.find<float>("zmin",0.0);
-  pcolorize.ptypes    = params.find<int>("ptypes",1);
-
-  for(int itype=0; itype<pcolorize.ptypes; itype++)
-    {
-    pcolorize.brightness[itype] = params.find<double>("brightness"+dataToString(itype),1.);
-    pcolorize.col_vector[itype] = params.find<bool>("color_is_vector"+dataToString(itype),false);
-    }
-  pcolorize.rfac=1.5;
-
-  //prepare memory for parameters and dump to device
-  cu_param_colorize   *d_param_colorize;
-  cutilSafeCall( cudaMalloc((void**) &d_param_colorize, sizeof(cu_param_colorize)));
-  cutilSafeCall( cudaMemcpy(d_param_colorize, &pcolorize, sizeof(cu_param_colorize),
-    cudaMemcpyHostToDevice));
 
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  k_colorize<<<dimGrid,dimBlock>>>(d_param_colorize, pgv->d_pd, n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
+  k_colorize<<<dimGrid,dimBlock>>>(pgv->d_pd, n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
 
   //copy the result out
   size_t size = n* sizeof(cu_particle_splotch);
   cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_render, size, cudaMemcpyDeviceToHost) );
-
-  //free params memory
-  CLEAR_MEM((d_param_colorize));
 
   //particle_splotch memory on device will be freed in cu_end
   }
@@ -255,14 +186,14 @@ void cu_copy_particles_to_render(cu_particle_splotch *p,
     cudaMemcpyHostToDevice) );
   }
 
-float cu_render1
+void cu_render1
   (int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
   {
   cudaEvent_t start,stop;
   cutilSafeCall( cudaEventCreate(&start));
   cutilSafeCall( cudaEventCreate(&stop));
   cutilSafeCall( cudaEventRecord( start, 0));
-  //endP actually exceed the last one to render
+ 
   //get dims from pgv->policy object first
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
@@ -273,11 +204,10 @@ float cu_render1
 
   cutilSafeCall( cudaEventRecord( stop, 0));
   cutilSafeCall( cudaEventSynchronize(stop));
-  float elapsedTime;
-  cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
+//  float elapsedTime;
+//  cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
   cutilSafeCall( cudaEventDestroy(start));
   cutilSafeCall( cudaEventDestroy(stop));
-  return elapsedTime;
   }
 
 
