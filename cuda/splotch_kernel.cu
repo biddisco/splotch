@@ -22,6 +22,7 @@ Copyright things go here.
 /////////constant memory declaration /////////////////////
 __constant__ cu_color_map_entry dmap[MAXSIZE];
 __constant__ int ptype_points[10];
+__constant__ cu_param dparams;
 
 /////////help functions///////////////////////////////////
 __device__ float    my_asinh(float val)
@@ -226,9 +227,54 @@ __global__ void k_render1
  }
 
 
+//Transform by kernel
+__global__ void k_transform
+  (cu_particle_sim *p, int n)
+  {
+  //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >n) m =n;
+
+  //copy parameters to __share__ local memory? later
+
+  //now do x,y,z
+  float x,y,z;
+  x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
+  y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
+  z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
+
+
+  //do r
+  float xfac = dparams.xfac;
+  const float   res2 = 0.5*dparams.xres;
+  const float   ycorr = .5f*(dparams.yres-dparams.xres);
+  if (!dparams.projection)
+    {
+    x = res2 * (x+dparams.fovfct*dparams.dist)*xfac;
+    y = res2 * (y+dparams.fovfct*dparams.dist)*xfac + ycorr;
+    }
+  else
+    {
+    xfac=1./(dparams.fovfct*z);
+    x = res2 * (x+dparams.fovfct*z)*xfac;
+    y = res2 * (y+dparams.fovfct*z)*xfac + ycorr;
+    }
+  p[m].x =x;
+  p[m].y =y;
+  p[m].z =z;
+
+  p[m].I /= p[m].r;
+  p[m].r = p[m].r *res2*xfac;
+
+  const float rfac= sqrt(p[m].r*p[m].r + 0.25*dparams.minrad_pix*dparams.minrad_pix)/p[m].r;
+  p[m].r *= rfac;
+  p[m].I /= rfac;
+  }
+
+
 //colorize by kernel
 __global__ void k_colorize
-  (cu_param_colorize *params, cu_particle_sim *p, int n, cu_particle_splotch *p2, int mapSize, int ptypes)
+  (cu_particle_sim *p, int n, cu_particle_splotch *p2, int mapSize, int ptypes)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -236,29 +282,29 @@ __global__ void k_colorize
 
   //now do the calc, p[m]--->p2[m]
   p2[m].isValid=false;
-  if (p[m].z<=0 || p[m].z<=params->zminval || p[m].z>=params->zmaxval)
+  if (p[m].z<=0 || p[m].z<=dparams.zminval || p[m].z>=dparams.zmaxval)
     return;
 
   const float posx=p[m].x, posy=p[m].y;
-  const float rfacr=params->rfac*p[m].r;
+  const float rfacr=dparams.rfac*p[m].r;
 
   // compute region occupied by the partile
   int minx=int(posx-rfacr+1);
-  if (minx>=params->xres) return;
+  if (minx>=dparams.xres) return;
   minx=max(minx,0);
 
   int maxx=int(posx+rfacr+1);
   if (maxx<=0) return;
-  maxx=min(maxx,params->xres);
+  maxx=min(maxx,dparams.xres);
   if (minx>=maxx) return;
 
   int miny=int(posy-rfacr+1);
-  if (miny>=params->yres) return;
+  if (miny>=dparams.yres) return;
   miny=max(miny,0);
 
   int maxy=int(posy+rfacr+1);
   if (maxy<=0) return;
-  maxy=min(maxy,params->yres);
+  maxy=min(maxy,dparams.yres);
   if (miny>=maxy) return;
 
   //set region info to output the p2
@@ -267,17 +313,17 @@ __global__ void k_colorize
 
   float col1=p[m].e.r,col2=p[m].e.g,col3=p[m].e.b;
   clamp (0.0000001,0.9999999,col1);
-  if (params->col_vector[p[m].type])
+  if (dparams.col_vector[p[m].type])
     {
     clamp (0.0000001,0.9999999,col2);
     clamp (0.0000001,0.9999999,col3);
     }
   float intensity=p[m].I;
   clamp (0.0000001,0.9999999,intensity);
-  intensity *= params->brightness[p[m].type];
+  intensity *= dparams.brightness[p[m].type];
 
   cu_color e;
-  if (params->col_vector[p[m].type])   // color from file
+  if (dparams.col_vector[p[m].type])   // color from file
     {
     e.r=col1*intensity;
     e.g=col2*intensity;
@@ -304,108 +350,5 @@ __global__ void k_colorize
   p2[m].e=e;
   }
 
-//Range by kernel step 1
-__global__ void k_range1(cu_param_range *pr, cu_particle_sim *p, int n)
-  {
-  //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >=n) m = n;
-
-  //now do the calc
-  //I, minint, maxint
-  if (pr->log_int[p[m].type]) //could access invalid address under EMULATION
-    p[m].I = log10(p[m].I);
-  get_minmax(pr->minint[p[m].type], pr->maxint[p[m].type], p[m].I);
-
-  //e.r, mincol, maxcol
-  if (pr->log_col[p[m].type])
-  p[m].e.r = log10(p[m].e.r);
-  if (pr->asinh_col[p[m].type])
-    p[m].e.r = my_asinh(p[m].e.r);
-  get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.r);
-
-  //C2, C3, mincol, maxcol
-  if (pr->col_vector[p[m].type])
-    {
-    if (pr->log_col[p[m].type])
-      {
-      p[m].e.g = log10(p[m].e.g);
-      p[m].e.b = log10(p[m].e.b);
-      }
-    if (pr->asinh_col[p[m].type])
-      {
-      p[m].e.g = my_asinh(p[m].e.g);
-      p[m].e.b = my_asinh(p[m].e.b);
-      }
-    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.g);
-    get_minmax(pr->mincol[p[m].type], pr->maxcol[p[m].type], p[m].e.b);
-    }
-  }
-
-//Range by kernel step 2
-__global__ void k_range2
-  (cu_param_range *pr, cu_particle_sim *p, int n, int itype,
-  float minval_int, float maxval_int,
-  float minval_col, float maxval_col)
-  {
-  //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n) m =n;
-
-  //do the calculation
-  if(p[m].type == itype)///clamp into (min,max)
-    {
-    my_normalize(minval_int,maxval_int,p[m].I);
-    my_normalize(minval_col,maxval_col,p[m].e.r);
-    if (pr->col_vector[p[m].type])
-      {
-      my_normalize(minval_col,maxval_col,p[m].e.g);
-      my_normalize(minval_col,maxval_col,p[m].e.b);
-      }
-    }
-  }
-
-//Transform by kernel
-__global__ void k_transform
-  (cu_particle_sim *p, int n, cu_param_transform *ptrans)
-  {
-  //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n) m =n;
-
-  //copy parameters to __share__ local memory? later
-
-  //now do x,y,z
-  float x,y,z;
-  x =p[m].x*ptrans->p[0] + p[m].y*ptrans->p[1] + p[m].z*ptrans->p[2] + ptrans->p[3];
-  y =p[m].x*ptrans->p[4] + p[m].y*ptrans->p[5] + p[m].z*ptrans->p[6] + ptrans->p[7];
-  z =p[m].x*ptrans->p[8] + p[m].y*ptrans->p[9] + p[m].z*ptrans->p[10]+ ptrans->p[11];
-  p[m].x =x;
-  p[m].y =y;
-  p[m].z =z;
-
-  //do r
-  float xfac = ptrans->xfac;
-  const float   res2 = 0.5*ptrans->xres;
-  const float   ycorr = .5f*(ptrans->yres-ptrans->xres);
-  if (!ptrans->projection)
-    {
-    p[m].x = res2 * (p[m].x+ptrans->fovfct*ptrans->dist)*xfac;
-    p[m].y = res2 * (p[m].y+ptrans->fovfct*ptrans->dist)*xfac + ycorr;
-    }
-  else
-    {
-    xfac=1./(ptrans->fovfct*p[m].z);
-    p[m].x = res2 * (p[m].x+ptrans->fovfct*p[m].z)*xfac;
-    p[m].y = res2 * (p[m].y+ptrans->fovfct*p[m].z)*xfac + ycorr;
-    }
-
-  p[m].I /= p[m].r;
-  p[m].r = p[m].r *res2*xfac;
-
-  const float rfac= sqrt(p[m].r*p[m].r + 0.25*ptrans->minrad_pix*ptrans->minrad_pix)/p[m].r;
-  p[m].r *= rfac;
-  p[m].I /= rfac;
-  }
 
 
