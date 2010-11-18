@@ -143,7 +143,8 @@ THREADFUNC cu_thread_func(void *pinfo)
   ti.pPic = &pic;
 
   // num particles to manage at once
-  int len = cu_get_chunk_particle_count(*g_params, policy); 
+  float factor = g_params->find<float>("particle_mem_factor", 3);
+  int len = cu_get_chunk_particle_count(*g_params, policy, sizeof(cu_particle_sim), factor); 
   if (len == 0)
     {
     printf("\nGraphics memory setting error\n");
@@ -199,9 +200,14 @@ void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv)
   cu_copy_particles_to_device(d_particle_data, nParticle, gv);
   tInfo->times.stop("gcopy");
 
+  //init cu_particle_splotch array memory
+  cu_particle_splotch *cu_ps;
+  cu_ps = new cu_particle_splotch[nParticle];
+  memset(cu_ps, 0, nParticle);
+
   //CUDA Transformation
   tInfo->times.start("gtransform");
-  cu_transform(nParticle, d_particle_data, gv);
+  cu_transform(nParticle, cu_ps, gv);
   tInfo->times.stop("gtransform");
 
 /* temporarily ignore sorting 191109.
@@ -227,18 +233,6 @@ PROBLEM HERE!
      memcpy( &(d_particle_data[i]), &(particle_data[i]), sizeof(cu_particle_sim));
     cu_copy_particle_sim_to_device(d_particle_data, particle_data.size());
 */
-
-  //CUDA Coloring
-  tInfo->times.start("gcoloring");
-
-  //init cu_particle_splotch array memory
-  cu_particle_splotch *cu_ps;
-  cu_ps = new cu_particle_splotch[nParticle];
-  memset(cu_ps, 0, nParticle);
-
-  //Colorize with device
-  cu_colorize(cu_ps, nParticle, gv);
-  tInfo->times.stop("gcoloring");
  
 
 // ----------------------------------
@@ -276,7 +270,6 @@ PROBLEM HERE!
   cu_particle_splotch *cu_ps_filtered;
   cu_ps_filtered = new cu_particle_splotch[chunk_dim];
 
-
   //clear the output pic
   tInfo->pPic ->fill(COLOUR(0.0, 0.0, 0.0));
  
@@ -296,6 +289,10 @@ PROBLEM HERE!
    tInfo->times.start("gcopy");
 
    // render chunks of pFiltered particles
+   tInfo->times.start("gcoloring");
+   cu_colorize(pFiltered, gv);
+   tInfo->times.stop("gcoloring");
+
    tInfo->times.start("grender");
    cu_render1(pFiltered, a_eq_e, (float) grayabsorb, gv);
    tInfo->times.stop("grender");

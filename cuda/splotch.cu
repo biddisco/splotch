@@ -114,6 +114,13 @@ void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &camp
   cutilSafeCall( cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param) ));
   }
 
+void cu_allocate_particles(unsigned int nP, cu_gpu_vars* pgv)
+  {
+  //now resize d_particle_splotch.
+  //one more for dums
+  size_t s = (nP+1)* sizeof(cu_particle_splotch);
+  cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, s)); 
+  }
 
 void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv)
   {
@@ -123,27 +130,19 @@ void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_v
   }
 
 
-void cu_transform (unsigned int n, cu_particle_sim* h_pd, cu_gpu_vars* pgv)
+void cu_transform (unsigned int n, cu_particle_splotch *h_ps, cu_gpu_vars* pgv)
   {
 
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
 
-  cudaEvent_t start,stop;
-  cutilSafeCall( cudaEventCreate(&start));
-  cutilSafeCall( cudaEventCreate(&stop));
-  cutilSafeCall( cudaEventRecord( start, 0));
-
   //call device transformation
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, n);
+  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_ps_render, n);
 
-  cutilSafeCall( cudaEventRecord( stop, 0));
-  cutilSafeCall( cudaEventSynchronize(stop));
- // float elapsedTime;
- // cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
-  cutilSafeCall( cudaEventDestroy(start));
-  cutilSafeCall( cudaEventDestroy(stop));
+  //copy the result out
+  size_t size = n* sizeof(cu_particle_splotch);
+  cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_render, size, cudaMemcpyDeviceToHost) );
 
   }
 
@@ -161,17 +160,26 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   pgv->colormap_ptypes = h_info.ptypes;
   }
 
-void cu_colorize(cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv)
+void cu_colorize(int n, cu_gpu_vars* pgv)
   {
 
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  k_colorize<<<dimGrid,dimBlock>>>(pgv->d_pd, n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
 
-  //copy the result out
-  size_t size = n* sizeof(cu_particle_splotch);
-  cutilSafeCall(cudaMemcpy(h_ps, pgv->d_ps_render, size, cudaMemcpyDeviceToHost) );
+  cudaEvent_t start,stop;
+  cutilSafeCall( cudaEventCreate(&start));
+  cutilSafeCall( cudaEventCreate(&stop));
+  cutilSafeCall( cudaEventRecord( start, 0));
+
+  k_colorize<<<dimGrid,dimBlock>>>(n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
+
+  cutilSafeCall( cudaEventRecord( stop, 0));
+  cutilSafeCall( cudaEventSynchronize(stop));
+ // float elapsedTime;
+ // cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
+  cutilSafeCall( cudaEventDestroy(start));
+  cutilSafeCall( cudaEventDestroy(stop));
 
   //particle_splotch memory on device will be freed in cu_end
   }
@@ -235,15 +243,15 @@ void cu_end(cu_gpu_vars* pgv)
   delete pgv->policy;
   }
 
-int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy)
+int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy, size_t psize, float pfactor)
   {
    int gMemSize = policy->GetGMemSize();
    int fBufSize = policy->GetFBufSize();
    if (gMemSize <= fBufSize) return 0;
 
-   float factor =params.find<float>("particle_mem_factor", 3);
+  // float factor =params.find<float>("particle_mem_factor", 3);
    int spareMem = 10;
    int arrayParticleSize = gMemSize - fBufSize - spareMem;
 
-   return (int) (arrayParticleSize/sizeof(cu_particle_sim)/factor)*(1<<20);
+   return (int) (arrayParticleSize/psize/pfactor)*(1<<20);
   }

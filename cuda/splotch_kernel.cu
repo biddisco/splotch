@@ -229,20 +229,17 @@ __global__ void k_render1
 
 //Transform by kernel
 __global__ void k_transform
-  (cu_particle_sim *p, int n)
+  (cu_particle_sim *p, cu_particle_splotch *p2, int n)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >n) m =n;
-
-  //copy parameters to __share__ local memory? later
 
   //now do x,y,z
   float x,y,z;
   x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
   y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
-
 
   //do r
   float xfac = dparams.xfac;
@@ -259,71 +256,74 @@ __global__ void k_transform
     x = res2 * (x+dparams.fovfct*z)*xfac;
     y = res2 * (y+dparams.fovfct*z)*xfac + ycorr;
     }
-  p[m].x =x;
-  p[m].y =y;
-  p[m].z =z;
 
-  p[m].I /= p[m].r;
-  p[m].r = p[m].r *res2*xfac;
+  float r = p[m].r;
+  p[m].I /= r;
+  r *= res2*xfac;
 
-  const float rfac= sqrt(p[m].r*p[m].r + 0.25*dparams.minrad_pix*dparams.minrad_pix)/p[m].r;
-  p[m].r *= rfac;
-  p[m].I /= rfac;
+  const float rfac= sqrt(r*r + 0.25*dparams.minrad_pix*dparams.minrad_pix)/r;
+  r *= rfac;
+  p2[m].I = p[m].I/rfac;
+
+  p2[m].isValid = false;
+
+  // compute region occupied by the partile
+  const float rfacr=dparams.rfac*r;
+  int minx=int(x-rfacr+1);
+  if (minx>=dparams.xres) return;
+  minx=max(minx,0);
+
+  int maxx=int(x+rfacr+1);
+  if (maxx<=0) return;
+  maxx=min(maxx,dparams.xres);
+  if (minx>=maxx) return;
+
+  int miny=int(y-rfacr+1);
+  if (miny>=dparams.yres) return;
+  miny=max(miny,0);
+
+  int maxy=int(y+rfacr+1);
+  if (maxy<=0) return;
+  maxy=min(maxy,dparams.yres);
+  if (miny>=maxy) return;
+
+  p2[m].minx =minx;  p2[m].miny =miny;
+  p2[m].maxx =maxx;  p2[m].maxy =maxy;
+
+  p2[m].isValid = true;
+  p2[m].x = x;
+  p2[m].y = y;
+  p2[m].r = r;
+  p2[m].e.r = (float) p[m].e.r;
+  p2[m].e.g = (float) p[m].e.g;
+  p2[m].e.b = (float) p[m].e.b;
+  p2[m].type = p[m].type;
+
   }
 
 
 //colorize by kernel
 __global__ void k_colorize
-  (cu_particle_sim *p, int n, cu_particle_splotch *p2, int mapSize, int ptypes)
+  (int n, cu_particle_splotch *p2, int mapSize, int types)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >n) m =n;
-
-  //now do the calc, p[m]--->p2[m]
-  p2[m].isValid=false;
-  if (p[m].z<=0 || p[m].z<=dparams.zminval || p[m].z>=dparams.zmaxval)
-    return;
-
-  const float posx=p[m].x, posy=p[m].y;
-  const float rfacr=dparams.rfac*p[m].r;
-
-  // compute region occupied by the partile
-  int minx=int(posx-rfacr+1);
-  if (minx>=dparams.xres) return;
-  minx=max(minx,0);
-
-  int maxx=int(posx+rfacr+1);
-  if (maxx<=0) return;
-  maxx=min(maxx,dparams.xres);
-  if (minx>=maxx) return;
-
-  int miny=int(posy-rfacr+1);
-  if (miny>=dparams.yres) return;
-  miny=max(miny,0);
-
-  int maxy=int(posy+rfacr+1);
-  if (maxy<=0) return;
-  maxy=min(maxy,dparams.yres);
-  if (miny>=maxy) return;
-
-  //set region info to output the p2
-  p2[m].minx =minx;  p2[m].miny =miny;
-  p2[m].maxx =maxx;  p2[m].maxy =maxy;
-
-  float col1=p[m].e.r,col2=p[m].e.g,col3=p[m].e.b;
+ 
+  int ptype = p2[m].type;
+  float col1=p2[m].e.r,col2=p2[m].e.g,col3=p2[m].e.b;
   clamp (0.0000001,0.9999999,col1);
-  if (dparams.col_vector[p[m].type])
+  if (dparams.col_vector[ptype])
     {
     clamp (0.0000001,0.9999999,col2);
     clamp (0.0000001,0.9999999,col3);
     }
-  float intensity=p[m].I;
+  float intensity=p2[m].I;
   clamp (0.0000001,0.9999999,intensity);
-  intensity *= dparams.brightness[p[m].type];
+  intensity *= dparams.brightness[ptype];
 
   cu_color e;
-  if (dparams.col_vector[p[m].type])   // color from file
+  if (dparams.col_vector[ptype])   // color from file
     {
     e.r=col1*intensity;
     e.g=col2*intensity;
@@ -332,9 +332,9 @@ __global__ void k_colorize
   else   // get color, associated from physical quantity contained in e.r, from lookup table
     {
   //first find the right entry for this ptype
-      if (p[m].type<ptypes)
+      if (ptype<types)
       {
-        e = get_color(p[m].type, col1, mapSize, ptypes);
+        e = get_color(ptype, col1, mapSize, types);
         e.r *= intensity;
         e.g *= intensity;
         e.b *= intensity;
@@ -342,12 +342,8 @@ __global__ void k_colorize
       else
       { e.r =e.g =e.b =0.0; }
     }
-
-  p2[m].isValid =true;
-  p2[m].x =p[m].x;
-  p2[m].y =p[m].y;
-  p2[m].r =p[m].r;
   p2[m].e=e;
+
   }
 
 
