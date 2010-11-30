@@ -434,6 +434,37 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   particle_project(params, particles, campos, lookat, sky);
   wallTimers.stop("transform");
 
+// ------------------------------------
+// ----------- Coloring ---------------
+// ------------------------------------
+  wallTimers.start("coloring");
+  if (master)
+    cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
+  particle_colorize(params, particles, amap);
+  wallTimers.stop("coloring");
+
+// ------------------------------------
+// -- Eliminating inactive particles --
+// ------------------------------------
+  wallTimers.start("sort");
+  if (master)
+    cout << endl << "host: eliminating inactive particles ..." << endl;
+  tdiff i1=0, i2=particles.size()-1;
+  while (true)
+    {
+    while (i1<=i2 && particles[i1].active) ++i1;
+    while (i1<=i2 && !particles[i2].active) --i2;
+    if (i1>=i2) break;
+    swap(particles[i1],particles[i2]);
+    }
+  npart=i2+1;
+  particles.resize(npart);
+  npart_all=npart;
+  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+  if (master)
+    cout << npart_all << " particles left" << endl;
+  wallTimers.stop("sort");
+
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
@@ -448,15 +479,6 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
     particle_sort(particles,sort_type,true);
     }
   wallTimers.stop("sort");
-
-// ------------------------------------
-// ----------- Coloring ---------------
-// ------------------------------------
-  wallTimers.start("coloring");
-  if (master)
-    cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
-  particle_colorize(params, particles, amap);
-  wallTimers.stop("coloring");
 
 // ------------------------------------
 // ----------- Rendering ---------------
