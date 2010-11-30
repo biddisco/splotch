@@ -56,6 +56,9 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   {
   int xres = params.find<int>("xres",800),
       yres = params.find<int>("yres",xres);
+  float32 zmaxval = params.find<float32>("zmax",1.e23),
+          zminval = params.find<float32>("zmin",0.0);
+  zminval = max(0.f,zminval);
 
   float32 ycorr = .5f*(yres-xres);
   float32 res2 = 0.5f*xres;
@@ -99,6 +102,10 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
     v=trans.TransPoint(v);
     p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
 
+    p[m].active = false;
+    if (p[m].z<=zminval) continue;
+    if (p[m].z>=zmaxval) continue;
+
     if (!projection)
       {
       p[m].x = res2*(p[m].x+fovfct*dist)*xfac2;
@@ -127,39 +134,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 #else
     p[m].I/=rcorr*rcorr;
 #endif
-    }
-}
-  }
 
-void particle_colorize(paramfile &params, vector<particle_sim> &p,
-  vector<COLOURMAP> &amap)
-  {
-  int xres = params.find<int>("xres",800),
-      yres = params.find<int>("yres",xres);
-  float32 zmaxval = params.find<float32>("zmax",1.e23);
-  float32 zminval = params.find<float32>("zmin",0.0);
-  int nt = params.find<int>("ptypes",1);
-  arr<bool> col_vector(nt);
-  arr<float32> brightness(nt);
-
-  for(int t=0;t<nt;t++)
-    {
-    brightness[t] = params.find<float32>("brightness"+dataToString(t),1.f);
-    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
-    }
-
-  int npart=p.size();
-
-#pragma omp parallel
-{
-  int m;
-#pragma omp for schedule(guided,1000)
-  for (m=0; m<npart; ++m)
-    {
-    p[m].active = false;
-    if (p[m].z<=0) continue;
-    if (p[m].z<=zminval) continue;
-    if (p[m].z>=zmaxval) continue;
     float32 posx=p[m].x, posy=p[m].y;
     float32 rfacr=rfac*p[m].r;
 
@@ -178,14 +153,41 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
     maxy=min(maxy,yres);
     if (miny>=maxy) continue;
 
-    if (!col_vector[p[m].type])
-      p[m].e=amap[p[m].type].getVal_const(p[m].e.r);
-
-    p[m].e *= p[m].I * brightness[p[m].type];
-
-//    if ((e.r==0.f) && (e.g==0.f) && (e.g==0.f)) continue;
-
     p[m].active = true;
+    }
+}
+  }
+
+void particle_colorize(paramfile &params, vector<particle_sim> &p,
+  vector<COLOURMAP> &amap)
+  {
+  int nt = params.find<int>("ptypes",1);
+  arr<bool> col_vector(nt);
+  arr<float32> brightness(nt);
+
+  for(int t=0;t<nt;t++)
+    {
+    brightness[t] = params.find<float32>("brightness"+dataToString(t),1.f);
+    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
+    }
+
+  int npart=p.size();
+
+#pragma omp parallel
+{
+  int m;
+#pragma omp for schedule(guided,1000)
+  for (m=0; m<npart; ++m)
+    {
+    if (p[m].active)
+      {
+      if (!col_vector[p[m].type])
+        p[m].e=amap[p[m].type].getVal_const(p[m].e.r);
+
+      p[m].e *= p[m].I * brightness[p[m].type];
+
+//      p[m].active = ((p[m].e.r!=0.f) || (p[m].e.g!=0.f) || (p[m].e.g!=0.f));
+      }
     }
 }
   }
