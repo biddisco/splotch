@@ -199,6 +199,9 @@ int main (int argc, const char **argv)
           case 3:
             img.write_TGA_rle(outfile);
             break;
+          case 4:
+            img.write_bmp(outfile);
+            break;
           default:
             planck_fail("No valid image file type given ...");
             break;
