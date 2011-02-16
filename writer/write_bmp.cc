@@ -1,6 +1,6 @@
 #include <algorithm>
 
-#include "kernel/bstream.h"
+#include "cxxsupport/bstream.h"
 #include "writer/writer.h"
 
 using namespace std;
