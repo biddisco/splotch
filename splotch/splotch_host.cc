@@ -183,6 +183,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
 
   int npart=p.size();
 
+  if (amap.size()>0) {
 #pragma omp parallel
 {
   int m;
@@ -200,6 +201,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
       }
     }
 }
+  }
   }
 
 void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)

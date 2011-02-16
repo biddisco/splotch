@@ -35,7 +35,13 @@
 #endif
 #include "mpi_support.h"
 
-MPI_Manager mpiMgr;
+#if defined(SUPPRESS_MPI_INIT)
+ #define MPI_INIT 0
+#else
+ #define MPI_INIT 1
+#endif
+
+MPI_Manager mpiMgr(MPI_INIT);
 
 using namespace std;
 
@@ -107,24 +113,20 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
 
 #ifdef USE_MPI
 
-MPI_Manager::MPI_Manager ()
+MPI_Manager::MPI_Manager (bool need_init)
   {
-  int flag;
-  MPI_Initialized(&flag);
-  if (!flag)
-    {
-    MPI_Init(0,0);
-    MPI_Errhandler_set(LS_COMM, MPI_ERRORS_ARE_FATAL);
+    this->ininitialized = false;
+    if (need_init) {
+      MPI_Init(0,0);
+      MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+      this->ininitialized = true;
     }
-  MPI_Comm_size(LS_COMM, &num_ranks_);
-  MPI_Comm_rank(LS_COMM, &rank_);
   }
 MPI_Manager::~MPI_Manager ()
-  {
-  int flag;
-  MPI_Finalized(&flag);
-  if (!flag)
-    MPI_Finalize();
+  { 
+  if (this->ininitialized) {
+    MPI_Finalize(); 
+   }
   }
 
 void MPI_Manager::abort() const

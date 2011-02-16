@@ -40,6 +40,7 @@ IF (SPLOTCH_USE_MPI)
   IF (MPI_EXTRA_LIBRARY)
     SET(SPLOTCH_MPI_LIBS "${MPI_LIBRARY};${MPI_EXTRA_LIBRARY}")
   ENDIF (MPI_EXTRA_LIBRARY)
+  ADD_DEFINITIONS(-DSUPPRESS_MPI_INIT)
 ENDIF (SPLOTCH_USE_MPI)
 
 #-----------------------------------------------------------------------------
@@ -72,7 +73,7 @@ SET(SPLOTCH_LIB_SRCS
 	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_bmp.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_ppm.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotchutils.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch.cc
+#	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/splotch/scenemaker.cc
 	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch_host.cc
 )

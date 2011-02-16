@@ -49,8 +49,10 @@ class MPI_Manager
     int num_ranks_, rank_;
 
   public:
-    MPI_Manager();
+    MPI_Manager(bool need_init);
     ~MPI_Manager();
+
+    int ininitialized;
 
     void abort() const;
 
