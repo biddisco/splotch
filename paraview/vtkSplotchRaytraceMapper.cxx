@@ -85,7 +85,7 @@ int vtkSplotchRaytraceMapper::FillInputPortInformation(int port,
 }
 
 // ---------------------------------------------------------------------------
-void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
+void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 {
   int X = ren->GetSize()[0];
   int Y = ren->GetSize()[1];
@@ -94,6 +94,14 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   //
   vtkDataArray *RadiusArray = this->RadiusScalars ? 
     input->GetPointData()->GetArray(this->RadiusScalars) : NULL;
+  //
+  vtkDataArray *IntensityArray = this->IntensityScalars ? 
+    input->GetPointData()->GetArray(this->IntensityScalars) : NULL;  
+
+  // For vertex coloring, this sets this->Colors as side effect.
+  // For texture map coloring, this sets ColorCoordinates
+  // and ColorTextureMap as a side effect.
+  this->MapScalars( act->GetProperty()->GetOpacity() );
 
   //
   double N = pts->GetNumberOfPoints();
@@ -111,34 +119,34 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
   ren->GetActiveCamera()->GetClippingRange(zmin, zmax);
   double FOV = ren->GetActiveCamera()->GetViewAngle();
   std::vector<COLOURMAP> amap;
-  amap.resize(1);
+//  amap.resize(1);
   //
+  unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
   double imax = 0;
-  for (double i=0; i<N; i++) {
+  for (int i=0; i<N; i++) {
     double *p = pts->GetPoint(i);
-    particle_data[i].x = p[0];
-    particle_data[i].y = p[1];
-    particle_data[i].z = p[2];
+    particle_data[i].x    = p[0];
+    particle_data[i].y    = p[1];
+    particle_data[i].z    = p[2];
     particle_data[i].type = 0;
-    particle_data[i].e.r = 0.25 + 0.5*(i/N);
-    particle_data[i].e.g = 0.25 + 0.75*(i/N);
-    particle_data[i].e.b = 0.25 + 0.25*(i/N);
-    particle_data[i].I   = 0.25 + 0.5*(i/N);
-    particle_data[i].r   = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
-
+    particle_data[i].r    = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
+    if (cdata) {      
+      particle_data[i].I   = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
+      particle_data[i].e.r = particle_data[i].I*(cdata[i*4+0]/255.0);
+      particle_data[i].e.g = particle_data[i].I*(cdata[i*4+1]/255.0);
+      particle_data[i].e.b = particle_data[i].I*(cdata[i*4+2]/255.0);
+    }
+    else { // we don't support any other mode
+      particle_data[i].e.r = 0.1;
+      particle_data[i].e.g = 0.1;
+      particle_data[i].e.b = 0.1;
+      particle_data[i].I   = 1.0;
+    }
     if (particle_data[i].I>imax) imax = particle_data[i].I;
   }
   arr2<COLOUR> pic(X,Y);
   paramfile params;
-
-  int nColours = 3;
-  double step = 1.0/(nColours-1.0);
-  vec3 col[3] = { vec3(0, 0, 255)/255.0, vec3(128, 255, 128)/255.0, vec3(255, 0, 0)/255.0 };
-  amap[0].addVal(0*step,COLOUR(col[0].x,col[0].y,col[0].z));
-  amap[0].addVal(1*step,COLOUR(col[1].x,col[1].y,col[1].z));
-  amap[0].addVal(2*step,COLOUR(col[2].x,col[2].y,col[2].z));
-  amap[0].sortMap();
 
   params.find("intensity_log0", false);
   params.find("color_log0", false);
@@ -162,36 +170,39 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
     host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
   }
 
-  bool master = true;
   bool a_eq_e = true;
-//    mpiMgr.allreduceRaw
-//      (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
-    exptable<float32> xexp(-20.0);
-    if (master && a_eq_e)
-      for (int ix=0;ix<X;ix++)
-        for (int iy=0;iy<Y;iy++)
-          {
-          pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-          pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-          pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-          }
-/*
+  mpiMgr.allreduceRaw
+    (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
+
+  exptable<float32> xexp(-20.0);
+  if (mpiMgr.master() && a_eq_e) {
+    for (int ix=0;ix<X;ix++) {
+      for (int iy=0;iy<Y;iy++) {
+        pic[ix][iy].r=-1.0*pic[ix][iy].r;//-xexp.expm1(pic[ix][iy].r);
+        pic[ix][iy].g=-1.0*pic[ix][iy].g;//-xexp.expm1(pic[ix][iy].g);
+        pic[ix][iy].b=-1.0*pic[ix][iy].b;//-xexp.expm1(pic[ix][iy].b);
+      }
+    }
+  }
+
+  /*
   for (int i=0; i<X; i++) {
     for (int j=0; j<Y; j++) {
       if (i==j) pic(i,j) = COLOUR(1,1,1);
     }
   }
-*/
+  */
 
-    int viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+  glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+
   for (int i=0; i<X; i++) {
     glRasterPos2i(X-1-i, 0);
     COLOUR *ptr = &pic[i][0];
@@ -199,14 +210,10 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *)
     glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
   }
 
-    glMatrixMode( GL_PROJECTION );
-    glPopMatrix();
-    glMatrixMode( GL_MODELVIEW );   
-    glPopMatrix();
-
-
-
- 	
+  glMatrixMode( GL_PROJECTION );
+  glPopMatrix();
+  glMatrixMode( GL_MODELVIEW );   
+  glPopMatrix();
 
 //  cerr << "Calling wrong render method!!\n";
 }
