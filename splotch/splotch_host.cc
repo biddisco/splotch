@@ -209,26 +209,26 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
   switch(sort_type)
     {
     case 0:
-      if (verbose && mpiMgr.master())
+      if (verbose && mpiMgr->master())
         cout << " skipped sorting ..." << endl;
       break;
     case 1:
-      if (verbose && mpiMgr.master())
+      if (verbose && mpiMgr->master())
         cout << " sorting by z ..." << endl;
       sort(p.begin(), p.end(), zcmp());
       break;
     case 2:
-      if (verbose && mpiMgr.master())
+      if (verbose && mpiMgr->master())
         cout << " sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp1());
       break;
     case 3:
-      if (verbose && mpiMgr.master())
+      if (verbose && mpiMgr->master())
         cout << " reverse sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp2());
       break;
     case 4:
-      if (verbose && mpiMgr.master())
+      if (verbose && mpiMgr->master())
         cout << " sorting by size ..." << endl;
       sort(p.begin(), p.end(), hcmp());
       break;
@@ -243,7 +243,7 @@ const int chunkdim=100;
 void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   bool a_eq_e, float32 grayabsorb)
   {
-  planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
+  planck_assert(a_eq_e || (mpiMgr->num_ranks()==1),
     "MPI only supported for A==E so far");
 
   int xres=pic.size1(), yres=pic.size2();
@@ -434,10 +434,10 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   vector<COLOURMAP> &amap, float b_brightness)
 #endif
   {
-  bool master = mpiMgr.master();
+  bool master = mpiMgr->master();
   tsize npart = particles.size();
   tsize npart_all = npart;
-  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
 
 // -------------------------------------
 // ----------- Transforming ------------
@@ -476,7 +476,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   npart=i2+1;
   particles.resize(npart);
   npart_all=npart;
-  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
   if (master)
     cout << npart_all << " particles left" << endl;
 
@@ -486,7 +486,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   if (!params.find<bool>("a_eq_e",true))
     {
     if (master)
-      (mpiMgr.num_ranks()>1) ?
+      (mpiMgr->num_ranks()>1) ?
         cout << endl << "host: applying local sort ..." << endl :
         cout << endl << "host: applying sort (" << npart << ") ..." << endl;
     int sort_type = params.find<int>("sort_type",1);

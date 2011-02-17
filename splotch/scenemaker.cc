@@ -90,12 +90,12 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   for(int t=0;t<nt;t++)
     {
-    mpiMgr.allreduce(intnorm[t].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(colnorm[t].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(intnorm[t].maxv,MPI_Manager::Max);
-    mpiMgr.allreduce(colnorm[t].maxv,MPI_Manager::Max);
+    mpiMgr->allreduce(intnorm[t].minv,MPI_Manager::Min);
+    mpiMgr->allreduce(colnorm[t].minv,MPI_Manager::Min);
+    mpiMgr->allreduce(intnorm[t].maxv,MPI_Manager::Max);
+    mpiMgr->allreduce(colnorm[t].maxv,MPI_Manager::Max);
 
-    if (verbose && mpiMgr.master())
+    if (verbose && mpiMgr->master())
       {
       cout << " For particles of type " << t << " : " << endl;
       cout << " From data: " << endl;
@@ -114,7 +114,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     colnorm[t].maxv = params.find<float>
       ("color_max"+dataToString(t),colnorm[t].maxv);
 
-    if (verbose && mpiMgr.master())
+    if (verbose && mpiMgr->master())
       {
       cout << " Restricted to: " << endl;
       cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
@@ -276,7 +276,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     }
 }
 
-  if(mpiMgr.master())
+  if(mpiMgr->master())
     cout << " found " << p.size() << " common particles ..." << endl;
   }
 
@@ -334,7 +334,7 @@ sceneMaker::sceneMaker (paramfile &par)
   else
     {
     if (interpol_mode>0)
-      planck_assert(mpiMgr.num_ranks()==1,
+      planck_assert(mpiMgr->num_ranks()==1,
         "Sorry, interpolating between files is not yet MPI parallelized ...");
 
     ifstream inp(geometry_file.c_str());
@@ -406,7 +406,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     { particle_data=p_orig; return; }
 
   tstack_push("Input");
-  if (mpiMgr.master())
+  if (mpiMgr->master())
     cout << endl << "reading data ..." << endl;
 #ifdef SPLVISIVO
   int simtype=params.find<int>("simtype",10);
@@ -483,7 +483,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 #if defined(USE_MPIIO)
       {
       float maxr, minr;
-      bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+      bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr->rank(), mpiMgr->num_ranks());
       }
 #else
       planck_fail("mpi reader not available in non MPI compiled version!");
@@ -555,7 +555,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 
   if (interpol_mode>0)
     {
-    if (mpiMgr.master())
+    if (mpiMgr->master())
       cout << "Interpolating between " << p1.size() << " and " <<
         p2.size() << " particles ..." << endl;
       tstack_push("Time interpolation");
@@ -564,8 +564,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     }
   tstack_push("Particle ranging");
   tsize npart_all = particle_data.size();
-  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
-  if (mpiMgr.master())
+  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
+  if (mpiMgr->master())
     cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(params, particle_data, true);
   tstack_pop("Particle ranging");

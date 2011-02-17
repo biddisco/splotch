@@ -116,7 +116,7 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(splotch_plugin splotchlib)
+TARGET_LINK_LIBRARIES(splotch_plugin splotchcore)
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects

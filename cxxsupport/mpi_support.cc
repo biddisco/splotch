@@ -35,13 +35,7 @@
 #endif
 #include "mpi_support.h"
 
-#if defined(SUPPRESS_MPI_INIT)
- #define MPI_INIT 0
-#else
- #define MPI_INIT 1
-#endif
-
-MPI_Manager mpiMgr(MPI_INIT);
+MPI_Manager *mpiMgr;
 
 using namespace std;
 

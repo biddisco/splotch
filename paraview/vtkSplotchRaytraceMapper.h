@@ -37,6 +37,9 @@ public:
   vtkSetStringMacro(RadiusScalars);
   vtkGetStringMacro(RadiusScalars);
 
+  vtkSetStringMacro(TypeScalars);
+  vtkGetStringMacro(TypeScalars);
+
 protected:
    vtkSplotchRaytraceMapper();
   ~vtkSplotchRaytraceMapper();
@@ -45,6 +48,7 @@ protected:
 
   char *IntensityScalars;
   char *RadiusScalars;
+  char *TypeScalars;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

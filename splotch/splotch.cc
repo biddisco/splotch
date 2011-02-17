@@ -44,9 +44,10 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
+  mpiMgr = new MPI_Manager(true);
   tstack_push("Splotch total time");
   tstack_push("Setup");
-  bool master = mpiMgr.master();
+  bool master = mpiMgr->master();
 #ifdef SPLVISIVO
 //  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   if(opt.splotchpar.empty())
@@ -70,9 +71,9 @@ int main (int argc, const char **argv)
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
 
-  int myID = mpiMgr.rank();
+  int myID = mpiMgr->rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
-  if (nDevNode < 1)   mpiMgr.abort();
+  if (nDevNode < 1)   mpiMgr->abort();
 
   int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
   int mydevID = 0;
@@ -86,14 +87,14 @@ int main (int argc, const char **argv)
       {
       cout << "There isn't a gpu available for process = " << myID << endl;
       cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
-      mpiMgr.abort();
+      mpiMgr->abort();
       }
     }
   // b) or processes run on different nodes and use a number of GPUs >= 1 and <= nDevNode
   else if (nDevNode < nDevProc)
     {
     cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
-    mpiMgr.abort();
+    mpiMgr->abort();
     }
 
   bool gpu_info = params.find<bool>("gpu_info",false);
@@ -152,7 +153,7 @@ int main (int argc, const char **argv)
 #endif
 
     tstack_push("Post-processing");
-    mpiMgr.allreduceRaw
+    mpiMgr->allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
     exptable<float32> xexp(-20.0);

@@ -269,6 +269,6 @@ class MPI_Manager
       }
   };
 
-extern MPI_Manager mpiMgr;
+extern MPI_Manager *mpiMgr;
 
 #endif

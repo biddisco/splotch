@@ -47,40 +47,49 @@ ENDIF (SPLOTCH_USE_MPI)
 # Include Directories
 #-----------------------------------------------------------------------------
 INCLUDE_DIRECTORIES(
-	${CMAKE_CURRENT_SOURCE_DIR}
-	kernel
-	cxxsupport
-	reader
-	writer
-	splotch
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  kernel
+  cxxsupport
+  reader
+  writer
+  splotch
 )
 
 #-----------------------------------------------------------------------------
-# Source files for splotch lib
+# Source files for splotch core library
 #-----------------------------------------------------------------------------
-SET(SPLOTCH_LIB_SRCS
-	${CMAKE_CURRENT_SOURCE_DIR}/kernel/transform.cxx
-	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/error_handling.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/walltimer.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/reader/mesh_reader.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/mpi_support.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/cxxutils.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/reader/gadget_reader.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/reader/millenium_reader.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader_mpi.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_tga.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_bmp.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/writer/write_ppm.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotchutils.cc
-#	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/splotch/scenemaker.cc
-	${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch_host.cc
+SET(SPLOTCH_CORE_LIB_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/kernel/transform.cxx
+  ${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotchutils.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/splotch/scenemaker.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/splotch/splotch_host.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/error_handling.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/walltimer.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/mpi_support.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/cxxutils.cc
 )
 
-ADD_LIBRARY(splotchlib STATIC ${SPLOTCH_LIB_SRCS})
-SET_TARGET_PROPERTIES(splotchlib PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
+SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+  
+#-----------------------------------------------------------------------------
+# Source files for splotch IO library
+#-----------------------------------------------------------------------------
+SET(SPLOTCH_IO_LIB_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/reader/mesh_reader.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/reader/gadget_reader.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/reader/millenium_reader.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/reader/bin_reader_mpi.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/writer/write_tga.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/writer/write_bmp.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/writer/write_ppm.cc
+)
 
+ADD_LIBRARY(splotchio STATIC ${SPLOTCH_IO_LIB_SRCS})
+SET_TARGET_PROPERTIES(splotchio PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+TARGET_LINK_LIBRARIES(splotchio splotchcore ${SPLOTCH_MPI_LIBS})
+  
 #-----------------------------------------------------------------------------
 # ParaView plugin
 #-----------------------------------------------------------------------------
@@ -97,12 +106,12 @@ IF (SPLOTCH_BUILD_PARAVIEW_PLUGIN)
 ENDIF (SPLOTCH_BUILD_PARAVIEW_PLUGIN)
 
 #-----------------------------------------------------------------------------
-# Define the Executable and set properties
+# Define the Test Executable and set properties
 #-----------------------------------------------------------------------------
 SET(SPLOTCH_SRCS
-	splotch/splotch.cc
+  splotch/splotch.cc
 )
 
-ADD_EXECUTABLE(splotch ${SPLOTCH_SRCS})
-TARGET_LINK_LIBRARIES(splotch splotchlib ${SPLOTCH_MPI_LIBS})
-SET_TARGET_PROPERTIES(splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+ADD_EXECUTABLE(splotchdemo ${SPLOTCH_SRCS})
+SET_TARGET_PROPERTIES(splotchdemo PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+TARGET_LINK_LIBRARIES(splotchdemo splotchcore splotchio)

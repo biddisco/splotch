@@ -66,13 +66,15 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
+  this->TypeScalars      = NULL;
 }
 
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
-  delete []IntensityScalars;
-  delete []RadiusScalars;
+  delete []this->IntensityScalars;
+  delete []this->RadiusScalars;
+  delete []this->TypeScalars;
 }
 
 // ---------------------------------------------------------------------------
@@ -97,6 +99,9 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   //
   vtkDataArray *IntensityArray = this->IntensityScalars ? 
     input->GetPointData()->GetArray(this->IntensityScalars) : NULL;  
+  //
+  vtkDataArray *TypeArray = this->TypeScalars ? 
+    input->GetPointData()->GetArray(this->TypeScalars) : NULL;  
 
   // For vertex coloring, this sets this->Colors as side effect.
   // For texture map coloring, this sets ColorCoordinates
@@ -123,13 +128,14 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   //
   unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
-  double imax = 0;
+  double imax = VTK_DOUBLE_MIN;
+  double imin = VTK_DOUBLE_MAX;
   for (int i=0; i<N; i++) {
     double *p = pts->GetPoint(i);
     particle_data[i].x    = p[0];
     particle_data[i].y    = p[1];
     particle_data[i].z    = p[2];
-    particle_data[i].type = 0;
+    particle_data[i].type = TypeArray ? TypeArray->GetTuple1(i) : 0;
     particle_data[i].r    = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
     if (cdata) {      
       particle_data[i].I   = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
@@ -144,6 +150,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
       particle_data[i].I   = 1.0;
     }
     if (particle_data[i].I>imax) imax = particle_data[i].I;
+    if (particle_data[i].I<imin) imin = particle_data[i].I;
   }
   arr2<COLOUR> pic(X,Y);
   paramfile params;
@@ -165,6 +172,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   params.find("intensity_max0", imax);
   params.find("intensity_min0", 0.0);
+  params.find("gray_absorption", 0.0001);
 
   if(particle_data.size()>0) {
     host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
@@ -172,16 +180,16 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   bool a_eq_e = true;
 
-  mpiMgr.allreduceRaw
+  mpiMgr->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   exptable<float32> xexp(-20.0);
-  if (mpiMgr.master() && a_eq_e) {
+  if (mpiMgr->master() && a_eq_e) {
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
-        pic[ix][iy].r=-1.0*pic[ix][iy].r;//-xexp.expm1(pic[ix][iy].r);
-        pic[ix][iy].g=-1.0*pic[ix][iy].g;//-xexp.expm1(pic[ix][iy].g);
-        pic[ix][iy].b=-1.0*pic[ix][iy].b;//-xexp.expm1(pic[ix][iy].b);
+        pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
+        pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
+        pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
       }
     }
   }
