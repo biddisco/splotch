@@ -67,6 +67,7 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
+  this->ActiveScalars    = NULL;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,6 +76,7 @@ vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
   delete []this->IntensityScalars;
   delete []this->RadiusScalars;
   delete []this->TypeScalars;
+  delete []this->ActiveScalars;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,6 +104,9 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   //
   vtkDataArray *TypeArray = this->TypeScalars ? 
     input->GetPointData()->GetArray(this->TypeScalars) : NULL;  
+  //
+  vtkDataArray *ActiveArray = this->ActiveScalars ? 
+    input->GetPointData()->GetArray(this->ActiveScalars) : NULL;  
 
   // For vertex coloring, this sets this->Colors as side effect.
   // For texture map coloring, this sets ColorCoordinates
@@ -131,12 +136,16 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   double imax = VTK_DOUBLE_MIN;
   double imin = VTK_DOUBLE_MAX;
   for (int i=0; i<N; i++) {
+//    if (ActiveArray && ActiveArray->GetTuple1(i)==0) {
+//      continue;
+//    }
     double *p = pts->GetPoint(i);
     particle_data[i].x    = p[0];
     particle_data[i].y    = p[1];
     particle_data[i].z    = p[2];
     particle_data[i].type = TypeArray ? TypeArray->GetTuple1(i) : 0;
     particle_data[i].r    = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
+    particle_data[i].active = ActiveArray ? ActiveArray->GetTuple1(i) : 1;
     if (cdata) {      
       particle_data[i].I   = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
       particle_data[i].e.r = particle_data[i].I*(cdata[i*4+0]/255.0);
