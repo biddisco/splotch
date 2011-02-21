@@ -113,6 +113,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   // and ColorTextureMap as a side effect.
   this->MapScalars( act->GetProperty()->GetOpacity() );
 
+
   //
   double N = pts->GetNumberOfPoints();
   double bounds[6];
@@ -135,22 +136,22 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   particle_data.assign(N, particle_sim());
   double imax = VTK_DOUBLE_MIN;
   double imin = VTK_DOUBLE_MAX;
+
+  double brightness[2] = {10.5, 1.5};
+
   for (int i=0; i<N; i++) {
-//    if (ActiveArray && ActiveArray->GetTuple1(i)==0) {
-//      continue;
-//    }
     double *p = pts->GetPoint(i);
-    particle_data[i].x    = p[0];
-    particle_data[i].y    = p[1];
-    particle_data[i].z    = p[2];
-    particle_data[i].type = TypeArray ? TypeArray->GetTuple1(i) : 0;
-    particle_data[i].r    = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
-    particle_data[i].active = ActiveArray ? ActiveArray->GetTuple1(i) : 1;
+    particle_data[i].x      = p[0];
+    particle_data[i].y      = p[1];
+    particle_data[i].z      = p[2];
+    particle_data[i].type   = TypeArray ? TypeArray->GetTuple1(i) : 0;
+    particle_data[i].r      = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
+    particle_data[i].active = ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 0;
+    particle_data[i].I      = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
     if (cdata) {      
-      particle_data[i].I   = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
-      particle_data[i].e.r = particle_data[i].I*(cdata[i*4+0]/255.0);
-      particle_data[i].e.g = particle_data[i].I*(cdata[i*4+1]/255.0);
-      particle_data[i].e.b = particle_data[i].I*(cdata[i*4+2]/255.0);
+      particle_data[i].e.r = (cdata[i*4+0]/255.0);
+      particle_data[i].e.g = (cdata[i*4+1]/255.0);
+      particle_data[i].e.b = (cdata[i*4+2]/255.0);
     }
     else { // we don't support any other mode
       particle_data[i].e.r = 0.1;
@@ -164,8 +165,9 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   arr2<COLOUR> pic(X,Y);
   paramfile params;
 
-  params.find("intensity_log0", false);
-  params.find("color_log0", false);
+  params.find("ptypes", 2);
+  params.find("intensity_log0", true);
+  params.find("color_log0", true);
   params.find("color_asinh0", false);
   params.find("color_is_vector0", false);
   params.find("xres", X);
@@ -177,17 +179,52 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   params.find("a_eq_e", true);
   params.find("zmin", zmin);
   params.find("zmax", zmax);
-  params.find("brightness0", 1);
+  params.find("brightness0", 10.5);
 
   params.find("intensity_max0", imax);
   params.find("intensity_min0", 0.0);
   params.find("gray_absorption", 0.0001);
 
   if(particle_data.size()>0) {
-    host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
+    particle_project(params, particle_data, campos, lookat, sky);
+  }
+  for (int i=0; i<N; i++) {
+    if (particle_data[i].active) {
+      if (cdata) {      
+        double b = brightness[particle_data[i].type];
+        particle_data[i].e.r *= particle_data[i].I*b;
+        particle_data[i].e.g *= particle_data[i].I*b;
+        particle_data[i].e.b *= particle_data[i].I*b;
+      }
+      else { // we don't support any other mode
+        particle_data[i].e.r = 0.1;
+        particle_data[i].e.g = 0.1;
+        particle_data[i].e.b = 0.1;
+        particle_data[i].I   = 1.0;
+      }
+    }
   }
 
-  bool a_eq_e = true;
+  // ------------------------------------
+  // -- Eliminating inactive particles --
+  // ------------------------------------
+  tsize npart_all;
+  particle_eliminate(params, particle_data, npart_all);
+
+  // --------------------------------
+  // ----------- Sorting ------------
+  // --------------------------------
+  bool a_eq_e = params.find<bool>("a_eq_e",true);
+  if (!a_eq_e) {
+    int sort_type = params.find<int>("sort_type",1);
+    particle_sort(particle_data,sort_type,true);
+    }
+
+  // ------------------------------------
+  // ----------- Rendering ---------------
+  // ------------------------------------
+  float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
+  render_new (particle_data,pic,a_eq_e,grayabsorb);
 
   mpiMgr->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);

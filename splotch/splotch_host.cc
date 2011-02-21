@@ -55,6 +55,25 @@ const float32 rfac=1.;
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky, VisIVOServerOptions &opt)
 #else
+
+} // unnamed namespace
+
+void particle_eliminate(paramfile &params, vector<particle_sim> &p, tsize &npart_all)
+  {
+  tdiff i1=0, i2=p.size()-1;
+  while (true)
+    {
+    while (i1<=i2 && p[i1].active) ++i1;
+    while (i1<=i2 && !p[i2].active) --i2;
+    if (i1>=i2) break;
+    swap(p[i1],p[i2]);
+    }
+  tsize npart=i2+1;
+  p.resize(npart);
+  npart_all=npart;
+  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
+}
+
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
 #endif
@@ -465,18 +484,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 // ------------------------------------
   if (master)
     cout << endl << "host: eliminating inactive particles ..." << endl;
-  tdiff i1=0, i2=particles.size()-1;
-  while (true)
-    {
-    while (i1<=i2 && particles[i1].active) ++i1;
-    while (i1<=i2 && !particles[i2].active) --i2;
-    if (i1>=i2) break;
-    swap(particles[i1],particles[i2]);
-    }
-  npart=i2+1;
-  particles.resize(npart);
-  npart_all=npart;
-  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
+  particle_eliminate(params, particles, npart_all);
   if (master)
     cout << npart_all << " particles left" << endl;
 
