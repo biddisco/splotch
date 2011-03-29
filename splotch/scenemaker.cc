@@ -343,13 +343,10 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
   int simtype = params.find<int>("simtype");
-  double frac=0;
-int spacing = 4;
-int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
-frac=(fidx-snr1)/spacing;
+  int spacing = params.find<double>("snapshot_spacing",1);
+  int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
+  double frac=(fidx-snr1)/spacing;
 
-  int snr1 = int(fidx), snr2=snr1+1;
-  frac = fidx-snr1;
   switch (simtype)
     {
     case 0:
@@ -377,14 +374,14 @@ frac=(fidx-snr1)/spacing;
         if (snr1_now!=snr1)
           {
           cout << " reading new1 " << snr1 << endl;
-          gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1);
+          gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
           buildIndex(id1.begin(),id1.end(),idx1);
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
-          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2);
+          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
           buildIndex(id2.begin(),id2.end(),idx2);
           snr2_now = snr2;
           }
@@ -392,7 +389,7 @@ frac=(fidx-snr1)/spacing;
       else
         {
         double dummy;
-        gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy);
+        gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy,boxsize);
         }
       break;
     case 3:
@@ -453,7 +450,7 @@ frac=(fidx-snr1)/spacing;
   }
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
-  vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
+			       vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
   {
   if (tsize(++cur_scene) >= scenes.size()) return false;
 
@@ -464,6 +461,35 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   outfile=scn.outname;
 
   fetchFiles(particle_data,scn.fidx);
+
+  if (params.find<bool>("Periodic",true)) 
+    {
+      int npart = particle_data.size();
+      double boxhalf = boxsize / 2;
+
+      if(mpiMgr.master())
+	cout << " doing parallel box wrap " << boxsize << endl;
+#pragma omp parallel
+      {
+	int m;
+#pragma omp for schedule(guided,1000)
+	for (m=0; m<npart; ++m)
+	  {
+	    if(particle_data[m].x - lookat.x > boxhalf)
+	      particle_data[m].x -= boxsize;
+	    if(lookat.x - particle_data[m].x > boxhalf)
+	      particle_data[m].x += boxsize;
+	    if(particle_data[m].y - lookat.y > boxhalf)
+	      particle_data[m].y -= boxsize;
+	    if(lookat.y - particle_data[m].y > boxhalf)
+	      particle_data[m].y += boxsize;
+	    if(particle_data[m].z - lookat.z > boxhalf)
+	      particle_data[m].z -= boxsize;
+	    if(lookat.z - particle_data[m].z > boxhalf)
+	      particle_data[m].z += boxsize;
+	  }
+      }
+    }
 
   return true;
   }
