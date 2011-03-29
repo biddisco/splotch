@@ -35,7 +35,7 @@ void hdf5_reader_prep (paramfile &params, hid_t * inp, arr<int> &qty_idx,
   qty_idx.alloc(5);
   raux = params.find<float>("smooth_param",0.0);
 
-    cout << "FIELD NAME" << field[0].c_str() << endl; 
+    cout << "FIELD NAME -> " << field[0].c_str() << endl; 
   int use_field = 0;
   if(field[0].compare("-1") == 0)use_field=3;
 
@@ -186,7 +186,7 @@ void hdf5_reader (paramfile &params, vector<particle_sim> &points)
     {
     if(field[qty].compare("-1") == 0) continue;
     float * buffer = new float [npart];
-    cout << "FIELD NAME" << field[qty].c_str() << endl; 
+    cout << "FIELD NAME " << field[qty].c_str() << endl; 
 
 //NOW HDF READ STUFF
 

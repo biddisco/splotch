@@ -50,9 +50,13 @@ const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
 #else
 const float32 rfac=1.;
 #endif
-
+#ifdef SPLVISIVO
+void particle_project(paramfile &params, vector<particle_sim> &p,
+  const vec3 &campos, const vec3 &lookat, vec3 sky, VisIVOServerOptions &opt)
+#else
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
+#endif
   {
   int xres = params.find<int>("xres",800),
       yres = params.find<int>("yres",xres);
@@ -62,7 +66,11 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 
   float32 ycorr = .5f*(yres-xres);
   float32 res2 = 0.5f*xres;
+#ifdef SPLVISIVO
+    float32 fov=opt.spFov;
+#else
   float32 fov = params.find<float32>("fov",45); //in degrees
+#endif
   float32 fovfct = tan(fov*0.5f*degr2rad);
   int npart=p.size();
 
@@ -415,10 +423,15 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   }
 
 } // unnamed namespace
-
+#ifdef SPLVISIVO
+void host_rendering (paramfile &params, vector<particle_sim> &particles,
+  arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
+  vector<COLOURMAP> &amap, VisIVOServerOptions &opt)
+#else
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
   vector<COLOURMAP> &amap)
+#endif
   {
   bool master = mpiMgr.master();
   tsize npart = particles.size();
@@ -431,7 +444,11 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   wallTimers.start("transform");
   if (master)
     cout << endl << "host: applying geometry (" << npart_all << ") ..." << endl;
+#ifdef SPLVISIVO
+  particle_project(params, particles, campos, lookat, sky, opt);
+#else
   particle_project(params, particles, campos, lookat, sky);
+#endif
   wallTimers.stop("transform");
 
 // ------------------------------------

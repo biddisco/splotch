@@ -53,10 +53,19 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic, vector<COLOURMAP> &amap)
     }
   }
 
-
+#ifdef SPLVISIVO
+void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap, VisIVOServerOptions &opt)
+#else
 void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
-  {
-  int ptypes = params.find<int>("ptypes",1);
+#endif
+{
+bool VisIVOPalette=false;  
+#ifdef SPLVISIVO
+    int ptypes=1; //VISIVO ptypes could contain also dark and star: now we have only gas
+#else
+    int ptypes = params.find<int>("ptypes",1);
+#endif
+    
   bool master = mpiMgr.master();
   amap.resize(ptypes);
 
@@ -70,6 +79,29 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
         cout << " color of ptype " << itype << " is vector, so no colormap to load ..." << endl;
       }
     else
+      {
+#ifdef SPLVISIVO
+//reading colortable from visivo
+	string paletteFile=params.find<string>("palette"+dataToString(itype),"none"); //itype is 0 in VisIVO
+	if(paletteFile=="none")  //VisIVO color table
+        {	
+	  int nVVColours=0;
+	  SelectLookTable(&opt);  //the Table is loaded only one time
+	  nVVColours=opt.extPalR.size();
+	    double step = 1./(nVVColours-1);
+	    for (int i=0; i<opt.extPalR.size(); i++)
+	    {
+	      float rrr,ggg,bbb;
+	      rrr=(float)opt.extPalR[i]; //these vale are already normalized to 255
+	      ggg=(float)opt.extPalG[i];
+	      bbb=(float)opt.extPalB[i];   
+	      amap[itype].addVal(i*step,COLOUR(rrr,ggg,bbb));
+	     }
+	     VisIVOPalette=true;
+	  }
+
+#endif
+      if(!VisIVOPalette)
       {
       ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
       planck_assert (infile,"could not open palette file  <" +
@@ -86,6 +118,9 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
         infile >> rrr >> ggg >> bbb;
         amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
         }
+      } //if(!VisIVOPalette)
+
+	
       }
     amap[itype].sortMap();
     }

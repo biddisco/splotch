@@ -51,7 +51,7 @@
 
 using namespace std;
 
-string trim (const string &orig)
+string SPLtrim (const string &orig)
   {
   string::size_type p1=orig.find_first_not_of(" \t");
   if (p1==string::npos) return "";
@@ -63,24 +63,24 @@ template<typename T> string dataToString (const T &x)
   {
   ostringstream strstrm;
   strstrm << x;
-  return trim(strstrm.str());
+  return SPLtrim(strstrm.str());
   }
 
 template<> string dataToString (const bool &x)
   { return x ? "T" : "F"; }
 template<> string dataToString (const string &x)
-  { return trim(x); }
+  { return SPLtrim(x); }
 template<> string dataToString (const float &x)
   {
   ostringstream strstrm;
   strstrm << setprecision(8) << x;
-  return trim(strstrm.str());
+  return SPLtrim(strstrm.str());
   }
 template<> string dataToString (const double &x)
   {
   ostringstream strstrm;
   strstrm << setprecision(16) << x;
-  return trim(strstrm.str());
+  return SPLtrim(strstrm.str());
   }
 
 template string dataToString (const signed char &x);
@@ -98,7 +98,7 @@ string intToString(int64 x, tsize width)
   {
   ostringstream strstrm;
   strstrm << setw(width) << setfill('0') << x;
-  return trim(strstrm.str());
+  return SPLtrim(strstrm.str());
   }
 
 namespace {
@@ -109,7 +109,7 @@ void end_stringToData (const string &x, const char *tn, istringstream &strstrm)
   planck_assert (strstrm,error);
   string rest;
   strstrm >> rest;
-//  rest=trim(rest);
+//  rest=SPLtrim(rest);
   planck_assert (rest.length()==0,error);
   }
 
@@ -123,7 +123,7 @@ template<typename T> void stringToData (const string &x, T &value)
   }
 
 template<> void stringToData (const string &x, string &value)
-  { value = trim(x); }
+  { value = SPLtrim(x); }
 
 template<> void stringToData (const string &x, bool &value)
   {
@@ -236,14 +236,14 @@ void parse_file (const string &filename, map<string,string> &dict)
     // remove potential carriage returns at the end of the line
     line=line.substr(0,line.find("\r"));
     line=line.substr(0,line.find("#"));
-    line=trim(line);
+    line=SPLtrim(line);
     if (line.size()>0)
       {
       string::size_type eqpos=line.find("=");
       if (eqpos!=string::npos)
         {
-        string key=trim(line.substr(0,eqpos)),
-               value=trim(line.substr(eqpos+1,string::npos));
+        string key=SPLtrim(line.substr(0,eqpos)),
+               value=SPLtrim(line.substr(eqpos+1,string::npos));
         if (key=="")
           cerr << "Warning: empty key in '" << filename << "', line "
                << lineno << endl;

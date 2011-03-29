@@ -28,6 +28,12 @@
 #include "kernel/colourmap.h"
 #include "cxxsupport/walltimer.h"
 
+#ifdef SPLVISIVO
+#include "optionssetter.h"
+#include "luteditor.h"
+#endif
+
+
 struct particle_sim
   {
   COLOUR e;
@@ -171,9 +177,11 @@ void add_colorbar(paramfile &params, arr2<COLOUR> &pic,
 
 void timeReport();
 void hostTimeReport(wallTimerSet &Timers);
-
+#ifdef SPLVISIVO
+void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap, VisIVOServerOptions &opt);
+#else
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
-
+#endif
 double my_asinh (double val);
 
 #endif // SPLOTCHUTILS_H

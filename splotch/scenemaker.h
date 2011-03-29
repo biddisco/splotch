@@ -8,6 +8,10 @@
 #include "cxxsupport/paramfile.h"
 #include "splotch/splotchutils.h"
 
+#ifdef SPLVISIVO
+#include "optionssetter.h"
+#endif
+
 class sceneMaker
   {
   private:
@@ -17,11 +21,11 @@ class sceneMaker
       double fidx;
       std::string outname;
       bool keep_particles, reuse_particles;
-
       scene (const vec3 &c, const vec3 &l, const vec3 &s, double fdx,
              const std::string &oname, bool keep, bool reuse)
         : campos(c), lookat(l), sky(s), fidx(fdx), outname(oname),
           keep_particles(keep), reuse_particles(reuse) {}
+	
       };
 
     std::vector<scene> scenes;
@@ -45,13 +49,21 @@ class sceneMaker
 // only used if the same particles are used for more than one scene
     std::vector<particle_sim> p_orig;
 
+#ifdef SPLVISIVO
+   void fetchFiles(std::vector<particle_sim> &particle_data, double fidx,VisIVOServerOptions &opt);
+#else
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
-
+#endif
   public:
+#ifdef SPLVISIVO
+    sceneMaker (paramfile &par, VisIVOServerOptions &opt);
+    bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
+      vec3 &lookat, vec3 &sky, std::string &outfile, VisIVOServerOptions &opt);
+#else
     sceneMaker (paramfile &par);
-
     bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
       vec3 &lookat, vec3 &sky, std::string &outfile);
+#endif
   };
 
 #endif

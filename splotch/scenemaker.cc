@@ -35,8 +35,8 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   for(int t=0;t<nt;t++)
     {
-    log_int[t] = params.find<bool>("intensity_log"+dataToString(t),true);
-    log_col[t] = params.find<bool>("color_log"+dataToString(t),true);
+    log_int[t] = params.find<bool>("intensity_log"+dataToString(t),false);
+    log_col[t] = params.find<bool>("color_log"+dataToString(t),false);
     asinh_col[t] = params.find<bool>("color_asinh"+dataToString(t),false);
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
@@ -243,15 +243,22 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   if(mpiMgr.master())
     cout << " found " << p.size() << " common particles ..." << endl;
   }
-
+#ifdef SPLVISIVO
+sceneMaker::sceneMaker (paramfile &par, VisIVOServerOptions &opt)
+  : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
+#else
 sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
+#endif
   {
   // do nothing if we are only analyzing ...
 
   vec3 campos, lookat, sky;
+#ifdef SPLVISIVO
+  string outfile = opt.imageName;
+#else
   string outfile = params.find<string>("outfile","demo");
-
+#endif
   if (params.find<bool>("AnalyzeSimulationOnly",false)) 
     {
       scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
@@ -260,16 +267,32 @@ sceneMaker::sceneMaker (paramfile &par)
 
   string geometry_file = params.find<string>("geometry_file","");
   interpol_mode = params.find<int>("interpolation_mode",0);
-
+#ifdef SPLVISIVO
+  interpol_mode=0; //Visivo does not use the dynamical evolution: forced to 0
+#endif
   if (geometry_file=="")
     {
+#ifdef SPLVISIVO
+  campos=vec3(opt.spPosition[0],
+               opt.spPosition[1],
+  	       opt.spPosition[2]);
+  lookat=vec3(opt.spLookat[0],
+                opt.spLookat[1],
+                opt.spLookat[2]);
+  sky=vec3(params.find<double>("sky_x",0),
+                params.find<double>("sky_y",0),
+                params.find<double>("sky_z",1));
+
+#else
     campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),
                 params.find<double>("camera_z"));
     lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),
                 params.find<double>("lookat_z"));
     sky=vec3(params.find<double>("sky_x",0),params.find<double>("sky_y",0),
              params.find<double>("sky_z",0));
+#endif
     scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
+
     }
   else
     {
@@ -333,8 +356,11 @@ sceneMaker::sceneMaker (paramfile &par)
       }
     }
   }
-
+#ifdef SPLVISIVO
+void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx,VisIVOServerOptions &opt)
+#else
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
+#endif
   {
   if (scenes[cur_scene].reuse_particles)
     { particle_data=p_orig; return; }
@@ -342,11 +368,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   wallTimers.start("read");
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
+#ifdef SPLVISIVO
+  int simtype=params.find<int>("simtype",10);
+#else
   int simtype = params.find<int>("simtype");
-  int spacing = params.find<double>("snapshot_spacing",1);
-  int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
-  double frac=(fidx-snr1)/spacing;
-
+#endif
+  double frac=0;
+  int snr1 = int(fidx), snr2=snr1+1;
+  frac = fidx-snr1;
   switch (simtype)
     {
     case 0:
@@ -374,14 +403,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
         if (snr1_now!=snr1)
           {
           cout << " reading new1 " << snr1 << endl;
-          gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+          gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1);
           buildIndex(id1.begin(),id1.end(),idx1);
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
-          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
+          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2);
           buildIndex(id2.begin(),id2.end(),idx2);
           snr2_now = snr2;
           }
@@ -389,7 +418,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       else
         {
         double dummy;
-        gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy,boxsize);
+        gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy);
         }
       break;
     case 3:
@@ -423,6 +452,12 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       hdf5_reader(params,particle_data);
       break;
 #endif
+#ifdef SPLVISIVO
+    case 10:
+      if(!visivo_reader(params,particle_data,opt))
+	planck_fail("Invalid read data ...");
+	break;
+#endif
     default:
       planck_fail("No valid file type given ...");
       break;
@@ -448,10 +483,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
   }
-
+#ifdef SPLVISIVO
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
-			       vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
-  {
+  vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile,VisIVOServerOptions &opt)
+#else
+bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
+  vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
+#endif
+{
   if (tsize(++cur_scene) >= scenes.size()) return false;
 
   const scene &scn=scenes[cur_scene];
@@ -459,37 +498,10 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   lookat=scn.lookat;
   sky=scn.sky;
   outfile=scn.outname;
-
+#ifdef SPLVISIVO
+  fetchFiles(particle_data,scn.fidx,opt);
+#else
   fetchFiles(particle_data,scn.fidx);
-
-  if (params.find<bool>("Periodic",true)) 
-    {
-      int npart = particle_data.size();
-      double boxhalf = boxsize / 2;
-
-      if(mpiMgr.master())
-	cout << " doing parallel box wrap " << boxsize << endl;
-#pragma omp parallel
-      {
-	int m;
-#pragma omp for schedule(guided,1000)
-	for (m=0; m<npart; ++m)
-	  {
-	    if(particle_data[m].x - lookat.x > boxhalf)
-	      particle_data[m].x -= boxsize;
-	    if(lookat.x - particle_data[m].x > boxhalf)
-	      particle_data[m].x += boxsize;
-	    if(particle_data[m].y - lookat.y > boxhalf)
-	      particle_data[m].y -= boxsize;
-	    if(lookat.y - particle_data[m].y > boxhalf)
-	      particle_data[m].y += boxsize;
-	    if(particle_data[m].z - lookat.z > boxhalf)
-	      particle_data[m].z -= boxsize;
-	    if(lookat.z - particle_data[m].z > boxhalf)
-	      particle_data[m].z += boxsize;
-	  }
-      }
-    }
-
+#endif
   return true;
   }

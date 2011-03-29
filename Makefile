@@ -18,9 +18,12 @@ OPT	+=  -DUSE_MPI
 #OPT     +=  -DCUDA
 #OPT     +=  -DNO_WIN_THREAD
 
+#--------------------------------------- Turn on VisIVO stuff
+#OPT	+=  -DSPLVISIVO
+
 #--------------------------------------- Select target Computer
 
-#SYSTYPE="SP6"
+SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
@@ -105,7 +108,7 @@ OPTIONS = $(OPTIMIZE) $(OPT)
 EXEC   = Splotch4.4$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
-        reader/mesh_reader.o \
+        reader/mesh_reader.o reader/visivo_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/cxxutils.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	writer/write_tga.o writer/write_ppm.o splotch/splotchutils.o splotch/splotch.o \

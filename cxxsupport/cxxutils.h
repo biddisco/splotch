@@ -276,7 +276,7 @@ template<typename It> inline void indirectSort (It begin, It end)
 /*! \{ */
 
 /*! Returns the string \a orig without leading and trailing whitespace. */
-std::string trim (const std::string &orig);
+std::string SPLtrim (const std::string &orig);
 
 /*! Returns a string containing the text representation of \a x.
     Care is taken that no information is lost in the conversion. */

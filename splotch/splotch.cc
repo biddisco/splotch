@@ -22,6 +22,10 @@
 #include <cmath>
 #include <algorithm>
 
+#ifdef SPLVISIVO
+#include "optionssetter.h"
+#endif
+
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
@@ -33,14 +37,28 @@
 #endif
 
 using namespace std;
-
+#ifdef SPLVISIVO
+int splotchMain (VisIVOServerOptions opt)
+#else
 int main (int argc, const char **argv)
+#endif
   {
   wallTimers.start("full");
   wallTimers.start("setup");
   bool master = mpiMgr.master();
+#ifdef SPLVISIVO
+//  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
+  if(opt.splotchpar.empty())
+  {	
+	std::cout<<"usage: --splotch <parameter file>"<<std::endl;
+	return -1;
+   }
+  paramfile params (opt.splotchpar.c_str(),false);
+#else  
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   paramfile params (argv[1],false);
+#endif
+  
 
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
@@ -80,12 +98,21 @@ int main (int argc, const char **argv)
   if (gpu_info) print_device_info(myID, mydevID);
 #endif // CUDA
 
-  get_colourmaps(params,amap);
+#ifdef SPLVISIVO
+  get_colourmaps(params,amap,opt); 
+#else
+  get_colourmaps(params,amap); 
+#endif
   wallTimers.stop("setup");
-
-  sceneMaker sMaker(params);
   string outfile;
+
+#ifdef SPLVISIVO
+  sceneMaker sMaker(params,opt);  
+  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile,opt))
+#else
+  sceneMaker sMaker(params);  
   while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
+#endif
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
     int xres = params.find<int>("xres",800),
@@ -94,7 +121,11 @@ int main (int argc, const char **argv)
 
 #ifndef CUDA
     if(particle_data.size()>0)
-      host_rendering(params, particle_data, pic, campos, lookat, sky, amap);
+#ifdef SPLVISIVO
+    host_rendering(params, particle_data, pic, campos, lookat, sky, amap,opt);
+#else
+      host_rendering(params, particle_data, pic, campos, lookat, sky, amap); 
+#endif
 #else
     cuda_rendering(mydevID, nDevProc, pic);
 #endif
