@@ -344,6 +344,10 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     cout << endl << "reading data ..." << endl;
   int simtype = params.find<int>("simtype");
   double frac=0;
+int spacing = 4;
+int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
+frac=(fidx-snr1)/spacing;
+
   int snr1 = int(fidx), snr2=snr1+1;
   frac = fidx-snr1;
   switch (simtype)
