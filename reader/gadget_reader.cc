@@ -58,7 +58,7 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
   }
 
-int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal)
+int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal, double &boxsize)
   {
   int blocksize = gadget_find_block (file,"HEAD");
   planck_assert (blocksize>0, "Header block not found");
@@ -68,13 +68,15 @@ int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *npart
   file >> time;
   file.skip(8+4+4);
   file.get(nparttotal,6);
+  file.skip(4+4);
+  file >> boxsize;
 
   return blocksize;
   }
 
 void gadget_reader(paramfile &params, int interpol_mode,
-  vector<particle_sim> &p, vector<uint32> &id, vector<vec3f> &vel, int snr,
-  double &time)
+		   vector<particle_sim> &p, vector<uint32> &id, vector<vec3f> &vel, int snr,
+		   double &time, double &boxsize)
   {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",false);
@@ -92,6 +94,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
   if (interpol_mode>0)
     infilename += intToString(snr,3);
+
+  if (params.find<bool>("snapdir",false))
+    infilename = "snapdir_"+intToString(snr,3)+"/"+infilename;
 
   planck_assert(numfiles >= readparallel,
     "Number of files must be larger or equal number of parallel reads ...");
@@ -136,7 +141,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         if(numfiles>1) filename+="."+dataToString(file);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time,nparttotal);
+        gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
         infile.close();
 	if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
 	  cout << "    Timestamp from file : t=" << time << endl;
@@ -205,6 +210,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
 
   mpiMgr.bcast(NPartThisTask,0);
+  mpiMgr.bcast(boxsize,0);
 
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     {
@@ -258,7 +264,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 	cout << " Task: " << ThisTask << " reading file " << filename << endl;
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
       gadget_find_block(infile,"POS");
       infile.skip(4);
       for(int itype=0;itype<ptypes;itype++)
@@ -394,7 +400,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
           infile.open(filename.c_str(),doswap);
           planck_assert (infile,"could not open input file! <" + filename + ">");
-          gadget_read_header(infile,npartthis,time,nparttotal);
+          gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
           gadget_find_block(infile,"VEL");
           infile.skip(4);
           for(int itype=0;itype<ptypes;itype++)
@@ -471,7 +477,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time,nparttotal);
+        gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
         string label_id = params.find<string>("id_label","ID");
         gadget_find_block(infile,label_id);
         infile.skip(4);
@@ -536,7 +542,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
 
       for(int itype=0;itype<ptypes;itype++)
         {
@@ -606,7 +612,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
 
       for(int itype=0;itype<ptypes;itype++)
         {
@@ -717,7 +723,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
       for(int itype=0;itype<ptypes;itype++)
         {
         int type = params.find<int>("ptype"+dataToString(itype),0);
