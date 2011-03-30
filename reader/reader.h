@@ -5,7 +5,7 @@
 
 void gadget_reader(paramfile &params, int interpol_mode,
   std::vector<particle_sim> &p, std::vector<uint32> &id,
-  std::vector<vec3f> &vel, int snr, double &time);
+  std::vector<vec3f> &vel, int snr, double &time, double &boxsize);
 void gadget_millenium_reader(paramfile &params, std::vector<particle_sim> &p, int snr, double *time);
 void bin_reader_tab (paramfile &params, std::vector<particle_sim> &points);
 void bin_reader_block (paramfile &params, std::vector<particle_sim> &points);
