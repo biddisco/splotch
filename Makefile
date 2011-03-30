@@ -1,5 +1,5 @@
 #######################################################################
-#  Splotch V4.4                                                       #
+#  Splotch V4.5                                                       #
 #######################################################################
 
 #--------------------------------------- Switch on MPI
@@ -105,7 +105,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.4$(SYSTYPE)
+EXEC   = Splotch4.5$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
