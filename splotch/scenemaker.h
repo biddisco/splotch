@@ -35,6 +35,7 @@ class sceneMaker
 
     int interpol_mode;
 
+    double boxsize;
 // only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
     std::vector<uint32> id1,id2,idx1,idx2;
