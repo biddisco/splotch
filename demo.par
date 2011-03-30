@@ -10,10 +10,12 @@ infile=snap_092
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
 # 6: mesh reader, 7: hdf7
 simtype=2
+snapshot_spacing=1
+snapdir=FALSE
 
 # Additional flags for Gadget
 numfiles=1
-swap_endian=TRUE
+#swap_endian=TRUE
 ptypes=2
 ptype0=0
 ptype1=4
