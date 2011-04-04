@@ -186,8 +186,9 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     {
     if (id1[idx1[i1]]==id2[idx2[i2]])
       {
-      v.push_back(pair<uint32,uint32>(idx1[i1],idx2[i2]));
-      i1++; i2++;
+	if(p1[idx1[i1]].type==p2[idx2[i2]].type)
+	  v.push_back(pair<uint32,uint32>(idx1[i1],idx2[i2]));
+	i1++; i2++;
       }
     else if (id1[idx1[i1]]<id2[idx2[i2]])
       i1++;
