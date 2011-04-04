@@ -26,7 +26,7 @@
  *  This file contains the implementation of various convenience functions
  *  used by the Planck LevelS package.
  *
- *  Copyright (C) 2002 - 2010 Max-Planck-Society
+ *  Copyright (C) 2002-2011 Max-Planck-Society
  *  Authors: Martin Reinecke, Reinhard Hell
  */
 
@@ -51,7 +51,9 @@
 
 using namespace std;
 
-string SPLtrim (const string &orig)
+#define trim SPLtrim
+
+string trim (const string &orig)
   {
   string::size_type p1=orig.find_first_not_of(" \t");
   if (p1==string::npos) return "";
@@ -63,24 +65,30 @@ template<typename T> string dataToString (const T &x)
   {
   ostringstream strstrm;
   strstrm << x;
-  return SPLtrim(strstrm.str());
+  return trim(strstrm.str());
   }
 
 template<> string dataToString (const bool &x)
   { return x ? "T" : "F"; }
 template<> string dataToString (const string &x)
-  { return SPLtrim(x); }
+  { return trim(x); }
 template<> string dataToString (const float &x)
   {
   ostringstream strstrm;
   strstrm << setprecision(8) << x;
-  return SPLtrim(strstrm.str());
+  return trim(strstrm.str());
   }
 template<> string dataToString (const double &x)
   {
   ostringstream strstrm;
   strstrm << setprecision(16) << x;
-  return SPLtrim(strstrm.str());
+  return trim(strstrm.str());
+  }
+template<> string dataToString (const long double &x)
+  {
+  ostringstream strstrm;
+  strstrm << setprecision(25) << x;
+  return trim(strstrm.str());
   }
 
 template string dataToString (const signed char &x);
@@ -98,7 +106,7 @@ string intToString(int64 x, tsize width)
   {
   ostringstream strstrm;
   strstrm << setw(width) << setfill('0') << x;
-  return SPLtrim(strstrm.str());
+  return trim(strstrm.str());
   }
 
 namespace {
@@ -109,7 +117,7 @@ void end_stringToData (const string &x, const char *tn, istringstream &strstrm)
   planck_assert (strstrm,error);
   string rest;
   strstrm >> rest;
-//  rest=SPLtrim(rest);
+//  rest=trim(rest);
   planck_assert (rest.length()==0,error);
   }
 
@@ -123,7 +131,7 @@ template<typename T> void stringToData (const string &x, T &value)
   }
 
 template<> void stringToData (const string &x, string &value)
-  { value = SPLtrim(x); }
+  { value = trim(x); }
 
 template<> void stringToData (const string &x, bool &value)
   {
@@ -149,6 +157,7 @@ template void stringToData (const string &x, long long &value);
 template void stringToData (const string &x, unsigned long long &value);
 template void stringToData (const string &x, float &value);
 template void stringToData (const string &x, double &value);
+template void stringToData (const string &x, long double &value);
 
 bool equal_nocase (const string &a, const string &b)
   {
@@ -170,29 +179,39 @@ namespace {
 
 void openmp_status()
   {
+#ifndef _OPENMP
+  cout << "OpenMP: not supported by this binary" << endl;
+#else
   int threads = openmp_max_threads();
   if (threads>1)
-    cout << "OpenMP active: max. " << threads << " threads. " << endl;
+    cout << "OpenMP active: max. " << threads << " threads." << endl;
+  else
+    cout << "OpenMP active, but running with 1 thread only." << endl;
+#endif
   }
 
 void MPI_status()
   {
+#ifndef USE_MPI
+  cout << "MPI: not supported by this binary" << endl;
+#else
   int tasks = mpiMgr.num_ranks();
   if (tasks>1)
-    cout << "MPI active with " << tasks << " tasks. " << endl;
+    cout << "MPI active with " << tasks << " tasks." << endl;
+  else
+    cout << "MPI active, but running with 1 task only. " << endl;
+#endif
   }
 
 void SSE_status()
   {
-#if(defined(PLANCK_HAVE_SSE)||defined(PLANCK_HAVE_SSE2))
-  cout << "Processor features detected: ";
+  cout << "Vector math: ";
 #if(defined(PLANCK_HAVE_SSE)&&defined(PLANCK_HAVE_SSE2))
   cout << "SSE, SSE2" << endl;
 #elif(defined(PLANCK_HAVE_SSE))
   cout << "SSE" << endl;
 #else
-  cout << "SSE2" << endl;
-#endif
+  cout << "not supported by this binary" << endl;
 #endif
   }
 
@@ -218,7 +237,7 @@ void module_startup (const string &name, int argc, const char **,
   {
   if (verbose) announce (name);
   if (argc==argc_expected) return;
-  cerr << "Usage: " << name << " " << argv_expected << endl;
+  if (verbose) cerr << "Usage: " << name << " " << argv_expected << endl;
   planck_fail_quietly ("Incorrect usage");
   }
 
@@ -236,14 +255,14 @@ void parse_file (const string &filename, map<string,string> &dict)
     // remove potential carriage returns at the end of the line
     line=line.substr(0,line.find("\r"));
     line=line.substr(0,line.find("#"));
-    line=SPLtrim(line);
+    line=trim(line);
     if (line.size()>0)
       {
       string::size_type eqpos=line.find("=");
       if (eqpos!=string::npos)
         {
-        string key=SPLtrim(line.substr(0,eqpos)),
-               value=SPLtrim(line.substr(eqpos+1,string::npos));
+        string key=trim(line.substr(0,eqpos)),
+               value=trim(line.substr(eqpos+1,string::npos));
         if (key=="")
           cerr << "Warning: empty key in '" << filename << "', line "
                << lineno << endl;
@@ -272,6 +291,8 @@ void calcShareGeneral (int64 glo, int64 ghi, int64 nshares, int64 myshare,
   hi = lo+nbase+(myshare<additional);
   }
 
+namespace {
+
 template<typename T> void split (istream &stream, vector<T> &list)
   {
   while (stream)
@@ -284,6 +305,8 @@ template<typename T> void split (istream &stream, vector<T> &list)
     if (stream) list.push_back(stringToData<T>(word));
     }
   }
+
+} // unnamed namespace
 
 template<typename T> void split (const string &inp, vector<T> &list)
   {

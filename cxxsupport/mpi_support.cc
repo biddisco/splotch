@@ -12,6 +12,8 @@ using namespace std;
 
 #ifdef USE_MPI
 
+#define LS_COMM MPI_COMM_WORLD
+
 namespace {
 
 MPI_Datatype ndt2mpi (NDT type)
@@ -78,24 +80,34 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
 
 MPI_Manager::MPI_Manager ()
   {
-  MPI_Init(0,0);
-  MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+  int flag;
+  MPI_Initialized(&flag);
+  if (!flag)
+    {
+    MPI_Init(0,0);
+    MPI_Errhandler_set(LS_COMM, MPI_ERRORS_ARE_FATAL);
+    }
   }
 MPI_Manager::~MPI_Manager ()
-  { MPI_Finalize(); }
+  {
+  int flag;
+  MPI_Finalized(&flag);
+  if (!flag)
+    MPI_Finalize();
+  }
 
 void MPI_Manager::abort() const
-  { MPI_Abort(MPI_COMM_WORLD, 1); }
+  { MPI_Abort(LS_COMM, 1); }
 
 int MPI_Manager::num_ranks() const
-  { int res; MPI_Comm_size(MPI_COMM_WORLD, &res); return res; }
+  { int res; MPI_Comm_size(LS_COMM, &res); return res; }
 int MPI_Manager::rank() const
-  { int res; MPI_Comm_rank(MPI_COMM_WORLD, &res); return res; }
+  { int res; MPI_Comm_rank(LS_COMM, &res); return res; }
 bool MPI_Manager::master() const
   { return (rank() == 0); }
 
 void MPI_Manager::barrier() const
-  { MPI_Barrier(MPI_COMM_WORLD); }
+  { MPI_Barrier(LS_COMM); }
 
 #else
 
@@ -117,21 +129,21 @@ void MPI_Manager::barrier() const {}
 void MPI_Manager::sendRawVoid (const void *data, NDT type, tsize num,
   tsize dest) const
   {
-  MPI_Send(const_cast<void *>(data),num,ndt2mpi(type),dest,0,MPI_COMM_WORLD);
+  MPI_Send(const_cast<void *>(data),num,ndt2mpi(type),dest,0,LS_COMM);
   }
 void MPI_Manager::recvRawVoid (void *data, NDT type, tsize num, tsize src) const
-  { MPI_Recv(data,num,ndt2mpi(type),src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE); }
+  { MPI_Recv(data,num,ndt2mpi(type),src,0,LS_COMM,MPI_STATUS_IGNORE); }
 void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
   tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const
   {
   MPI_Datatype dtype = ndt2mpi(type);
   MPI_Sendrecv (const_cast<void *>(sendbuf),sendcnt,dtype,dest,0,
-    recvbuf,recvcnt,dtype,src,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+    recvbuf,recvcnt,dtype,src,0,LS_COMM,MPI_STATUS_IGNORE);
   }
 void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
   tsize dest, tsize src) const
   {
-  MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,MPI_COMM_WORLD,
+  MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,LS_COMM,
     MPI_STATUS_IGNORE);
   }
 
@@ -139,28 +151,25 @@ void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
   const
   {
   MPI_Datatype dtype = ndt2mpi(type);
-  MPI_Gather(const_cast<void *>(in),1,dtype,out,num,dtype,0,MPI_COMM_WORLD);
+  MPI_Gather(const_cast<void *>(in),1,dtype,out,num,dtype,0,LS_COMM);
   }
 void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
   const int *nval, const int *offset, NDT type) const
   {
   MPI_Datatype dtype = ndt2mpi(type);
   MPI_Gatherv(const_cast<void *>(in),num,dtype,out,const_cast<int *>(nval),
-    const_cast<int *>(offset),dtype,0,MPI_COMM_WORLD);
+    const_cast<int *>(offset),dtype,0,LS_COMM);
   }
 
 void MPI_Manager::allgatherRawVoid (const void *in, void *out, NDT type,
   tsize num) const
   {
   MPI_Datatype tp = ndt2mpi(type);
-  MPI_Allgather (const_cast<void *>(in),num,tp,out,num,tp,MPI_COMM_WORLD);
+  MPI_Allgather (const_cast<void *>(in),num,tp,out,num,tp,LS_COMM);
   }
 void MPI_Manager::allreduceRawVoid (void *data, NDT type,
   tsize num, redOp op) const
-  {
-  MPI_Allreduce (MPI_IN_PLACE,data,num,ndt2mpi(type),op2mop(op),
-    MPI_COMM_WORLD);
-  }
+  { MPI_Allreduce (MPI_IN_PLACE,data,num,ndt2mpi(type),op2mop(op),LS_COMM); }
 void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   tsize num, redOp op) const
   {
@@ -171,11 +180,11 @@ void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
   redOp op, int root) const
   {
   MPI_Reduce (const_cast<void *>(in),out,num,ndt2mpi(type),op2mop(op), root,
-    MPI_COMM_WORLD);
+    LS_COMM);
   }
 
 void MPI_Manager::bcastRawVoid (void *data, NDT type, tsize num, int root) const
-  { MPI_Bcast (data,num,ndt2mpi(type),root,MPI_COMM_WORLD); }
+  { MPI_Bcast (data,num,ndt2mpi(type),root,LS_COMM); }
 
 void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
   tsize num) const
@@ -184,8 +193,7 @@ void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
   planck_assert (num%nranks==0,
     "array size is not divisible by number of ranks");
   MPI_Datatype tp = ndt2mpi(type);
-  MPI_Alltoall (const_cast<void *>(in),num/nranks,tp,out,num/nranks,tp,
-    MPI_COMM_WORLD);
+  MPI_Alltoall (const_cast<void *>(in),num/nranks,tp,out,num/nranks,tp,LS_COMM);
   }
 
 void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
@@ -195,7 +203,7 @@ void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
   MPI_Datatype tp = ndt2mpi(type);
   MPI_Alltoallv (const_cast<void *>(in), const_cast<int *>(numin),
     const_cast<int *>(disin), tp, out, const_cast<int *>(numout),
-    const_cast<int *>(disout), tp, MPI_COMM_WORLD);
+    const_cast<int *>(disout), tp, LS_COMM);
   }
 
 #else
