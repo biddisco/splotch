@@ -75,7 +75,7 @@ int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *npart
   }
 
 void gadget_reader(paramfile &params, int interpol_mode,
-		   vector<particle_sim> &p, vector<uint32> &id, vector<vec3f> &vel, int snr,
+		   vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
 		   double &time, double &boxsize)
   {
   int numfiles = params.find<int>("numfiles",1);
@@ -486,8 +486,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
           int type = params.find<int>("ptype"+dataToString(itype),0);
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
-              infile.skip(4*npartthis[s]);
-          arr<unsigned int> ftmp(npartthis[type]);
+              infile.skip(sizeof(MyIDType)*npartthis[s]);
+          arr<MyIDType> ftmp(npartthis[type]);
           infile.get(&ftmp[0],ftmp.size());
           for(int m=0; m<npartthis[type]; ++m)
             {
