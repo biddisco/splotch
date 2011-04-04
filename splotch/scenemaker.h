@@ -38,7 +38,8 @@ class sceneMaker
     double boxsize;
 // only used if interpol_mode>0
     std::vector<particle_sim> p1,p2;
-    std::vector<uint32> id1,id2,idx1,idx2;
+    std::vector<MyIDType> id1,id2;
+    std::vector<uint32> idx1,idx2;
     int snr1_now,snr2_now;
     double time1,time2;
 // only used if interpol_mode>1

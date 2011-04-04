@@ -34,6 +34,12 @@
 #endif
 
 
+#ifdef LONGIDS
+#define MyIDType uint64
+#else
+#define MyIDType uint32
+#endif
+
 struct particle_sim
   {
   COLOUR e;

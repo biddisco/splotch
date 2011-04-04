@@ -178,7 +178,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     v_unit2=v_unit/l_unit/sqrt(time2)*dt;
     }
 
-  vector<pair<uint32,uint32> > v;
+  vector<pair<MyIDType,MyIDType> > v;
   v.reserve(min(p1.size(),p2.size()));
   {
   tsize i1=0,i2=0;
@@ -187,7 +187,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     if (id1[idx1[i1]]==id2[idx2[i2]])
       {
 	if(p1[idx1[i1]].type==p2[idx2[i2]].type)
-	  v.push_back(pair<uint32,uint32>(idx1[i1],idx2[i2]));
+	  v.push_back(pair<MyIDType,MyIDType>(idx1[i1],idx2[i2]));
 	i1++; i2++;
       }
     else if (id1[idx1[i1]]<id2[idx2[i2]])
