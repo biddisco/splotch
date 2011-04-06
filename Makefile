@@ -2,6 +2,9 @@
 #  Splotch V4.5                                                       #
 #######################################################################
 
+#--------------------------------------- Switch on DataSize
+#OPT     +=  -DLONGIDS
+
 #--------------------------------------- Switch on MPI
 OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
@@ -23,7 +26,7 @@ OPT	+=  -DUSE_MPI
 
 #--------------------------------------- Select target Computer
 
-SYSTYPE="SP6"
+#SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
