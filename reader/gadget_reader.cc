@@ -489,6 +489,21 @@ void gadget_reader(paramfile &params, int interpol_mode,
               infile.skip(sizeof(MyIDType)*npartthis[s]);
           arr<MyIDType> ftmp(npartthis[type]);
           infile.get(&ftmp[0],ftmp.size());
+
+	  if(type == 0)
+	    {
+	      cout << "WARNING: Patching IDs for gas particles in Magneticum runs !!!" << endl;
+	      for(unsigned int m=0; m<ftmp.size(); m++)
+		ftmp[m] = ftmp[m] & 3221225471;           // remove upper 2 bits opf 32bit value 2^30-1
+	    }
+
+	  if(type == 4)
+	    {
+	      cout << "WARNING: Patching IDs for star particles in Magneticum runs !!!" << endl;
+	      for(unsigned int m=0; m<ftmp.size(); m++)
+		ftmp[m] = ftmp[m] + 536870912;           // adding 2^29
+	    }
+
           for(int m=0; m<npartthis[type]; ++m)
             {
             if(ThisTask == ToTask)
