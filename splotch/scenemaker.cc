@@ -439,14 +439,22 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           {
           cout << " reading new1 " << snr1 << endl;
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+	  wallTimers.stop("read");
+	  wallTimers.start("buildindex");
           buildIndex(id1.begin(),id1.end(),idx1);
+	  wallTimers.stop("buildindex");
+	  wallTimers.start("read");
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
           gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
+	  wallTimers.stop("read");
+	  wallTimers.start("buildindex");
           buildIndex(id2.begin(),id2.end(),idx2);
+	  wallTimers.stop("buildindex");
+	  wallTimers.start("read");
           snr2_now = snr2;
           }
         }
@@ -498,16 +506,17 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       break;
     }
 
+  wallTimers.stop("read");
+
   if (interpol_mode>0)
     {
     if (mpiMgr.master())
       cout << "Interpolating between " << p1.size() << " and " <<
         p2.size() << " particles ..." << endl;
-    particle_interpolate(particle_data,frac);
+      wallTimers.start("interoplate");
+      particle_interpolate(particle_data,frac);
+      wallTimers.stop("interoplate");
     }
-
-  wallTimers.stop("read");
-
   wallTimers.start("range");
   tsize npart_all = particle_data.size();
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);

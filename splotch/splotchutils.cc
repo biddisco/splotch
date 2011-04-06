@@ -145,6 +145,8 @@ void timeReport()
 void hostTimeReport(wallTimerSet &Timers)
   {
   cout << "Ranging Data (secs)        : " << Timers.acc("range") << endl;
+  cout << "Build Index List (secs)    : " << Timers.acc("buildindex") << endl;
+  cout << "Interpolating Data (secs)  : " << Timers.acc("interoplate") << endl;
   cout << "Transforming Data (secs)   : " << Timers.acc("transform") << endl;
   cout << "Sorting Data (secs)        : " << Timers.acc("sort") << endl;
   cout << "Coloring Sub-Data (secs)   : " << Timers.acc("coloring") << endl;
