@@ -186,7 +186,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     {
     if (id1[idx1[i1]]==id2[idx2[i2]])
       {
-	if(p1[idx1[i1]].type==p2[idx2[i2]].type)
+	//	if(p1[idx1[i1]].type==p2[idx2[i2]].type)
 	  v.push_back(pair<MyIDType,MyIDType>(idx1[i1],idx2[i2]));
 	i1++; i2++;
       }
@@ -200,6 +200,9 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   tsize npart=v.size();
   p.resize(npart);
 
+  bool periodic = params.find<bool>("Periodic",true);
+  double boxhalf = boxsize / 2;
+
 #pragma omp parallel
 {
   tsize i;
@@ -207,27 +210,53 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   for (i=0; i<npart; ++i)
     {
     tsize i1=v[i].first, i2=v[i].second;
+    /*
     planck_assert (p1[i1].type==p2[i2].type,
       "interpolate: cannot interpolate between different particle types!");
-
+    */
     vec3f pos;
+    double x1,x2,y1,y2,z1,z2;
+    if (periodic)
+      {
+	x1 = p1[i1].x;
+	x2 = p2[i2].x;
+        if( x2 - x1 > boxhalf) x2 -= boxsize;
+        if( x2 - x1 < boxhalf) x2 += boxsize;
+	y1 = p1[i1].y;
+	y2 = p2[i2].y;
+        if( y2 - y1 > boxhalf) y2 -= boxsize;
+        if( y2 - y1 < boxhalf) y2 += boxsize;
+	z1 = p1[i1].z;
+	z2 = p2[i2].z;
+        if( z2 - z1 > boxhalf) z2 -= boxsize;
+        if( z2 - z1 < boxhalf) z2 += boxsize;
+      }
+    else
+      {
+	x1 = p1[i1].x;
+	x2 = p2[i2].x;
+	y1 = p1[i1].y;
+	y2 = p2[i2].y;
+	z1 = p1[i1].z;
+	z2 = p2[i2].z;
+      }
     if (interpol_mode>1)
       {
-      double vda_x = 2 * (p2[i2].x-p1[i1].x) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
-      double vda_y = 2 * (p2[i2].y-p1[i1].y) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
-      double vda_z = 2 * (p2[i2].z-p1[i1].z) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
-      pos.x = p1[i1].x + vel1[i1].x * v_unit1 * frac
+      double vda_x = 2 * (x2-x1) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
+      double vda_y = 2 * (y2-y1) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
+      double vda_z = 2 * (z2-z1) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
+      pos.x = x1 + vel1[i1].x * v_unit1 * frac
            + 0.5 * (vel2[i2].x * v_unit2 - vel1[i1].x * v_unit1 + vda_x) * frac * frac;
-      pos.y = p1[i1].y + vel1[i1].y * v_unit1 * frac
+      pos.y = y1 + vel1[i1].y * v_unit1 * frac
            + 0.5 * (vel2[i2].y * v_unit2 - vel1[i1].y * v_unit1 + vda_y) * frac * frac;
-      pos.z = p1[i1].z + vel1[i1].z * v_unit1 * frac
+      pos.z = z1 + vel1[i1].z * v_unit1 * frac
            + 0.5 * (vel2[i2].z * v_unit2 - vel1[i1].z * v_unit1 + vda_z) * frac * frac;
       }
     else
       {
-      pos.x = (1-frac) * p1[i1].x  + frac*p2[i2].x;
-      pos.y = (1-frac) * p1[i1].y  + frac*p2[i2].y;
-      pos.z = (1-frac) * p1[i1].z  + frac*p2[i2].z;
+      pos.x = (1-frac) * x1  + frac*x2;
+      pos.y = (1-frac) * y1  + frac*y2;
+      pos.z = (1-frac) * z1  + frac*z2;
       }
 
     p[i]=particle_sim(
