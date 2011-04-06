@@ -216,29 +216,33 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     */
     vec3f pos;
     double x1,x2,y1,y2,z1,z2;
+
+    x1 = p1[i1].x;
+    x2 = p2[i2].x;
+    y1 = p1[i1].y;
+    y2 = p2[i2].y;
+    z1 = p1[i1].z;
+    z2 = p2[i2].z;
+
     if (periodic)
       {
-	x1 = p1[i1].x;
-	x2 = p2[i2].x;
-        if( x2 - x1 > boxhalf) x2 -= boxsize;
-        if( x2 - x1 < boxhalf) x2 += boxsize;
-	y1 = p1[i1].y;
-	y2 = p2[i2].y;
-        if( y2 - y1 > boxhalf) y2 -= boxsize;
-        if( y2 - y1 < boxhalf) y2 += boxsize;
-	z1 = p1[i1].z;
-	z2 = p2[i2].z;
-        if( z2 - z1 > boxhalf) z2 -= boxsize;
-        if( z2 - z1 < boxhalf) z2 += boxsize;
-      }
-    else
-      {
-	x1 = p1[i1].x;
-	x2 = p2[i2].x;
-	y1 = p1[i1].y;
-	y2 = p2[i2].y;
-	z1 = p1[i1].z;
-	z2 = p2[i2].z;
+        if(abs(x2 - x1) > boxhalf) 
+	  if(x2 > x1) 
+	    x2 -= boxsize;
+	  else 
+	    x2 += boxsize;
+
+        if(abs(y2 - y1) > boxhalf)
+          if(y2 > y1)
+            y2 -= boxsize;
+          else
+            y2 += boxsize;
+
+        if(abs(z2 - z1) > boxhalf)
+          if(z2 > z1)
+            z2 -= boxsize;
+          else
+            z2 += boxsize;
       }
     if (interpol_mode>1)
       {
