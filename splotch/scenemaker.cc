@@ -200,7 +200,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   tsize npart=v.size();
   p.resize(npart);
 
-  bool periodic = params.find<bool>("Periodic",true);
+  bool periodic = params.find<bool>("periodic",true);
   double boxhalf = boxsize / 2;
 
 #pragma omp parallel
@@ -548,7 +548,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   fetchFiles(particle_data,scn.fidx);
 #endif
 
- if (params.find<bool>("Periodic",true)) 
+ if (params.find<bool>("periodic",true)) 
     {
       int npart = particle_data.size();
       double boxhalf = boxsize / 2;
