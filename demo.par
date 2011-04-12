@@ -12,6 +12,7 @@ infile=snap_092
 simtype=2
 snapshot_spacing=1
 snapdir=FALSE
+periodic=FALSE
 
 # Additional flags for Gadget
 numfiles=1
@@ -32,6 +33,7 @@ intensity_max0=-1.44456
 color_label0=U
 color_present0=1
 color_is_vector0=FALSE
+color_log0=TRUE
 color_min0=0.152815
 color_max0=6.29244
 
@@ -39,13 +41,12 @@ size_fix1=0
 size_label1=HSMS
 size_present1=1
 size_fac1=0.5
-intensity_label1=RHO
+intensity_label1=XXXX
 intensity_present1=0
-intensity_min1=-11.8359
-intensity_max1=-1.44703
 color_label1=AGE
 color_present1=1
 color_is_vector1=FALSE
+color_log1=TRUE
 color_min1=-1.34248
 color_max1=0
 
