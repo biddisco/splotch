@@ -29,8 +29,8 @@
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
-#include "writer/writer.h"
 #include "cxxsupport/walltimer.h"
+#include "cxxsupport/ls_image.h"
 
 #ifdef CUDA
 #include "cuda/splotch_cuda2.h"
@@ -156,27 +156,33 @@ int main (int argc, const char **argv)
     if(!params.find<bool>("AnalyzeSimulationOnly"))
       {
       if (master)
+        {
         cout << endl << "saving file ..." << endl;
 
-      int pictype = params.find<int>("pictype",0);
+        LS_Image img(pic.size1(),pic.size2());
 
-      switch(pictype)
-        {
-        case 0:
-          if (master) write_tga(params,pic,outfile);
-          break;
-        case 1:
-          if (master) write_ppm_ascii(params,pic,outfile);
-          break;
-        case 2:
-          if (master) write_ppm_bin(params,pic,outfile);
-          break;
-        case 3:
-          if (master) write_tga_rle(params,pic,outfile);
-          break;
-        default:
-          planck_fail("No valid image file type given ...");
-          break;
+        for (tsize i=0; i<pic.size1(); ++i)
+          for (tsize j=0; j<pic.size2(); ++j)
+            img.put_pixel(i,j,Colour(pic[i][j].r,pic[i][j].g,pic[i][j].b));
+        int pictype = params.find<int>("pictype",0);
+        switch(pictype)
+          {
+          case 0:
+            img.write_TGA(outfile);
+            break;
+          case 1:
+            planck_fail("ASCII PPM no longer supported");
+            break;
+          case 2:
+            img.write_PPM(outfile);
+            break;
+          case 3:
+            img.write_TGA_rle(outfile);
+            break;
+          default:
+            planck_fail("No valid image file type given ...");
+            break;
+          }
         }
       }
 
