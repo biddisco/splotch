@@ -9,22 +9,79 @@ ENDIF(COMMAND CMAKE_POLICY)
 #--------------------------------------------------
 # Find and Use ParaView
 #--------------------------------------------------
-IF(NOT PARAVIEW_LOADED)
-  FIND_PACKAGE(ParaView REQUIRED)
-  INCLUDE(${PARAVIEW_USE_FILE})
-  SET(PARAVIEW_LOADED 1)
-ELSE(NOT PARAVIEW_LOADED)
-  IF (PARAVIEW_BUILD_QT_GUI)
-    INCLUDE(${QT_USE_FILE})
-  ENDIF (PARAVIEW_BUILD_QT_GUI)
+FIND_PACKAGE(ParaView REQUIRED)
+INCLUDE(${PARAVIEW_USE_FILE})
+
+IF (VTK_USE_PARALLEL AND VTK_USE_MPI)
+  INCLUDE_DIRECTORIES(${VTK_MPI_INCLUDE_DIR})
+  ADD_DEFINITIONS(-DUSE_MPI)
+ENDIF (VTK_USE_PARALLEL AND VTK_USE_MPI)
+
+#--------------------------------------------------
+# If not called from the splotch source directory
+# then build splotch
+#--------------------------------------------------
+IF (NOT TARGET splotchcore)
+  #-----------------------------------------------------------------------------
+  # OpenMP
+  #-----------------------------------------------------------------------------
+  OPTION(SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
+  IF (SPLOTCH_USE_OPENMP)
+    ADD_DEFINITIONS(-DHAVE_OPENMP)
+    SET(OpenMP_CXX_FLAGS "")
+    IF (WIN32 AND MSVC) 
+      SET(OpenMP_CXX_FLAGS "/openmp")
+    ENDIF (WIN32 AND MSVC) 
+  ENDIF (SPLOTCH_USE_OPENMP)
+
+  #-----------------------------------------------------------------------------
+  # Include Directories
+  #-----------------------------------------------------------------------------
   INCLUDE_DIRECTORIES(
-    ${PARAVIEW_INCLUDE_DIRS}
-    ${PARAVIEW_GUI_INCLUDE_DIRS}
-    ${PARAVIEW_KWSYS_INCLUDE_DIRS}
-    ${VTK_INCLUDE_DIR}
-    ${MPI_INCLUDE_PATH}
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../reader
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../writer
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
   )
-ENDIF(NOT PARAVIEW_LOADED)
+
+  #-----------------------------------------------------------------------------
+  # Source files for splotch core library
+  #-----------------------------------------------------------------------------
+  SET(SPLOTCH_CORE_LIB_SRCS
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/transform.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotchutils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/scenemaker.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch_host.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/cxxutils.cc
+  )
+
+  ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
+  SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+
+  #-----------------------------------------------------------------------------
+  # Source files for splotch IO library
+  #-----------------------------------------------------------------------------
+  SET(SPLOTCH_IO_LIB_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/mesh_reader.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/gadget_reader.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/millenium_reader.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader_mpi.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
+  )
+
+  ADD_LIBRARY(splotchio STATIC ${SPLOTCH_IO_LIB_SRCS})
+  SET_TARGET_PROPERTIES(splotchio PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+  TARGET_LINK_LIBRARIES(splotchio splotchcore ${SPLOTCH_MPI_LIBS})
+
+ENDIF (NOT TARGET splotchcore)
 
 #--------------------------------------------------
 # Set project include directories 
@@ -76,12 +133,10 @@ qt4_wrap_ui(UI_SRCS
 
 qt4_wrap_cpp(MOC_SRCS 
   pqSplotchRaytraceDisplayPanelDecorator.h
-  pqDisplayArrayWidget.h
   )
    
 set(Plugin_SRCS
   pqSplotchRaytraceDisplayPanelDecorator.cxx
-  pqDisplayArrayWidget.cxx
   )
 
     add_paraview_display_panel_decorator(
@@ -137,3 +192,9 @@ INSTALL(
   DESTINATION ${INSTALL_PATH}
 )
 
+#--------------------------------------------------
+# Testing
+#--------------------------------------------------
+IF (BUILD_TESTING)
+  ADD_SUBDIRECTORY(Testing)
+ENDIF (BUILD_TESTING)  
