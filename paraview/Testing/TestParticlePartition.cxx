@@ -10,7 +10,6 @@
 //
 #include <vector>
 #include <algorithm>
-#include "cxxsupport/mpi_support.h"
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
@@ -21,7 +20,6 @@
   #include <sys/time.h>
 #endif
 
-#include "vtkSmartPointer.h"
 #include "vtkActor.h"
 #include "vtkAppendPolyData.h"
 #include "vtkCamera.h"
@@ -42,6 +40,8 @@
 #include "vtkInformation.h"
 #include "vtkDebugLeaks.h"
 #include "vtkElevationFilter.h"
+#include "vtkH5PartWriter.h"
+#include "vtkH5PartReader.h"
 #include "vtkMaskPoints.h"
 #include "vtkProperty.h"
 #include "vtkPointData.h"
@@ -52,12 +52,10 @@
 #include "vtkTimerLog.h"
 #include "vtkColorTransferFunction.h"
 //
-#include "vtkH5PartWriter.h"
-#include "vtkH5PartReader.h"
-//
 #include <vtksys/SystemTools.hxx>
 #include <sstream>
 //
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -66,7 +64,6 @@
 #include "zoltan.h"
 //
 #include "vtkSplotchRaytraceMapper.h"
-#include <mpi.h>
 
 #define PART_COUNT 1024
 #define NUM_PARTITIONS 32
@@ -399,7 +396,7 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
     Ids->SetTuple1(Id, Id);
     Ranks->SetTuple1(Id, myId);
     Parts->SetTuple1(Id, myId);
-    Bright->SetTuple1(Id, 0.01*particle_data[i].I);
+    Bright->SetTuple1(Id, particle_data[i].I);
     Types->SetTuple1(Id, particle_data[i].type);
     Values->SetTuple1(Id, particle_data[i].e.r);
     Active->SetTuple1(Id, particle_data[i].active);
@@ -687,6 +684,7 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
 #endif
 
 
+
       vtkSmartPointer<vtkColorTransferFunction>    lut = vtkSmartPointer<vtkColorTransferFunction>::New();
       vtkSmartPointer<vtkActor>                  actor = vtkSmartPointer<vtkActor>::New();
       vtkSmartPointer<vtkRenderer>                 ren = vtkSmartPointer<vtkRenderer>::New();
@@ -697,9 +695,9 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
       renWindow->SetSize( 400, 400);
       mapper->SetInput(polys);
 
-      lut->AddRGBPoint(0.0, 0,              0,            256.0*(255.0/255.0));
-      lut->AddRGBPoint(0.5, 256.0*(128.0/255.0), 256.0*(255.0/255.0), 256.0*(128.0/255.0));
-      lut->AddRGBPoint(1.0, 256.0*(255.0/255.0),   0,           0);
+      lut->AddRGBPoint(0.0, 0.0, 0.0, 1.0);
+      lut->AddRGBPoint(0.5, 0.5, 1.0, 0.5);
+      lut->AddRGBPoint(1.0, 1.0, 0.0, 0.0);
 
       lut->Build();
       mapper->SetLookupTable(lut);
@@ -708,6 +706,13 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
       actor->SetMapper(mapper);
       ren->AddActor(actor);
       renWindow->AddRenderer(ren);
+
+      vtkCamera *cam = ren->GetActiveCamera();
+      cam->SetPosition(3244.4, 25289.3, 4764.7);
+      cam->SetFocalPoint(-2000, 5289.3, 4764.7);
+      cam->SetViewUp(0,0,-1.0);
+      ren->ResetCameraClippingRange();
+
 /*
       vtkSmartPointer<vtkPolyData> polys2 = vtkSmartPointer<vtkPolyData>::New();
       polys2->ShallowCopy(verts->GetOutput());
