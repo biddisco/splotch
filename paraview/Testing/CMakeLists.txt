@@ -13,14 +13,14 @@ MESSAGE("${Trilinos_LIBRARY_DIRS}/${CMAKE_CFG_INTDIR}")
 # Test partitioner/raytracer
 #--------------------------------------------------
 INCLUDE_DIRECTORIES(
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../../plugins/pv-meshless
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../pv-meshless
 )
 
 ADD_EXECUTABLE(TestParticlePartition TestParticlePartition.cxx)
 TARGET_LINK_LIBRARIES(TestParticlePartition
-  pv_meshless
   splotchio
-  splotch_plugin
+  pv_splotch
+  pv_meshless
   ${Trilinos_LIBRARIES}
   )
 ADD_TEST(TestParticlePartition.cxx ${PROJECT_BINARY_DIR}/../bin/TestParticlePartition.cxx)

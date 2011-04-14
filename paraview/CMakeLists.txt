@@ -148,7 +148,7 @@ set(Plugin_SRCS
 #--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
-SET(LIBRARY_TARGET_NAME splotch_plugin)
+SET(LIBRARY_TARGET_NAME pv_splotch)
 
 ADD_PARAVIEW_PLUGIN(
   ${LIBRARY_TARGET_NAME}
@@ -171,7 +171,7 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(splotch_plugin splotchcore)
+TARGET_LINK_LIBRARIES(pv_splotch splotchcore)
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects
@@ -188,7 +188,7 @@ SET(INSTALL_PATH
 
 INSTALL(
   TARGETS 
-    splotch_plugin
+    pv_splotch
   DESTINATION ${INSTALL_PATH}
 )
 
