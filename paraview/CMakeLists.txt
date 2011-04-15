@@ -92,27 +92,6 @@ INCLUDE_DIRECTORIES(
 )
 
 #--------------------------------------------------
-# Source files, not wrapped by Client/Server
-#--------------------------------------------------
-SET(splotch_plugin_SRCS
-#  vtkSplotchRaytracePainter.cxx
-#  vtkSplotchRaytracePainter.h
-#  vtkSplotchRaytracePreprocessor.cxx
-#  vtkSplotchRaytracePreprocessor.h
-#  vtkSplotchRaytraceDefaultPainter.cxx
-#  vtkSplotchRaytraceDefaultPainter.h
-#  vtkSplotchRaytraceProperty.cxx
-#  vtkSplotchRaytraceProperty.h
-#  vtkSMSplotchRepresentation.cxx
-
-#  framebufferObject.cpp          
-#  glErrorUtil.cpp                
-#  renderbuffer.cpp               
-#  vtkPointSpriteMapper.cxx            
-#  vtkPointSpriteDepthSort.cxx  
-)
-
-#--------------------------------------------------
 # Source files, that are wrapped by Client/Server
 #--------------------------------------------------
 SET( splotch_plugin_WRAPPED_SRCS
@@ -139,11 +118,11 @@ set(Plugin_SRCS
   pqSplotchRaytraceDisplayPanelDecorator.cxx
   )
 
-    add_paraview_display_panel_decorator(
-      IFACES
-      IFACE_SRCS
-      CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
-      PANEL_TYPES pqDisplayProxyEditor)
+add_paraview_display_panel_decorator(
+  IFACES
+  IFACE_SRCS
+  CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
+  PANEL_TYPES pqDisplayProxyEditor)
 
 #--------------------------------------------------
 # Define Plugin

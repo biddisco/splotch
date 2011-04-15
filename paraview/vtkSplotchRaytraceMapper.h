@@ -31,6 +31,9 @@ public:
 
   void Render(vtkRenderer *, vtkActor *);
 
+  vtkSetStringMacro(ValueScalars);
+  vtkGetStringMacro(ValueScalars);
+
   vtkSetStringMacro(IntensityScalars);
   vtkGetStringMacro(IntensityScalars);
 
@@ -49,6 +52,7 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
+  char *ValueScalars;
   char *IntensityScalars;
   char *RadiusScalars;
   char *TypeScalars;

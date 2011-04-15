@@ -64,6 +64,7 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
+  this->ValueScalars     = NULL;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
@@ -73,6 +74,7 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
+  delete []this->ValueScalars;
   delete []this->IntensityScalars;
   delete []this->RadiusScalars;
   delete []this->TypeScalars;
