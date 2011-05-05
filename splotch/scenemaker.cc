@@ -21,6 +21,7 @@
 #include "splotch/scenemaker.h"
 #include "cxxsupport/lsconstants.h"
 #include "cxxsupport/walltimer.h"
+#include "cxxsupport/cxxutils.h"
 #include "reader/reader.h"
 
 using namespace std;

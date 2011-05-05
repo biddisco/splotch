@@ -6,7 +6,6 @@
 #include <math.h>
 
 #include "cxxsupport/arr.h"
-#include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #include "cxxsupport/mpi_support.h"
 #include "splotch/splotchutils.h"

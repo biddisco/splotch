@@ -39,7 +39,7 @@ endif
 OMP      = -fopenmp
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
-SUP_INCL = -I. -Icxxsupport
+SUP_INCL = -I. -Icxxsupport -Ic_utils
 
 
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
@@ -112,10 +112,10 @@ EXEC   = Splotch4.5$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
-	cxxsupport/mpi_support.o cxxsupport/cxxutils.o cxxsupport/paramfile.o cxxsupport/ls_image.o reader/gadget_reader.o \
+	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	splotch/splotchutils.o splotch/splotch.o \
-	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o
+	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 

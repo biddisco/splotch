@@ -31,6 +31,7 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/ls_image.h"
+#include "cxxsupport/announce.h"
 
 #ifdef CUDA
 #include "cuda/splotch_cuda2.h"

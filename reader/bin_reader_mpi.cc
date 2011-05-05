@@ -12,7 +12,6 @@
 #include <vector>
 
 #include "cxxsupport/arr.h"
-#include "cxxsupport/cxxutils.h"
 #include "cxxsupport/paramfile.h"
 #include "kernel/colour.h"
 

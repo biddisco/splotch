@@ -23,7 +23,7 @@
  */
 
 /*
- *  Copyright (C) 2009, 2010 Max-Planck-Society
+ *  Copyright (C) 2009-2011 Max-Planck-Society
  *  \author Martin Reinecke
  */
 
@@ -32,6 +32,7 @@
 
 #include "datatypes.h"
 #include "arr.h"
+#include "share_utils.h"
 
 class MPI_Manager
   {
