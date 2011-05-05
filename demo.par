@@ -55,7 +55,7 @@ color_max1=0
 ############################
 
 # 0: TGA uncompressed, 1: PPM ASCII, 2: PPM binary, 3: TGA runlength-compressed
-pictype=2
+pictype=0
 outfile=demo.tga
 xres=800
 
