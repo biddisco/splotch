@@ -382,7 +382,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
               lpic[x][y]+=(lpic[x][y]-vq)*va*att;
             else
               {
-              typename V4sf::Tu tmp;
+              V4sf::Tu tmp;
               tmp.v=lpic[x][y].v;
               tmp.d[0] += xexp.expm1(att*a.r)*(tmp.d[0]-q.r);
               tmp.d[1] += xexp.expm1(att*a.g)*(tmp.d[1]-q.g);
