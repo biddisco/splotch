@@ -28,7 +28,7 @@
 #include "cxxsupport/lsconstants.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
-#include "cxxsupport/sse_utils.h"
+#include "cxxsupport/sse_utils_cxx.h"
 
 #define SPLOTCH_CLASSIC
 
@@ -286,7 +286,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 {
   arr<float32> pre1(chunkdim);
 #ifdef PLANCK_HAVE_SSE
-  arr2_align<v4sf,16> lpic(chunkdim,chunkdim);
+  arr2_align<V4sf,16> lpic(chunkdim,chunkdim);
 #else
   arr2<COLOUR> lpic(chunkdim,chunkdim);
 #endif
@@ -300,7 +300,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     x1-=x0; x0=0; y1-=y0; y0=0;
     lpic.fast_alloc(x1-x0,y1-y0);
 #ifdef PLANCK_HAVE_SSE
-    lpic.fill(_mm_setzero_ps());
+    lpic.fill(V4sf(0.));
 #else
     lpic.fill(COLOUR(0,0,0));
 #endif
@@ -329,7 +329,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
       COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
 #ifdef PLANCK_HAVE_SSE
-      v4sf va=build_v4sf(a.r,a.g,a.b,0.f);
+      V4sf va(a.r,a.g,a.b,0.f);
 #endif
 
       for (int y=miny; y<maxy; ++y)
@@ -348,9 +348,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
             {
             float32 att = pre1[y]*pre2;
 #ifdef PLANCK_HAVE_SSE
-            v4sf tmpatt=_mm_set1_ps(att);
-            tmpatt=_mm_mul_ps(tmpatt,va);
-            lpic[x][y]=_mm_add_ps(tmpatt,lpic[x][y]);
+            lpic[x][y]+=va*att;
 #else
             lpic[x][y].r += att*a.r;
             lpic[x][y].g += att*a.g;
@@ -366,7 +364,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
                  pp.e.b/(pp.e.b+grayabsorb));
 #ifdef PLANCK_HAVE_SSE
         float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
-        v4sf vq=build_v4sf(q.r,q.g,q.b,0.f);
+        V4sf vq(q.r,q.g,q.b,0.f);
 #endif
 
         for (int x=minx; x<maxx; ++x)
@@ -381,20 +379,14 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
             float32 att = pre1[y]*pre2;
 #ifdef PLANCK_HAVE_SSE
             if ((maxa*att)<taylorlimit)
-              {
-              v4sf tmpatt=_mm_set1_ps(att);
-              tmpatt=_mm_mul_ps(tmpatt,va);
-              v4sf tlpic=_mm_sub_ps(lpic[x][y],vq);
-              tlpic=_mm_mul_ps(tmpatt,tlpic);
-              lpic[x][y]=_mm_add_ps(tlpic,lpic[x][y]);
-              }
+              lpic[x][y]+=(lpic[x][y]-vq)*va*att;
             else
               {
-              V4SF tmp;
-              tmp.v=lpic[x][y];
-              tmp.f[0] += xexp.expm1(att*a.r)*(tmp.f[0]-q.r);
-              tmp.f[1] += xexp.expm1(att*a.g)*(tmp.f[1]-q.g);
-              tmp.f[2] += xexp.expm1(att*a.b)*(tmp.f[2]-q.b);
+              typename V4sf::Tu tmp;
+              tmp.v=lpic[x][y].v;
+              tmp.d[0] += xexp.expm1(att*a.r)*(tmp.d[0]-q.r);
+              tmp.d[1] += xexp.expm1(att*a.g)*(tmp.d[1]-q.g);
+              tmp.d[2] += xexp.expm1(att*a.b)*(tmp.d[2]-q.b);
               lpic[x][y]=tmp.v;
               }
 #else
@@ -411,8 +403,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       for (int iy=0;iy<y1;iy++)
 #ifdef PLANCK_HAVE_SSE
         {
-        COLOUR &c(pic[ix+x0s][iy+y0s]);
-        read_v4sf(lpic[ix][iy],&c.r,&c.g,&c.b,0);
+        COLOUR &c(pic[ix+x0s][iy+y0s]); float32 dum;
+        lpic[ix][iy].writeTo(c.r,c.g,c.b,dum);
         }
 #else
         pic[ix+x0s][iy+y0s]=lpic[ix][iy];
