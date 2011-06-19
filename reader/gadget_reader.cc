@@ -5,6 +5,7 @@
 
 #include "cxxsupport/arr.h"
 #include "cxxsupport/sort_utils.h"
+#include "cxxsupport/string_utils.h"
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/paramfile.h"
 #include "cxxsupport/bstream.h"

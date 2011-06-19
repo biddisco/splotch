@@ -21,6 +21,7 @@
 #include <fstream>
 #include "splotch/splotchutils.h"
 #include "cxxsupport/mpi_support.h"
+#include "cxxsupport/string_utils.h"
 
 using namespace std;
 

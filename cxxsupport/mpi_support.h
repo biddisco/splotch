@@ -46,20 +46,22 @@ class MPI_Manager
     void gathervRawVoid (const void *in, tsize num, void *out,
       const int *nval, const int *offset, NDT type) const;
 
+    int num_ranks_, rank_;
+
   public:
     MPI_Manager();
     ~MPI_Manager();
 
     void abort() const;
 
-    int num_ranks() const;
-    int rank() const;
-    bool master() const;
+    int num_ranks() const { return num_ranks_; }
+    int rank() const { return rank_; }
+    bool master() const { return rank_==0; }
 
     void barrier() const;
 
     void calcShare (int64 glo, int64 ghi, int64 &lo, int64 &hi) const
-      { calcShareGeneral(glo,ghi,num_ranks(),rank(),lo,hi); }
+      { calcShareGeneral(glo,ghi,num_ranks_,rank_,lo,hi); }
 
     void sendRawVoid (const void *data, NDT type, tsize num, tsize dest) const;
     template<typename T> void sendRaw (const T *data, tsize num, tsize dest)
@@ -67,12 +69,16 @@ class MPI_Manager
       { sendRawVoid(data, nativeType<T>(), num, dest); }
     template<typename T> void send (const arr<T> &data, tsize dest) const
       { sendRaw(&data[0], data.size(), dest); }
+    template<typename T> void send (const T &data, tsize dest) const
+      { sendRaw(&data, 1, dest); }
 
     void recvRawVoid (void *data, NDT type, tsize num, tsize src) const;
     template<typename T> void recvRaw (T *data, tsize num, tsize src) const
       { recvRawVoid(data, nativeType<T>(), num, src); }
     template<typename T> void recv (arr<T> &data, tsize src) const
       { recvRaw(&data[0], data.size(), src); }
+    template<typename T> void recv (T &data, tsize src) const
+      { recvRaw(&data, 1, src); }
 
     void sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
       tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const;
@@ -88,6 +94,9 @@ class MPI_Manager
       sendrecvRaw(&sendbuf[0], sendbuf.size(), dest,
                   &recvbuf[0], recvbuf.size(), src);
       }
+    template<typename T> void sendrecv (const T &sendval, tsize dest,
+      T &recvval, tsize src) const
+      { sendrecvRaw(&sendval, 1, dest, &recvval, 1, src); }
 
     void sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
       tsize dest, tsize src) const;
@@ -97,10 +106,13 @@ class MPI_Manager
     template<typename T> void sendrecv_replace (arr<T> &data, tsize dest,
       tsize src) const
       { sendrecv_replaceRaw(&data[0], data.size(), dest, src); }
+    template<typename T> void sendrecv_replace (T &data, tsize dest,
+      tsize src) const
+      { sendrecv_replaceRaw(&data, 1, dest, src); }
 
     template<typename T> void gather_m (const T &in, arr<T> &out) const
       {
-      out.alloc(num_ranks());
+      out.alloc(num_ranks_);
       gatherRawVoid (&in,1,&out[0],nativeType<T>());
       }
     template<typename T> void gather_s (const T &in) const
@@ -112,7 +124,8 @@ class MPI_Manager
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc,nval,offset,nval_tot);
       out.alloc(nval_tot);
-      gathervRawVoid (&in[0],nval_loc,&out[0],&nval[0],&offset[0],nativeType<T>());
+      gathervRawVoid (&in[0],nval_loc,&out[0],&nval[0],&offset[0],
+        nativeType<T>());
       }
     template<typename T> void gatherv_s (const arr<T> &in) const
       {
@@ -130,7 +143,8 @@ class MPI_Manager
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc, nval, offset, nval_tot);
       out.alloc(nval_tot/in.size2(),in.size2());
-      gathervRawVoid (&in[0][0],nval_loc,&out[0][0],&nval[0],&offset[0],nativeType<T>());
+      gathervRawVoid (&in[0][0],nval_loc,&out[0][0],&nval[0],&offset[0],
+        nativeType<T>());
       }
 
     template<typename T> void gatherv_s (const arr2<T> &in) const
@@ -147,12 +161,12 @@ class MPI_Manager
       { reduceRawVoid (in, out, nativeType<T>(), num, op, root); }
     template<typename T> void reduce (const arr<T> &in, arr<T> &out, redOp op,
       int root=0) const
-      { (rank()==root) ? reduce_m (in, out, op) : reduce_s (in, op, root); }
+      { (rank_==root) ? reduce_m (in, out, op) : reduce_s (in, op, root); }
     template<typename T> void reduce_m (const arr<T> &in, arr<T> &out,
       redOp op) const
       {
       out.alloc(in.size());
-      reduceRaw (&in[0], &out[0], in.size(), op, rank());
+      reduceRaw (&in[0], &out[0], in.size(), op, rank_);
       }
     template<typename T> void reduce_s (const arr<T> &in, redOp op, int root)
       const
@@ -165,12 +179,12 @@ class MPI_Manager
       { allgatherRawVoid (in, out, nativeType<T>(), num); }
     template<typename T> void allgather (const arr<T> &in, arr<T> &out) const
       {
-      out.alloc(num_ranks()*in.size());
+      out.alloc(num_ranks_*in.size());
       allgatherRaw (&in[0], &out[0], in.size());
       }
     template<typename T> void allgather (const T &in, arr<T> &out) const
       {
-      out.alloc(num_ranks());
+      out.alloc(num_ranks_);
       allgatherRaw (&in, &out[0], 1);
       }
 
@@ -234,7 +248,7 @@ class MPI_Manager
     template<typename T> void all2allv_easy (const arr<T> &in,
       const arr<int> &numin, arr<T> &out, arr<int> &numout) const
       {
-      tsize n=num_ranks();
+      tsize n=num_ranks_;
       planck_assert (numin.size()==n,"array size mismatch");
       numout.alloc(n);
       all2all (numin,numout);
@@ -245,7 +259,8 @@ class MPI_Manager
         disin [i]=disin [i-1]+numin [i-1];
         disout[i]=disout[i-1]+numout[i-1];
         }
-      planck_assert(in.size()==disin[n-1]+numin[n-1],"incorrect array size");
+      planck_assert(in.size()==tsize(disin[n-1]+numin[n-1]),
+        "incorrect array size");
       out.alloc(disout[n-1]+numout[n-1]);
       all2allvRawVoid (&in[0], &numin[0], &disin[0], &out[0], &numout[0],
         &disout[0], nativeType<T>());

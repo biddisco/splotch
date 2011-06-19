@@ -1,3 +1,32 @@
+/*
+ *  This file is part of libcxxsupport.
+ *
+ *  libcxxsupport is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  libcxxsupport is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with libcxxsupport; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
+
+/*
+ *  libcxxsupport is being developed at the Max-Planck-Institut fuer Astrophysik
+ *  and financially supported by the Deutsches Zentrum fuer Luft- und Raumfahrt
+ *  (DLR).
+ */
+
+/*
+ *  Copyright (C) 2009-2011 Max-Planck-Society
+ *  \author Martin Reinecke
+ */
+
 #ifdef USE_MPI
 #include "mpi.h"
 #else
@@ -57,7 +86,7 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
   nval_tot=0;
   for (tsize i=0; i<nval.size(); ++i)
     nval_tot+=nval[i];
-  offset.alloc(num_ranks());
+  offset.alloc(num_ranks_);
   offset[0]=0;
   for (tsize i=1; i<offset.size(); ++i)
     offset[i]=offset[i-1]+nval[i-1];
@@ -87,6 +116,8 @@ MPI_Manager::MPI_Manager ()
     MPI_Init(0,0);
     MPI_Errhandler_set(LS_COMM, MPI_ERRORS_ARE_FATAL);
     }
+  MPI_Comm_size(LS_COMM, &num_ranks_);
+  MPI_Comm_rank(LS_COMM, &rank_);
   }
 MPI_Manager::~MPI_Manager ()
   {
@@ -99,27 +130,17 @@ MPI_Manager::~MPI_Manager ()
 void MPI_Manager::abort() const
   { MPI_Abort(LS_COMM, 1); }
 
-int MPI_Manager::num_ranks() const
-  { int res; MPI_Comm_size(LS_COMM, &res); return res; }
-int MPI_Manager::rank() const
-  { int res; MPI_Comm_rank(LS_COMM, &res); return res; }
-bool MPI_Manager::master() const
-  { return (rank() == 0); }
-
 void MPI_Manager::barrier() const
   { MPI_Barrier(LS_COMM); }
 
 #else
 
-MPI_Manager::MPI_Manager () {}
+MPI_Manager::MPI_Manager ()
+  : num_ranks_(1), rank_(0) {}
 MPI_Manager::~MPI_Manager () {}
 
 void MPI_Manager::abort() const
   { exit(1); }
-
-int MPI_Manager::num_ranks() const { return 1; }
-int MPI_Manager::rank() const { return 0; }
-bool MPI_Manager::master() const { return true; }
 
 void MPI_Manager::barrier() const {}
 
@@ -128,14 +149,14 @@ void MPI_Manager::barrier() const {}
 #ifdef USE_MPI
 void MPI_Manager::sendRawVoid (const void *data, NDT type, tsize num,
   tsize dest) const
-  {
-  MPI_Send(const_cast<void *>(data),num,ndt2mpi(type),dest,0,LS_COMM);
-  }
+  { MPI_Send(const_cast<void *>(data),num,ndt2mpi(type),dest,0,LS_COMM); }
 void MPI_Manager::recvRawVoid (void *data, NDT type, tsize num, tsize src) const
   { MPI_Recv(data,num,ndt2mpi(type),src,0,LS_COMM,MPI_STATUS_IGNORE); }
 void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
   tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const
   {
+  if ((rank_!=src) || (rank_!=dest)) return;
+
   MPI_Datatype dtype = ndt2mpi(type);
   MPI_Sendrecv (const_cast<void *>(sendbuf),sendcnt,dtype,dest,0,
     recvbuf,recvcnt,dtype,src,0,LS_COMM,MPI_STATUS_IGNORE);
@@ -143,6 +164,9 @@ void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
 void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
   tsize dest, tsize src) const
   {
+  if (dest==src) return;
+  if ((rank_!=src) || (rank_!=dest)) return;
+
   MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,LS_COMM,
     MPI_STATUS_IGNORE);
   }
@@ -189,11 +213,11 @@ void MPI_Manager::bcastRawVoid (void *data, NDT type, tsize num, int root) const
 void MPI_Manager::all2allRawVoid (const void *in, void *out, NDT type,
   tsize num) const
   {
-  tsize nranks = num_ranks();
-  planck_assert (num%nranks==0,
+  planck_assert (num%num_ranks_==0,
     "array size is not divisible by number of ranks");
   MPI_Datatype tp = ndt2mpi(type);
-  MPI_Alltoall (const_cast<void *>(in),num/nranks,tp,out,num/nranks,tp,LS_COMM);
+  MPI_Alltoall (const_cast<void *>(in),num/num_ranks_,tp,out,num/num_ranks_,
+    tp,LS_COMM);
   }
 
 void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
@@ -212,9 +236,13 @@ void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
   { planck_fail("not supported in scalar code"); }
 void MPI_Manager::recvRawVoid (void *, NDT, tsize, tsize) const
   { planck_fail("not supported in scalar code"); }
-void MPI_Manager::sendrecvRawVoid (const void *, tsize, tsize, void *, tsize,
-  tsize, NDT) const
-  { planck_fail("not supported in scalar code"); }
+void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
+  tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const
+  {
+  planck_assert ((dest==0) && (src==0), "inconsistent call");
+  planck_assert (sendcnt==recvcnt, "inconsistent call");
+  memcpy (recvbuf, sendbuf, sendcnt*ndt2size(type));
+  }
 void MPI_Manager::sendrecv_replaceRawVoid (void *, NDT, tsize, tsize dest,
   tsize src) const
   { planck_assert ((dest==0) && (src==0), "inconsistent call"); }

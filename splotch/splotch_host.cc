@@ -29,6 +29,7 @@
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils_cxx.h"
+#include "cxxsupport/string_utils.h"
 
 #define SPLOTCH_CLASSIC
 
