@@ -44,8 +44,8 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
-  wallTimers.start("full");
-  wallTimers.start("setup");
+  tstack_push("Splotch total time");
+  tstack_push("Setup");
   bool master = mpiMgr.master();
 #ifdef SPLVISIVO
 //  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
@@ -104,7 +104,7 @@ int main (int argc, const char **argv)
 #else
   get_colourmaps(params,amap); 
 #endif
-  wallTimers.stop("setup");
+  tstack_pop("Setup");
   string outfile;
 
 #ifdef SPLVISIVO
@@ -131,7 +131,7 @@ int main (int argc, const char **argv)
     cuda_rendering(mydevID, nDevProc, pic);
 #endif
 
-    wallTimers.start("postproc");
+    tstack_push("Post-processing");
     mpiMgr.allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
@@ -144,9 +144,8 @@ int main (int argc, const char **argv)
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
           }
-    wallTimers.stop("postproc");
 
-    wallTimers.start("write");
+    tstack_replace("Post-processing","Output");
 
     if (master && params.find<bool>("colorbar",false))
       {
@@ -187,7 +186,7 @@ int main (int argc, const char **argv)
         }
       }
 
-    wallTimers.stop("write");
+    tstack_pop("Output");
 
 #ifdef CUDA
     cuda_timeReport(params);

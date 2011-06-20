@@ -228,22 +228,13 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     if (periodic)
       {
         if(abs(x2 - x1) > boxhalf) 
-	  if(x2 > x1) 
-	    x2 -= boxsize;
-	  else 
-	    x2 += boxsize;
+          (x2 > x1) ? x2 -= boxsize : x2 += boxsize;
 
         if(abs(y2 - y1) > boxhalf)
-          if(y2 > y1)
-            y2 -= boxsize;
-          else
-            y2 += boxsize;
+          (y2 > y1) ? y2 -= boxsize : y2 += boxsize;
 
         if(abs(z2 - z1) > boxhalf)
-          if(z2 > z1)
-            z2 -= boxsize;
-          else
-            z2 += boxsize;
+          (z2 > z1) ? z2 -= boxsize : z2 += boxsize;
       }
     if (interpol_mode>1)
       {
@@ -400,7 +391,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   if (scenes[cur_scene].reuse_particles)
     { particle_data=p_orig; return; }
 
-  wallTimers.start("read");
+  tstack_push("Input");
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
 #ifdef SPLVISIVO
@@ -440,22 +431,18 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           {
           cout << " reading new1 " << snr1 << endl;
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
-	  wallTimers.stop("read");
-	  wallTimers.start("buildindex");
+          tstack_replace("Input","Particle index generation");
           buildIndex(id1.begin(),id1.end(),idx1);
-	  wallTimers.stop("buildindex");
-	  wallTimers.start("read");
+          tstack_replace("Particle index generation","Input");
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
           gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
-	  wallTimers.stop("read");
-	  wallTimers.start("buildindex");
+          tstack_replace("Input","Particle index generation");
           buildIndex(id2.begin(),id2.end(),idx2);
-	  wallTimers.stop("buildindex");
-	  wallTimers.start("read");
+          tstack_replace("Particle index generation","Input");
           snr2_now = snr2;
           }
         }
@@ -507,24 +494,24 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       break;
     }
 
-  wallTimers.stop("read");
+  tstack_pop("Input");
 
   if (interpol_mode>0)
     {
     if (mpiMgr.master())
       cout << "Interpolating between " << p1.size() << " and " <<
         p2.size() << " particles ..." << endl;
-      wallTimers.start("interoplate");
+      tstack_push("Time interpolation");
       particle_interpolate(particle_data,frac);
-      wallTimers.stop("interoplate");
+      tstack_pop("Time interpolation");
     }
-  wallTimers.start("range");
+  tstack_push("Particle ranging");
   tsize npart_all = particle_data.size();
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
   if (mpiMgr.master())
     cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(params, particle_data, true);
-  wallTimers.stop("range");
+  tstack_pop("Particle ranging");
 
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
   }

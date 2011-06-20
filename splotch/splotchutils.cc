@@ -130,17 +130,7 @@ bool VisIVOPalette=false;
 void timeReport()
   {
   if (mpiMgr.master())
-    {
-    cout << endl << "--------------------------------------------" << endl;
-    cout << "Summary of timings" << endl;
-    cout << "--------------------------------------------" << endl;
-    cout << "Setup Data (secs)          : " << wallTimers.acc("setup") << endl;
-    cout << "Read Data (secs)           : " << wallTimers.acc("read") << endl;
-    hostTimeReport(wallTimers);
-    cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc") << endl;
-    cout << "Write Data (secs)          : " << wallTimers.acc("write") << endl;
-    cout << "Total (secs)               : " << wallTimers.acc("full") << endl;
-    }
+    tstack_report("Splotch total time");
   }
 
 void hostTimeReport(wallTimerSet &Timers)

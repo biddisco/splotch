@@ -257,6 +257,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 
   pic.fill(COLOUR(0,0,0));
 
+  tstack_push("Chunk preparation");
+
   for (tsize i=0; i<p.size(); ++i)
     {
     particle_sim &pp(p[i]);
@@ -281,6 +283,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         }
       }
     }
+
+  tstack_replace("Chunk preparation","Rendering proper");
 
   work_distributor wd (xres,yres,chunkdim,chunkdim);
 #pragma omp parallel
@@ -413,6 +417,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     } // for this chunk
 } // #pragma omp parallel
 
+  tstack_pop("Rendering proper");
   }
 
 } // unnamed namespace
@@ -434,7 +439,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 // -------------------------------------
 // ----------- Transforming ------------
 // -------------------------------------
-  wallTimers.start("transform");
+  tstack_push("3D transform");
   if (master)
     cout << endl << "host: applying geometry (" << npart_all << ") ..." << endl;
 #ifdef SPLVISIVO
@@ -442,21 +447,19 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 #else
   particle_project(params, particles, campos, lookat, sky);
 #endif
-  wallTimers.stop("transform");
+  tstack_replace("3D transform","Particle coloring");
 
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
-  wallTimers.start("coloring");
   if (master)
     cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
   particle_colorize(params, particles, amap);
-  wallTimers.stop("coloring");
+  tstack_replace("Particle coloring","Particle sorting");
 
 // ------------------------------------
 // -- Eliminating inactive particles --
 // ------------------------------------
-  wallTimers.start("sort");
   if (master)
     cout << endl << "host: eliminating inactive particles ..." << endl;
   tdiff i1=0, i2=particles.size()-1;
@@ -473,12 +476,10 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
   if (master)
     cout << npart_all << " particles left" << endl;
-  wallTimers.stop("sort");
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
-  wallTimers.start("sort");
   if (!params.find<bool>("a_eq_e",true))
     {
     if (master)
@@ -488,7 +489,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
     int sort_type = params.find<int>("sort_type",1);
     particle_sort(particles,sort_type,true);
     }
-  wallTimers.stop("sort");
+  tstack_pop("Particle sorting");
 
 // ------------------------------------
 // ----------- Rendering ---------------
@@ -499,7 +500,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   bool a_eq_e = params.find<bool>("a_eq_e",true);
   float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
 
-  wallTimers.start("render");
+  tstack_push("Rendering");
   render_new (particles,pic,a_eq_e,grayabsorb);
-  wallTimers.stop("render");
+  tstack_pop("Rendering");
   }
