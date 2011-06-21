@@ -53,7 +53,12 @@ class MPI_Manager
     ~MPI_Manager();
 
     static MPI_Manager *Instance;
-    static MPI_Manager *GetInstance() { return MPI_Manager::Instance; }
+    static MPI_Manager *GetInstance() { 
+      if (MPI_Manager::Instance==NULL) {
+        MPI_Manager::Instance = new MPI_Manager(false);
+      }
+      return MPI_Manager::Instance; 
+    }
 
     int initialized;
 
