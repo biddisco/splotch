@@ -61,7 +61,6 @@
 #include <ctype.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "zoltan.h"
 //
 #include "vtkSplotchRaytraceMapper.h"
 
@@ -119,81 +118,6 @@ unsigned long int random_seed()
 }
 #endif
 
-//----------------------------------------------------------------------------
-/* Structure to hold mesh data */
-//----------------------------------------------------------------------------
-typedef struct{
-  int numGlobalPoints;
-  int numMyPoints;
-  int *myGlobalIDs;
-  float *points; // we use the vtkPoints->Data->Array
-} MESH_DATA;
-
-//----------------------------------------------------------------------------
-/* Application defined query functions */
-//----------------------------------------------------------------------------
-static int  get_number_of_objects(void *data, int *ierr);
-static void get_object_list(void *data, int sizeGID, int sizeLID,
-                  ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
-                  int wgt_dim, float *obj_wgts, int *ierr);
-static int  get_num_geometry(void *data, int *ierr);
-static void get_geometry_list(void *data, int sizeGID, int sizeLID,
-             int num_obj, ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
-             int num_dim, double *geom_vec, int *ierr);
-
-//----------------------------------------------------------------------------
-/* Application defined query functions */
-//----------------------------------------------------------------------------
-static int get_number_of_objects(void *data, int *ierr)
-{
-  MESH_DATA *mesh= (MESH_DATA *)data;
-  *ierr = ZOLTAN_OK;
-  return mesh->numMyPoints;
-}
-//----------------------------------------------------------------------------
-static void get_object_list(void *data, int sizeGID, int sizeLID,
-            ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
-                  int wgt_dim, float *obj_wgts, int *ierr)
-{
-  MESH_DATA *mesh= (MESH_DATA *)data;
-  *ierr = ZOLTAN_OK;
-
-  /* In this example, return the IDs of our objects, but no weights.
-   * Zoltan will assume equally weighted objects.
-   */
-
-  for (int i=0; i<mesh->numMyPoints; i++){
-    globalID[i] = mesh->myGlobalIDs[i];
-    localID[i] = i;
-  }
-}
-//----------------------------------------------------------------------------
-static int get_num_geometry(void *data, int *ierr)
-{
-  *ierr = ZOLTAN_OK;
-  return 3;
-}
-//----------------------------------------------------------------------------
-static void get_geometry_list(void *data, int sizeGID, int sizeLID,
-                      int num_obj,
-             ZOLTAN_ID_PTR globalID, ZOLTAN_ID_PTR localID,
-             int num_dim, double *geom_vec, int *ierr)
-{
-  MESH_DATA *mesh= (MESH_DATA *)data;
-/*
-  if ( (sizeGID != 1) || (sizeLID != 1) || (num_dim != 3)){
-    *ierr = ZOLTAN_FATAL;
-    return;
-  }
-*/
-  *ierr = ZOLTAN_OK;
-  for (int i=0;  i < num_obj ; i++){
-    geom_vec[3*i]   = (double)mesh->points[3*i];
-    geom_vec[3*i+1] = (double)mesh->points[3*i+1];
-    geom_vec[3*i+1] = (double)mesh->points[3*i+2];
-  }
-  return;
-}
 
 //----------------------------------------------------------------------------
 // Just pick a tag which is available
@@ -415,112 +339,6 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
    collective = true;
   }
 
-  //--------------------------------------------------------------
-  // Use Zoltan library to re-partition the particles in parallel
-  //--------------------------------------------------------------
-  struct Zoltan_Struct *zz;
-  int changes, numGidEntries, numLidEntries, numImport, numExport;
-  ZOLTAN_ID_PTR importGlobalGids, importLocalGids, exportGlobalGids, exportLocalGids; 
-  int *importProcs, *importToPart, *exportProcs, *exportToPart;
-  MESH_DATA myMesh;
-
-  float ver;
-  int rc = Zoltan_Initialize(args->argc, args->argv, &ver);
-  if (rc != ZOLTAN_OK){
-    printf("Zoltan initialization failed ...\n");
-    return;
-  }
-
-  myMesh.myGlobalIDs     = Ids->GetPointer(0);
-  myMesh.numGlobalPoints = numPoints*numProcs;
-  myMesh.numMyPoints     = numPoints;
-  myMesh.points          = vtkFloatArray::SafeDownCast(points->GetData())->GetPointer(0);
-
-  /******************************************************************
-  ** Create a Zoltan library structure for this instance of load
-  ** balancing.  Set the parameters and query functions that will
-  ** govern the library's calculation.  See the Zoltan User's
-  ** Guide for the definition of these and many other parameters.
-  ******************************************************************/
-
-  zz = Zoltan_Create(MPI_COMM_WORLD); 
-
-  /* General parameters */
-
-  Zoltan_Set_Param(zz, "DEBUG_LEVEL", "0");
-  Zoltan_Set_Param(zz, "LB_METHOD", "RCB");
-//  Zoltan_Set_Param(zz, "LB_METHOD", "PARMETIS");
-  Zoltan_Set_Param(zz, "NUM_GID_ENTRIES", "1"); 
-  Zoltan_Set_Param(zz, "NUM_LID_ENTRIES", "1");
-  Zoltan_Set_Param(zz, "NUM_GLOBAL_PARTS", NUM_PARTITIONSS); // we will create 4 partitions locally (testing)
-//  Zoltan_Set_Param(zz, "NUM_LOCAL_PARTS", NUM_PARTITIONSS); // we will create 4 partitions locally (testing)
-  Zoltan_Set_Param(zz, "OBJ_WEIGHT_DIM", "0");
-  Zoltan_Set_Param(zz, "RETURN_LISTS", "ALL");
-
-  /* RCB parameters */
-
-//  Zoltan_Set_Param(zz, "PARMETIS_METHOD", "PARTKWAY");
-
-  Zoltan_Set_Param(zz, "RCB_RECOMPUTE_BOX", "1");
-  Zoltan_Set_Param(zz, "REDUCE_DIMENSIONS", "0");
-  
-  Zoltan_Set_Param(zz, "RCB_OUTPUT_LEVEL", "0");
-  Zoltan_Set_Param(zz, "RCB_RECTILINEAR_BLOCKS", "1"); 
-  /*Zoltan_Set_Param(zz, "RCB_RECTILINEAR_BLOCKS", "0"); */
-
-  /* Query functions, to provide geometry to Zoltan */
-
-  Zoltan_Set_Num_Obj_Fn(zz, get_number_of_objects, &myMesh);
-  Zoltan_Set_Obj_List_Fn(zz, get_object_list, &myMesh);
-  Zoltan_Set_Num_Geom_Fn(zz, get_num_geometry, &myMesh);
-  Zoltan_Set_Geom_Multi_Fn(zz, get_geometry_list, &myMesh);
-
-  /******************************************************************
-  ** Zoltan can now partition the vertices in the simple mesh.
-  ******************************************************************/
-
-  //rc = Zoltan_LB_Partition(zz, /* input (all remaining fields are output) */
-  //      &changes,           /* 1 if partitioning was changed, 0 otherwise */ 
-  //      &numGidEntries,     /* Number of integers used for a global ID */
-  //      &numLidEntries,     /* Number of integers used for a local ID */
-  //      &numImport,         /* Number of vertices to be sent to me */
-  //      &importGlobalGids,  /* Global IDs of vertices to be sent to me */
-  //      &importLocalGids,   /* Local IDs of vertices to be sent to me */
-  //      &importProcs,       /* Process rank for source of each incoming vertex */
-  //      &importToPart,      /* New partition for each incoming vertex */
-  //      &numExport,         /* Number of vertices I must send to other processes*/
-  //      &exportGlobalGids,  /* Global IDs of the vertices I must send */
-  //      &exportLocalGids,   /* Local IDs of the vertices I must send */
-  //      &exportProcs,       /* Process to which I send each of the vertices */
-  //      &exportToPart);     /* Partition to which each vertex will belong */
-
-  //if (rc != ZOLTAN_OK){
-  //  printf("Zoltan_LB_Partition NOT OK...\n");
-  //  MPI_Finalize();
-  //  Zoltan_Destroy(&zz);
-  //  exit(0);
-  //}
-
-  /******************************************************************
-  ** Visualize the mesh partitioning before and after calling Zoltan.
-  ******************************************************************/
-
-  //int *parts = Parts->GetPointer(0);
-  //for (int i=0; i < numExport; i++){
-  //  parts[exportLocalGids[i]] = exportToPart[i];
-  //}
-
-  /******************************************************************
-  ** Free the arrays allocated by Zoltan_LB_Partition, and free
-  ** the storage allocated for the Zoltan structure.
-  ******************************************************************/
-
-  //Zoltan_LB_Free_Part(&importGlobalGids, &importLocalGids, 
-  //                    &importProcs, &importToPart);
-  //Zoltan_LB_Free_Part(&exportGlobalGids, &exportLocalGids, 
-  //                    &exportProcs, &exportToPart);
-
-  //Zoltan_Destroy(&zz);
 
   //--------------------------------------------------------------
   // Create writer on all processes
