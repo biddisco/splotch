@@ -90,12 +90,12 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 
   for(int t=0;t<nt;t++)
     {
-    mpiMgr->allreduce(intnorm[t].minv,MPI_Manager::Min);
-    mpiMgr->allreduce(colnorm[t].minv,MPI_Manager::Min);
-    mpiMgr->allreduce(intnorm[t].maxv,MPI_Manager::Max);
-    mpiMgr->allreduce(colnorm[t].maxv,MPI_Manager::Max);
+    MPI_Manager::GetInstance()->allreduce(intnorm[t].minv,MPI_Manager::Min);
+    MPI_Manager::GetInstance()->allreduce(colnorm[t].minv,MPI_Manager::Min);
+    MPI_Manager::GetInstance()->allreduce(intnorm[t].maxv,MPI_Manager::Max);
+    MPI_Manager::GetInstance()->allreduce(colnorm[t].maxv,MPI_Manager::Max);
 
-    if (verbose && mpiMgr->master())
+    if (verbose && MPI_Manager::GetInstance()->master())
       {
       cout << " For particles of type " << t << " : " << endl;
       cout << " From data: " << endl;
@@ -114,7 +114,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
     colnorm[t].maxv = params.find<float>
       ("color_max"+dataToString(t),colnorm[t].maxv);
 
-    if (verbose && mpiMgr->master())
+    if (verbose && MPI_Manager::GetInstance()->master())
       {
       cout << " Restricted to: " << endl;
       cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
@@ -238,13 +238,22 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     if (periodic)
       {
         if(abs(x2 - x1) > boxhalf) 
-          (x2 > x1) ? x2 -= boxsize : x2 += boxsize;
+	  if(x2 > x1) 
+	    x2 -= boxsize;
+	  else 
+	    x2 += boxsize;
 
         if(abs(y2 - y1) > boxhalf)
-          (y2 > y1) ? y2 -= boxsize : y2 += boxsize;
+          if(y2 > y1)
+            y2 -= boxsize;
+          else
+            y2 += boxsize;
 
         if(abs(z2 - z1) > boxhalf)
-          (z2 > z1) ? z2 -= boxsize : z2 += boxsize;
+          if(z2 > z1)
+            z2 -= boxsize;
+          else
+            z2 += boxsize;
       }
     if (interpol_mode>1)
       {
@@ -276,7 +285,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     }
 }
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     cout << " found " << p.size() << " common particles ..." << endl;
   }
 
@@ -334,7 +343,7 @@ sceneMaker::sceneMaker (paramfile &par)
   else
     {
     if (interpol_mode>0)
-      planck_assert(mpiMgr->num_ranks()==1,
+      planck_assert(MPI_Manager::GetInstance()->num_ranks()==1,
         "Sorry, interpolating between files is not yet MPI parallelized ...");
 
     ifstream inp(geometry_file.c_str());
@@ -405,8 +414,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   if (scenes[cur_scene].reuse_particles)
     { particle_data=p_orig; return; }
 
-  tstack_push("Input");
-  if (mpiMgr->master())
+  wallTimers.start("read");
+  if (MPI_Manager::GetInstance()->master())
     cout << endl << "reading data ..." << endl;
 #ifdef SPLVISIVO
   int simtype=params.find<int>("simtype",10);
@@ -445,18 +454,22 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           {
           cout << " reading new1 " << snr1 << endl;
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
-          tstack_replace("Input","Particle index generation");
+	  wallTimers.stop("read");
+	  wallTimers.start("buildindex");
           buildIndex(id1.begin(),id1.end(),idx1);
-          tstack_replace("Particle index generation","Input");
+	  wallTimers.stop("buildindex");
+	  wallTimers.start("read");
           snr1_now = snr1;
           }
         if (snr2_now!=snr2)
           {
           cout << " reading new2 " << snr2 << endl;
           gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
-          tstack_replace("Input","Particle index generation");
+	  wallTimers.stop("read");
+	  wallTimers.start("buildindex");
           buildIndex(id2.begin(),id2.end(),idx2);
-          tstack_replace("Particle index generation","Input");
+	  wallTimers.stop("buildindex");
+	  wallTimers.start("read");
           snr2_now = snr2;
           }
         }
@@ -483,7 +496,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 #if defined(USE_MPIIO)
       {
       float maxr, minr;
-      bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr->rank(), mpiMgr->num_ranks());
+      bin_reader_block_mpi(params,particle_data, &maxr, &minr, MPI_Manager::GetInstance()->rank(), MPI_Manager::GetInstance()->num_ranks());
       }
 #else
       planck_fail("mpi reader not available in non MPI compiled version!");
@@ -551,24 +564,24 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       break;
     }
 
-  tstack_pop("Input");
+  wallTimers.stop("read");
 
   if (interpol_mode>0)
     {
-    if (mpiMgr->master())
+    if (MPI_Manager::GetInstance()->master())
       cout << "Interpolating between " << p1.size() << " and " <<
         p2.size() << " particles ..." << endl;
-      tstack_push("Time interpolation");
+      wallTimers.start("interoplate");
       particle_interpolate(particle_data,frac);
-      tstack_pop("Time interpolation");
+      wallTimers.stop("interoplate");
     }
-  tstack_push("Particle ranging");
+  wallTimers.start("range");
   tsize npart_all = particle_data.size();
-  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
-  if (mpiMgr->master())
+  MPI_Manager::GetInstance()->allreduce (npart_all,MPI_Manager::Sum);
+  if (MPI_Manager::GetInstance()->master())
     cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(params, particle_data, true);
-  tstack_pop("Particle ranging");
+  wallTimers.stop("range");
 
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
 
@@ -612,7 +625,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
       int npart = particle_data.size();
       double boxhalf = boxsize / 2;
 
-      if(mpiMgr.master())
+      if(MPI_Manager::GetInstance()->master())
 	cout << " doing parallel box wrap " << boxsize << endl;
 #pragma omp parallel
       {

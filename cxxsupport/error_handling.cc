@@ -54,4 +54,4 @@ void planck_failure__(const char *file, int line, const char *func,
   { planck_failure__ (file,line,func,string(msg)); }
 
 void killjob__()
-  { mpiMgr->abort(); }
+  { MPI_Manager::GetInstance()->abort(); }

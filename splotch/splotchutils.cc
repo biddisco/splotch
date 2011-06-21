@@ -67,7 +67,7 @@ bool VisIVOPalette=false;
     int ptypes = params.find<int>("ptypes",1);
 #endif
     
-  bool master = mpiMgr->master();
+  bool master = MPI_Manager::GetInstance()->master();
   amap.resize(ptypes);
 
   if (master)
@@ -129,7 +129,7 @@ bool VisIVOPalette=false;
 
 void timeReport()
   {
-  if (mpiMgr->master())
+  if (MPI_Manager::GetInstance()->master())
     tstack_report("Splotch total time");
   }
 

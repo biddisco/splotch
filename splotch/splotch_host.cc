@@ -29,7 +29,7 @@
 #include "cxxsupport/mpi_support.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils_cxx.h"
-#include "cxxsupport/string_utils.h"
+#include "string_utils.h"
 
 #define SPLOTCH_CLASSIC
 
@@ -71,7 +71,7 @@ void particle_eliminate(paramfile &params, vector<particle_sim> &p, tsize &npart
   tsize npart=i2+1;
   p.resize(npart);
   npart_all=npart;
-  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
+  MPI_Manager::GetInstance()->allreduce (npart_all,MPI_Manager::Sum);
 }
 
 void particle_project(paramfile &params, vector<particle_sim> &p,
@@ -228,26 +228,26 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
   switch(sort_type)
     {
     case 0:
-      if (verbose && mpiMgr->master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " skipped sorting ..." << endl;
       break;
     case 1:
-      if (verbose && mpiMgr->master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by z ..." << endl;
       sort(p.begin(), p.end(), zcmp());
       break;
     case 2:
-      if (verbose && mpiMgr->master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp1());
       break;
     case 3:
-      if (verbose && mpiMgr->master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " reverse sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp2());
       break;
     case 4:
-      if (verbose && mpiMgr->master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by size ..." << endl;
       sort(p.begin(), p.end(), hcmp());
       break;
@@ -262,7 +262,7 @@ const int chunkdim=100;
 void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   bool a_eq_e, float32 grayabsorb)
   {
-  planck_assert(a_eq_e || (mpiMgr->num_ranks()==1),
+  planck_assert(a_eq_e || (MPI_Manager::GetInstance()->num_ranks()==1),
     "MPI only supported for A==E so far");
 
   int xres=pic.size1(), yres=pic.size2();
@@ -278,8 +278,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #endif
 
   pic.fill(COLOUR(0,0,0));
-
-  tstack_push("Chunk preparation");
 
   for (tsize i=0; i<p.size(); ++i)
     {
@@ -305,8 +303,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         }
       }
     }
-
-  tstack_replace("Chunk preparation","Rendering proper");
 
   work_distributor wd (xres,yres,chunkdim,chunkdim);
 #pragma omp parallel
@@ -439,10 +435,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
     } // for this chunk
 } // #pragma omp parallel
 
-  tstack_pop("Rendering proper");
-  }
+} 
 
-} // unnamed namespace
 #ifdef SPLVISIVO
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
@@ -453,15 +447,15 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   vector<COLOURMAP> &amap, float b_brightness)
 #endif
   {
-  bool master = mpiMgr->master();
+  bool master = MPI_Manager::GetInstance()->master();
   tsize npart = particles.size();
   tsize npart_all = npart;
-  mpiMgr->allreduce (npart_all,MPI_Manager::Sum);
+  MPI_Manager::GetInstance()->allreduce (npart_all,MPI_Manager::Sum);
 
 // -------------------------------------
 // ----------- Transforming ------------
 // -------------------------------------
-  tstack_push("3D transform");
+  wallTimers.start("transform");
   if (master)
     cout << endl << "host: applying geometry (" << npart_all << ") ..." << endl;
 #ifdef SPLVISIVO
@@ -469,38 +463,42 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 #else
   particle_project(params, particles, campos, lookat, sky);
 #endif
-  tstack_replace("3D transform","Particle coloring");
+  wallTimers.stop("transform");
 
 // ------------------------------------
 // ----------- Coloring ---------------
 // ------------------------------------
+  wallTimers.start("coloring");
   if (master)
     cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
   particle_colorize(params, particles, amap, b_brightness);
-  tstack_replace("Particle coloring","Particle sorting");
+  wallTimers.stop("coloring");
 
 // ------------------------------------
 // -- Eliminating inactive particles --
 // ------------------------------------
+  wallTimers.start("sort");
   if (master)
     cout << endl << "host: eliminating inactive particles ..." << endl;
   particle_eliminate(params, particles, npart_all);
   if (master)
     cout << npart_all << " particles left" << endl;
+  wallTimers.stop("sort");
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
+  wallTimers.start("sort");
   if (!params.find<bool>("a_eq_e",true))
     {
     if (master)
-      (mpiMgr->num_ranks()>1) ?
+      (MPI_Manager::GetInstance()->num_ranks()>1) ?
         cout << endl << "host: applying local sort ..." << endl :
         cout << endl << "host: applying sort (" << npart << ") ..." << endl;
     int sort_type = params.find<int>("sort_type",1);
     particle_sort(particles,sort_type,true);
     }
-  tstack_pop("Particle sorting");
+  wallTimers.stop("sort");
 
 // ------------------------------------
 // ----------- Rendering ---------------
@@ -511,7 +509,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   bool a_eq_e = params.find<bool>("a_eq_e",true);
   float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
 
-  tstack_push("Rendering");
+  wallTimers.start("render");
   render_new (particles,pic,a_eq_e,grayabsorb);
-  tstack_pop("Rendering");
+  wallTimers.stop("render");
   }

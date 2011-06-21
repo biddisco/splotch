@@ -57,7 +57,8 @@ IF (NOT TARGET splotchcore)
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
-#	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/cxxutils.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
   )
 
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})

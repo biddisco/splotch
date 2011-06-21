@@ -35,7 +35,7 @@
 #endif
 #include "mpi_support.h"
 
-MPI_Manager *mpiMgr;
+MPI_Manager *MPI_Manager::Instance = NULL;
 
 using namespace std;
 
@@ -109,16 +109,18 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
 
 MPI_Manager::MPI_Manager (bool need_init)
   {
-    this->ininitialized = false;
+    this->initialized = false;
     if (need_init) {
       MPI_Init(0,0);
       MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
-      this->ininitialized = true;
+      this->initialized = true;
     }
+  MPI_Comm_size(LS_COMM, &num_ranks_);
+  MPI_Comm_rank(LS_COMM, &rank_);
   }
 MPI_Manager::~MPI_Manager ()
   { 
-  if (this->ininitialized) {
+  if (this->initialized) {
     MPI_Finalize(); 
    }
   }

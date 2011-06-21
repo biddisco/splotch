@@ -53,22 +53,27 @@
 vtkInstantiatorNewMacro(vtkSplotchRaytraceMapper);
 
 //----------------------------------------------------------------------------
-// return the correct type of vtkSplotchRaytraceMapper 
 vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 {
-  // First try to create the object from the vtkObjectFactory
-  vtkObject* ret = new vtkSplotchRaytraceMapper();
+  vtkObject* ret = new vtkSplotchRaytraceMapper(NULL);
   return static_cast<vtkSplotchRaytraceMapper *>(ret);
 }
-
+//----------------------------------------------------------------------------
+vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New2(MPI_Manager *mpimgr)
+{
+  // First try to create the object from the vtkObjectFactory
+  vtkObject* ret = new vtkSplotchRaytraceMapper(mpimgr);
+  return static_cast<vtkSplotchRaytraceMapper *>(ret);
+}
 // ---------------------------------------------------------------------------
-vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
+vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper(MPI_Manager *mpimgr)
 {
   this->ValueScalars     = NULL;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
   this->ActiveScalars    = NULL;
+  this->MPImgr           = mpimgr;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +191,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   params.find("intensity_max0", imax);
   params.find("intensity_min0", 0.0);
   params.find("gray_absorption", 0.0001);
+  params.find("colorbar", 1);
 
   if(particle_data.size()>0) {
     particle_project(params, particle_data, campos, lookat, sky);
@@ -228,11 +234,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
   render_new (particle_data,pic,a_eq_e,grayabsorb);
 
-  mpiMgr->allreduceRaw
+  this->MPImgr->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   exptable<float32> xexp(-20.0);
-  if (mpiMgr->master() && a_eq_e) {
+  if (this->MPImgr->master() && a_eq_e) {
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
         pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);

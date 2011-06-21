@@ -28,17 +28,46 @@
  *  Copyright (C) 2010, 2011 Max-Planck-Society
  *  Author: Martin Reinecke
  */
+#if defined (_OPENMP)
+ #include <omp.h>
+#elif defined (USE_MPI)
+ #include "mpi.h"
+#else
+ #include <stdio.h>
+ #include <ctime>
+#endif
 
 #include <iostream>
 #include <utility>
-#include <cstdio>
 #include <cmath>
 #include <algorithm>
 #include "walltimer.h"
-#include "walltime_c.h"
+//#include "walltime_c.h"
 #include "error_handling.h"
 
 using namespace std;
+namespace {
+
+double wallTime()
+  {
+#if defined _OPENMP
+  return omp_get_wtime();
+#elif defined (USE_MPI)
+  return MPI_Wtime();
+#else
+  # if defined(_WIN32) || defined(__WIN32__) || defined(WIN32)
+      std::clock_t t;
+      t = std::clock();
+      return t/double(CLOCKS_PER_SEC);
+  # else
+      struct timeval t;
+      gettimeofday(&t, NULL);
+      return t.tv_sec + 1e-6*t.tv_usec;
+  # endif
+#endif
+  }
+
+} // unnamed namespace
 
 void wallTimer::start()
   { start(wallTime()); }

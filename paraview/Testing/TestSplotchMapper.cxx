@@ -214,8 +214,8 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
   //--------------------------------------------------------------
   char *splotchparams = vtkTestUtilities::GetArgOrEnvOrDefault(
     "-s", args->argc, args->argv, "DUMMY_ENV_VAR", "");
-  mpiMgr = new MPI_Manager(false);
-  bool master = mpiMgr->master();
+  MPI_Manager::Instance = new MPI_Manager(false);
+  bool master = MPI_Manager::GetInstance()->master();
   paramfile params (splotchparams,false);
   //
   std::vector<particle_sim> particle_data;
@@ -493,7 +493,9 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
 #if 0
       vtkSmartPointer<vtkPolyDataMapper>       mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 #else
-      vtkSmartPointer<vtkSplotchRaytraceMapper> mapper = vtkSmartPointer<vtkSplotchRaytraceMapper>::New();
+      vtkSplotchRaytraceMapper *srm = vtkSplotchRaytraceMapper::New2(MPI_Manager::GetInstance());
+      vtkSmartPointer<vtkSplotchRaytraceMapper> mapper;
+      mapper.TakeReference(srm);
 //      mapper->SetRadiusScalars("Radius");
       mapper->SetRadiusScalars("Radius");
       mapper->SetIntensityScalars("Intensity");

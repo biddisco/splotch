@@ -46,14 +46,14 @@ void mesh_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   npart_total = qty_idx[0]*qty_idx[1]*qty_idx[2];
   *rrr = params.find<float>("r",1.0);
 
-  if (mpiMgr->master())
+  if (MPI_Manager::GetInstance()->master())
     {
     cout << "Input data file name: " << datafile << endl;
     cout << "Number of columns " << nfields << endl;
     cout << "Number of mesh cells " << npart_total << endl;
     }
   int64 myend;
-  mpiMgr->calcShare (0, npart_total, mybegin, myend);
+  MPI_Manager::GetInstance()->calcShare (0, npart_total, mybegin, myend);
   npart = myend-mybegin;
   }
 
@@ -80,14 +80,14 @@ void mesh_reader_finish (vector<particle_sim> &points)
     minz = min(minz,points[i].z);
     maxz = max(maxz,points[i].z);
     }
-  mpiMgr->allreduce(maxr,MPI_Manager::Max);
-  mpiMgr->allreduce(minr,MPI_Manager::Min);
-  mpiMgr->allreduce(maxx,MPI_Manager::Max);
-  mpiMgr->allreduce(minx,MPI_Manager::Min);
-  mpiMgr->allreduce(maxy,MPI_Manager::Max);
-  mpiMgr->allreduce(miny,MPI_Manager::Min);
-  mpiMgr->allreduce(maxz,MPI_Manager::Max);
-  mpiMgr->allreduce(minz,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(maxr,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(minr,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(maxx,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(minx,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(maxy,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(miny,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(maxz,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(minz,MPI_Manager::Min);
 #ifdef DEBUG
   cout << "MIN, MAX --> " << minr << " " << maxr << endl;
   cout << "MIN, MAX --> " << minx << " " << maxx << endl;
@@ -105,7 +105,7 @@ void mesh_reader (paramfile &params, vector<particle_sim> &points)
   int nfields;
   int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
-  if (mpiMgr->master())
+  if (MPI_Manager::GetInstance()->master())
     cout << "MESH BINARY DATA" << endl;
   mesh_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, &rrr, npart_total);
 

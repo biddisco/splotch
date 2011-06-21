@@ -177,7 +177,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   string filename;
   bifstream infile;
 
-  int ThisTask=mpiMgr->rank(),NTasks=mpiMgr->num_ranks();
+  int ThisTask=MPI_Manager::GetInstance()->rank(),NTasks=MPI_Manager::GetInstance()->num_ranks();
 
   vector<int> ThisTaskReads(NTasks),DataFromTask(NTasks);
   vector<long> NPartThisTask(NTasks);
@@ -186,7 +186,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   MPI_Status status;
 #endif
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     {
     planck_assert(numfiles >= readparallel,
       "Number of files must be larger or equal number of parallel reads ...");
@@ -218,7 +218,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
       }
     }
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     {
     int itask=0;
     for(int rt=0;rt<readparallel;rt++)
@@ -257,7 +257,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   MPI_Bcast(&NPartThisTask[0], NTasks, MPI_LONG, 0, MPI_COMM_WORLD);
 #endif
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     {
     cout << " Reading " << numfiles << " files by " << readparallel << " tasks ... " << endl;
 
@@ -295,7 +295,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   arr<float> v1_tmp(nmax),v2_tmp(nmax),v3_tmp(nmax);
   arr<int> i1_tmp(nmax);
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -394,7 +394,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   cout << "   -> " << p[0].x << "," << p[0].y << "," << p[0].z << endl;
   cout << "   -> " << p[npart-1].x << "," << p[npart-1].y << "," << p[npart-1].z << endl;
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     cout << " Reading smoothing ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -485,7 +485,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   cout << "   -> " << p[npart-1].r << endl;
 
 
-  if(mpiMgr->master())
+  if(MPI_Manager::GetInstance()->master())
     cout << " Reading colors ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -616,7 +616,7 @@ void gadget_millenium_reader(paramfile &params, vector<particle_sim> &p, int /*s
   cout << "   -> " << p[0].e.r << "," << p[0].e.g << "," << p[0].e.b << endl;
   cout << "   -> " << p[npart-1].e.r << "," << p[npart-1].e.g << "," << p[npart-1].e.b << endl;
 
- if(mpiMgr->master())
+ if(MPI_Manager::GetInstance()->master())
     cout << " Reading intensity ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
     {
