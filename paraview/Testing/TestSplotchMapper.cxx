@@ -493,9 +493,7 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
 #if 0
       vtkSmartPointer<vtkPolyDataMapper>       mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 #else
-      vtkSplotchRaytraceMapper *srm = vtkSplotchRaytraceMapper::New2(MPI_Manager::GetInstance());
-      vtkSmartPointer<vtkSplotchRaytraceMapper> mapper;
-      mapper.TakeReference(srm);
+      vtkSmartPointer<vtkSplotchRaytraceMapper> mapper = vtkSmartPointer<vtkSplotchRaytraceMapper>::New();
 //      mapper->SetRadiusScalars("Radius");
       mapper->SetRadiusScalars("Radius");
       mapper->SetIntensityScalars("Intensity");

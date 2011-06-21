@@ -22,13 +22,11 @@
 #define __vtkSplotchRaytraceMapper_h
 
 #include "vtkPainterPolyDataMapper.h"
-class MPI_Manager;
 
 class VTK_EXPORT vtkSplotchRaytraceMapper : public vtkPainterPolyDataMapper
 {
 public:
   static vtkSplotchRaytraceMapper* New();
-  static vtkSplotchRaytraceMapper* New2(MPI_Manager *mpimgr);
   vtkTypeMacro(vtkSplotchRaytraceMapper, vtkMapper);
 
   void Render(vtkRenderer *, vtkActor *);
@@ -49,7 +47,7 @@ public:
   vtkGetStringMacro(ActiveScalars);
 
 protected:
-   vtkSplotchRaytraceMapper(MPI_Manager *mpimgr);
+   vtkSplotchRaytraceMapper();
   ~vtkSplotchRaytraceMapper();
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
@@ -59,7 +57,6 @@ protected:
   char *RadiusScalars;
   char *TypeScalars;
   char *ActiveScalars;
-  MPI_Manager *MPImgr;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

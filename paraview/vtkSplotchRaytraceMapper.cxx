@@ -55,25 +55,18 @@ vtkInstantiatorNewMacro(vtkSplotchRaytraceMapper);
 //----------------------------------------------------------------------------
 vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 {
-  vtkObject* ret = new vtkSplotchRaytraceMapper(NULL);
-  return static_cast<vtkSplotchRaytraceMapper *>(ret);
-}
-//----------------------------------------------------------------------------
-vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New2(MPI_Manager *mpimgr)
-{
-  // First try to create the object from the vtkObjectFactory
-  vtkObject* ret = new vtkSplotchRaytraceMapper(mpimgr);
+  vtkObject* ret = new vtkSplotchRaytraceMapper();
   return static_cast<vtkSplotchRaytraceMapper *>(ret);
 }
 // ---------------------------------------------------------------------------
-vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper(MPI_Manager *mpimgr)
+vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
   this->ValueScalars     = NULL;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
   this->ActiveScalars    = NULL;
-  this->MPImgr           = mpimgr;
+  MPI_Manager::GetInstance();
 }
 
 // ---------------------------------------------------------------------------
@@ -234,11 +227,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
   render_new (particle_data,pic,a_eq_e,grayabsorb);
 
-  this->MPImgr->allreduceRaw
+  MPI_Manager::GetInstance()->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   exptable<float32> xexp(-20.0);
-  if (this->MPImgr->master() && a_eq_e) {
+  if (MPI_Manager::GetInstance()->master() && a_eq_e) {
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
         pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
