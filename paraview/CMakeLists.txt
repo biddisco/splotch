@@ -57,7 +57,7 @@ IF (NOT TARGET splotchcore)
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/cxxutils.cc
+#	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/cxxutils.cc
   )
 
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
@@ -72,9 +72,9 @@ IF (NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../reader/millenium_reader.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader_mpi.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
   )
 
   ADD_LIBRARY(splotchio STATIC ${SPLOTCH_IO_LIB_SRCS})
