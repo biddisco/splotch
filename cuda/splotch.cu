@@ -11,6 +11,7 @@ Copyright things go here.
 #include <cutil_inline.h>
 
 #include "cxxsupport/lsconstants.h"
+#include "cxxsupport/string_utils.h"
 #include "splotch/splotchutils.h"
 #include "kernel/transform.h"
 
@@ -208,7 +209,7 @@ void cu_render1
 
   //call device
   k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, nP,
-    pgv->d_fbuf, a_eq_e, grayabsorb);
+    pgv->d_fbuf, a_eq_e, grayabsorb, pgv->colormap_size, pgv->colormap_ptypes);
 
   cutilSafeCall( cudaEventRecord( stop, 0));
   cutilSafeCall( cudaEventSynchronize(stop));
