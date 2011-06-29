@@ -3,6 +3,7 @@
 #endif
 
 #include "cuda/splotch_cuda2.h"
+#include "cxxsupport/string_utils.h"
 #include "cuda/CuPolicy.h"
 
 using namespace std;
@@ -289,9 +290,9 @@ PROBLEM HERE!
    tInfo->times.start("gcopy");
 
    // render chunks of pFiltered particles
-   tInfo->times.start("gcoloring");
-   cu_colorize(pFiltered, gv);
-   tInfo->times.stop("gcoloring");
+//   tInfo->times.start("gcoloring");  moved inside the render kernel
+//   cu_colorize(pFiltered, gv);
+//   tInfo->times.stop("gcoloring");
 
    tInfo->times.start("grender");
    cu_render1(pFiltered, a_eq_e, (float) grayabsorb, gv);
@@ -351,6 +352,7 @@ int filter_chunk(int StartP, int chunk_dim, int nParticle, int maxRegion,
        region = h*w;
 
        if (region <= maxRegion)
+//       if(p.r <= 32.0)
        {
          // set the start position of the particle in fragment buffer
          if ((pFiltered + 1 <= chunk_dim) && (posInFragBuf+region < nFBufInCell)) 
@@ -499,7 +501,7 @@ void GPUReport(wallTimerSet &cuTimers)
     cout << "Copy-fbuf  (secs)          : " << cuTimers.acc("gcopy-fbuf") << endl;
     cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
 //    cout << "Sorting Data (secs)        : " << cuTimers.acc("gsort") << endl;
-    cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
+//    cout << "Coloring Sub-Data (secs)   : " << cuTimers.acc("gcoloring") << endl;
     cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
     cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
     cout << "Combine Sub-image (secs)   : " << cuTimers.acc("gcombine") << endl;
