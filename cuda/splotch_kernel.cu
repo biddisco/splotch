@@ -125,13 +125,48 @@ __global__ void k_combine
 //device render function k_render1
 __global__ void k_render1
   (cu_particle_splotch *p, int nP,
-  void *buf, bool a_eq_e, float grayabsorb)
+  void *buf, bool a_eq_e, float grayabsorb, int mapSize, int types)
   {
   //first get the index m of this thread
   int m;
+
   m =blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=nP)//m goes from 0 to nP-1
     return;
+
+  // coloring
+  int ptype = p[m].type;
+  float col1=p[m].e.r,col2=p[m].e.g,col3=p[m].e.b;
+  clamp (0.0000001,0.9999999,col1);
+  if (dparams.col_vector[ptype])
+    {
+    clamp (0.0000001,0.9999999,col2);
+    clamp (0.0000001,0.9999999,col3);
+    }
+  float intensity=p[m].I;
+  clamp (0.0000001,0.9999999,intensity);
+  intensity *= dparams.brightness[ptype];
+
+  cu_color e;
+  if (dparams.col_vector[ptype])   // color from file
+    {
+    e.r=col1*intensity;
+    e.g=col2*intensity;
+    e.b=col3*intensity;
+    }
+  else   // get color, associated from physical quantity contained in e.r, from lookup table
+    {
+  //first find the right entry for this ptype
+      if (ptype<types)
+      {
+        e = get_color(ptype, col1, mapSize, types);
+        e.r *= intensity;
+        e.g *= intensity;
+        e.b *= intensity;
+      }
+      else
+      { e.r =e.g =e.b =0.0; }
+    }
 
   //make fbuf the right type
   cu_fragment_AeqE        *fbuf;
@@ -141,7 +176,7 @@ __global__ void k_render1
   else
     fbuf1 =(cu_fragment_AneqE*)buf;
 
-  //now do the calc
+  //now do the rendering
   const float powtmp = pow(Pi,1./3.);
   const float sigma0 = powtmp/sqrt(2*Pi);
 
@@ -149,7 +184,7 @@ __global__ void k_render1
   const float radsq = 2.25*r*r;
   const float stp = -0.5/(r*r*sigma0*sigma0);
 
-  cu_color e=p[m].e, q;
+  cu_color q; //e=p[m].e;
   if (!a_eq_e)
    {
      q.r = e.r/(e.r+grayabsorb);
@@ -172,7 +207,7 @@ __global__ void k_render1
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
-          float att = exp(stp*dsq);
+          float att = __expf(stp*dsq);
           fbuf[fpos].aR = att*e.r;
           fbuf[fpos].aG = att*e.g;
           fbuf[fpos].aB = att*e.b;
@@ -198,15 +233,15 @@ __global__ void k_render1
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
-          float att = exp(stp*dsq);
+          float att = __expf(stp*dsq);
           float   expm1;
-          expm1 =exp(att*e.r)-1.0;
+          expm1 =__expf(att*e.r)-1.0;
           fbuf1[fpos].aR = expm1;
           fbuf1[fpos].qR = q.r;
-          expm1 =exp(att*e.g)-1.0;
+          expm1 =__expf(att*e.g)-1.0;
           fbuf1[fpos].aG = expm1;
           fbuf1[fpos].qG = q.g;
-          expm1 =exp(att*e.b)-1.0;
+          expm1 =__expf(att*e.b)-1.0;
           fbuf1[fpos].aB = expm1;
           fbuf1[fpos].qB = q.b;
         }
@@ -231,6 +266,7 @@ __global__ void k_render1
 __global__ void k_transform
   (cu_particle_sim *p, cu_particle_splotch *p2, int n)
   {
+
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >n) m =n;
@@ -306,6 +342,7 @@ __global__ void k_transform
 __global__ void k_colorize
   (int n, cu_particle_splotch *p2, int mapSize, int types)
   {
+
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >n) m =n;
