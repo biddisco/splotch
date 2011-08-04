@@ -23,6 +23,8 @@
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/cxxutils.h"
 #include "reader/reader.h"
+//boost
+#include "booster/mesh_vis.h"
 
 using namespace std;
 
@@ -157,6 +159,14 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 // Interpolated velocities:
 //    v=v0+t*(v1-v0)
 
+// booster main variables
+
+   Mesh_vis * Mesh = NULL;
+   Mesh_dim MeshD;
+   //vector<particle_sim> r_points;
+
+// THIS IS particle_interpolate function
+
 void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   {
   cout << " Time1/2 = " << time1 << "," << time2 << endl;
@@ -269,6 +279,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   if(mpiMgr.master())
     cout << " found " << p.size() << " common particles ..." << endl;
   }
+
 #ifdef SPLVISIVO
 sceneMaker::sceneMaker (paramfile &par, VisIVOServerOptions &opt)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
@@ -382,6 +393,9 @@ sceneMaker::sceneMaker (paramfile &par)
       }
     }
   }
+
+// THIS IS fetchFiles function
+
 #ifdef SPLVISIVO
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx,VisIVOServerOptions &opt)
 #else
@@ -514,12 +528,26 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   tstack_pop("Particle ranging");
 
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
+
+// boost initialization
+
+   bool boost = params.find<bool>("boost",false);
+   if(boost)
+   {
+     cout << "Boost setup..." << endl;
+     mesh_creator(particle_data, &Mesh, &MeshD);
+     randomizer(particle_data, Mesh, MeshD);
+   }
+
   }
+
+// THIS IS function getNextScene
+
 #ifdef SPLVISIVO
-bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
+bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<particle_sim> &r_points,
   vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile,VisIVOServerOptions &opt)
 #else
-bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
+bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<particle_sim> &r_points,
   vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
 #endif
 {
@@ -564,5 +592,19 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
 	  }
       }
     }
+
+// Let's try to boost!!!
+
+   bool boost = params.find<bool>("boost",false);
+   if(boost)
+   {
+     cout << "Boost!!!" << endl;
+     m_rotation(params, &Mesh, MeshD, campos, lookat, sky);
+     p_selector(particle_data, Mesh, MeshD, r_points);
+   }
+
+// End boost
+
+
   return true;
   }

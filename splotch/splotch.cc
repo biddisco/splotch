@@ -63,6 +63,7 @@ int main (int argc, const char **argv)
 
 #ifndef CUDA
   vector<particle_sim> particle_data; //raw data from file
+  vector<particle_sim> r_points;
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
 #else //ifdef CUDA they will be global vars
@@ -107,12 +108,13 @@ int main (int argc, const char **argv)
   tstack_pop("Setup");
   string outfile;
 
+
 #ifdef SPLVISIVO
   sceneMaker sMaker(params,opt);  
-  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile,opt))
+  while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile,opt))
 #else
   sceneMaker sMaker(params);  
-  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
+  while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile))
 #endif
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
@@ -120,14 +122,32 @@ int main (int argc, const char **argv)
         yres = params.find<int>("yres",xres);
     arr2<COLOUR> pic(xres,yres);
 
+// calculate boost factor for brightness
+    
+    float b_brightness = 1.0;
+    bool boost = params.find<bool>("boost",false);
+    if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
+
 #ifndef CUDA
     if(particle_data.size()>0)
+    {
+      if(boost)
+      {
 #ifdef SPLVISIVO
-    host_rendering(params, particle_data, pic, campos, lookat, sky, amap,opt);
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, opt);
 #else
-      host_rendering(params, particle_data, pic, campos, lookat, sky, amap); 
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness); 
 #endif
+      } else {
+#ifdef SPLVISIVO
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, opt);
 #else
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
+#endif
+      }
+    }
+#else
+// BOOST not implemented here
     cuda_rendering(mydevID, nDevProc, pic);
 #endif
 

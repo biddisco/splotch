@@ -59,12 +59,14 @@ class sceneMaker
   public:
 #ifdef SPLVISIVO
     sceneMaker (paramfile &par, VisIVOServerOptions &opt);
-    bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
-      vec3 &lookat, vec3 &sky, std::string &outfile, VisIVOServerOptions &opt);
+    bool getNextScene (std::vector<particle_sim> &particle_data, 
+                       std::vector<particle_sim> &r_points, vec3 &campos,
+                       vec3 &lookat, vec3 &sky, std::string &outfile, VisIVOServerOptions &opt);
 #else
     sceneMaker (paramfile &par);
-    bool getNextScene (std::vector<particle_sim> &particle_data, vec3 &campos,
-      vec3 &lookat, vec3 &sky, std::string &outfile);
+    bool getNextScene (std::vector<particle_sim> &particle_data, 
+                       std::vector<particle_sim> &r_points, vec3 &campos,
+                       vec3 &lookat, vec3 &sky, std::string &outfile);
 #endif
   };
 
