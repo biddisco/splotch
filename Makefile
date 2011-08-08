@@ -6,7 +6,7 @@
 #OPT     +=  -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
+OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -108,7 +108,7 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch4.5$(SYSTYPE)
+EXEC   = Splotch4.6$(SYSTYPE)
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
