@@ -129,7 +129,7 @@ void m_rotation(paramfile &params, Mesh_vis ** p, Mesh_dim MeshD, const vec3 &ca
     float effvy = v.y - (fabs(v.y)/v.y)*diag;
     float effvv2 = effvx*effvx + effvy*effvy;
     float effvv = sqrt(effvv2);
-    float effdd = v.z * fovfct;
+    float effdd = sqrt2 * v.z * fovfct;
 
     if (effvv > effdd){(*p)[m].active = false; continue;};
 
@@ -137,7 +137,7 @@ void m_rotation(paramfile &params, Mesh_vis ** p, Mesh_dim MeshD, const vec3 &ca
     (*p)[m].weight = quality_factor;
 
 // weight othogonal to the line of sight
-    float sigma_eff = 2.0*effdd;
+    float sigma_eff = 1.0*effdd;
     (*p)[m].weight *= gauss_weight(effvv,sigma_eff);
 // weight along the line of sight
     sigma_eff = dist;
