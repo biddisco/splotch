@@ -12,6 +12,8 @@ using namespace std;
 
 namespace {
 
+float smooth_factor = 1.0;
+
 void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   int &nfields, int64 &mybegin, int64 &npart, int64 &npart_total)
   {
@@ -27,6 +29,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
      qty_idx[7] = color 3 (B) */
 
   bool doswap = params.find<bool>("swap_endian",true);
+  smooth_factor = params.find<float>("smooth_factor",1.0);
   string datafile = params.find<string>("infile");
   inp.open (datafile.c_str(),doswap);
   planck_assert (inp,"could not open input file '" + datafile + "'");
@@ -105,7 +108,7 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
     points[i].x = buffer[qty_idx[0]];
     points[i].y = buffer[qty_idx[1]];
     points[i].z = buffer[qty_idx[2]];
-    points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : 1.0;
+    points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : smooth_factor;
     points[i].I = (qty_idx[4]>=0) ? buffer[qty_idx[4]] : 0.5;
     points[i].e.r = buffer[qty_idx[5]];
     points[i].e.g = have_c2c3 ? buffer[qty_idx[6]] : 0.0;
@@ -151,9 +154,9 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points)
       CASEMACRO__(0,x,0)
       CASEMACRO__(1,y,0)
       CASEMACRO__(2,z,0)
-      CASEMACRO__(3,r,1.)
+      CASEMACRO__(3,r,smooth_factor)
       CASEMACRO__(4,I,.5)
-      CASEMACRO__(5,e.r,0)
+      CASEMACRO__(5,e.r,1.0)
       CASEMACRO__(6,e.g,0)
       CASEMACRO__(7,e.b,0)
       }
