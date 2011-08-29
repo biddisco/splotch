@@ -496,6 +496,49 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     case 7:
       hdf5_reader(params,particle_data);
       break;
+    case 8:
+      // GADGET HDF5 READER (this block was initially copied from case 2)
+      //
+      if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
+        {
+        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
+        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+        if (snr1==snr2_now)
+          {
+          cout << " old2 = new1!" << endl;
+          p1.swap(p2);
+          id1.swap(id2);
+          idx1.swap(idx2);
+          vel1.swap(vel2);
+
+          snr1_now = snr1;
+          time1 = time2;
+          }
+        if (snr1_now!=snr1)
+          {
+          cout << " reading new1 " << snr1 << endl;
+          gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+          tstack_replace("Input","Particle index generation");
+          buildIndex(id1.begin(),id1.end(),idx1);
+          tstack_replace("Particle index generation","Input");
+          snr1_now = snr1;
+          }
+        if (snr2_now!=snr2)
+          {
+          cout << " reading new2 " << snr2 << endl;
+          gadget_hdf5_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
+          tstack_replace("Input","Particle index generation");
+          buildIndex(id2.begin(),id2.end(),idx2);
+          tstack_replace("Particle index generation","Input");
+          snr2_now = snr2;
+          }
+        }
+      else
+        {
+        double dummy;
+        gadget_hdf5_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy,boxsize);
+        }
+      break;
 #endif
 #ifdef SPLVISIVO
     case 10:

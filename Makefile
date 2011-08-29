@@ -11,8 +11,8 @@ OPT	+=  -DUSE_MPI
 
 #--------------------------------------- Switch on HDF5
 
-#OPT     +=  -DHDF5
-#OPT     +=  -DH5_USE_16_API
+OPT     +=  -DHDF5
+OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
@@ -30,6 +30,7 @@ OPT	+=  -DUSE_MPI
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
+SYSTYPE="VIZ"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
 CC       = mpic++        # sets the C-compiler (default)
@@ -45,6 +46,22 @@ SUP_INCL = -I. -Icxxsupport -Ic_utils
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 SUP_INCL += -Impiio-1.0/include/
 endif
+
+
+
+# configuration for the VIZ visualization cluster at the Garching computing centre
+ifeq ($(SYSTYPE),"VIZ")
+ ifeq (HDF5,$(findstring HDF5,$(OPT)))
+  # HDF5_HOME = /u/system/hdf5/1.6.10/mpi
+  HDF5_HOME = /u/system/hdf5/1.8.7/serial
+  LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+  HDF5_INCL = -I$(HDF5_HOME)/include
+ endif
+ OPTIMIZE += -O3 -march=native -mtune=native
+ OMP      = -fopenmp
+endif
+
+
 
 ifeq ($(SYSTYPE),"SP6")
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
@@ -119,7 +136,8 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
-OBJS += reader/hdf5_reader.o 
+OBJS += reader/hdf5_reader.o
+OBJS += reader/gadget_hdf5_reader.o
 endif
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
 OBJS += cuda/splotch.o cuda/CuPolicy.o cuda/splotch_cuda2.o cuda/deviceQuery.o
