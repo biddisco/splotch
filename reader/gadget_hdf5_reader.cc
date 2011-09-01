@@ -3,13 +3,13 @@
  *
  *  TODO  - implement support for 64bit integer IDs
  *        - implement byte swapping
- *        - implement error handling of HDF5 calls
- *        - clean code, correct indentation
+ *        - implement improved error handling of HDF5 calls
  *        - merge with <gadget_reader.cc> as a significant amount
  *          of code is shared?
  *
  *                                               (Klaus Reuter, RZG)
  */
+
 
 #include <iostream>
 #include <cmath>
@@ -40,20 +40,20 @@ using namespace std;
 //
 void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *attribute)
 {
-   hid_t   hdf5_attribute, hdf5_datatype, hdf5_dataSpace;
-   herr_t  hdf5_status;
-   int     rank;
-   hsize_t sdim[64]; 
-   //
-   hdf5_attribute = H5Aopen_name(hdf5_group, attrName);
-   hdf5_datatype  = H5Aget_type(hdf5_attribute);
-   hdf5_dataSpace = H5Aget_space(hdf5_attribute);
-   rank           = H5Sget_simple_extent_ndims(hdf5_dataSpace);
-   hdf5_status    = H5Sget_simple_extent_dims(hdf5_dataSpace, sdim, NULL);
-   hdf5_status    = H5Aread(hdf5_attribute, hdf5_datatype, attribute);
-   hdf5_status    = H5Tclose(hdf5_datatype);
-   hdf5_status    = H5Sclose(hdf5_dataSpace);
-   hdf5_status    = H5Aclose(hdf5_attribute);
+  hid_t   hdf5_attribute, hdf5_datatype, hdf5_dataSpace;
+  herr_t  hdf5_status;
+  int     rank;
+  hsize_t sdim[64];
+  //
+  hdf5_attribute = H5Aopen_name(hdf5_group, attrName);
+  hdf5_datatype  = H5Aget_type(hdf5_attribute);
+  hdf5_dataSpace = H5Aget_space(hdf5_attribute);
+  rank           = H5Sget_simple_extent_ndims(hdf5_dataSpace);
+  hdf5_status    = H5Sget_simple_extent_dims(hdf5_dataSpace, sdim, NULL);
+  hdf5_status    = H5Aread(hdf5_attribute, hdf5_datatype, attribute);
+  hdf5_status    = H5Tclose(hdf5_datatype);
+  hdf5_status    = H5Sclose(hdf5_dataSpace);
+  hdf5_status    = H5Aclose(hdf5_attribute);
 }
 
 
@@ -62,31 +62,31 @@ void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *at
 //
 int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, int32 *nparttotal, double &boxsize)
 {
-/*
-  int blocksize = gadget_find_block (file,"HEAD");
-  planck_assert (blocksize>0, "Header block not found");
-  file.skip(4);
-  file.get(npart,6);
-  file.skip(6*8);
-  file >> time;
-  file.skip(8+4+4);
-  file.get(nparttotal,6);
-  file.skip(4+4);
-  file >> boxsize;
-*/
-   hid_t  hdf5_header;
-   herr_t hdf5_status;
+  /*
+    int blocksize = gadget_find_block (file,"HEAD");
+    planck_assert (blocksize>0, "Header block not found");
+    file.skip(4);
+    file.get(npart,6);
+    file.skip(6*8);
+    file >> time;
+    file.skip(8+4+4);
+    file.get(nparttotal,6);
+    file.skip(4+4);
+    file >> boxsize;
+  */
+  hid_t  hdf5_header;
+  herr_t hdf5_status;
 
-   hdf5_header = H5Gopen(hdf5_file, "/Header", H5P_DEFAULT);
-   //
-   read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart);
-   read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time);
-   read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal);
-   read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize);
-   //
-   hdf5_status = H5Gclose(hdf5_header);
- 
-   return 0;
+  hdf5_header = H5Gopen(hdf5_file, "/Header", H5P_DEFAULT);
+  //
+  read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart);
+  read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time);
+  read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal);
+  read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize);
+  //
+  hdf5_status = H5Gclose(hdf5_header);
+
+  return 0;
 }
 
 
@@ -94,59 +94,59 @@ int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, int32 *
 //
 void readHDF5DataArray( hid_t group_id, const char * arrayName, hid_t hdf5Type, void *dataArray )
 {
-   hid_t dataSetId;
-   int nColumns;
+  hid_t dataSetId;
+  int nColumns;
 
-   // if arrayName does not exist, H5Dopen writes an error message to <stderr>
-   // and returns a value < 0
-   dataSetId = H5Dopen(group_id, arrayName, H5P_DEFAULT);
+  // if arrayName does not exist, H5Dopen writes an error message to <stderr>
+  // and returns a value < 0
+  dataSetId = H5Dopen(group_id, arrayName, H5P_DEFAULT);
 
-   if (dataSetId<0)
-   {
-      return;
-   }
+  if (dataSetId<0)
+  {
+    return;
+  }
 
-   hid_t dataSpace;
-   int   dataSetRank;
-   dataSpace   = H5Dget_space(dataSetId);
-   dataSetRank = H5Sget_simple_extent_ndims(dataSpace);
-   herr_t status;
-   hsize_t dataSetDims[64];
-   status = H5Sget_simple_extent_dims(dataSpace, dataSetDims, NULL);
-   status = H5Sclose(dataSpace);
+  hid_t dataSpace;
+  int   dataSetRank;
+  dataSpace   = H5Dget_space(dataSetId);
+  dataSetRank = H5Sget_simple_extent_ndims(dataSpace);
+  herr_t status;
+  hsize_t dataSetDims[64];
+  status = H5Sget_simple_extent_dims(dataSpace, dataSetDims, NULL);
+  status = H5Sclose(dataSpace);
 
-   if (dataSetRank==1)
-   {
-      nColumns=1;   // scalar field
-   }
-   else if(dataSetRank==2)
-   {
-      nColumns=3;   // vector field
-      if (nColumns!=dataSetDims[1])
-         throw "readHDF5DataArray: dataSetDims[1]!=3";
-   }
-   else
-   {
-      throw "readHDF5DataArray: unknown HDF5 array format";
-   }
+  if (dataSetRank==1)
+  {
+    nColumns=1;   // scalar field
+  }
+  else if(dataSetRank==2)
+  {
+    nColumns=3;   // vector field
+    if (nColumns!=dataSetDims[1])
+      throw "readHDF5DataArray: dataSetDims[1]!=3";
+  }
+  else
+  {
+    throw "readHDF5DataArray: unknown HDF5 array format";
+  }
 
-   if (!((hdf5Type==H5T_NATIVE_UINT)||(hdf5Type==H5T_NATIVE_FLOAT)))
-   {
-      throw "readHDF5DataArray: wrong HDF5 data type";
-   }
+  if (!((hdf5Type==H5T_NATIVE_UINT)||(hdf5Type==H5T_NATIVE_FLOAT)))
+  {
+    throw "readHDF5DataArray: wrong HDF5 data type";
+  }
 
-   H5Dread(dataSetId, hdf5Type, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataArray);
+  H5Dread(dataSetId, hdf5Type, H5S_ALL, H5S_ALL, H5P_DEFAULT, dataArray);
 
-   H5Dclose(dataSetId);
+  H5Dclose(dataSetId);
 }
 
 
 
 
 void gadget_hdf5_reader(paramfile &params, int interpol_mode,
-         vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
-         double &time, double &boxsize)
-  {
+                        vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
+                        double &time, double &boxsize)
+{
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",false);
   string infilename = params.find<string>("infile");
@@ -181,28 +181,28 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
   int NFilePerRead=numfiles/readparallel;
   int SendingTask=-1;
 
-  for(int i=0;i<NTasks;i++)
-    {
+  for(int i=0; i<NTasks; i++)
+  {
     if(i%NTaskPerRead == 0 && (readparallel > 1 || i == 0))
-      {
+    {
       ThisTaskReads[i]=i/NTaskPerRead*NFilePerRead;
       DataFromTask[i]=-1;
       SendingTask=i;
-      }
+    }
     else
-      {
+    {
       ThisTaskReads[i]=-1;
       DataFromTask[i]=SendingTask;
-      }
     }
+  }
 
   if(mpiMgr.master())
   {
     int itask=0;
-    for(int rt=0;rt<readparallel;rt++)
-      {
+    for(int rt=0; rt<readparallel; rt++)
+    {
       long NPartThisReadTask = 0;
-      for(int f=0;f<NFilePerRead;f++)
+      for(int f=0; f<NFilePerRead; f++)
       {
         int file=rt*NFilePerRead+f;
         int npartthis[6],nparttotal[6];
@@ -226,17 +226,17 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
           cout << "    Timestamp from file : t=" << time << endl;
         if(rt==0 && f==0)
         {
-         cout << "    Total number of particles in file :" << endl;
-         cout << "    Type 0 (gas):   " << nparttotal[0] << endl;
-         cout << "    Type 1 (dm):    " << nparttotal[1] << endl;
-         cout << "    Type 2 (bndry): " << nparttotal[2] << endl;
-         cout << "    Type 3 (bndry): " << nparttotal[3] << endl;
-         cout << "    Type 4 (stars): " << nparttotal[4] << endl;
-         cout << "    Type 5 (BHs):   " << nparttotal[5] << endl;
-         if(params.find<bool>("AnalyzeSimulationOnly"))
-         {
-           if(nparttotal[0] > 0)
-           {
+          cout << "    Total number of particles in file :" << endl;
+          cout << "    Type 0 (gas):   " << nparttotal[0] << endl;
+          cout << "    Type 1 (dm):    " << nparttotal[1] << endl;
+          cout << "    Type 2 (bndry): " << nparttotal[2] << endl;
+          cout << "    Type 3 (bndry): " << nparttotal[3] << endl;
+          cout << "    Type 4 (stars): " << nparttotal[4] << endl;
+          cout << "    Type 5 (BHs):   " << nparttotal[5] << endl;
+          if(params.find<bool>("AnalyzeSimulationOnly"))
+          {
+            if(nparttotal[0] > 0)
+            {
               cout << "To visualize the gas particles add/change the following lines to the parameter file:" << endl;
               cout << "ptypes=1" << endl;
               cout << "AnalyzeSimulationOnly=FALSE" << endl;
@@ -247,45 +247,45 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
               ptype_found = 0;
               ptypes = 1;
               ntot = nparttotal[0];
-           }
-           else
-           {
-             if(nparttotal[1] > 0)
-             {
-               cout << "To vizualize the dm particles add/change following lines to the parameter file:" << endl;
-               cout << "ptypes=1" << endl;
-               cout << "AnalyzeSimulationOnly=FALSE" << endl;
-               cout << "ptype0=1" << endl;
-               cout << "color_label0=VEL" << endl;
-               cout << "color_present0=63" << endl;
-               cout << "color_is_vector0=TRUE" << endl;
-               cout << "color_log0=FALSE" << endl;
-               cout << "color_asinh0=TRUE" << endl;
-               ptype_found = 1;
-               ptypes = 1;
-               ntot = nparttotal[1];
+            }
+            else
+            {
+              if(nparttotal[1] > 0)
+              {
+                cout << "To vizualize the dm particles add/change following lines to the parameter file:" << endl;
+                cout << "ptypes=1" << endl;
+                cout << "AnalyzeSimulationOnly=FALSE" << endl;
+                cout << "ptype0=1" << endl;
+                cout << "color_label0=VEL" << endl;
+                cout << "color_present0=63" << endl;
+                cout << "color_is_vector0=TRUE" << endl;
+                cout << "color_log0=FALSE" << endl;
+                cout << "color_asinh0=TRUE" << endl;
+                ptype_found = 1;
+                ptypes = 1;
+                ntot = nparttotal[1];
               }
-           }
-         }
+            }
+          }
         }
-        for(int itype=0;itype<ptypes;itype++)
+        for(int itype=0; itype<ptypes; itype++)
         {
           int type = params.find<int>("ptype"+dataToString(itype),0);
           if(params.find<bool>("AnalyzeSimulationOnly") && ptype_found >= 0)
-          type = ptype_found;
+            type = ptype_found;
           NPartThisReadTask += npartthis[type];
         }
       }
       long SumPartThisReadTask = 0;
-      for(int t=0;t<NTaskPerRead-1;t++)
-        {
+      for(int t=0; t<NTaskPerRead-1; t++)
+      {
         NPartThisTask[itask] = NPartThisReadTask / NTaskPerRead;
         SumPartThisReadTask += NPartThisReadTask / NTaskPerRead;
         itask++;
-        }
+      }
       NPartThisTask[itask] = NPartThisReadTask - SumPartThisReadTask;
       itask++;
-      }
+    }
   }
 
 
@@ -298,16 +298,16 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
     cout << " Task " << ThisTask << "/" << NTasks << endl;
     cout << " NTaskPerRead/NFilePerRead " << NTaskPerRead << "," << NFilePerRead << endl;
     cout << " ThisTaskReads";
-    for(int i=0;i<NTasks;i++)
+    for(int i=0; i<NTasks; i++)
       cout << ',' << ThisTaskReads[i];
     cout << endl;
     cout << " DataFromTask";
-    for(int i=0;i<NTasks;i++)
+    for(int i=0; i<NTasks; i++)
       cout << ',' << DataFromTask[i];
     cout << endl;
 
     cout << " NPartThis";
-    for(int i=0;i<NTasks;i++)
+    for(int i=0; i<NTasks; i++)
       cout  << ',' << NPartThisTask[i];
     cout << endl;
   }
@@ -319,7 +319,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
   if (interpol_mode>1)
     vel.resize(npart);
 
-  for(int i=0;i<NTasks;i++)
+  for(int i=0; i<NTasks; i++)
     if(NPartThisTask[i] > nmax)
       nmax = NPartThisTask[i];
 
@@ -329,12 +329,12 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
-    {
+  {
     int ToTask=ThisTask;
     long ncount=0;
 
-    for(int f=0;f<NFilePerRead;f++)
-      {
+    for(int f=0; f<NFilePerRead; f++)
+    {
       int npartthis[6],nparttotal[6];
       int present=1+2+4+8+16+32;
       int LastType=-1;
@@ -351,13 +351,18 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
 
-      for(int itype=0;itype<ptypes;itype++)
+      for(int itype=0; itype<ptypes; itype++)
       {
         int type = params.find<int>("ptype"+dataToString(itype),0);
         if(params.find<bool>("AnalyzeSimulationOnly") && ptype_found >= 0)
           type = ptype_found;
 
         arr<float32> ftmp(3*npartthis[type]);
+
+        // If there are 0 particles of species "type" there's also no
+        // HDF5 group named "/PartType{type}" which would lead to error
+        // messages from H5Gopen below.
+        if(npartthis[type]==0) continue;
 
         string GroupName;
         GroupName.assign("/PartType");
@@ -371,120 +376,120 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         for(int m=0; m<npartthis[type]; ++m)
         {
           if(ThisTask == ToTask)
-            {
+          {
             p[ncount].x=ftmp[3*m];
             p[ncount].y=ftmp[3*m+1];
             p[ncount].z=ftmp[3*m+2];
             p[ncount].type=itype;
             ncount++;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               ToTask++;
               ncount=0;
-              }
             }
+          }
           else
-            {
+          {
             v1_tmp[ncount]=ftmp[3*m];
             v2_tmp[ncount]=ftmp[3*m+1];
             v3_tmp[ncount]=ftmp[3*m+2];
             i1_tmp[ncount] = itype;
             ncount++;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
               mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
               mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
-              }
             }
           }
-        LastType=type;
         }
-      H5Fclose(file_id);
+        LastType=type;
       }
-    planck_assert(ncount == 0,"Some particles were left when reading positions ...");
+      H5Fclose(file_id);
     }
+    planck_assert(ncount == 0,"Some particles were left when reading positions ...");
+  }
   else
-    {
+  {
     mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-      {
+    {
       p[m].x=v1_tmp[m];
       p[m].y=v2_tmp[m];
       p[m].z=v3_tmp[m];
       p[m].type=i1_tmp[m];
-      }
     }
+  }
 
   if(params.find<bool>("AnalyzeSimulationOnly"))
   {
-      arr<Normalizer<float32> > posnorm(3);
-      for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-   {
-     posnorm[0].collect(p[m].x);
-     posnorm[1].collect(p[m].y);
-     posnorm[2].collect(p[m].z);
-   }
+    arr<Normalizer<float32> > posnorm(3);
+    for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+    {
+      posnorm[0].collect(p[m].x);
+      posnorm[1].collect(p[m].y);
+      posnorm[2].collect(p[m].z);
+    }
 
-      mpiMgr.allreduce(posnorm[0].minv,MPI_Manager::Min);
-      mpiMgr.allreduce(posnorm[1].minv,MPI_Manager::Min);
-      mpiMgr.allreduce(posnorm[2].minv,MPI_Manager::Min);
-      mpiMgr.allreduce(posnorm[0].maxv,MPI_Manager::Max);
-      mpiMgr.allreduce(posnorm[1].maxv,MPI_Manager::Max);
-      mpiMgr.allreduce(posnorm[2].maxv,MPI_Manager::Max);
-      if(mpiMgr.master())
-   {
-     if(ptype_found == 1)
-       {
-         double dx=(posnorm[0].maxv - posnorm[0].minv);
-         double dy=(posnorm[1].maxv - posnorm[1].minv);
-         double dz=(posnorm[2].maxv - posnorm[2].minv);
-              double l;
-              l = pow(dx * dy * dz / ntot,1./3.) / 5;
-         cout << "size_fix0=" << l << endl;
-       }
-     cout << "camera_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
-     cout << "camera_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 + (posnorm[1].maxv - posnorm[1].minv) *1.5 << endl;
-     cout << "camera_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
-     cout << "lookat_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
-     cout << "lookat_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 << endl;
-     cout << "lookat_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
-     cout << "sky_x=0" << endl;
-     cout << "sky_y=0" << endl;
-     cout << "sky_z=1" << endl;
-     cout << "fov=30" << endl;
-     cout << "pictype=0" << endl;
-     cout << "outfile=demo.tga" << endl;
-     cout << "xres=800" << endl;
-     cout << "colorbar=TRUE" << endl;
-     if(ptype_found == 0)
-       cout << "palette0=palettes/OldSplotch.pal" << endl;
-          cout << "brightness0=2.0" << endl;
-   }
-      ptypes=0;
-      p.resize(0);
- }
+    mpiMgr.allreduce(posnorm[0].minv,MPI_Manager::Min);
+    mpiMgr.allreduce(posnorm[1].minv,MPI_Manager::Min);
+    mpiMgr.allreduce(posnorm[2].minv,MPI_Manager::Min);
+    mpiMgr.allreduce(posnorm[0].maxv,MPI_Manager::Max);
+    mpiMgr.allreduce(posnorm[1].maxv,MPI_Manager::Max);
+    mpiMgr.allreduce(posnorm[2].maxv,MPI_Manager::Max);
+    if(mpiMgr.master())
+    {
+      if(ptype_found == 1)
+      {
+        double dx=(posnorm[0].maxv - posnorm[0].minv);
+        double dy=(posnorm[1].maxv - posnorm[1].minv);
+        double dz=(posnorm[2].maxv - posnorm[2].minv);
+        double l;
+        l = pow(dx * dy * dz / ntot,1./3.) / 5;
+        cout << "size_fix0=" << l << endl;
+      }
+      cout << "camera_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
+      cout << "camera_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 + (posnorm[1].maxv - posnorm[1].minv) *1.5 << endl;
+      cout << "camera_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
+      cout << "lookat_x=" << (posnorm[0].minv + posnorm[0].maxv)/2 << endl;
+      cout << "lookat_y=" << (posnorm[1].minv + posnorm[1].maxv)/2 << endl;
+      cout << "lookat_z=" << (posnorm[2].minv + posnorm[2].maxv)/2 << endl;
+      cout << "sky_x=0" << endl;
+      cout << "sky_y=0" << endl;
+      cout << "sky_z=1" << endl;
+      cout << "fov=30" << endl;
+      cout << "pictype=0" << endl;
+      cout << "outfile=demo.tga" << endl;
+      cout << "xres=800" << endl;
+      cout << "colorbar=TRUE" << endl;
+      if(ptype_found == 0)
+        cout << "palette0=palettes/OldSplotch.pal" << endl;
+      cout << "brightness0=2.0" << endl;
+    }
+    ptypes=0;
+    p.resize(0);
+  }
 
 
   if (interpol_mode>0)
-    {
+  {
     if (interpol_mode>1)
-      {
+    {
       if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
         cout << " Reading velocities ..." << endl;
       if(ThisTaskReads[ThisTask] >= 0)
-        {
+      {
         int ToTask=ThisTask;
         long ncount=0;
 
-        for(int f=0;f<NFilePerRead;f++)
-          {
+        for(int f=0; f<NFilePerRead; f++)
+        {
           int npartthis[6],nparttotal[6];
           int present=1+2+4+8+16+32;
           int LastType=-1;
@@ -493,17 +498,19 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
           if (numfiles>1)
             filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
-          
+
           hid_t file_id;
           file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
           gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
-          for(int itype=0;itype<ptypes;itype++)
-            {
+          for(int itype=0; itype<ptypes; itype++)
+          {
             int type = params.find<int>("ptype"+dataToString(itype),0);
 
             arr<float32> ftmp(3*npartthis[type]);
             // infile.get(&ftmp[0],ftmp.size());
+
+            if(npartthis[type]==0) continue;
 
             string GroupName;
             GroupName.assign("/PartType");
@@ -514,67 +521,67 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
             H5Gclose(group_id);
 
             for(int m=0; m<npartthis[type]; ++m)
-              {
+            {
               if(ThisTask == ToTask)
-                {
+              {
                 vel[ncount].x=ftmp[3*m];
                 vel[ncount].y=ftmp[3*m+1];
                 vel[ncount].z=ftmp[3*m+2];
                 ncount++;
                 if(ncount == NPartThisTask[ToTask])
-                  {
+                {
                   ToTask++;
                   ncount=0;
-                  }
                 }
+              }
               else
-                {
+              {
                 v1_tmp[ncount]=ftmp[3*m];
                 v2_tmp[ncount]=ftmp[3*m+1];
                 v3_tmp[ncount]=ftmp[3*m+2];
                 ncount++;
                 if(ncount == NPartThisTask[ToTask])
-                  {
+                {
                   mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
                   mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
                   mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
                   ToTask++;
                   ncount=0;
-                  }
                 }
               }
-            LastType=type;
             }
-          H5Fclose(file_id);
+            LastType=type;
           }
-        planck_assert(ncount == 0,"Some particles were left when reading positions ...");
+          H5Fclose(file_id);
         }
+        planck_assert(ncount == 0,"Some particles were left when reading positions ...");
+      }
       else
-        {
+      {
         mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
         mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
         mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
         for (int m=0; m<NPartThisTask[ThisTask]; ++m)
-          {
+        {
           vel[m].x=v1_tmp[m];
           vel[m].y=v2_tmp[m];
           vel[m].z=v3_tmp[m];
-          }
         }
       }
+    }
 
 
     if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
       cout << " Reading ids ..." << endl;
     if(ThisTaskReads[ThisTask] >= 0)
-      {
+    {
       int ToTask=ThisTask;
       long ncount=0;
 
-      for(int f=0;f<NFilePerRead;f++)
-        {
+      for(int f=0; f<NFilePerRead; f++)
+      {
         int npartthis[6],nparttotal[6];
-        
+
         int present=1+2+4+8+16+32;
         int LastType=-1;
         filename=infilename;
@@ -585,84 +592,85 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
         gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
-        for(int itype=0;itype<ptypes;itype++)
-          {
+        for(int itype=0; itype<ptypes; itype++)
+        {
           int type = params.find<int>("ptype"+dataToString(itype),0);
 
+          arr<MyIDType> ftmp(npartthis[type]);
 
-              arr<MyIDType> ftmp(npartthis[type]);
+          if(npartthis[type]==0) continue;
 
-              string GroupName;
-              GroupName.assign("/PartType");
-              GroupName.append(dataToString(type));
-              hid_t group_id;
-              group_id = H5Gopen(file_id, GroupName.c_str(), H5P_DEFAULT);
-              readHDF5DataArray(group_id, "ParticleIDs", H5T_NATIVE_UINT, (void*) &ftmp[0]);
-              H5Gclose(group_id);
+          string GroupName;
+          GroupName.assign("/PartType");
+          GroupName.append(dataToString(type));
+          hid_t group_id;
+          group_id = H5Gopen(file_id, GroupName.c_str(), H5P_DEFAULT);
+          readHDF5DataArray(group_id, "ParticleIDs", H5T_NATIVE_UINT, (void*) &ftmp[0]);
+          H5Gclose(group_id);
 
 
-     if(type == 0)
-       {
-         cout << "WARNING: Patching IDs for gas particles in Magneticum runs !!!" << endl;
-         for(unsigned int m=0; m<ftmp.size(); m++)
-      ftmp[m] = ftmp[m] & 3221225471;           // remove upper 2 bits opf 32bit value 2^30-1
-       }
+          if(type == 0)
+          {
+            cout << "WARNING: Patching IDs for gas particles in Magneticum runs !!!" << endl;
+            for(unsigned int m=0; m<ftmp.size(); m++)
+              ftmp[m] = ftmp[m] & 3221225471;           // remove upper 2 bits opf 32bit value 2^30-1
+          }
 
-     if(type == 4)
-       {
-         cout << "WARNING: Patching IDs for star particles in Magneticum runs !!!" << endl;
-         for(unsigned int m=0; m<ftmp.size(); m++)
-      ftmp[m] = ftmp[m] + 536870912;           // adding 2^29
-       }
+          if(type == 4)
+          {
+            cout << "WARNING: Patching IDs for star particles in Magneticum runs !!!" << endl;
+            for(unsigned int m=0; m<ftmp.size(); m++)
+              ftmp[m] = ftmp[m] + 536870912;           // adding 2^29
+          }
 
           for(int m=0; m<npartthis[type]; ++m)
-            {
+          {
             if(ThisTask == ToTask)
-              {
+            {
               id[ncount]=ftmp[m];
               ncount++;
               if(ncount == NPartThisTask[ToTask])
-                {
+              {
                 ToTask++;
                 ncount=0;
-                }
               }
+            }
             else
-              {
+            {
               i1_tmp[ncount]=ftmp[m];
               ncount++;
               if(ncount == NPartThisTask[ToTask])
-                {
+              {
                 mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
                 ToTask++;
                 ncount=0;
-                }
               }
             }
-          LastType=type;
           }
-          H5Fclose(file_id);
+          LastType=type;
         }
-      planck_assert(ncount == 0,"Some particles were left when reading IDs ...");
+        H5Fclose(file_id);
       }
+      planck_assert(ncount == 0,"Some particles were left when reading IDs ...");
+    }
     else
-      {
+    {
       mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
       for (int m=0; m<NPartThisTask[ThisTask]; ++m)
         id[m]=i1_tmp[m];
-      }
     }
+  }
 
 
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading smoothing ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
-    {
+  {
     int ToTask=ThisTask;
     long ncount=0;
 
-    for(int f=0;f<NFilePerRead;f++)
-      {
+    for(int f=0; f<NFilePerRead; f++)
+    {
       int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
@@ -672,16 +680,19 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);     
+      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
-      for(int itype=0;itype<ptypes;itype++)
-        {
+      for(int itype=0; itype<ptypes; itype++)
+      {
         int type = params.find<int>("ptype"+dataToString(itype),0);
         float fix_size = params.find<float>("size_fix"+dataToString(itype),1.0);
         float size_fac = params.find<float>("size_fac"+dataToString(itype),1.0);
         string label_size = params.find<string>("size_label"+dataToString(itype),"XXXX");
 
         arr<float32> ftmp(npartthis[type]);
+
+        if(npartthis[type]==0) continue;
+
         if (!(fix_size > 0.0))
         {
           string GroupName;
@@ -694,49 +705,49 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         }
 
         for (int m=0; m<npartthis[type]; ++m)
-          {
+        {
           if(ThisTask == ToTask)
-            {
+          {
             p[ncount++].r = (fix_size==0.0) ? ftmp[m]*size_fac : fix_size;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               ToTask++;
               ncount=0;
-              }
             }
+          }
           else
-            {
+          {
             v1_tmp[ncount++] = (fix_size==0.0) ? ftmp[m]*size_fac : fix_size;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
-              }
             }
           }
-          LastType=type;
         }
-        H5Fclose(file_id);
+        LastType=type;
       }
-    planck_assert(ncount == 0,"Some particles were left when reading sizes ...");
+      H5Fclose(file_id);
     }
+    planck_assert(ncount == 0,"Some particles were left when reading sizes ...");
+  }
   else
-    {
+  {
     mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].r=v1_tmp[m];
-    }
+  }
 
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading colors ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
-    {
+  {
     int ToTask=ThisTask;
     long ncount=0;
 
-    for(int f=0;f<NFilePerRead;f++)
-      {
+    for(int f=0; f<NFilePerRead; f++)
+    {
       int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
@@ -748,8 +759,8 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
-      for(int itype=0;itype<ptypes;itype++)
-        {
+      for(int itype=0; itype<ptypes; itype++)
+      {
         int type = params.find<int>("ptype"+dataToString(itype),0);
 
         string label_col = params.find<string>("color_label"+dataToString(itype),"XXXX");
@@ -766,6 +777,8 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
         arr<float32> ftmp(fnread);
 
+        if(npartthis[type]==0) continue;
+
         string GroupName;
         GroupName.assign("/PartType");
         GroupName.append(dataToString(type));
@@ -776,69 +789,69 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
 
         for (int m=0; m<npartthis[type]; ++m)
-          {
+        {
           if(ThisTask == ToTask)
-            {
+          {
             if (read_col > 0)
-              {
+            {
               tsize ofs = col_vector ? 3*m : m;
               p[ncount].e.r = ftmp[ofs]*col_fac;
               if(col_vector)
-                {
+              {
                 p[ncount].e.g = ftmp[ofs+1]*col_fac;
                 p[ncount].e.b = ftmp[ofs+2]*col_fac;
-                }
               }
+            }
             else
               p[ncount].e.Set(1,1,1);
 
             ncount++;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               ToTask++;
               ncount=0;
-              }
             }
+          }
           else
-            {
+          {
             if (read_col > 0)
-              {
+            {
               tsize ofs = col_vector ? 3*m : m;
               v1_tmp[ncount] = ftmp[ofs]*col_fac;
               if(col_vector)
-                {
+              {
                 v2_tmp[ncount] = ftmp[ofs+1]*col_fac;
                 v3_tmp[ncount] = ftmp[ofs+2]*col_fac;
-                }
               }
+            }
             else
               v1_tmp[ncount] = v2_tmp[ncount] = v3_tmp[ncount] = 1;
 
             ncount++;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
               mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
-              }
             }
           }
-        LastType=type;
         }
-      H5Fclose(file_id);
+        LastType=type;
       }
-    planck_assert(ncount == 0,"Some particles were left when reading colors ...");
+      H5Fclose(file_id);
     }
+    planck_assert(ncount == 0,"Some particles were left when reading colors ...");
+  }
   else
-    {
+  {
     mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].e.Set(v1_tmp[m],v2_tmp[m],v3_tmp[m]);
-    }
+  }
 
 
 
@@ -847,12 +860,12 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
     cout << " Reading intensity ..." << endl;
 
   if(ThisTaskReads[ThisTask] >= 0)
-    {
+  {
     int ToTask=ThisTask;
     long ncount=0;
 
-    for(int f=0;f<NFilePerRead;f++)
-      {
+    for(int f=0; f<NFilePerRead; f++)
+    {
       int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
@@ -864,8 +877,8 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
       gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
 
-      for(int itype=0;itype<ptypes;itype++)
-        {
+      for(int itype=0; itype<ptypes; itype++)
+      {
         int type = params.find<int>("ptype"+dataToString(itype),0);
 
         string label_int = params.find<string>("intensity_label"+dataToString(itype),"XXXX");
@@ -873,6 +886,8 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         int read_int=1; //=gadget_find_block(infile,label_int);
 
         arr<float32> ftmp(npartthis[type]);
+
+        if(npartthis[type]==0) continue;
 
         string GroupName;
         GroupName.assign("/PartType");
@@ -884,49 +899,49 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         H5Gclose(group_id);
 
         for (int m=0; m<npartthis[type]; ++m)
-          {
+        {
           if(ThisTask == ToTask)
-            {
+          {
             p[ncount++].I = (read_int>0) ? ftmp[m] : 1;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               ToTask++;
               ncount=0;
-              }
             }
+          }
           else
-            {
+          {
             v1_tmp[ncount++] = (read_int>0) ? ftmp[m] : 1;
             if(ncount == NPartThisTask[ToTask])
-              {
+            {
               mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
-              }
             }
           }
-        LastType=type;
         }
-      H5Fclose(file_id);
+        LastType=type;
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Colors ...");
+      H5Fclose(file_id);
     }
+    planck_assert(ncount == 0,"Some Particles where left when reading Colors ...");
+  }
   else
-    {
+  {
     mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].I=v1_tmp[m];
-    }
   }
+}
 
 #else
 // we compile the code without HDF5 support ...
 
 void gadget_hdf5_reader(paramfile &params, int interpol_mode,
-         vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
-         double &time, double &boxsize)
+                        vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
+                        double &time, double &boxsize)
 {
-   cout << "Splotch was built without support for GADGET HDF5 I/O.  Exiting..." << endl;
+  cout << "Splotch was built without support for GADGET HDF5 I/O.  Exiting..." << endl;
 }
 
 #endif
