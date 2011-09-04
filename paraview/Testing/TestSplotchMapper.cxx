@@ -220,9 +220,10 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
   //
   std::vector<particle_sim> particle_data;
   vec3 campos, lookat, sky;
+  std::vector<particle_sim> r_points;
   sceneMaker sMaker(params);
   std::string outfile;
-  sMaker.getNextScene (particle_data, campos, lookat, sky, outfile);
+  sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile);
 
   numPoints = particle_data.size();
 

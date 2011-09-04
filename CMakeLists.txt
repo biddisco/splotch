@@ -49,6 +49,7 @@ ENDIF (SPLOTCH_USE_MPI)
 INCLUDE_DIRECTORIES(
   ${CMAKE_CURRENT_SOURCE_DIR}
   kernel
+  booster
   cxxsupport
   reader
   writer
@@ -67,6 +68,11 @@ SET(SPLOTCH_CORE_LIB_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/walltimer.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/mpi_support.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/cxxsupport/cxxutils.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/booster/m_rotation.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/booster/mesh_creator.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/booster/mesh_creator_vs1.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/booster/p_selector.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/booster/randomizer.cc 
 )
 
 ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})

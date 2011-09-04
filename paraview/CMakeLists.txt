@@ -44,6 +44,7 @@ IF (NOT TARGET splotchcore)
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../reader
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../writer
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
+	  ${CMAKE_CURRENT_SOURCE_DIR}/../booster	  
   )
 
   #-----------------------------------------------------------------------------
@@ -59,6 +60,11 @@ IF (NOT TARGET splotchcore)
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
 	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/m_rotation.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc 
   )
 
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
