@@ -34,17 +34,16 @@ vtkStandardNewMacro(vtkSplotchRaytraceRepresentation);
 //----------------------------------------------------------------------------
 vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
 {
-  this->SplotchMapper = vtkSplotchRaytraceMapper::New();
-  this->LODSplotchMapper = vtkSplotchRaytraceMapper::New();
+  this->SplotchMapper    = vtkSplotchRaytraceMapper::New();
+  this->Mapper           = this->SplotchMapper;
+  this->LODSplotchMapper = NULL;
+  this->LODMapper        = vtkPolyDataMapper::New();
 
-  this->SplotchMapper->SetInputConnection(0,this->Mapper->GetInputConnection(0, 0));
-  this->LODSplotchMapper->SetInputConnection(0,this->LODMapper->GetInputConnection(0, 0));
-  // does the same as above, just checking
   this->Mapper->SetInputConnection(this->Distributor->GetOutputPort());
   this->LODMapper->SetInputConnection(this->LODDeliveryFilter->GetOutputPort());
 
-  this->Actor->SetMapper(this->SplotchMapper);
-  this->Actor->SetLODMapper(this->LODSplotchMapper);
+  this->Actor->SetMapper(this->Mapper);
+  this->Actor->SetLODMapper(this->LODMapper);
   this->Actor->SetProperty(this->Property);
 
   // override some settings made in GeometryRepresentation
@@ -56,7 +55,7 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
 
   this->ColorArrayName = 0;
   this->ColorAttributeType = POINT_DATA;
-  this->Representation = SURFACE;
+  this->Representation = POINTS;
 
   // Not insanely thrilled about this API on vtkProp about properties, but oh
   // well. We have to live with it.
@@ -68,26 +67,9 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
 //----------------------------------------------------------------------------
 vtkSplotchRaytraceRepresentation::~vtkSplotchRaytraceRepresentation()
 {
-  this->SplotchMapper->Delete();
-  this->LODSplotchMapper->Delete();
-}
-//----------------------------------------------------------------------------
-void vtkSplotchRaytraceRepresentation::SetVisibility(bool val)
-{
-  this->Superclass::SetVisibility(val);
-  this->Actor->SetVisibility(val);
-}
-//----------------------------------------------------------------------------
-void vtkSplotchRaytraceRepresentation::SetIntensityScalars(const char *s)
-{
-  if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(s);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetIntensityScalars(s);
-}
-//----------------------------------------------------------------------------
-void vtkSplotchRaytraceRepresentation::SetRadiusScalars(const char *s)
-{
-  if (this->SplotchMapper) this->SplotchMapper->SetRadiusScalars(s);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetRadiusScalars(s);
+  // Geometry Representation base class will delete the Mapper and LODMapper which point to our classes
+  this->SplotchMapper = NULL;
+  this->LODSplotchMapper = NULL;
 }
 //----------------------------------------------------------------------------
 int vtkSplotchRaytraceRepresentation::FillInputPortInformation(int port,
@@ -110,7 +92,32 @@ void vtkSplotchRaytraceRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
 }
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetIntensityScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetIntensityScalars(s);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetRadiusScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetRadiusScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetRadiusScalars(s);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetTypeScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetTypeScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetTypeScalars(s);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetActiveScalars(const char *s)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetActiveScalars(s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetActiveScalars(s);
+}
+//----------------------------------------------------------------------------
 
-//**************************************************************************
-// Forwarded to vtkPointSpriteMapper
+
+
 //----------------------------------------------------------------------------

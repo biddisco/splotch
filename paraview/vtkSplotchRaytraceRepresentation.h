@@ -31,15 +31,12 @@ public:
   vtkTypeMacro(vtkSplotchRaytraceRepresentation, vtkGeometryRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Get/Set the visibility for this representation. When the visibility of
-  // representation of false, all view passes are ignored.
-  virtual void SetVisibility(bool);
-
   //**************************************************************************
   // Forwarded to vtkSplotchRaytraceMapper
   void SetIntensityScalars(const char *);
   void SetRadiusScalars(const char *);
+  void SetTypeScalars(const char *);
+  void SetActiveScalars(const char *);
 
 //BTX
 protected:

@@ -67,6 +67,7 @@ IF (NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc 
   )
 
+  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
   SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 

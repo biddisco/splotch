@@ -117,19 +117,29 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
   this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
 
   pqPipelineRepresentation *pr = qobject_cast<pqPipelineRepresentation*>(panel->getRepresentation());
+  vtkSMProperty *prop;
 
-  vtkSMProperty *prop = this->Internals->RepresentationProxy->GetProperty("IntensityScalars");
+  prop = this->Internals->RepresentationProxy->GetProperty("IntensityScalars");
   pqFieldSelectionAdaptor *Ifsa = new pqFieldSelectionAdaptor(this->Internals->IntensityArray, prop);
 
   prop = this->Internals->RepresentationProxy->GetProperty("RadiusScalars");
   pqFieldSelectionAdaptor *Rfsa = new pqFieldSelectionAdaptor(this->Internals->RadiusArray, prop);
+
+  prop = this->Internals->RepresentationProxy->GetProperty("TypeScalars");
+  pqFieldSelectionAdaptor *Tfsa = new pqFieldSelectionAdaptor(this->Internals->TypeArray, prop);
+
+  prop = this->Internals->RepresentationProxy->GetProperty("ActiveScalars");
+  pqFieldSelectionAdaptor *Afsa = new pqFieldSelectionAdaptor(this->Internals->ActiveArray, prop);
+
+//  prop = this->Internals->RepresentationProxy->GetProperty("RadiusScalars");
+//  pqFieldSelectionAdaptor *Rfsa = new pqFieldSelectionAdaptor(this->Internals->RadiusArray, prop);
   
-  this->Internals->Links.addPropertyLink(
-    Rfsa, "attributeMode", SIGNAL(selectionChanged()),
-    reprProxy, prop, 0);
-  this->Internals->Links.addPropertyLink(
-    Rfsa, "scalar", SIGNAL(selectionChanged()),
-    reprProxy, prop, 1);
+//  this->Internals->Links.addPropertyLink(
+//    Rfsa, "attributeMode", SIGNAL(selectionChanged()),
+//    reprProxy, prop, 0);
+//  this->Internals->Links.addPropertyLink(
+//    Rfsa, "scalar", SIGNAL(selectionChanged()),
+//    reprProxy, prop, 1);
 
 /*
   // setup the scaleBy and radiusBy menus
