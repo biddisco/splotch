@@ -38,38 +38,14 @@ IF (NOT TARGET splotchcore)
   # Include Directories
   #-----------------------------------------------------------------------------
   INCLUDE_DIRECTORIES(
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../reader
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../writer
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../booster	  
+          ${CMAKE_CURRENT_SOURCE_DIR}/../
+          ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
+          ${CMAKE_CURRENT_SOURCE_DIR}/../reader
+          ${CMAKE_CURRENT_SOURCE_DIR}/../writer
+          ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
+          ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
   )
-
-  #-----------------------------------------------------------------------------
-  # Source files for splotch core library
-  #-----------------------------------------------------------------------------
-  SET(SPLOTCH_CORE_LIB_SRCS
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/transform.cxx
-    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotchutils.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/scenemaker.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch_host.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/m_rotation.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc 
-  )
-
-  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
-  ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
-  SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
   #-----------------------------------------------------------------------------
   # Source files for splotch IO library
@@ -87,7 +63,32 @@ IF (NOT TARGET splotchcore)
 
   ADD_LIBRARY(splotchio STATIC ${SPLOTCH_IO_LIB_SRCS})
   SET_TARGET_PROPERTIES(splotchio PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
-  TARGET_LINK_LIBRARIES(splotchio splotchcore ${SPLOTCH_MPI_LIBS})
+  TARGET_LINK_LIBRARIES(splotchio ${SPLOTCH_MPI_LIBS})
+  
+  #-----------------------------------------------------------------------------
+  # Source files for splotch core library
+  #-----------------------------------------------------------------------------
+  SET(SPLOTCH_CORE_LIB_SRCS
+          ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/transform.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotchutils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/scenemaker.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch_host.cc
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
+          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/m_rotation.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc 
+  )
+
+  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
+  ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
+  TARGET_LINK_LIBRARIES(splotchcore splotchio ${SPLOTCH_MPI_LIBS})
+  SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
 ENDIF (NOT TARGET splotchcore)
 
@@ -158,7 +159,7 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(pv_splotch splotchcore)
+TARGET_LINK_LIBRARIES(pv_splotch splotchcore splotchio)
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects
@@ -185,3 +186,4 @@ INSTALL(
 IF (BUILD_TESTING)
   ADD_SUBDIRECTORY(Testing)
 ENDIF (BUILD_TESTING)  
+

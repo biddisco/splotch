@@ -27,9 +27,16 @@ ENDIF(USE_TRILINOS)
 IF (USE_HDF5)
   ADD_EXECUTABLE(TestSplotchMapper TestSplotchMapper.cxx)
   TARGET_LINK_LIBRARIES(TestSplotchMapper
-    splotchio
-    pv_splotch
     pv_meshless
+    pv_splotch
+    splotchio
     )
-  ADD_TEST(TestSplotchMapper.cxx ${PROJECT_BINARY_DIR}/../bin/TestSplotchMapper.cxx)
+  ADD_TEST(TestSplotchMapper 
+    vglrun ${PROJECT_BINARY_DIR}/../bin/TestSplotchMapper
+      -s /scratch/eiger/biddisco/data/splotch/splotch.par 
+      -D /scratch/eiger/biddisco/data/splotch/ 
+      -F splotch.h5part 
+      -R
+  )
+
 ENDIF (USE_HDF5)
