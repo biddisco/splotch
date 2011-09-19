@@ -61,6 +61,7 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
+  this->Brightness       = 10.5;
   this->ValueScalars     = NULL;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
@@ -113,7 +114,6 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   // and ColorTextureMap as a side effect.
   this->MapScalars( act->GetProperty()->GetOpacity() );
 
-
   //
   double N = pts->GetNumberOfPoints();
   double bounds[6];
@@ -137,7 +137,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   double imax = VTK_DOUBLE_MIN;
   double imin = VTK_DOUBLE_MAX;
 
-  double brightness[2] = {10.5, 1.5};
+  double brightness[2] = {this->Brightness, 1.5};
 
   for (int i=0; i<N; i++) {
     double *p = pts->GetPoint(i);
@@ -179,12 +179,12 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   params.find("a_eq_e", true);
   params.find("zmin", zmin);
   params.find("zmax", zmax);
-  params.find("brightness0", 10.5);
+  params.find("brightness0", this->Brightness);
 
   params.find("intensity_max0", imax);
   params.find("intensity_min0", 0.0);
   params.find("gray_absorption", 0.0001);
-  params.find("colorbar", 1);
+  params.find("colorbar", 0);
 
   if(particle_data.size()>0) {
     particle_project(params, particle_data, campos, lookat, sky);

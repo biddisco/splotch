@@ -11,119 +11,21 @@
       <!-- this adds to what is already defined in PVRepresentationBase -->
       <RepresentationType subproxy="SplotchRaytraceRepresentation" 
                           text="Splotch particles"
-                          subtype="0" /> 
-      <!-- subtype 0 for the Default Geometry Representation is points -->
+                          subtype="Points" />
 
       <SubProxy>
         <Proxy name="SplotchRaytraceRepresentation"
-          proxygroup="representations" proxyname="SplotchRaytraceRepresentation" />
+               proxygroup="representations" 
+               proxyname="SplotchRaytraceRepresentation" />
 
         <ShareProperties subproxy="SurfaceRepresentation">
+          <Exception name="Input" />
           <Exception name="Visibility" />
           <Exception name="Representation" />
         </ShareProperties>
 
-        <InputProperty name="Input" command="SetInputConnection">
-          <DataTypeDomain name="input_type">
-            <DataType value="vtkPointSet"/>
-          </DataTypeDomain>
-          <Documentation>
-            Set the input to the representation.
-          </Documentation>
-        </InputProperty>
-
-        <StringVectorProperty
-          name="IntensityScalars"
-          command="SetIntensityScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Intensity"
-          default_regex_delimiter=","
-          default_regex="^[Vv][Oo][Ll][Uu][Mm][Ee]$,.*[Vv][Oo][Ll]"
-          label="Intensity">
-          <ArrayListDomain
-            name="array_list"
-            attribute_type="Scalars"
-            none_string="Not available"
-            input_domain_name="input_array">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-          <Documentation>
-            This property indicates the name of the array to be used for intensities
-          </Documentation>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="RadiusScalars"
-          command="SetRadiusScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Radius"
-          default_regex_delimiter=","
-          default_regex="^[Rr][Aa][Dd][Ii][Uu][Ss]$"
-          label="Radius">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="TypeScalars"
-          command="SetTypeScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Type"
-          default_regex_delimiter=","
-          default_regex="^[Tt][Yy][Pp][Ee]$"
-          label="Type">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="ActiveScalars"
-          command="SetActiveScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Active"
-          default_regex_delimiter=","
-          default_regex="^[Aa][Cc][Tt][Ii][Vv][Ee]$"
-          label="Active">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
         <ExposedProperties>
+          <Property name="Brightness"/>
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -137,110 +39,24 @@
     <!-- this adds to what is already defined in PVRepresentationBase -->
     <Extension name="UnstructuredGridRepresentation">
 
-      <RepresentationType subproxy="SplotchRaytraceRepresentation" 
+      <!-- this adds to what is already defined in PVRepresentationBase -->
+      <RepresentationType subproxy="SplotchRaytraceRepresentation"
                           text="Splotch particles"
-                          subtype="0" />
+                          subtype="Points" />
+
       <SubProxy>
         <Proxy name="SplotchRaytraceRepresentation"
-          proxygroup="representations" proxyname="SplotchRaytraceRepresentation" />
+               proxygroup="representations" 
+               proxyname="SplotchRaytraceRepresentation" />
 
         <ShareProperties subproxy="SurfaceRepresentation">
+          <Exception name="Input" />
           <Exception name="Visibility" />
           <Exception name="Representation" />
         </ShareProperties>
 
-        <StringVectorProperty
-          name="IntensityScalars"
-          command="SetIntensityScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Intensity"
-          default_regex_delimiter=","
-          default_regex="^[Vv][Oo][Ll][Uu][Mm][Ee]$,.*[Vv][Oo][Ll]"
-          label="Intensity">
-          <ArrayListDomain
-            name="array_list"
-            attribute_type="Scalars"
-            none_string="Not available"
-            input_domain_name="input_array">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-          <Documentation>
-            This property indicates the name of the array to be used for intensities
-          </Documentation>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="RadiusScalars"
-          command="SetRadiusScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Radius"
-          default_regex_delimiter=","
-          default_regex="^[Rr][Aa][Dd][Ii][Uu][Ss]$"
-          label="Radius">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="TypeScalars"
-          command="SetTypeScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Type"
-          default_regex_delimiter=","
-          default_regex="^[Tt][Yy][Pp][Ee]$"
-          label="Type">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
-        <StringVectorProperty
-          name="ActiveScalars"
-          command="SetActiveScalars"
-          number_of_elements="1"
-          animateable="0"
-          default_values="Active"
-          default_regex_delimiter=","
-          default_regex="^[Aa][Cc][Tt][Ii][Vv][Ee]$"
-          label="Active">
-          <ArrayListDomain name="array_list" attribute_type="Scalars">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </ArrayListDomain>
-          <FieldDataDomain name="field_list">
-            <RequiredProperties>
-              <Property name="Input" function="Input"/>
-            </RequiredProperties>
-          </FieldDataDomain>
-        </StringVectorProperty>
-
         <ExposedProperties>
+          <Property name="Brightness"/>
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -251,10 +67,10 @@
 
     <!-- ================================================================= -->
     <RepresentationProxy name="SplotchRaytraceRepresentation"    
-                           base_proxygroup="representations"      
-                           base_proxyname="SurfaceRepresentationBase"      
-                           class="vtkSplotchRaytraceRepresentation"      
-                           processes="client|dataserver|renderserver" >
+                         base_proxygroup="representations"      
+                         base_proxyname="SurfaceRepresentationBase"      
+                         class="vtkSplotchRaytraceRepresentation"      
+                         processes="client|dataserver|renderserver" >
 
       <Documentation>
         Representation for Particle or Point Data.
@@ -268,15 +84,70 @@
         </InputArrayDomain>
       </InputProperty>
 
-      <StringVectorProperty
-        name="IntensityScalars"
-        command="SetIntensityScalars"
+      <DoubleVectorProperty name="Brightness"
+        command="SetBrightness"
         number_of_elements="1"
+        default_values="105">
+        <DoubleRangeDomain name="range" min="0" max="10000"/>
+      </DoubleVectorProperty>
+
+      <StringVectorProperty
+         name="IntensityScalars"
+         command="SetInputArrayToProcess"
+         default_values="0"
+         number_of_elements="5"
+         element_types="0 0 0 0 2">
+        <ArrayListDomain 
+          name="array_list" 
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <FieldDataDomain name="field_list"
+                         disable_update_domain_entries="1">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </FieldDataDomain>
+        <Documentation>
+          Scalars to use for Intensity
+        </Documentation>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+        name="RadiusScalars"
+        command="SetInputArrayToProcess"
         animateable="0"
-        default_values="Intensity"
-        default_regex_delimiter=","
-        default_regex="^[Vv][Oo][Ll][Uu][Mm][Ee]$,.*[Vv][Oo][Ll]"
-        label="Intensity">
+        default_values="1"
+        number_of_elements="5"
+        element_types="0 0 0 0 2">
+        <ArrayListDomain 
+          name="array_list" 
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </ArrayListDomain>
+        <FieldDataDomain name="field_list"
+                         disable_update_domain_entries="1">
+          <RequiredProperties>
+            <Property name="Input" function="Input"/>
+          </RequiredProperties>
+        </FieldDataDomain>
+      </StringVectorProperty>
+
+      <StringVectorProperty
+        name="TypeScalars"
+        command="SetInputArrayToProcess"
+        animateable="0"
+        default_values="2"
+        number_of_elements="5"
+        element_types="0 0 0 0 2">
         <ArrayListDomain
           name="array_list"
           attribute_type="Scalars"
@@ -286,52 +157,8 @@
             <Property name="Input" function="Input"/>
           </RequiredProperties>
         </ArrayListDomain>
-        <FieldDataDomain name="field_list">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </FieldDataDomain>
-        <Documentation>
-          This property indicates the name of the array to be used for intensities
-        </Documentation>
-      </StringVectorProperty>
-
-      <StringVectorProperty
-        name="RadiusScalars"
-        command="SetRadiusScalars"
-        number_of_elements="1"
-        animateable="0"
-        default_values="Radius"
-        default_regex_delimiter=","
-        default_regex="^[Rr][Aa][Dd][Ii][Uu][Ss]$"
-        label="Radius">
-        <ArrayListDomain name="array_list" attribute_type="Scalars">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </ArrayListDomain>
-        <FieldDataDomain name="field_list">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </FieldDataDomain>
-      </StringVectorProperty>
-
-      <StringVectorProperty
-        name="TypeScalars"
-        command="SetTypeScalars"
-        number_of_elements="1"
-        animateable="0"
-        default_values="Type"
-        default_regex_delimiter=","
-        default_regex="^[Tt][Yy][Pp][Ee]$"
-        label="Type">
-        <ArrayListDomain name="array_list" attribute_type="Scalars">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </ArrayListDomain>
-        <FieldDataDomain name="field_list">
+        <FieldDataDomain name="field_list"
+                         disable_update_domain_entries="1">
           <RequiredProperties>
             <Property name="Input" function="Input"/>
           </RequiredProperties>
@@ -340,19 +167,22 @@
 
       <StringVectorProperty
         name="ActiveScalars"
-        command="SetActiveScalars"
-        number_of_elements="1"
+        command="SetInputArrayToProcess"
         animateable="0"
-        default_values="Active"
-        default_regex_delimiter=","
-        default_regex="^[Aa][Cc][Tt][Ii][Vv][Ee]$"
-        label="Active">
-        <ArrayListDomain name="array_list" attribute_type="Scalars">
+        default_values="3"
+        number_of_elements="5"
+        element_types="0 0 0 0 2">
+        <ArrayListDomain
+          name="array_list"
+          attribute_type="Scalars"
+          none_string="Not available"
+          input_domain_name="input_array">
           <RequiredProperties>
             <Property name="Input" function="Input"/>
           </RequiredProperties>
         </ArrayListDomain>
-        <FieldDataDomain name="field_list">
+        <FieldDataDomain name="field_list"
+                         disable_update_domain_entries="1">
           <RequiredProperties>
             <Property name="Input" function="Input"/>
           </RequiredProperties>

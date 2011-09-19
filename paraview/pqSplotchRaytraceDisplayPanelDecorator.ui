@@ -1,86 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>pqSplotchRaytraceDisplayPanelDecorator</class>
- <widget class="QGroupBox" name="pqSplotchRaytraceDisplayPanelDecorator">
+ <widget class="QWidget" name="pqSplotchRaytraceDisplayPanelDecorator">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>459</width>
-    <height>327</height>
+    <width>331</width>
+    <height>312</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Splotch</string>
+   <string>Form</string>
   </property>
-  <property name="title">
-   <string>Splotch Raytrace</string>
-  </property>
-  <layout class="QGridLayout">
-   <item row="2" column="0">
+  <layout class="QGridLayout" name="gridLayout_3">
+   <item row="0" column="0">
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>Brightness</string>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="1">
+    <widget class="QSlider" name="brightness">
+     <property name="maximum">
+      <number>10000</number>
+     </property>
+     <property name="pageStep">
+      <number>1000</number>
+     </property>
+     <property name="value">
+      <number>105</number>
+     </property>
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="tickPosition">
+      <enum>QSlider::TicksBelow</enum>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0">
     <widget class="QLabel" name="IntensityLabel">
      <property name="text">
       <string>Intensity</string>
      </property>
     </widget>
    </item>
-   <item row="8" column="0" colspan="4">
-    <spacer name="verticalSpacer_2">
-     <property name="orientation">
-      <enum>Qt::Vertical</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>20</width>
-       <height>40</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="RadiusArrayLabel">
      <property name="text">
       <string>Radius</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="1" colspan="3">
-    <widget class="QComboBox" name="IntensityArray"/>
-   </item>
-   <item row="3" column="1" colspan="3">
+   <item row="2" column="1">
     <widget class="QComboBox" name="RadiusArray"/>
    </item>
-   <item row="4" column="1" colspan="3">
-    <widget class="QComboBox" name="TypeArray"/>
-   </item>
-   <item row="4" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="TypeArrayLabel">
      <property name="text">
       <string>Type</string>
      </property>
     </widget>
    </item>
-   <item row="5" column="1" colspan="3">
-    <widget class="QComboBox" name="ActiveArray"/>
+   <item row="3" column="1">
+    <widget class="QComboBox" name="TypeArray"/>
    </item>
-   <item row="5" column="0">
+   <item row="4" column="0">
     <widget class="QLabel" name="ActiveArrayLabel">
      <property name="text">
       <string>Active</string>
      </property>
     </widget>
    </item>
-   <item row="0" column="1" colspan="3">
-    <widget class="QComboBox" name="ValueArray"/>
+   <item row="4" column="1">
+    <widget class="QComboBox" name="ActiveArray"/>
    </item>
-   <item row="0" column="0">
-    <widget class="QLabel" name="ValueArrayLabel">
-     <property name="text">
-      <string>Value</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="0" colspan="4">
+   <item row="5" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Type 0</string>
@@ -103,7 +100,7 @@
      </layout>
     </widget>
    </item>
-   <item row="7" column="0" colspan="4">
+   <item row="6" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox_2">
      <property name="title">
       <string>Type 1</string>
@@ -125,6 +122,22 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item row="7" column="0" colspan="2">
+    <spacer name="verticalSpacer_2">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>310</width>
+       <height>33</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="1">
+    <widget class="QComboBox" name="IntensityArray"/>
    </item>
   </layout>
  </widget>

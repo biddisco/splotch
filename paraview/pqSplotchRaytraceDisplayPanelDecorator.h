@@ -19,12 +19,6 @@
 //
 //  This file is part of the SplotchRaytraces plugin developed and contributed by
 //
-//  Copyright (c) CSCS - Swiss National Supercomputing Centre
-//                EDF - Electricite de France
-//
-//  John Biddiscombe, Ugo Varetto (CSCS)
-//  Stephane Ploix (EDF)
-//
 // </verbatim>
 
 #ifndef __pqSplotchRaytraceDisplayPanelDecorator_h
@@ -46,7 +40,16 @@ public:
   pqSplotchRaytraceDisplayPanelDecorator(pqDisplayPanel* panel);
   ~pqSplotchRaytraceDisplayPanelDecorator();
 
+  // called when the representation changed
+  void setRepresentation(pqPipelineRepresentation* repr);
+
+  // setup the connections between the GUI and the proxies
+  void setupGUIConnections();
+
+  void updateAllViews();
+
 protected slots:
+  void representationTypeChanged();
 
 protected :
 

@@ -93,6 +93,23 @@ void vtkSplotchRaytraceRepresentation::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
 }
 //----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetBrightness(double b)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetBrightness(b/10.0);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetBrightness(b/10.0);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetInputArrayToProcess(
+  int idx, int port, int connection, int fieldAssociation, const char *name)
+{
+  switch (idx) {
+    case 0: this->SetIntensityScalars(name); break;
+    case 1: this->SetRadiusScalars(name); break;
+    case 2: this->SetTypeScalars(name); break;
+    case 3: this->SetActiveScalars(name); break;
+  }
+}
+//----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetIntensityScalars(const char *s)
 {
   if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(s);

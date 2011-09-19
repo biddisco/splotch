@@ -31,12 +31,21 @@ public:
   vtkTypeMacro(vtkSplotchRaytraceRepresentation, vtkGeometryRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+
   //**************************************************************************
   // Forwarded to vtkSplotchRaytraceMapper
+  //**************************************************************************
+  virtual void SetInputArrayToProcess(int idx, int port, int connection,
+                              int fieldAssociation,
+                              const char *name);
+
   void SetIntensityScalars(const char *);
   void SetRadiusScalars(const char *);
   void SetTypeScalars(const char *);
   void SetActiveScalars(const char *);
+
+  void SetBrightness(double b);
+  vtkGetMacro(Brightness, double);
 
 //BTX
 protected:
@@ -53,6 +62,7 @@ protected:
 
   vtkSplotchRaytraceMapper  *SplotchMapper;
   vtkSplotchRaytraceMapper  *LODSplotchMapper;
+  double                     Brightness;
 
 private:
   vtkSplotchRaytraceRepresentation(const vtkSplotchRaytraceRepresentation&); // Not implemented
