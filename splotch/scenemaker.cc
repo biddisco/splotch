@@ -523,7 +523,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     hdf5_reader(params,particle_data);
     break;
   case 8:
-    // GADGET HDF5 READER (this block was initially copied from case 2)
+    // GADGET HDF5 READER
     //
     if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
     {
@@ -671,9 +671,11 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
     p_selector(particle_data, Mesh, MeshD, r_points);
   }
 
-  // dump information on the next rendered image into a similarly named file
-  // which makes image postprocessing with additional scripts *much* easier
-  if(mpiMgr.master())
+  // Dump information on the next rendered image into a similarly named file
+  // which makes image postprocessing with additional scripts *much* easier.
+  // For the moment, this is possible with Gadget data only.
+  int simtype = params.find<int>("simtype");
+  if ( mpiMgr.master() && ((simtype==2)||(simtype==8)))
   {
     string logFileName;
     string suffix=outfile.substr( outfile.length()-3, 3 );

@@ -8,7 +8,7 @@
 infile=snap_092
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
-# 6: mesh reader, 7: hdf7
+# 6: mesh reader, 7: Enzo hdf5, 8: Gadget HDF5
 simtype=2
 snapshot_spacing=1
 snapdir=FALSE
