@@ -6,13 +6,13 @@
 #OPT     +=  -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-OPT	+=  -DUSE_MPI
+#OPT	+=  -DUSE_MPI
 #OPT	+=  -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
 
-OPT     +=  -DHDF5
-OPT     +=  -DH5_USE_16_API
+#OPT     +=  -DHDF5
+#OPT     +=  -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT	+=  -DVS
@@ -33,34 +33,29 @@ OPT     +=  -DH5_USE_16_API
 SYSTYPE="VIZ"
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       = mpic++        # sets the C-compiler (default)
+CC       = mpic++    # sets the C-compiler (default)
 else
-CC       = g++        # sets the C-compiler (default)
+CC       = g++       # sets the C-compiler (default)
 endif
 OMP      = -fopenmp
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport -Ic_utils
 
-
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
 SUP_INCL += -Impiio-1.0/include/
 endif
 
 
-
-# configuration for the VIZ visualization cluster at the Garching computing centre
+# configuration for the VIZ visualization cluster at the Garching computing centre (RZG)
 ifeq ($(SYSTYPE),"VIZ")
- ifeq (HDF5,$(findstring HDF5,$(OPT)))
-  # HDF5_HOME = /u/system/hdf5/1.6.10/mpi
-  HDF5_HOME = /u/system/hdf5/1.8.7/serial
-  LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
-  HDF5_INCL = -I$(HDF5_HOME)/include
- endif
- OPTIMIZE += -O3 -march=native -mtune=native
- OMP      = -fopenmp
+ OPT      += -DHDF5 -DH5_USE_16_API
+ HDF5_HOME = /u/system/hdf5/1.8.7/serial
+ LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+ HDF5_INCL = -I$(HDF5_HOME)/include
+ OPTIMIZE += -march=native -mtune=native
+ OMP       = -fopenmp
 endif
-
 
 
 ifeq ($(SYSTYPE),"SP6")

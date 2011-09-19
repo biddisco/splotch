@@ -60,7 +60,8 @@ void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *at
 // Function to read data from the Gadget HDF5 header, similar to the standard gadget reader function
 //    <int gadget_read_hdf5_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal)>.
 //
-int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, int32 *nparttotal, double &boxsize)
+int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, double &redshift, 
+                            int32 *nparttotal, double &boxsize)
 {
   /*
     int blocksize = gadget_find_block (file,"HEAD");
@@ -81,6 +82,7 @@ int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, int32 *
   //
   read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart);
   read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time);
+  read_hdf5_group_attribute(hdf5_header, "Redshift",         &redshift);
   read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal);
   read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize);
   //
@@ -145,7 +147,7 @@ void readHDF5DataArray( hid_t group_id, const char * arrayName, hid_t hdf5Type, 
 
 void gadget_hdf5_reader(paramfile &params, int interpol_mode,
                         vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
-                        double &time, double &boxsize)
+                        double &time, double &redshift, double &boxsize)
 {
   int numfiles = params.find<int>("numfiles",1);
   bool doswap = params.find<bool>("swap_endian",false);
@@ -219,11 +221,16 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         // OK, now in HDF5 ...
         hid_t file_id;
         file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+        // gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
         H5Fclose(file_id);
 
         if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
-          cout << "    Timestamp from file : t=" << time << endl;
+        {
+          cout << "    Timestamp from file: t=" << time << endl;
+          cout << "    Redshift from file:  z=" << redshift << endl;
+        }
+
         if(rt==0 && f==0)
         {
           cout << "    Total number of particles in file :" << endl;
@@ -348,7 +355,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
 
       for(int itype=0; itype<ptypes; itype++)
@@ -501,7 +508,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
           hid_t file_id;
           file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-          gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+          gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
           for(int itype=0; itype<ptypes; itype++)
           {
@@ -590,7 +597,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
           filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
         hid_t file_id;
         file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
         for(int itype=0; itype<ptypes; itype++)
         {
@@ -680,7 +687,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
       for(int itype=0; itype<ptypes; itype++)
       {
@@ -757,7 +764,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
       for(int itype=0; itype<ptypes; itype++)
       {
@@ -875,7 +882,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
 
       for(int itype=0; itype<ptypes; itype++)
       {
@@ -939,7 +946,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
 void gadget_hdf5_reader(paramfile &params, int interpol_mode,
                         vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
-                        double &time, double &boxsize)
+                        double &time, double &redshift, double &boxsize)
 {
   cout << "Splotch was built without support for GADGET HDF5 I/O.  Exiting..." << endl;
 }
