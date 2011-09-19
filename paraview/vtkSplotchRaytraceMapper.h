@@ -34,9 +34,6 @@ public:
   vtkSetMacro(Brightness, double);
   vtkGetMacro(Brightness, double);
 
-  vtkSetStringMacro(ValueScalars);
-  vtkGetStringMacro(ValueScalars);
-
   vtkSetStringMacro(IntensityScalars);
   vtkGetStringMacro(IntensityScalars);
 
@@ -55,12 +52,11 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
-  double Brightness;
-  char *ValueScalars;
-  char *IntensityScalars;
-  char *RadiusScalars;
-  char *TypeScalars;
-  char *ActiveScalars;
+  double  Brightness;
+  char   *IntensityScalars;
+  char   *RadiusScalars;
+  char   *TypeScalars;
+  char   *ActiveScalars;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

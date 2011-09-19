@@ -53,6 +53,10 @@
 #include "pqWidgetRangeDomain.h"
 #include "pqFieldSelectionAdaptor.h"
 #include "pqSignalAdaptors.h"
+#include "pqLookupTableManager.h"
+#include "pqApplicationCore.h"
+#include "pqColorScaleEditor.h"
+#include "pqCoreUtilities.h"
 
 class pqSplotchRaytraceDisplayPanelDecorator::pqInternals: public Ui::pqSplotchRaytraceDisplayPanelDecorator
 {
@@ -93,85 +97,88 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
 
   this->Internals = NULL;
   vtkSMProperty* prop = reprProxy->GetProperty("IntensityScalars");
-  if (prop)
-    {
-    this->Internals = new pqInternals(this);
-    this->Internals->Representation = reprProxy;
-
-    QWidget* wid = new QWidget(panel);
-    this->Internals->Frame = wid;
-    this->Internals->setupUi(wid);
-    QVBoxLayout* l = qobject_cast<QVBoxLayout*>(panel->layout());
-    l->addWidget(wid);
-    //
-    this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
-
-    pqPipelineRepresentation *pr = qobject_cast<pqPipelineRepresentation*>(panel->getRepresentation());
-
-    //
-    // Intensity
-    //
-    pqFieldSelectionAdaptor* adaptor= new pqFieldSelectionAdaptor(
-      this->Internals->IntensityArray, prop);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "attributeMode", SIGNAL(selectionChanged()),
-      reprProxy, prop, 0);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "scalar", SIGNAL(selectionChanged()),
-      reprProxy, prop, 1);
-    reprProxy->GetProperty("Input")->UpdateDependentDomains();
-    prop->UpdateDependentDomains();
-
-    //
-    // Radius
-    //
-    prop = reprProxy->GetProperty("RadiusScalars");
-    adaptor = new pqFieldSelectionAdaptor(
-      this->Internals->RadiusArray, prop);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "attributeMode", SIGNAL(selectionChanged()),
-      reprProxy, prop, 0);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "scalar", SIGNAL(selectionChanged()),
-      reprProxy, prop, 1);
-    prop->UpdateDependentDomains();
-
-    //
-    // Type
-    //
-    prop = reprProxy->GetProperty("TypeScalars");
-    adaptor = new pqFieldSelectionAdaptor(
-      this->Internals->TypeArray, prop);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "attributeMode", SIGNAL(selectionChanged()),
-      reprProxy, prop, 0);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "scalar", SIGNAL(selectionChanged()),
-      reprProxy, prop, 1);
-    prop->UpdateDependentDomains();
-
-    //
-    // Active
-    //
-    prop = reprProxy->GetProperty("ActiveScalars");
-    adaptor = new pqFieldSelectionAdaptor(
-      this->Internals->ActiveArray, prop);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "attributeMode", SIGNAL(selectionChanged()),
-      reprProxy, prop, 0);
-    this->Internals->Links.addPropertyLink(
-      adaptor, "scalar", SIGNAL(selectionChanged()),
-      reprProxy, prop, 1);
-    prop->UpdateDependentDomains();
-
-    //
-    //
-    //
-    this->Internals->Links.addPropertyLink(
-      this->Internals->brightness, "value", SIGNAL(valueChanged(int)),
-      reprProxy, reprProxy->GetProperty("Brightness"));
-
+  if (!prop)  {
+    return;
   }
+
+  this->Internals = new pqInternals(this);
+  this->Internals->Representation = reprProxy;
+
+  QWidget* wid = new QWidget(panel);
+  this->Internals->Frame = wid;
+  this->Internals->setupUi(wid);
+  QVBoxLayout* l = qobject_cast<QVBoxLayout*>(panel->layout());
+  l->addWidget(wid);
+  //
+  this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
+
+  this->Internals->PipelineRepresentation = qobject_cast<pqPipelineRepresentation*>(panel->getRepresentation());
+
+  //
+  // Intensity
+  //
+  pqFieldSelectionAdaptor* adaptor= new pqFieldSelectionAdaptor(
+    this->Internals->IntensityArray, prop);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "attributeMode", SIGNAL(selectionChanged()),
+    reprProxy, prop, 0);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "scalar", SIGNAL(selectionChanged()),
+    reprProxy, prop, 1);
+  reprProxy->GetProperty("Input")->UpdateDependentDomains();
+  prop->UpdateDependentDomains();
+
+  //
+  // Radius
+  //
+  prop = reprProxy->GetProperty("RadiusScalars");
+  adaptor = new pqFieldSelectionAdaptor(
+    this->Internals->RadiusArray, prop);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "attributeMode", SIGNAL(selectionChanged()),
+    reprProxy, prop, 0);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "scalar", SIGNAL(selectionChanged()),
+    reprProxy, prop, 1);
+  prop->UpdateDependentDomains();
+
+  //
+  // Type
+  //
+  prop = reprProxy->GetProperty("TypeScalars");
+  adaptor = new pqFieldSelectionAdaptor(
+    this->Internals->TypeArray, prop);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "attributeMode", SIGNAL(selectionChanged()),
+    reprProxy, prop, 0);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "scalar", SIGNAL(selectionChanged()),
+    reprProxy, prop, 1);
+  prop->UpdateDependentDomains();
+
+  //
+  // Active
+  //
+  prop = reprProxy->GetProperty("ActiveScalars");
+  adaptor = new pqFieldSelectionAdaptor(
+    this->Internals->ActiveArray, prop);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "attributeMode", SIGNAL(selectionChanged()),
+    reprProxy, prop, 0);
+  this->Internals->Links.addPropertyLink(
+    adaptor, "scalar", SIGNAL(selectionChanged()),
+    reprProxy, prop, 1);
+  prop->UpdateDependentDomains();
+
+  //
+  //
+  //
+  this->Internals->Links.addPropertyLink(
+    this->Internals->brightness, "value", SIGNAL(valueChanged(int)),
+    reprProxy, reprProxy->GetProperty("Brightness"));
+
+  QObject::connect(this->Internals->EditColorMapButton0, SIGNAL(clicked()), this,
+      SLOT(editColour0()), Qt::QueuedConnection);
 
   this->setupGUIConnections();
 }
@@ -185,7 +192,8 @@ pqSplotchRaytraceDisplayPanelDecorator::~pqSplotchRaytraceDisplayPanelDecorator(
 void pqSplotchRaytraceDisplayPanelDecorator::setRepresentation(
     pqPipelineRepresentation* repr)
 {
-//  this->Internals->IntensityArray->setRepresentation(repr);
+  this->Internals->PipelineRepresentation = repr;
+  //  this->Internals->IntensityArray->setRepresentation(repr);
 
 //  QObject::connect(this->Internals->ScaleBy, SIGNAL(modified()), this,
 //      SLOT(updateEnableState()), Qt::QueuedConnection);
@@ -254,3 +262,17 @@ void pqSplotchRaytraceDisplayPanelDecorator::updateAllViews()
     }
 }
 
+//-----------------------------------------------------------------------------
+void pqSplotchRaytraceDisplayPanelDecorator::editColour0()
+{
+  pqApplicationCore* core = pqApplicationCore::instance();
+  pqLookupTableManager* lut_mgr = core->getLookupTableManager();
+  vtkSMProxy* lut = 0;
+  vtkSMProxy* opf = 0;
+  pqScalarsToColors* pqlut = this->Internals->PipelineRepresentation->getLookupTable();
+  lut = (pqlut)? pqlut->getProxy() : 0;
+
+  pqColorScaleEditor editor(pqCoreUtilities::mainWidget());
+  editor.setRepresentation(this->Internals->PipelineRepresentation);
+  editor.exec();
+}

@@ -62,7 +62,6 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
   this->Brightness       = 10.5;
-  this->ValueScalars     = NULL;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
@@ -73,14 +72,12 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
-  delete []this->ValueScalars;
   delete []this->IntensityScalars;
   delete []this->RadiusScalars;
   delete []this->TypeScalars;
   delete []this->ActiveScalars;
 }
 
-// ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 int vtkSplotchRaytraceMapper::FillInputPortInformation(int port,
   vtkInformation *info)
@@ -109,9 +106,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   vtkDataArray *ActiveArray = this->ActiveScalars ? 
     input->GetPointData()->GetArray(this->ActiveScalars) : NULL;  
 
-  // For vertex coloring, this sets this->Colors as side effect.
-  // For texture map coloring, this sets ColorCoordinates
-  // and ColorTextureMap as a side effect.
+  // For vertex coloring, this sets this->Colors.
   this->MapScalars( act->GetProperty()->GetOpacity() );
 
   //

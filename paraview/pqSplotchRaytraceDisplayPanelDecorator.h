@@ -50,6 +50,7 @@ public:
 
 protected slots:
   void representationTypeChanged();
+  void editColour0();
 
 protected :
 
