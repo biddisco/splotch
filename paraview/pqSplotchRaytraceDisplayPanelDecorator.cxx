@@ -55,35 +55,28 @@
 #include "pqSignalAdaptors.h"
 #include "pqLookupTableManager.h"
 #include "pqApplicationCore.h"
-#include "pqColorScaleEditor.h"
 #include "pqCoreUtilities.h"
+
+// splotch enhanced qt classes
+#include "pqSplotchColorScaleEditor.h"
 
 class pqSplotchRaytraceDisplayPanelDecorator::pqInternals: public Ui::pqSplotchRaytraceDisplayPanelDecorator
 {
 public:
-  pqPropertyLinks Links;
-  vtkSMProxy                * Representation;
-  vtkSMPVRepresentationProxy* RepresentationProxy;
   vtkSmartPointer<vtkEventQtSlotConnect> VTKConnect;
-  pqPipelineRepresentation* PipelineRepresentation;
-
-  pqWidgetRangeDomain* MaxPixelSizeRangeDomain;
-  pqWidgetRangeDomain* OpacityRangeDomain;
-  pqWidgetRangeDomain* RadiusRangeDomain;
-  QWidget* Frame;
-
+  pqPropertyLinks                        Links;
+  vtkSMPVRepresentationProxy            *RepresentationProxy;
+  pqPipelineRepresentation              *PipelineRepresentation;
+  QWidget                               *Frame;
+  QList<pqScalarsToColors*>              ColorTableList;
+  int                                    TableIndex;
+  //
   pqInternals(QWidget* parent)
   {
     this->VTKConnect     = vtkSmartPointer<vtkEventQtSlotConnect>::New();
-    this->Representation = 0;
     this->Frame          = 0;
-/*
+    this->TableIndex     = 0;
     this->RepresentationProxy = 0;
-    this->TransferFunctionDialog = new pqTransferFunctionDialog(parent);
-    this->MaxPixelSizeRangeDomain = NULL;
-    this->OpacityRangeDomain = NULL;
-    this->RadiusRangeDomain = NULL;
-*/
   }
 };
 
@@ -92,31 +85,32 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
   pqDisplayPanel* _panel):Superclass(_panel)
 {
   pqDisplayProxyEditor *panel = qobject_cast<pqDisplayProxyEditor*> (_panel);
-  pqRepresentation     *repr = panel->getRepresentation();
-  vtkSMProxy      *reprProxy = (repr) ? repr->getProxy() : NULL;
+  pqRepresentation     *repr  = panel->getRepresentation();
+  vtkSMProxy      *reprProxy  = (repr) ? repr->getProxy() : NULL;
+  this->Internals             = NULL;
 
-  this->Internals = NULL;
+  //
+  // If the representation doesn't have this property, then it's not our splotch representation
+  //
   vtkSMProperty* prop = reprProxy->GetProperty("IntensityScalars");
   if (!prop)  {
     return;
   }
 
-  this->Internals = new pqInternals(this);
-  this->Internals->Representation = reprProxy;
-
   QWidget* wid = new QWidget(panel);
+  this->Internals = new pqInternals(this);
   this->Internals->Frame = wid;
   this->Internals->setupUi(wid);
   QVBoxLayout* l = qobject_cast<QVBoxLayout*>(panel->layout());
   l->addWidget(wid);
   //
   this->Internals->RepresentationProxy = vtkSMPVRepresentationProxy::SafeDownCast(reprProxy);
-
-  this->Internals->PipelineRepresentation = qobject_cast<pqPipelineRepresentation*>(panel->getRepresentation());
+  this->Internals->PipelineRepresentation = qobject_cast<pqPipelineRepresentation*>(repr);
 
   //
   // Intensity
   //
+  prop = reprProxy->GetProperty("IntensityScalars");
   pqFieldSelectionAdaptor* adaptor= new pqFieldSelectionAdaptor(
     this->Internals->IntensityArray, prop);
   this->Internals->Links.addPropertyLink(
@@ -171,15 +165,33 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
   prop->UpdateDependentDomains();
 
   //
+  // Colour scalars display control
   //
+//  this->Internals->ColorBy->setPropertyArrayName("ColorArrayName");
+//  this->Internals->ColorBy->setPropertyArrayComponent("ColorAttributeType");
+//  this->Internals->ColorBy->setRepresentation(this->Internals->PipelineRepresentation);
   //
+  // 
+  //
+  this->Internals->VTKConnect->Connect(
+      this->Internals->RepresentationProxy->GetProperty("Representation"),
+      vtkCommand::ModifiedEvent, this, SLOT(representationTypeChanged()));
+
   this->Internals->Links.addPropertyLink(
-    this->Internals->brightness, "value", SIGNAL(valueChanged(int)),
+    this->Internals->Brightness, "value", SIGNAL(valueChanged(int)),
     reprProxy, reprProxy->GetProperty("Brightness"));
-
-  QObject::connect(this->Internals->EditColorMapButton0, SIGNAL(clicked()), this,
-      SLOT(editColour0()), Qt::QueuedConnection);
-
+  
+  this->Internals->Links.addPropertyLink(
+    this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
+    reprProxy, reprProxy->GetProperty("GrayAbsorption"));
+  
+  this->Internals->Links.addPropertyLink(
+    this->Internals->LogIntensity, "checked", SIGNAL(toggled(bool)),
+    reprProxy, reprProxy->GetProperty("LogIntensity"));
+  
+  //
+  //
+  //
   this->setupGUIConnections();
 }
 //-----------------------------------------------------------------------------
@@ -189,90 +201,63 @@ pqSplotchRaytraceDisplayPanelDecorator::~pqSplotchRaytraceDisplayPanelDecorator(
   this->Internals = 0;
 }
 //-----------------------------------------------------------------------------
+void pqSplotchRaytraceDisplayPanelDecorator::setupGUIConnections()
+{
+  QObject::connect(this->Internals->EditColorMapButton, SIGNAL(clicked()), this,
+      SLOT(EditColour()), Qt::QueuedConnection);
+
+  QObject::connect(this->Internals->RepaintButton, SIGNAL(clicked()), this,
+      SLOT(RepaintClicked()), Qt::QueuedConnection);
+
+  QObject::connect(this->Internals->TypeSpin, SIGNAL(valueChanged(int)), this,
+      SLOT(TypeSpinChanged(int)), Qt::QueuedConnection);
+
+}
+//-----------------------------------------------------------------------------
 void pqSplotchRaytraceDisplayPanelDecorator::setRepresentation(
     pqPipelineRepresentation* repr)
 {
   this->Internals->PipelineRepresentation = repr;
-  //  this->Internals->IntensityArray->setRepresentation(repr);
-
-//  QObject::connect(this->Internals->ScaleBy, SIGNAL(modified()), this,
-//      SLOT(updateEnableState()), Qt::QueuedConnection);
-
-}
-//-----------------------------------------------------------------------------
-void pqSplotchRaytraceDisplayPanelDecorator::setupGUIConnections()
-{
-  this->Internals->VTKConnect->Connect(
-      this->Internals->RepresentationProxy->GetProperty("Representation"),
-      vtkCommand::ModifiedEvent, this, SLOT(representationTypeChanged()));
-
-//  this->connect(this->Internals->IntensityArray,
-//      SIGNAL(variableChanged(pqVariableType, const QString&)), this,
-//      SLOT(onRadiusArrayChanged(pqVariableType, const QString&)));
 }
 //-----------------------------------------------------------------------------
 void pqSplotchRaytraceDisplayPanelDecorator::representationTypeChanged()
 {
-  if (this->Internals)
-    {
+  if (this->Internals) {
     const char* reprType = vtkSMPropertyHelper
-        ( this->Internals->Representation, "Representation" ).GetAsString();
-    if ( strcmp(  reprType, "Splotch particles"  ) == 0 )
-      {
+        ( this->Internals->RepresentationProxy, "Representation" ).GetAsString();
+    if ( strcmp(  reprType, "Splotch particles"  ) == 0 ) {
       this->Internals->Frame->setEnabled(true);
-      vtkSMPropertyHelper(this->Internals->Representation,
+      vtkSMPropertyHelper(this->Internals->RepresentationProxy,
         "InterpolateScalarsBeforeMapping").Set(0);
-      this->Internals->Representation->UpdateVTKObjects();
-      }
-    else
-      {
+      this->Internals->RepresentationProxy->UpdateVTKObjects();
+    }
+    else {
       this->Internals->Frame->setEnabled(false);
-      }
     }
-}
-//-----------------------------------------------------------------------------
-/*
-void pqSplotchRaytraceDisplayPanelDecorator::onIntensityArrayChanged(
-    pqVariableType type, const QString& name)
-{
-  if (!this->Internals->PipelineRepresentation) {
-    return;
   }
-
-  vtkSMStringVectorProperty* svp = vtkSMStringVectorProperty::SafeDownCast(
-      this->Internals->PipelineRepresentation->GetProperty("IntensityArray"));
-  svp->SetElement(0, 0); // idx
-  svp->SetElement(1, 0); //port
-  svp->SetElement(2, 0); //connection
-  svp->SetElement(3, (int) vtkDataObject::FIELD_ASSOCIATION_POINTS); //type
-  svp->SetElement(4, name.toAscii().data()); //name
-
-  this->Internals->IntensityArray->reloadGUI();
-
-//  this->Internals->PipelineRepresentation->UpdateVTKObjects();
-  this->updateAllViews();
 }
-*/
 //-----------------------------------------------------------------------------
-void pqSplotchRaytraceDisplayPanelDecorator::updateAllViews()
+void pqSplotchRaytraceDisplayPanelDecorator::TypeSpinChanged(int v)
 {
-//  if (this->Internals->PipelineRepresentation)
-    {
-//    this->Internals->PipelineRepresentation->renderViewEventually();
-    }
+  this->Internals->TableIndex = v;
 }
-
 //-----------------------------------------------------------------------------
-void pqSplotchRaytraceDisplayPanelDecorator::editColour0()
+void pqSplotchRaytraceDisplayPanelDecorator::EditColour()
 {
-  pqApplicationCore* core = pqApplicationCore::instance();
-  pqLookupTableManager* lut_mgr = core->getLookupTableManager();
-  vtkSMProxy* lut = 0;
-  vtkSMProxy* opf = 0;
-  pqScalarsToColors* pqlut = this->Internals->PipelineRepresentation->getLookupTable();
-  lut = (pqlut)? pqlut->getProxy() : 0;
+  pqApplicationCore       *core = pqApplicationCore::instance();
+  pqLookupTableManager *lut_mgr = core->getLookupTableManager();
+  pqScalarsToColors      *pqlut = this->Internals->PipelineRepresentation->getLookupTable();
+  vtkSMProxy               *lut = (pqlut)? pqlut->getProxy() : 0;
 
-  pqColorScaleEditor editor(pqCoreUtilities::mainWidget());
+  pqSplotchColorScaleEditor editor(pqCoreUtilities::mainWidget());
+  editor.setActiveColorTable(pqlut);
   editor.setRepresentation(this->Internals->PipelineRepresentation);
   editor.exec();
+}
+//-----------------------------------------------------------------------------
+void pqSplotchRaytraceDisplayPanelDecorator::RepaintClicked()
+{
+  if (this->Internals->PipelineRepresentation) {
+    this->Internals->PipelineRepresentation->renderViewEventually();
+  }
 }

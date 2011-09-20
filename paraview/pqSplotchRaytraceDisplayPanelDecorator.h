@@ -46,11 +46,11 @@ public:
   // setup the connections between the GUI and the proxies
   void setupGUIConnections();
 
-  void updateAllViews();
-
 protected slots:
   void representationTypeChanged();
-  void editColour0();
+  void EditColour();
+  void RepaintClicked();
+  void TypeSpinChanged(int v);
 
 protected :
 
@@ -60,6 +60,7 @@ private:
 
   class pqInternals;
   pqInternals* Internals;
+  int TableIndex;
 };
 
 #endif

@@ -34,6 +34,13 @@ public:
   vtkSetMacro(Brightness, double);
   vtkGetMacro(Brightness, double);
 
+  vtkBooleanMacro(LogIntensity, int);
+  vtkGetMacro(LogIntensity, int);
+  vtkSetMacro(LogIntensity, int);
+
+  vtkSetMacro(GrayAbsorption, double);
+  vtkGetMacro(GrayAbsorption, double);
+
   vtkSetStringMacro(IntensityScalars);
   vtkGetStringMacro(IntensityScalars);
 
@@ -53,6 +60,8 @@ protected:
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
   double  Brightness;
+  double  GrayAbsorption;
+  int     LogIntensity;
   char   *IntensityScalars;
   char   *RadiusScalars;
   char   *TypeScalars;

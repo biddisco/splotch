@@ -47,6 +47,12 @@ public:
   void SetBrightness(double b);
   vtkGetMacro(Brightness, double);
 
+  void SetGrayAbsorption(double b);
+  vtkGetMacro(GrayAbsorption, double);
+
+  void SetLogIntensity(int l);
+  vtkGetMacro(LogIntensity, int);
+
 //BTX
 protected:
   vtkSplotchRaytraceRepresentation();
@@ -63,6 +69,8 @@ protected:
   vtkSplotchRaytraceMapper  *SplotchMapper;
   vtkSplotchRaytraceMapper  *LODSplotchMapper;
   double                     Brightness;
+  double                     GrayAbsorption;
+  int                        LogIntensity;
 
 private:
   vtkSplotchRaytraceRepresentation(const vtkSplotchRaytraceRepresentation&); // Not implemented

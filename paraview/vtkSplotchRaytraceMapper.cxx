@@ -62,6 +62,8 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
   this->Brightness       = 10.5;
+  this->GrayAbsorption   = 0.0001;
+  this->LogIntensity     = 1;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
@@ -124,8 +126,6 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   ren->GetActiveCamera()->GetViewUp(&sky.x);
   ren->GetActiveCamera()->GetClippingRange(zmin, zmax);
   double FOV = ren->GetActiveCamera()->GetViewAngle();
-  std::vector<COLOURMAP> amap;
-//  amap.resize(1);
   //
   unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
@@ -161,24 +161,24 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   paramfile params;
 
   params.find("ptypes", 2);
-  params.find("intensity_log0", true);
-  params.find("color_log0", true);
-  params.find("color_asinh0", false);
-  params.find("color_is_vector0", false);
   params.find("xres", X);
   params.find("yres", Y);
+  params.find("intensity_log0", this->LogIntensity);
+  params.find("zmin", zmin);
+  params.find("zmax", zmax);
+//  params.find("color_log0", true);
+//  params.find("color_asinh0", false);
+//  params.find("color_is_vector0", false);
 
   params.find("fov", FOV);
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
-  params.find("zmin", zmin);
-  params.find("zmax", zmax);
   params.find("brightness0", this->Brightness);
 
   params.find("intensity_max0", imax);
   params.find("intensity_min0", 0.0);
-  params.find("gray_absorption", 0.0001);
+  params.find("gray_absorption", this->GrayAbsorption);
   params.find("colorbar", 0);
 
   if(particle_data.size()>0) {
@@ -214,13 +214,13 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   if (!a_eq_e) {
     int sort_type = params.find<int>("sort_type",1);
     particle_sort(particle_data,sort_type,true);
-    }
+  }
 
   // ------------------------------------
   // ----------- Rendering ---------------
   // ------------------------------------
-  float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
-  render_new (particle_data,pic,a_eq_e,grayabsorb);
+  float32 grayabsorb = params.find<float32>("gray_absorption",this->GrayAbsorption);
+  render_new (particle_data, pic, a_eq_e, this->GrayAbsorption);
 
   MPI_Manager::GetInstance()->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
@@ -235,14 +235,6 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
       }
     }
   }
-
-  /*
-  for (int i=0; i<X; i++) {
-    for (int j=0; j<Y; j++) {
-      if (i==j) pic(i,j) = COLOUR(1,1,1);
-    }
-  }
-  */
 
   int viewport[4];
   glGetIntegerv(GL_VIEWPORT, viewport);
@@ -265,5 +257,4 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   glMatrixMode( GL_MODELVIEW );   
   glPopMatrix();
 
-//  cerr << "Calling wrong render method!!\n";
 }

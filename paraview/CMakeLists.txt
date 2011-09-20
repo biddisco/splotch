@@ -121,10 +121,12 @@ qt4_wrap_ui(UI_SRCS
 
 qt4_wrap_cpp(MOC_SRCS 
   pqSplotchRaytraceDisplayPanelDecorator.h
+  pqSplotchColorScaleEditor.h
   )
    
 set(Plugin_SRCS
   pqSplotchRaytraceDisplayPanelDecorator.cxx
+  pqSplotchColorScaleEditor.cxx
   )
 
 add_paraview_display_panel_decorator(

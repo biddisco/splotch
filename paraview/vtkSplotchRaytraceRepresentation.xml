@@ -26,6 +26,8 @@
 
         <ExposedProperties>
           <Property name="Brightness"/>
+          <Property name="GrayAbsorption"/>
+          <Property name="LogIntensity"/>
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -57,6 +59,8 @@
 
         <ExposedProperties>
           <Property name="Brightness"/>
+          <Property name="GrayAbsorption"/>
+          <Property name="LogIntensity"/>          
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -87,9 +91,29 @@
       <DoubleVectorProperty name="Brightness"
         command="SetBrightness"
         number_of_elements="1"
-        default_values="105">
-        <DoubleRangeDomain name="range" min="0" max="10000"/>
+        default_values="102">
+        <DoubleRangeDomain name="range" min="-500" max="500"/>
+        <Documentation>
+          The value passed to the mapper is 10^(Brighness/100)
+        </Documentation>
       </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="GrayAbsorption"
+        command="SetGrayAbsorption"
+        number_of_elements="1"
+        default_values="-400">
+        <DoubleRangeDomain name="range" min="-500" max="0"/>
+        <Documentation>
+          The value passed to the mapper is 10^(GrayAbsorption/100)
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="LogIntensity"
+        command="SetLogIntensity"
+        number_of_elements="1"
+        default_values="1">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
 
       <StringVectorProperty
          name="IntensityScalars"

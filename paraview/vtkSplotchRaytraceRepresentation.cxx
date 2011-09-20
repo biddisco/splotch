@@ -39,6 +39,10 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
   this->LODSplotchMapper = NULL;
   this->LODMapper        = vtkPolyDataMapper::New();
 
+  this->GrayAbsorption = 0.0001;
+  this->Brightness = 10.5;
+  this->LogIntensity = 1;
+
   this->Mapper->SetInputConnection(this->Distributor->GetOutputPort());
   this->LODMapper->SetInputConnection(this->LODDeliveryFilter->GetOutputPort());
 
@@ -95,8 +99,22 @@ void vtkSplotchRaytraceRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetBrightness(double b)
 {
-  if (this->SplotchMapper) this->SplotchMapper->SetBrightness(b/10.0);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetBrightness(b/10.0);
+  double value = pow(10,(b/100.0));
+  if (this->SplotchMapper) this->SplotchMapper->SetBrightness(value);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetBrightness(value);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetGrayAbsorption(double g)
+{
+  double value = pow(10,(g/100.0));
+  if (this->SplotchMapper) this->SplotchMapper->SetGrayAbsorption(value);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetGrayAbsorption(value);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetLogIntensity(int l)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetLogIntensity(l);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetLogIntensity(l);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetInputArrayToProcess(
@@ -135,6 +153,7 @@ void vtkSplotchRaytraceRepresentation::SetActiveScalars(const char *s)
 }
 //----------------------------------------------------------------------------
 
+//----------------------------------------------------------------------------
 
 
 //----------------------------------------------------------------------------
