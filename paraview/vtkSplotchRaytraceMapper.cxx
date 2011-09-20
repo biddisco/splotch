@@ -126,6 +126,8 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   ren->GetActiveCamera()->GetViewUp(&sky.x);
   ren->GetActiveCamera()->GetClippingRange(zmin, zmax);
   double FOV = ren->GetActiveCamera()->GetViewAngle();
+  double newFOV = tan(vtkMath::RadiansFromDegrees(FOV/2.0))*X/Y;
+  double splotchFOV = vtkMath::DegreesFromRadians(2.0*atan(newFOV));
   //
   unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
@@ -170,7 +172,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 //  params.find("color_asinh0", false);
 //  params.find("color_is_vector0", false);
 
-  params.find("fov", FOV);
+  params.find("fov", splotchFOV);
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
