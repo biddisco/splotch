@@ -126,8 +126,6 @@ void LS_Image::write_TGA (const string &file) const
   for (tsize j=0; j<yres; ++j)
     for (tsize i=0; i<xres; ++i)
       bo << pixel[i][j].b << pixel[i][j].g << pixel[i][j].r;
-
-  planck_assert(out,"error writing output file '" + file + "'");
   }
 
 namespace {
@@ -201,7 +199,6 @@ void LS_Image::write_TGA_rle(const string &file) const
         }
       }
     }
-  planck_assert(out,"error writing output file '" + file + "'");
   }
 
 void LS_Image::write_PPM (const string &file) const
@@ -221,6 +218,4 @@ void LS_Image::write_PPM (const string &file) const
   for (tsize j=0; j<yres; ++j)
     for (tsize i=0; i<xres; ++i)
       bo << pixel[i][j].r << pixel[i][j].g << pixel[i][j].b;
-
-  planck_assert(out,"error writing output file '" + file + "'");
   }

@@ -27,9 +27,7 @@
  *
  *  Copyright (C) 2010,2011 Max-Planck-Society
  *  \author Martin Reinecke
- */
-
-#ifndef PLANCK_SSE_UTILS_H
+ */#ifndef PLANCK_SSE_UTILS_H
 #define PLANCK_SSE_UTILS_H
 
 #ifndef PLANCK_DISABLE_SSE

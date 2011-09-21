@@ -69,7 +69,7 @@ __device__ cu_color get_color(int ptype, float val, int mapSize, int ptypes)
 
   return clr;
   }
-
+/*
 __global__ void k_post_process(cu_color *pic, int n)
   {
   //first get the index m of this thread
@@ -82,6 +82,7 @@ __global__ void k_post_process(cu_color *pic, int n)
   pic[m].g =1.0 - exp( pic[m].g);
   pic[m].b =1.0 - exp( pic[m].b);
   }
+
 
 __global__ void k_combine
   (int minx, int miny, int maxx, int maxy, int xres, int yres,
@@ -121,7 +122,7 @@ __global__ void k_combine
       }
     }
   }
-
+*/
 //device render function k_render1
 __global__ void k_render1
   (cu_particle_splotch *p, int nP,

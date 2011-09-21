@@ -374,7 +374,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 	  cout << "xres=800" << endl;
 	  cout << "colorbar=TRUE" << endl;
 	  if(ptype_found == 0)
-	    cout << "palette0=palettes/OldSplotch.pal" << endl;
+	    cout << "palette0=palettes/Oldsplotch.pal" << endl;
           cout << "brightness0=2.0" << endl;
 	}
       ptypes=0;

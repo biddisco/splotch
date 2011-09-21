@@ -8,7 +8,7 @@
 infile=snap_092
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
-# 6: mesh reader, 7: Enzo hdf5, 8: Gadget HDF5
+# 6: mesh reader, 7: hdf7
 simtype=2
 snapshot_spacing=1
 snapdir=FALSE
@@ -57,7 +57,7 @@ color_max1=0
 # 0: TGA uncompressed, 1: PPM ASCII, 2: PPM binary, 3: TGA runlength-compressed
 pictype=0
 outfile=demo.tga
-xres=800
+xres=400
 
 gray_absorption=0.0001
 colorbar=TRUE
@@ -94,7 +94,7 @@ sky_z=1
 fov=30
 
 #EyeSeparation = 0.8
-
-# CUDA
+particle_mem_factor = 6
+#CUDA
 #use_host_as_thread =t
-#host_load=30
+#host_load=80

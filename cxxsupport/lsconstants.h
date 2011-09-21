@@ -32,6 +32,7 @@
 /*! \defgroup mathconstgroup Mathematical constants */
 /*! \{ */
 
+
 const double pi=3.141592653589793238462643383279502884197;
 const double twopi=6.283185307179586476925286766559005768394;
 const double inv_twopi=1.0/twopi;
@@ -55,11 +56,11 @@ const double rad2degr=180.0/pi;
 //! Ratio between FWHM and sigma of a Gauss curve (\f$\sqrt{8\ln2}\f$).
 const double sigma2fwhm=2.3548200450309493; // sqrt(8*log(2.))
 const double fwhm2sigma=1/sigma2fwhm;
-
 /*! \} */
 
 /*! \defgroup physconstgroup Physical constants */
 /*! \{ */
+
 
 const double Jansky2SI=1.0e-26;
 const double SI2Jansky=1.0e+26;

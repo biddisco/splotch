@@ -1,0 +1,8 @@
+campos 3244.4, 25289.3, 4764.7
+lookat -2000, 5289.3, 4764.7
+sky 0, 0, 1
+redshift -1
+time 1
+colmin0 0.152815
+colmax0 6.29244
+bright0 10.5

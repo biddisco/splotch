@@ -62,7 +62,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
 {
 bool VisIVOPalette=false;  
 #ifdef SPLVISIVO
-    int ptypes=1; //VISIVO ptypes could contain also dark and star: now we have only gas
+    int ptypes=1; 
 #else
     int ptypes = params.find<int>("ptypes",1);
 #endif
