@@ -58,12 +58,10 @@ void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic)
 
 //  planck_assert(nDev <= 1, "can't have multiple cuda threads on Linux (yet), so 'gpu_number' must be 1");
   pthread_t *tHandle = new pthread_t[nThread];
-  
-for (int i=0; i<nDev; i++)
-   pthread_create(&(tHandle[i]), NULL, cu_thread_func, (void *) &(tInfo[i]) );
- 
- if (bHostThread)
-   pthread_create(&(tHandle[nDev]), NULL, host_thread_func, (void *) &(tInfo[nDev]) );
+  for (int i=0; i<nDev; i++)
+     pthread_create(&(tHandle[i]), NULL, cu_thread_func, (void *) &(tInfo[i]) );
+  if (bHostThread)
+     pthread_create(&(tHandle[nDev]), NULL, host_thread_func, (void *) &(tInfo[nDev]) );
   void *status[nThread];
   for (int i=0; i <nThread; ++i) pthread_join(tHandle[i], &status[i]);
 //  cu_thread_func (&(tInfo[0])); //just call it as normal function

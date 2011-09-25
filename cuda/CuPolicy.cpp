@@ -10,7 +10,6 @@ CuPolicy::CuPolicy(paramfile &Param)
     gmsize = deviceProp.totalGlobalMem;
     maxregion = Param.find<int>("max_region", 1024);
 //    fbsize = Param.find<int>("fragment_buffer_size", 128);
-printf("**block=%i, gm=%ld**", m_blockSize, gmsize);
     fbsize = GetGMemSize()/4;
   }
 

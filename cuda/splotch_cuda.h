@@ -13,7 +13,7 @@ Copyright things go here.
 
 #include <cstring>
 #include "cxxsupport/paramfile.h"
-//#include "kernel/colour.h"
+#include "kernel/colour.h"
 #include "splotch/splotchutils.h"
 class CuPolicy;
 

@@ -86,20 +86,15 @@ void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &camp
   //allocate device memory for particle data
   size_t s = pgv->policy->GetSizeDPD(nP);
   //one more space allocated for the dumb
-cout<<" size:1 "<<(int)(s +sizeof(cu_particle_sim))<<endl;
   cutilSafeCall(cudaMalloc((void**) &pgv->d_pd, s +sizeof(cu_particle_sim)));
   
   //now prepare memory for d_particle_splotch.
   //one more for dums
   s = nP* sizeof(cu_particle_splotch);
-cout<<" size:2 "<<(int)(s+sizeof(cu_particle_splotch))<<endl;
   cutilSafeCall( cudaMalloc((void**) &pgv->d_ps_render, s+sizeof(cu_particle_splotch)));
 
   size_t size = pgv->policy->GetFBufSize() <<20;
-cout<<" size:3 "<<(int)size<<endl;
-//size = 500000;
   cutilSafeCall( cudaMalloc((void**) &pgv->d_fbuf, size)); 
-cout<<" pass: "<<(int)size<<endl;
 
   //retrieve parameters
   cu_param tparams;
