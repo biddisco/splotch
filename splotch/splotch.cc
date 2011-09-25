@@ -33,12 +33,8 @@
 #include "cxxsupport/ls_image.h"
 #include "cxxsupport/announce.h"
 
-#ifdef OPENCL
-#include "opencl/splotch_cuda2.h"
-#else
 #ifdef CUDA
 #include "cuda/splotch_cuda2.h"
-#endif
 #endif
 
 using namespace std;
@@ -64,7 +60,13 @@ int main (int argc, const char **argv)
   paramfile params (argv[1],false);
 #endif
   
-#if defined OPENCL || defined CUDA // they will be global vars
+
+#ifndef CUDA
+  vector<particle_sim> particle_data; //raw data from file
+  vector<particle_sim> r_points;
+  vec3 campos, lookat, sky;
+  vector<COLOURMAP> amap;
+#else //ifdef CUDA they will be global vars
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
 
@@ -96,11 +98,7 @@ int main (int argc, const char **argv)
 
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) print_device_info(myID, mydevID);
-#else // not opencl and not cuda
-  vector<particle_sim> particle_data; //raw data from file
-  vec3 campos, lookat, sky;
-  vector<COLOURMAP> amap;
-#endif // OpenCL
+#endif // CUDA
 
 #ifdef SPLVISIVO
   get_colourmaps(params,amap,opt); 
@@ -110,12 +108,13 @@ int main (int argc, const char **argv)
   tstack_pop("Setup");
   string outfile;
 
+
 #ifdef SPLVISIVO
   sceneMaker sMaker(params,opt);  
-  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile,opt))
+  while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile,opt))
 #else
   sceneMaker sMaker(params);  
-  while (sMaker.getNextScene (particle_data, campos, lookat, sky, outfile))
+  while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile))
 #endif
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
@@ -123,15 +122,33 @@ int main (int argc, const char **argv)
         yres = params.find<int>("yres",xres);
     arr2<COLOUR> pic(xres,yres);
 
-#if defined OPENCL || defined CUDA
-    cuda_rendering(mydevID, nDevProc, pic);
-#else
+// calculate boost factor for brightness
+    
+    float b_brightness = 1.0;
+    bool boost = params.find<bool>("boost",false);
+    if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
+
+#ifndef CUDA
     if(particle_data.size()>0)
+    {
+      if(boost)
+      {
 #ifdef SPLVISIVO
-    host_rendering(params, particle_data, pic, campos, lookat, sky, amap,opt);
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, opt);
 #else
-      host_rendering(params, particle_data, pic, campos, lookat, sky, amap); 
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness); 
 #endif
+      } else {
+#ifdef SPLVISIVO
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, opt);
+#else
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
+#endif
+      }
+    }
+#else
+// BOOST not implemented here
+    cuda_rendering(mydevID, nDevProc, pic);
 #endif
 
     tstack_push("Post-processing");
@@ -191,7 +208,7 @@ int main (int argc, const char **argv)
 
     tstack_pop("Output");
 
-#if defined OPENCL || defined CUDA
+#ifdef CUDA
     cuda_timeReport(params);
 #else
     timeReport();
