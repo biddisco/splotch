@@ -29,7 +29,6 @@
  *  Authors: Reinhard Hell, Martin Reinecke
  */
 
-
 #ifndef PLANCK_ERROR_HANDLING_H
 #define PLANCK_ERROR_HANDLING_H
 
