@@ -168,7 +168,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   }
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
-  vector<COLOURMAP> &amap)
+  vector<COLOURMAP> &amap, float b_brightness)
   {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt);
@@ -177,6 +177,7 @@ void particle_colorize(paramfile &params, vector<particle_sim> &p,
   for(int t=0;t<nt;t++)
     {
     brightness[t] = params.find<float32>("brightness"+dataToString(t),1.f);
+    brightness[t] *= b_brightness;
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
     }
 
@@ -424,11 +425,11 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #ifdef SPLVISIVO
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
-  vector<COLOURMAP> &amap, VisIVOServerOptions &opt)
+  vector<COLOURMAP> &amap, float b_brightnessVisIVOServerOptions &opt)
 #else
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
-  vector<COLOURMAP> &amap)
+  vector<COLOURMAP> &amap, float b_brightness)
 #endif
   {
   bool master = mpiMgr.master();
@@ -454,7 +455,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
 // ------------------------------------
   if (master)
     cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
-  particle_colorize(params, particles, amap);
+  particle_colorize(params, particles, amap, b_brightness);
   tstack_replace("Particle coloring","Particle sorting");
 
 // ------------------------------------
