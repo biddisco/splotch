@@ -57,7 +57,7 @@ color_max1=0
 # 0: TGA uncompressed, 1: PPM ASCII, 2: PPM binary, 3: TGA runlength-compressed
 pictype=0
 outfile=demo.tga
-xres=400
+xres=800
 
 gray_absorption=0.0001
 colorbar=TRUE
@@ -94,7 +94,7 @@ sky_z=1
 fov=30
 
 #EyeSeparation = 0.8
-particle_mem_factor = 6
-#CUDA
+
+# CUDA
 #use_host_as_thread =t
-#host_load=80
+#host_load=30
