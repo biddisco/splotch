@@ -24,8 +24,8 @@ OPT     +=  -DLONGIDS
 
 #--------------------------------------- OpenCL options
 
-OPT     +=  -DOPENCL
-OPT     +=  -DNO_WIN_THREAD
+#OPT     +=  -DOPENCL
+#OPT     +=  -DNO_WIN_THREAD
 
 #--------------------------------------- Turn on VisIVO stuff
 #OPT	+=  -DSPLVISIVO
@@ -111,10 +111,10 @@ ifeq (CUDA,$(findstring CUDA,$(OPT)))
 LIB_OPT  =  -L$(CUDA_HOME)/lib64 -lcudart
 SUP_INCL += -I$(CUDA_HOME)/include -I$(CUDA_SDK)/CUDALibraries/common/inc 
 else
-#ifeq (OPENCL,$(findstring OPENCL,$(OPT)))
+ifeq (OPENCL,$(findstring OPENCL,$(OPT)))
 LIB_OPT  =  -L$(CUDA_HOME)/lib64   -Llib -lshrutil_x86_64 -lOpenCL  -loclUtil_x86_64 
 SUP_INCL += -I$(CUDA_HOME)/include   -Iinc 
-#else
+endif
 endif
 
 #-L/home/pavel/NVIDIA_GPU_Computing_SDK/shared/lib 
@@ -130,7 +130,7 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
 	splotch/splotchutils.o splotch/splotch.o \
-	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o 
+	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o booster/p_selector.o booster/randomizer.o booster/m_rotation.o booster/mesh_creator.o
 	
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
 OBJS += reader/hdf5_reader.o 

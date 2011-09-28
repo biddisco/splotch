@@ -36,6 +36,9 @@
 #ifdef CUDA
 #include "cuda/splotch_cuda2.h"
 #endif
+#ifdef OPENCL
+#include "opencl/splotch_cuda2.h"
+#endif
 
 using namespace std;
 #ifdef SPLVISIVO
@@ -61,7 +64,7 @@ int main (int argc, const char **argv)
 #endif
   
 
-#ifndef CUDA
+#if (!defined(CUDA) && !defined(OPENCL))
   vector<particle_sim> particle_data; //raw data from file
   vector<particle_sim> r_points;
   vec3 campos, lookat, sky;
@@ -128,7 +131,7 @@ int main (int argc, const char **argv)
     bool boost = params.find<bool>("boost",false);
     if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
 
-#ifndef CUDA
+#if (!defined(CUDA) && !defined(OPENCL))
     if(particle_data.size()>0)
     {
       if(boost)
@@ -208,7 +211,7 @@ int main (int argc, const char **argv)
 
     tstack_pop("Output");
 
-#ifdef CUDA
+#if (defined(OPENCL) || defined(CUDA))
     cuda_timeReport(params);
 #else
     timeReport();
