@@ -53,6 +53,11 @@ public:
   vtkSetStringMacro(ActiveScalars);
   vtkGetStringMacro(ActiveScalars);
 
+  // we need to override the bouds so that IceT composites the whole image 
+  // and not only the piece bounds
+  void GetBounds(double *bounds);
+  double *GetBounds();
+
 protected:
    vtkSplotchRaytraceMapper();
   ~vtkSplotchRaytraceMapper();

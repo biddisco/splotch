@@ -16,6 +16,13 @@
 
 #include "vtkSplotchRaytraceMapper.h"
 
+#include "vtkToolkits.h" // For VTK_USE_MPI
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkPolyData.h"
@@ -86,6 +93,38 @@ int vtkSplotchRaytraceMapper::FillInputPortInformation(int port,
 {
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
   return 1;
+}
+
+// ---------------------------------------------------------------------------
+double *vtkSplotchRaytraceMapper::GetBounds()
+{
+  this->GetBounds(this->Bounds);
+  return this->Bounds;
+}
+
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::GetBounds(double *bounds)
+{
+  //
+  // Define box...
+  //
+  this->GetInput()->GetBounds(bounds);
+  //
+#ifdef VTK_USE_MPI
+  vtkMPICommunicator *communicator = vtkMPICommunicator::SafeDownCast(
+    vtkMultiProcessController::GetGlobalController()->GetCommunicator());
+  if (communicator)
+  {
+    double mins[3] = {bounds[0], bounds[2], bounds[4]};
+    double maxes[3] = {bounds[1], bounds[3], bounds[5]};
+    double globalMins[3], globalMaxes[3];
+    communicator->AllReduce(mins, globalMins, 3, vtkCommunicator::MIN_OP);
+    communicator->AllReduce(maxes, globalMaxes, 3, vtkCommunicator::MAX_OP);
+    bounds[0] = globalMins[0];  bounds[1] = globalMaxes[0];
+    bounds[2] = globalMins[1];  bounds[3] = globalMaxes[1];
+    bounds[4] = globalMins[2];  bounds[5] = globalMaxes[2];
+  }
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -229,11 +268,22 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   exptable<float32> xexp(-20.0);
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
+    std::cout << "Ïmage dimensions are " << X << "," << Y << std::endl;
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
-        pic[ix][iy].r= -xexp.expm1(pic[ix][iy].r);
-        pic[ix][iy].g= -xexp.expm1(pic[ix][iy].g);
-        pic[ix][iy].b= -xexp.expm1(pic[ix][iy].b);
+        pic[ix][iy].r = -xexp.expm1(pic[ix][iy].r);
+        pic[ix][iy].g = -xexp.expm1(pic[ix][iy].g);
+        pic[ix][iy].b = -xexp.expm1(pic[ix][iy].b);
+      }
+    }
+  }
+
+  if (!MPI_Manager::GetInstance()->master()) {
+    for (int ix=0;ix<X;ix++) {
+      for (int iy=0;iy<Y;iy++) {
+        pic[ix][iy].r = 0.0;
+        pic[ix][iy].g = 0.0;
+        pic[ix][iy].b = 0.0;
       }
     }
   }
