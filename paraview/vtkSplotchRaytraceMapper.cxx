@@ -16,7 +16,6 @@
 
 #include "vtkSplotchRaytraceMapper.h"
 
-#include "vtkToolkits.h" // For VTK_USE_MPI
 #ifdef VTK_USE_MPI
   #include "vtkMPI.h"
   #include "vtkMPIController.h"
@@ -56,6 +55,7 @@
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
+#include "cxxsupport/string_utils.h"
 
 vtkInstantiatorNewMacro(vtkSplotchRaytraceMapper);
 
@@ -70,7 +70,8 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
   this->Brightness       = 10.5;
   this->GrayAbsorption   = 0.0001;
-  this->LogIntensity     = 1;
+  this->LogIntensity     = 0;
+  this->LogColour        = 0;
   this->IntensityScalars = NULL;
   this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
@@ -150,12 +151,12 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   // For vertex coloring, this sets this->Colors.
   this->MapScalars( act->GetProperty()->GetOpacity() );
 
-  //
-  double N = pts->GetNumberOfPoints();
+  // if one process has no points, pts will be NULL
+  double N = pts ? pts->GetNumberOfPoints() : 0;
   double bounds[6];
   input->GetBounds(bounds);
   double length = input->GetLength();
-  double radius = length/N;
+  double radius = N>0 ? length/N : length/1000.0;
   //
   std::vector<particle_sim> particle_data; // raw data 
   vec3 campos, lookat, sky;
@@ -170,8 +171,6 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   //
   unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
-  double imax = VTK_DOUBLE_MIN;
-  double imin = VTK_DOUBLE_MAX;
 
   double brightness[2] = {this->Brightness, 1.5};
 
@@ -195,16 +194,20 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
       particle_data[i].e.b = 0.1;
       particle_data[i].I   = 1.0;
     }
-    if (particle_data[i].I>imax) imax = particle_data[i].I;
-    if (particle_data[i].I<imin) imin = particle_data[i].I;
   }
-  arr2<COLOUR> pic(X,Y);
+
   paramfile params;
 
   params.find("ptypes", 2);
   params.find("xres", X);
   params.find("yres", Y);
-  params.find("intensity_log0", this->LogIntensity);
+  if (this->LogIntensity) {
+    params.find("intensity_log0", true);
+  }
+  else {
+    params.find("intensity_log0", false);
+  }
+
   params.find("zmin", zmin);
   params.find("zmax", zmax);
 //  params.find("color_log0", true);
@@ -216,11 +219,12 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
   params.find("brightness0", this->Brightness);
-
-  params.find("intensity_max0", imax);
-  params.find("intensity_min0", 0.0);
   params.find("gray_absorption", this->GrayAbsorption);
   params.find("colorbar", 0);
+
+  particle_normalize(params, particle_data, true);
+
+  arr2<COLOUR> pic(X,Y);
 
   if(particle_data.size()>0) {
     particle_project(params, particle_data, campos, lookat, sky);

@@ -20,6 +20,8 @@ void host_rendering (paramfile &params, std::vector<particle_sim> &particle_data
 void particle_colorize(paramfile &params, std::vector<particle_sim> &particle_data,
   std::vector<COLOURMAP> &amap);
 
+void particle_normalize(paramfile &params, std::vector<particle_sim> &p, bool verbose);
+
 void particle_project(paramfile &params, std::vector<particle_sim> &particle_data,
   const vec3 &campos, const vec3 &lookat, vec3 sky);
 

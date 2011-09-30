@@ -21,6 +21,7 @@
 #ifndef __vtkSplotchRaytraceMapper_h
 #define __vtkSplotchRaytraceMapper_h
 
+#include "vtkToolkits.h" // For VTK_USE_MPI
 #include "vtkPainterPolyDataMapper.h"
 
 class VTK_EXPORT vtkSplotchRaytraceMapper : public vtkPainterPolyDataMapper
@@ -37,6 +38,10 @@ public:
   vtkBooleanMacro(LogIntensity, int);
   vtkGetMacro(LogIntensity, int);
   vtkSetMacro(LogIntensity, int);
+
+  vtkBooleanMacro(LogColour, int);
+  vtkGetMacro(LogColour, int);
+  vtkSetMacro(LogColour, int);
 
   vtkSetMacro(GrayAbsorption, double);
   vtkGetMacro(GrayAbsorption, double);
@@ -67,6 +72,7 @@ protected:
   double  Brightness;
   double  GrayAbsorption;
   int     LogIntensity;
+  int     LogColour;
   char   *IntensityScalars;
   char   *RadiusScalars;
   char   *TypeScalars;

@@ -28,7 +28,7 @@
 
 using namespace std;
 
-namespace {
+//namespace {
 
 void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
   {
@@ -142,7 +142,7 @@ void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose
 }
   }
 
-} // unnamed namespace
+//} // unnamed namespace
 
 // Higher order interpolation would be:
 // Time between snapshots (cosmology!)
