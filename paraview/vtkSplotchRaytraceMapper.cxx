@@ -12,16 +12,10 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
-#include "vtkgl.h"
 
 #include "vtkSplotchRaytraceMapper.h"
 
-#ifdef VTK_USE_MPI
-  #include "vtkMPI.h"
-  #include "vtkMPIController.h"
-  #include "vtkMPICommunicator.h"
-#endif
-
+#include "vtkgl.h"
 #include "vtkActor.h"
 #include "vtkRenderer.h"
 #include "vtkPolyData.h"
@@ -51,7 +45,12 @@
 #include <assert.h>
 #include <vtkstd/vector>
 
-//
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
