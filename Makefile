@@ -6,7 +6,7 @@
 OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-OPT += -DUSE_MPI
+#OPT += -DUSE_MPI
 #OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -42,6 +42,7 @@ OPT += -DH5_USE_16_API
 #SYSTYPE="RZG-SLES11-generic"
 
 
+# Set compiler executables to common names, may be altered below!
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
  CC       = mpic++
 else
@@ -49,6 +50,7 @@ else
 endif
 
 OMP      = -fopenmp
+
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport -Ic_utils
@@ -76,7 +78,11 @@ endif
 # Configuration for SLES11 Linux clusters at the Garching computing centre (RZG):
 # ->  gcc/IntelMPI_4.0.0, requires "module load impi"
 ifeq ($(SYSTYPE),"RZG-SLES11-generic")
- CC        = mpigxx
+ ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+  CC       = mpigxx
+ else
+  CC       = g++
+ endif
  OPT      += -DHDF5 -DH5_USE_16_API
  HDF5_HOME = /afs/ipp/home/k/khr/soft/amd64_sles11/opt/hdf5/1.8.7
  LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
