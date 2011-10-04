@@ -3,32 +3,32 @@
 #######################################################################
 
 #--------------------------------------- Switch on DataSize
-OPT     +=  -DLONGIDS
+OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-#OPT	+=  -DUSE_MPI
-#OPT	+=  -DUSE_MPIIO
+OPT += -DUSE_MPI
+#OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
 
-#OPT     +=  -DHDF5
-#OPT     +=  -DH5_USE_16_API
+OPT += -DHDF5
+OPT += -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
-#OPT	+=  -DVS
+#OPT += -DVS
 
 #--------------------------------------- CUDA options
 
-#OPT     +=  -DCUDA
-#OPT     +=  -DNO_WIN_THREAD
+#OPT += -DCUDA
+#OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- OpenCL options
 
-#OPT     +=  -DOPENCL
-#OPT     +=  -DNO_WIN_THREAD
+#OPT += -DOPENCL
+#OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- Turn on VisIVO stuff
-#OPT	+=  -DSPLVISIVO
+#OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
 
@@ -36,21 +36,55 @@ OPT     +=  -DLONGIDS
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
+### visualization cluster at the Garching computing center (RZG):
+#SYSTYPE="RZG-SLES11-VIZ"
+### generic SLES11 Linux machines at the Garching computing center (RZG):
+#SYSTYPE="RZG-SLES11-generic"
+
 
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-CC       = mpic++        # sets the C-compiler (default)
+ CC       = mpic++
 else
-CC       = g++        # sets the C-compiler (default)
+ CC       = g++
 endif
+
 OMP      = -fopenmp
 
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast -O2 -g    # optimization and warning flags (default)
 SUP_INCL = -I. -Icxxsupport -Ic_utils
 
+
 #CUDA_HOME = /usr/local/cuda/
 ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
-SUP_INCL += -Impiio-1.0/include/
+ SUP_INCL += -Impiio-1.0/include/
 endif
+
+
+# Configuration for the VIZ visualization cluster at the Garching computing centre (RZG):
+# ->  gcc/OpenMPI_1.4.2
+ifeq ($(SYSTYPE),"RZG-SLES11-VIZ")
+ CC        = mpic++
+ OPT      += -DHDF5 -DH5_USE_16_API
+ HDF5_HOME = /u/system/hdf5/1.8.7/serial
+ LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+ HDF5_INCL = -I$(HDF5_HOME)/include
+ OPTIMIZE += -march=native -mtune=native
+ OMP       = -fopenmp
+endif
+
+
+# Configuration for SLES11 Linux clusters at the Garching computing centre (RZG):
+# ->  gcc/IntelMPI_4.0.0, requires "module load impi"
+ifeq ($(SYSTYPE),"RZG-SLES11-generic")
+ CC        = mpigxx
+ OPT      += -DHDF5 -DH5_USE_16_API
+ HDF5_HOME = /afs/ipp/home/k/khr/soft/amd64_sles11/opt/hdf5/1.8.7
+ LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+ HDF5_INCL = -I$(HDF5_HOME)/include
+ OPTIMIZE += -O3 -msse3
+ OMP       = -fopenmp
+endif
+
 
 ifeq ($(SYSTYPE),"SP6")
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
@@ -123,17 +157,19 @@ endif
 
 OPTIONS = $(OPTIMIZE) $(OPT)
 
-EXEC   = Splotch5$(SYSTYPE)
+EXEC = Splotch5-$(SYSTYPE)
 
-OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
-        reader/mesh_reader.o reader/visivo_reader.o \
-	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
-	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-	splotch/splotchutils.o splotch/splotch.o \
-	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o booster/p_selector.o booster/randomizer.o booster/m_rotation.o booster/mesh_creator.o
-	
+OBJS = kernel/transform.o cxxsupport/error_handling.o \
+       reader/mesh_reader.o reader/visivo_reader.o \
+       cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
+       reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
+       splotch/splotchutils.o splotch/splotch.o \
+       splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
+		 booster/p_selector.o booster/randomizer.o booster/m_rotation.o booster/mesh_creator.o
+
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
-OBJS += reader/hdf5_reader.o 
+OBJS += reader/hdf5_reader.o
+OBJS += reader/gadget_hdf5_reader.o
 endif
 
 ifeq (OPENCL,$(findstring OPENCL,$(OPT)))

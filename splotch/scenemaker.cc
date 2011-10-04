@@ -289,8 +289,8 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
     }
   }
 
-  // set the time variables for the output to the image log file
-  // which is done in getNextScene
+  // Set the time variables for the output to the image log file
+  // which is written in getNextScene()
   intTime     = (1.-frac)*time1     + frac*time2;
   intRedshift = (1.-frac)*redshift1 + frac*redshift2;
 
