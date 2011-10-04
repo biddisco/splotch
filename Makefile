@@ -31,6 +31,7 @@ OPT += -DLONGIDS
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
+SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
@@ -43,8 +44,7 @@ OPT += -DLONGIDS
 
 
 
-
-# Set compiler executables to common names, may be altered below!
+# Set compiler executables to commonly used names, may be altered below!
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
  CC       = mpic++
 else
@@ -53,9 +53,8 @@ endif
 
 # optimization and warning flags (g++)
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast
-ifndef $(SYSTYPE)
+ifeq ($(SYSTYPE),"generic")
  OPTIMIZE += -O2 -g
- SYSTYPE = generic
 endif
 
 # OpenMP compiler switch
