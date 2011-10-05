@@ -57,6 +57,10 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/string_utils.h"
 
+#undef min
+#undef max
+#include <algorithm>
+
 vtkInstantiatorNewMacro(vtkSplotchRaytraceMapper);
 
 //----------------------------------------------------------------------------
@@ -379,9 +383,22 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   MPI_Manager::GetInstance()->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
-  exptable<float32> xexp(-20.0);
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
     std::cout << "Ïmage dimensions are " << X << "," << Y << std::endl;
+    float vmin=VTK_FLOAT_MAX, vmax=VTK_FLOAT_MIN;
+    for (int ix=0;ix<X;ix++) {
+      for (int iy=0;iy<Y;iy++) {
+        vmin = std::min(pic[ix][iy].r, vmin);
+        vmin = std::min(pic[ix][iy].g, vmin);
+        vmin = std::min(pic[ix][iy].b, vmin);
+        vmax = std::max(pic[ix][iy].r, vmax);
+        vmax = std::max(pic[ix][iy].g, vmax);
+        vmax = std::max(pic[ix][iy].b, vmax);
+      }
+    }
+    std::cout << "vmin, vmax are {" << vmin << "," << vmax << "}" << std::endl;
+    exptable<float32> xexp(vmin);
+    //
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
         pic[ix][iy].r = -xexp.expm1(pic[ix][iy].r);
