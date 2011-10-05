@@ -50,7 +50,8 @@ protected slots:
   void representationTypeChanged();
   void EditColour();
   void RepaintClicked();
-  void TypeSpinChanged(int v);
+  void ActiveParticleTypeChanged(int v);
+  void UpdateParticleTypes();
 
 protected :
 

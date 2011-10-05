@@ -28,6 +28,8 @@
           <Property name="Brightness"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
+          <Property name="ActiveParticleType"/>
+          <Property name="ActiveParticleSettings"/>
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -60,7 +62,10 @@
         <ExposedProperties>
           <Property name="Brightness"/>
           <Property name="GrayAbsorption"/>
-          <Property name="LogIntensity"/>          
+          <Property name="LogIntensity"/>
+
+          <Property name="ActiveParticleType"/>
+          <Property name="ActiveParticleSettings"/>
           <Property name="IntensityScalars"/>
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
@@ -87,6 +92,20 @@
         <InputArrayDomain name="input_array" attribute_type="point">
         </InputArrayDomain>
       </InputProperty>
+
+      <IntVectorProperty name="ActiveParticleType"
+        command="SetActiveParticleType"
+        number_of_elements="1"
+        default_values="0">
+      </IntVectorProperty>-->
+
+      <StringVectorProperty
+         name="ActiveParticleSettings"
+         command="GetActiveParticleSettings"
+         information_only="1">
+        <StringArrayHelper/>
+      </StringVectorProperty>
+
 
       <DoubleVectorProperty name="Brightness"
         command="SetBrightness"

@@ -35,6 +35,8 @@
 #include "vtkPVDataInformation.h"
 #include "vtkSMStringVectorProperty.h"
 #include "vtkSMEnumerationDomain.h"
+#include "vtkPVDataSetAttributesInformation.h"
+#include "vtkPVArrayInformation.h"
 
 // Qt Includes.
 #include <QVBoxLayout>
@@ -59,6 +61,8 @@
 
 // splotch enhanced qt classes
 #include "pqSplotchColorScaleEditor.h"
+
+// enum ElementTypes{ INT, DOUBLE, STRING };
 
 class pqSplotchRaytraceDisplayPanelDecorator::pqInternals: public Ui::pqSplotchRaytraceDisplayPanelDecorator
 {
@@ -115,7 +119,7 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
     this->Internals->IntensityArray, prop);
   this->Internals->Links.addPropertyLink(
     adaptor, "attributeMode", SIGNAL(selectionChanged()),
-    reprProxy, prop, 0);
+    reprProxy, prop, 3);
   this->Internals->Links.addPropertyLink(
     adaptor, "scalar", SIGNAL(selectionChanged()),
     reprProxy, prop, 1);
@@ -178,16 +182,20 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
       vtkCommand::ModifiedEvent, this, SLOT(representationTypeChanged()));
 
   this->Internals->Links.addPropertyLink(
+    this->Internals->ActiveParticleType, "value", SIGNAL(valueChanged(int)),
+    reprProxy, reprProxy->GetProperty("ActiveParticleType"));
+
+  this->Internals->Links.addPropertyLink(
     this->Internals->Brightness, "value", SIGNAL(valueChanged(int)),
     reprProxy, reprProxy->GetProperty("Brightness"));
   
   this->Internals->Links.addPropertyLink(
-    this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
-    reprProxy, reprProxy->GetProperty("GrayAbsorption"));
-  
-  this->Internals->Links.addPropertyLink(
     this->Internals->LogIntensity, "checked", SIGNAL(toggled(bool)),
     reprProxy, reprProxy->GetProperty("LogIntensity"));
+  
+  this->Internals->Links.addPropertyLink(
+    this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
+    reprProxy, reprProxy->GetProperty("GrayAbsorption"));
   
   //
   //
@@ -209,9 +217,12 @@ void pqSplotchRaytraceDisplayPanelDecorator::setupGUIConnections()
   QObject::connect(this->Internals->RepaintButton, SIGNAL(clicked()), this,
       SLOT(RepaintClicked()), Qt::QueuedConnection);
 
-  QObject::connect(this->Internals->TypeSpin, SIGNAL(valueChanged(int)), this,
-      SLOT(TypeSpinChanged(int)), Qt::QueuedConnection);
+  QObject::connect(this->Internals->ActiveParticleType, SIGNAL(valueChanged(int)), this,
+      SLOT(ActiveParticleTypeChanged(int)), Qt::QueuedConnection);
 
+  QObject::connect(this->Internals->TypeArray, SIGNAL(currentIndexChanged(int)), this,
+      SLOT(UpdateParticleTypes()), Qt::QueuedConnection);
+  
 }
 //-----------------------------------------------------------------------------
 void pqSplotchRaytraceDisplayPanelDecorator::setRepresentation(
@@ -237,9 +248,58 @@ void pqSplotchRaytraceDisplayPanelDecorator::representationTypeChanged()
   }
 }
 //-----------------------------------------------------------------------------
-void pqSplotchRaytraceDisplayPanelDecorator::TypeSpinChanged(int v)
+void pqSplotchRaytraceDisplayPanelDecorator::UpdateParticleTypes()
+{
+  vtkPVDataInformation *dataInfo = 
+    this->Internals->PipelineRepresentation->getInputDataInformation();
+  vtkPVDataInformation* geomInfo = 
+    this->Internals->RepresentationProxy->GetRepresentedDataInformation();
+  vtkPVDataSetAttributesInformation *pointInfo = 
+    dataInfo->GetPointDataInformation();
+  vtkPVArrayInformation *arrayInfo = pointInfo->GetArrayInformation(
+    this->Internals->TypeArray->currentText().toAscii().data());
+  if (!arrayInfo) return;
+  //
+  QString valstr;
+  double *range = arrayInfo->GetComponentRange(0);
+  int ntypes = 1+static_cast<int>(range[1]);
+  if (ntypes>9) {
+    ntypes = 9;
+    valstr = "(Error) Clamped to 9";
+  }
+  else {
+    valstr = QString::number(ntypes);
+  }
+  this->Internals->ActiveParticleType->setMaximum(ntypes-1);
+  this->Internals->typeslabel->setText(valstr);
+}
+//-----------------------------------------------------------------------------
+void pqSplotchRaytraceDisplayPanelDecorator::ActiveParticleTypeChanged(int v)
 {
   this->Internals->TableIndex = v;
+  //
+  vtkSMProperty* SettingsProperty = this->Internals->RepresentationProxy->GetProperty("ActiveParticleSettings");
+  this->Internals->RepresentationProxy->UpdatePropertyInformation(SettingsProperty);
+  QList<QVariant> ActiveParticleSettings = pqSMAdaptor::getMultipleElementProperty(SettingsProperty);
+  //
+  int ptype = ActiveParticleSettings.at(0).toString().toInt();
+  if (ptype==this->Internals->ActiveParticleType->value()) {
+    double brightness = ActiveParticleSettings.at(1).toString().toDouble();
+    bool logI = ActiveParticleSettings.at(2).toString().toInt();
+    this->Internals->Brightness->setValue(log10(brightness)*100);
+    this->Internals->LogIntensity->setChecked(logI);
+    int t = this->Internals->IntensityArray->findText(ActiveParticleSettings.at(3).toString());
+    //
+    if (t==-1) { t=0; }
+    this->Internals->IntensityArray->setCurrentIndex(t);
+    //
+    t = this->Internals->RadiusArray->findText(ActiveParticleSettings.at(4).toString());
+    if (t==-1) { t=0; }
+    this->Internals->RadiusArray->setCurrentIndex(t);
+  }  
+  for (int i=0; i<ActiveParticleSettings.size(); i++) {
+    std::cout << ActiveParticleSettings.at(i).toString().toAscii().data() << std::endl;
+  }
 }
 //-----------------------------------------------------------------------------
 void pqSplotchRaytraceDisplayPanelDecorator::EditColour()

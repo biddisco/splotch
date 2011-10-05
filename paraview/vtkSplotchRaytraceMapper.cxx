@@ -15,6 +15,8 @@
 
 #include "vtkSplotchRaytraceMapper.h"
 
+#include "vtksys/ios/sstream"
+
 #include "vtkgl.h"
 #include "vtkActor.h"
 #include "vtkRenderer.h"
@@ -43,7 +45,6 @@
 #include "vtkTransform.h"
 
 #include <assert.h>
-#include <vtkstd/vector>
 
 #ifdef VTK_USE_MPI
   #include "vtkMPI.h"
@@ -67,22 +68,17 @@ vtkSplotchRaytraceMapper *vtkSplotchRaytraceMapper::New()
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
 {
-  this->Brightness       = 10.5;
-  this->GrayAbsorption   = 0.0001;
-  this->LogIntensity     = 0;
-  this->LogColour        = 0;
-  this->IntensityScalars = NULL;
-  this->RadiusScalars    = NULL;
   this->TypeScalars      = NULL;
   this->ActiveScalars    = NULL;
+  this->NumberOfParticleTypes = 0;
+  this->SetNumberOfParticleTypes(1); 
+  this->GrayAbsorption = 0.001;
   MPI_Manager::GetInstance();
 }
 
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
-  delete []this->IntensityScalars;
-  delete []this->RadiusScalars;
   delete []this->TypeScalars;
   delete []this->ActiveScalars;
 }
@@ -126,7 +122,91 @@ void vtkSplotchRaytraceMapper::GetBounds(double *bounds)
   }
 #endif
 }
-
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetNumberOfParticleTypes(int N)
+{
+  this->NumberOfParticleTypes = std::max(N,this->NumberOfParticleTypes);
+  this->IntensityScalars.resize(this->NumberOfParticleTypes,"");
+  this->RadiusScalars.resize(this->NumberOfParticleTypes,"");
+  this->Brightness.resize(this->NumberOfParticleTypes,10.5);
+  this->LogIntensity.resize(this->NumberOfParticleTypes,0);
+  this->LogColour.resize(this->NumberOfParticleTypes,0);
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetIntensityScalars(int ptype, const char *s)
+{
+  if (std::string(s)!=this->IntensityScalars[ptype]) {
+    this->IntensityScalars[ptype] = s;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+const char *vtkSplotchRaytraceMapper::GetIntensityScalars(int ptype)
+{
+  return this->IntensityScalars[ptype].c_str();
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetRadiusScalars(int ptype, const char *s)
+{
+  if (std::string(s)!=this->RadiusScalars[ptype]) {
+    this->RadiusScalars[ptype] = s;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+const char *vtkSplotchRaytraceMapper::GetRadiusScalars(int ptype)
+{
+  return this->RadiusScalars[ptype].c_str();
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetBrightness(int ptype, double b)
+{
+  if (b!=this->Brightness[ptype]) {
+    this->Brightness[ptype] = b;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+double vtkSplotchRaytraceMapper::GetBrightness(int ptype)
+{
+  return this->Brightness[ptype];
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetLogIntensity(int ptype, int l)
+{
+  if (l!=this->LogIntensity[ptype]) {
+    this->LogIntensity[ptype] = l;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+int vtkSplotchRaytraceMapper::GetLogIntensity(int ptype)
+{
+  return this->LogIntensity[ptype];
+}
+// ---------------------------------------------------------------------------
+// don't need this?
+void vtkSplotchRaytraceMapper::SetLogColour(int ptype, int l)
+{
+  if (l!=this->LogColour[ptype]) {
+    this->LogColour[ptype] = l;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+int vtkSplotchRaytraceMapper::GetLogColour(int ptype)
+{
+  return this->LogColour[ptype];
+}
+// ---------------------------------------------------------------------------
+template <typename T>
+std::string NumToStrSPM(T data) {
+  vtksys_ios::ostringstream oss;
+  oss.setf(0,ios::floatfield);
+  oss.precision(5);  
+  oss << data;
+  return oss.str();
+}
 // ---------------------------------------------------------------------------
 void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 {
@@ -135,11 +215,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   vtkPointSet *input = this->GetInput();
   vtkPoints *pts = input->GetPoints();
   //
-  vtkDataArray *RadiusArray = this->RadiusScalars ? 
-    input->GetPointData()->GetArray(this->RadiusScalars) : NULL;
+  vtkDataArray *RadiusArray = (this->RadiusScalars[0].size()>0) ? 
+    input->GetPointData()->GetArray(this->RadiusScalars[0].c_str()) : NULL;
   //
-  vtkDataArray *IntensityArray = this->IntensityScalars ? 
-    input->GetPointData()->GetArray(this->IntensityScalars) : NULL;  
+  vtkDataArray *IntensityArray = (this->IntensityScalars[0].size()>0) ? 
+    input->GetPointData()->GetArray(this->IntensityScalars[0].c_str()) : NULL;  
   //
   vtkDataArray *TypeArray = this->TypeScalars ? 
     input->GetPointData()->GetArray(this->TypeScalars) : NULL;  
@@ -171,7 +251,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   unsigned char *cdata = this->Colors ? this->Colors->GetPointer(0) : NULL;
   particle_data.assign(N, particle_sim());
 
-  double brightness[2] = {this->Brightness, 1.5};
+  double *brightness = &this->Brightness[0];
 
   for (int i=0; i<N; i++) {
     double *p = pts->GetPoint(i);
@@ -197,15 +277,17 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   paramfile params;
 
-  params.find("ptypes", 2);
+  params.find("ptypes", this->NumberOfParticleTypes);
   params.find("xres", X);
   params.find("yres", Y);
-  if (this->LogIntensity) {
-    params.find("intensity_log0", true);
+  for (int i=0; i<this->NumberOfParticleTypes; i++) {
+    std::string name;
+    name = "intensity_log" + NumToStrSPM<int>(i);
+    params.find(name, (this->LogIntensity[i]!=0));
+    name = "brightness" + NumToStrSPM<int>(i);
+    params.find(name, this->Brightness[i]);
   }
-  else {
-    params.find("intensity_log0", false);
-  }
+  params.find("gray_absorption", this->GrayAbsorption);
 
   params.find("zmin", zmin);
   params.find("zmax", zmax);
@@ -217,9 +299,10 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
-  params.find("brightness0", this->Brightness);
-  params.find("gray_absorption", this->GrayAbsorption);
-  params.find("colorbar", 0);
+  params.find("colorbar", false);
+
+  params.find("quality_factor", 0.001);
+  params.find("boost", true);
 
   particle_normalize(params, particle_data, true);
 
@@ -263,7 +346,11 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   // ------------------------------------
   // ----------- Rendering ---------------
   // ------------------------------------
-  float32 grayabsorb = params.find<float32>("gray_absorption",this->GrayAbsorption);
+
+  float32 grayabsorb;
+  for (int i=0; i<this->NumberOfParticleTypes; i++) {
+    grayabsorb = params.find<float32>("gray_absorption",this->GrayAbsorption);
+  }
   render_new (particle_data, pic, a_eq_e, this->GrayAbsorption);
 
   MPI_Manager::GetInstance()->allreduceRaw

@@ -14,6 +14,8 @@
 =========================================================================*/
 #include "vtkSplotchRaytraceRepresentation.h"
 
+#include "vtksys/ios/sstream"
+
 #include "vtkCompositePolyDataMapper2.h"
 #include "vtkDataObject.h"
 #include "vtkSplotchRaytraceMapper.h"
@@ -39,9 +41,10 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
   this->LODSplotchMapper = NULL;
   this->LODMapper        = vtkPolyDataMapper::New();
 
-  this->GrayAbsorption = 0.0001;
-  this->Brightness = 10.5;
-  this->LogIntensity = 1;
+//  this->GrayAbsorption = 0.0001;
+//  this->Brightness = 10.5;
+//  this->LogIntensity = 1;
+  this->ActiveParticleType = 0;
 
   this->Mapper->SetInputConnection(this->Distributor->GetOutputPort());
   this->LODMapper->SetInputConnection(this->LODDeliveryFilter->GetOutputPort());
@@ -66,6 +69,8 @@ vtkSplotchRaytraceRepresentation::vtkSplotchRaytraceRepresentation()
   vtkInformation* keys = vtkInformation::New();
   this->Actor->SetPropertyKeys(keys);
   keys->Delete();
+
+  Settings = vtkSmartPointer<vtkStringArray>::New();
 
 }
 //----------------------------------------------------------------------------
@@ -97,11 +102,61 @@ void vtkSplotchRaytraceRepresentation::PrintSelf(ostream& os, vtkIndent indent)
   this->Superclass::PrintSelf(os, indent);
 }
 //----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetActiveParticleType(int p)
+{
+  // this only allocates space in the mapper, it does not actually set the max
+  if (this->SplotchMapper) this->SplotchMapper->SetNumberOfParticleTypes(p+1);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetNumberOfParticleTypes(p+1);
+  // this is the active one
+  this->ActiveParticleType = p;
+}
+//----------------------------------------------------------------------------
+template <typename T>
+std::string NumToStr(T data) {
+  vtksys_ios::ostringstream oss;
+  oss.setf(0,ios::floatfield);
+  oss.precision(5);  
+  oss << data;
+  return oss.str();
+}
+//----------------------------------------------------------------------------
+vtkStringArray *vtkSplotchRaytraceRepresentation::GetActiveParticleSettings()
+{
+  this->Settings->Initialize();
+  this->Settings->SetNumberOfComponents(1);
+  this->Settings->SetNumberOfTuples(5);
+
+  this->Settings->SetValue(0, NumToStr<int>(this->ActiveParticleType).c_str());
+  this->Settings->SetValue(1, NumToStr<double>(this->GetBrightness()).c_str());
+  this->Settings->SetValue(2, NumToStr<int>(this->GetLogIntensity()).c_str());
+  this->Settings->SetValue(3, this->GetIntensityScalars());
+  this->Settings->SetValue(4, this->GetRadiusScalars());
+  //
+
+  return this->Settings;
+}
+//----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetBrightness(double b)
 {
   double value = pow(10,(b/100.0));
-  if (this->SplotchMapper) this->SplotchMapper->SetBrightness(value);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetBrightness(value);
+  if (this->SplotchMapper) this->SplotchMapper->SetBrightness(this->ActiveParticleType, value);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetBrightness(this->ActiveParticleType, value);
+}
+//----------------------------------------------------------------------------
+double vtkSplotchRaytraceRepresentation::GetBrightness()
+{
+  return this->SplotchMapper->GetBrightness(this->ActiveParticleType);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetLogIntensity(int l)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetLogIntensity(this->ActiveParticleType, l);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetLogIntensity(this->ActiveParticleType, l);
+}
+//----------------------------------------------------------------------------
+int vtkSplotchRaytraceRepresentation::GetLogIntensity()
+{
+  return this->SplotchMapper->GetLogIntensity(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetGrayAbsorption(double g)
@@ -111,10 +166,9 @@ void vtkSplotchRaytraceRepresentation::SetGrayAbsorption(double g)
   if (this->LODSplotchMapper) this->LODSplotchMapper->SetGrayAbsorption(value);
 }
 //----------------------------------------------------------------------------
-void vtkSplotchRaytraceRepresentation::SetLogIntensity(int l)
+double vtkSplotchRaytraceRepresentation::GetGrayAbsorption()
 {
-  if (this->SplotchMapper) this->SplotchMapper->SetLogIntensity(l);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetLogIntensity(l);
+  return this->SplotchMapper->GetGrayAbsorption();
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetInputArrayToProcess(
@@ -130,14 +184,14 @@ void vtkSplotchRaytraceRepresentation::SetInputArrayToProcess(
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetIntensityScalars(const char *s)
 {
-  if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(s);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetIntensityScalars(s);
+  if (this->SplotchMapper) this->SplotchMapper->SetIntensityScalars(this->ActiveParticleType, s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetIntensityScalars(this->ActiveParticleType, s);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetRadiusScalars(const char *s)
 {
-  if (this->SplotchMapper) this->SplotchMapper->SetRadiusScalars(s);
-  if (this->LODSplotchMapper) this->LODSplotchMapper->SetRadiusScalars(s);
+  if (this->SplotchMapper) this->SplotchMapper->SetRadiusScalars(this->ActiveParticleType, s);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetRadiusScalars(this->ActiveParticleType, s);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetTypeScalars(const char *s)
@@ -152,6 +206,31 @@ void vtkSplotchRaytraceRepresentation::SetActiveScalars(const char *s)
   if (this->LODSplotchMapper) this->LODSplotchMapper->SetActiveScalars(s);
 }
 //----------------------------------------------------------------------------
+const char *vtkSplotchRaytraceRepresentation::GetIntensityScalars()
+{
+  if (this->SplotchMapper) return this->SplotchMapper->GetIntensityScalars(this->ActiveParticleType);
+  return NULL;
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRaytraceRepresentation::GetRadiusScalars()
+{
+  if (this->SplotchMapper) return this->SplotchMapper->GetRadiusScalars(this->ActiveParticleType);
+  return NULL;
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRaytraceRepresentation::GetTypeScalars()
+{
+  if (this->SplotchMapper) return this->SplotchMapper->GetTypeScalars();
+  return NULL;
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRaytraceRepresentation::GetActiveScalars()
+{
+  if (this->SplotchMapper) return this->SplotchMapper->GetActiveScalars();
+  return NULL;
+}
+//----------------------------------------------------------------------------
+
 
 //----------------------------------------------------------------------------
 

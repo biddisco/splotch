@@ -23,6 +23,8 @@
 
 #include "vtkToolkits.h" // For VTK_USE_MPI
 #include "vtkPainterPolyDataMapper.h"
+#include <vtkstd/vector> // needed for our arrays
+#include <vtkstd/string> // needed for our arrays
 
 class VTK_EXPORT vtkSplotchRaytraceMapper : public vtkPainterPolyDataMapper
 {
@@ -32,34 +34,48 @@ public:
 
   void Render(vtkRenderer *, vtkActor *);
 
-  vtkSetMacro(Brightness, double);
-  vtkGetMacro(Brightness, double);
-
-  vtkBooleanMacro(LogIntensity, int);
-  vtkGetMacro(LogIntensity, int);
-  vtkSetMacro(LogIntensity, int);
-
-  vtkBooleanMacro(LogColour, int);
-  vtkGetMacro(LogColour, int);
-  vtkSetMacro(LogColour, int);
-
-  vtkSetMacro(GrayAbsorption, double);
-  vtkGetMacro(GrayAbsorption, double);
-
-  vtkSetStringMacro(IntensityScalars);
-  vtkGetStringMacro(IntensityScalars);
-
-  vtkSetStringMacro(RadiusScalars);
-  vtkGetStringMacro(RadiusScalars);
-
+  // Description:
+  // Each particle may have a type, this must be an integer
+  // usuall, dark matter, gas, star, etc are denoted by their type Id
+  // one array maps all particles
   vtkSetStringMacro(TypeScalars);
   vtkGetStringMacro(TypeScalars);
 
+  // Description:
+  // Each particle may be visible or invisible, the active array is used to pass
+  // a yes/no value. usually an int array (or char) is used.
+  // one array maps all particles
   vtkSetStringMacro(ActiveScalars);
   vtkGetStringMacro(ActiveScalars);
 
-  // we need to override the bouds so that IceT composites the whole image 
-  // and not only the piece bounds
+  // Description:
+  // There may be N particle types. Each type has its own colour table,
+  // Intensity array, brigthness etc. The remaining values are defined per
+  // particle type.
+  void SetNumberOfParticleTypes(int N);
+  vtkGetMacro(NumberOfParticleTypes, int);
+
+  void SetIntensityScalars(int ptype, const char *s);
+  const char *GetIntensityScalars(int ptype);
+
+  void SetRadiusScalars(int ptype, const char *s);
+  const char *GetRadiusScalars(int ptype);
+
+  void SetBrightness(int ptype, double);
+  double GetBrightness(int ptype);
+
+  void SetLogIntensity(int ptype, int);
+  int GetLogIntensity(int ptype);
+
+  // don't need this?
+  void SetLogColour(int ptype, int);
+  int GetLogColour(int ptype);
+
+  vtkGetMacro(GrayAbsorption,double);
+  vtkSetMacro(GrayAbsorption,double);
+
+  // we need to override the bounds so that IceT composites the whole image 
+  // and not only the projected piece bounds from each process
   void GetBounds(double *bounds);
   double *GetBounds();
 
@@ -69,14 +85,15 @@ protected:
 
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
-  double  Brightness;
-  double  GrayAbsorption;
-  int     LogIntensity;
-  int     LogColour;
-  char   *IntensityScalars;
-  char   *RadiusScalars;
   char   *TypeScalars;
   char   *ActiveScalars;
+  double  GrayAbsorption;
+  int     NumberOfParticleTypes;
+  std::vector<std::string> IntensityScalars;
+  std::vector<std::string> RadiusScalars;
+  std::vector<double>      Brightness;
+  std::vector<int>         LogIntensity;
+  std::vector<int>         LogColour;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

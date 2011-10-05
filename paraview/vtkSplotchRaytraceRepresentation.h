@@ -21,6 +21,8 @@
 #define __vtkSplotchRaytraceRepresentation_h
 
 #include "vtkGeometryRepresentation.h"
+#include "vtkStringArray.h"
+#include "vtkSmartPointer.h"
 
 class vtkSplotchRaytraceMapper;
 
@@ -31,6 +33,11 @@ public:
   vtkTypeMacro(vtkSplotchRaytraceRepresentation, vtkGeometryRepresentation);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  // Description:
+  // To simplify the GUI interaction, we make one particle type active
+  // so that SetBrightness, SetActiveScalars etc act on that type.
+  void SetActiveParticleType(int p);
+  vtkGetMacro(ActiveParticleType, int);
 
   //**************************************************************************
   // Forwarded to vtkSplotchRaytraceMapper
@@ -43,15 +50,22 @@ public:
   void SetRadiusScalars(const char *);
   void SetTypeScalars(const char *);
   void SetActiveScalars(const char *);
+  const char *GetIntensityScalars();
+  const char *GetRadiusScalars();
+  const char *GetTypeScalars();
+  const char *GetActiveScalars();
 
-  void SetBrightness(double b);
-  vtkGetMacro(Brightness, double);
+  void   SetBrightness(double b);
+  double GetBrightness();
 
-  void SetGrayAbsorption(double b);
-  vtkGetMacro(GrayAbsorption, double);
+  void   SetLogIntensity(int l);
+  int    GetLogIntensity();
 
-  void SetLogIntensity(int l);
-  vtkGetMacro(LogIntensity, int);
+  void   SetGrayAbsorption(double b);
+  double GetGrayAbsorption();
+
+  // Gather all the settings in one call for feeding back to the gui display
+  vtkStringArray *GetActiveParticleSettings();
 
 //BTX
 protected:
@@ -63,14 +77,15 @@ protected:
   virtual int FillInputPortInformation(int port, vtkInformation* info);
 
   // Description:
-  // Execute
+  // Execute the pipeline, not used, but can instantiate filters for extra processing
+  // in here.
   virtual int RequestData(vtkInformation*, vtkInformationVector**, vtkInformationVector*);
 
-  vtkSplotchRaytraceMapper  *SplotchMapper;
-  vtkSplotchRaytraceMapper  *LODSplotchMapper;
-  double                     Brightness;
-  double                     GrayAbsorption;
-  int                        LogIntensity;
+  //
+  vtkSplotchRaytraceMapper       *SplotchMapper;
+  vtkSplotchRaytraceMapper       *LODSplotchMapper;
+  int                             ActiveParticleType;
+  vtkSmartPointer<vtkStringArray> Settings;
 
 private:
   vtkSplotchRaytraceRepresentation(const vtkSplotchRaytraceRepresentation&); // Not implemented

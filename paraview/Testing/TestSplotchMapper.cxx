@@ -495,9 +495,8 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
       vtkSmartPointer<vtkPolyDataMapper>       mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
 #else
       vtkSmartPointer<vtkSplotchRaytraceMapper> mapper = vtkSmartPointer<vtkSplotchRaytraceMapper>::New();
-//      mapper->SetRadiusScalars("Radius");
-      mapper->SetRadiusScalars("Radius");
-      mapper->SetIntensityScalars("Intensity");
+      mapper->SetRadiusScalars(0,"Radius");
+      mapper->SetIntensityScalars(0,"Intensity");
       mapper->SetTypeScalars("Type");
       mapper->SetActiveScalars("Active");      
 #endif
