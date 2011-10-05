@@ -114,7 +114,7 @@ void vtkSplotchRaytraceRepresentation::SetActiveParticleType(int p)
 template <typename T>
 std::string NumToStr(T data) {
   vtksys_ios::ostringstream oss;
-  oss.setf(0,ios::floatfield);
+//  oss.setf(0,ios::floatfield);
   oss.precision(5);  
   oss << data;
   return oss.str();

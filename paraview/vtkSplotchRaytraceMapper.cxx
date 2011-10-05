@@ -212,7 +212,7 @@ int vtkSplotchRaytraceMapper::GetLogColour(int ptype)
 template <typename T>
 std::string NumToStrSPM(T data) {
   vtksys_ios::ostringstream oss;
-  oss.setf(0,ios::floatfield);
+//  oss.setf(0,ios::floatfield);
   oss.precision(5);  
   oss << data;
   return oss.str();
