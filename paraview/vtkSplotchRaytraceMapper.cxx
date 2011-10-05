@@ -268,11 +268,16 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   vtkIdType activeParticles = 0;
   for (vtkIdType i=0; i<N; i++) {
-    int ptype               = TypeArray ? TypeArray->GetTuple1(i) : 0;
-    ptype = ptype<this->NumberOfParticleTypes ? ptype : this->NumberOfParticleTypes-1;
+    // what particle type is this
+    int ptype = TypeArray ? TypeArray->GetTuple1(i) : 0;
+    // clamp it to prevent array access faults
+    ptype = ptype<this->NumberOfParticleTypes ? ptype : 0;
     particle_data[activeParticles].type   = ptype;
-    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 0);
+    // is this particle active
+    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 1);
     if (!active) continue;
+
+    // if we are active, setup parameters
     particle_data[activeParticles].active = active;
     //
     double *p = pts->GetPoint(i);
