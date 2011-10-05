@@ -2,7 +2,6 @@
  *  Reader for Gadget HDF5 output (started from <gadget_reader.cc>).
  *
  *  TODO  - implement support for 64bit integer IDs
- *        - implement byte swapping
  *        - implement improved error handling of HDF5 calls
  *        - merge with <gadget_reader.cc> as a significant amount
  *          of code is shared?
@@ -38,20 +37,18 @@ using namespace std;
 
 // helper function to read a single attribute from a HDF5 group, typically from "Header"
 //
-void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *attribute)
+void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *attribute, hid_t hdf5_datatype )
 {
-  hid_t   hdf5_attribute, hdf5_datatype, hdf5_dataSpace;
+  hid_t   hdf5_attribute, hdf5_dataSpace;
   herr_t  hdf5_status;
   int     rank;
   hsize_t sdim[64];
   //
   hdf5_attribute = H5Aopen_name(hdf5_group, attrName);
-  hdf5_datatype  = H5Aget_type(hdf5_attribute);
   hdf5_dataSpace = H5Aget_space(hdf5_attribute);
   rank           = H5Sget_simple_extent_ndims(hdf5_dataSpace);
   hdf5_status    = H5Sget_simple_extent_dims(hdf5_dataSpace, sdim, NULL);
   hdf5_status    = H5Aread(hdf5_attribute, hdf5_datatype, attribute);
-  hdf5_status    = H5Tclose(hdf5_datatype);
   hdf5_status    = H5Sclose(hdf5_dataSpace);
   hdf5_status    = H5Aclose(hdf5_attribute);
 }
@@ -60,31 +57,19 @@ void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *at
 // Function to read data from the Gadget HDF5 header, similar to the standard gadget reader function
 //    <int gadget_read_hdf5_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal)>.
 //
-int gadget_read_hdf5_header(hid_t hdf5_file, int32 *npart, double &time, double &redshift, 
-                            int32 *nparttotal, double &boxsize)
+int gadget_read_hdf5_header(hid_t hdf5_file, unsigned int *npart, double &time, double &redshift, 
+                            unsigned int *nparttotal, double &boxsize)
 {
-  /*
-    int blocksize = gadget_find_block (file,"HEAD");
-    planck_assert (blocksize>0, "Header block not found");
-    file.skip(4);
-    file.get(npart,6);
-    file.skip(6*8);
-    file >> time;
-    file.skip(8+4+4);
-    file.get(nparttotal,6);
-    file.skip(4+4);
-    file >> boxsize;
-  */
   hid_t  hdf5_header;
   herr_t hdf5_status;
 
   hdf5_header = H5Gopen(hdf5_file, "/Header", H5P_DEFAULT);
   //
-  read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart);
-  read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time);
-  read_hdf5_group_attribute(hdf5_header, "Redshift",         &redshift);
-  read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal);
-  read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize);
+  read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart,      H5T_NATIVE_UINT);
+  read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time,      H5T_NATIVE_DOUBLE);
+  read_hdf5_group_attribute(hdf5_header, "Redshift",         &redshift,  H5T_NATIVE_DOUBLE);
+  read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal, H5T_NATIVE_UINT);
+  read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize,   H5T_NATIVE_DOUBLE);
   //
   hdf5_status = H5Gclose(hdf5_header);
 
@@ -150,14 +135,12 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
                         double &time, double &redshift, double &boxsize)
 {
   int numfiles = params.find<int>("numfiles",1);
-  bool doswap = params.find<bool>("swap_endian",false);
   string infilename = params.find<string>("infile");
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
   int ptype_found = -1, ntot = 1;
 
   string filename;
-  bifstream infile;
 
   int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
@@ -207,7 +190,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       for(int f=0; f<NFilePerRead; f++)
       {
         int file=rt*NFilePerRead+f;
-        int npartthis[6],nparttotal[6];
+        unsigned int npartthis[6],nparttotal[6];
         filename=infilename;
 
         if (numfiles>1)
@@ -342,8 +325,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
     for(int f=0; f<NFilePerRead; f++)
     {
-      int npartthis[6],nparttotal[6];
-      int present=1+2+4+8+16+32;
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
 
@@ -497,8 +479,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
         for(int f=0; f<NFilePerRead; f++)
         {
-          int npartthis[6],nparttotal[6];
-          int present=1+2+4+8+16+32;
+          unsigned int npartthis[6],nparttotal[6];
           int LastType=-1;
 
           filename=infilename;
@@ -587,9 +568,8 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
       for(int f=0; f<NFilePerRead; f++)
       {
-        int npartthis[6],nparttotal[6];
+        unsigned int npartthis[6],nparttotal[6];
 
-        int present=1+2+4+8+16+32;
         int LastType=-1;
         filename=infilename;
 
@@ -678,7 +658,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
     for(int f=0; f<NFilePerRead; f++)
     {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
 
@@ -755,7 +735,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
     for(int f=0; f<NFilePerRead; f++)
     {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
 
@@ -873,7 +853,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
     for(int f=0; f<NFilePerRead; f++)
     {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
 
