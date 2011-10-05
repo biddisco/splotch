@@ -28,6 +28,7 @@
           <Property name="Brightness"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
+          <Property name="TypeActive"/>
           <Property name="ActiveParticleType"/>
           <Property name="ActiveParticleSettings"/>
           <Property name="IntensityScalars"/>
@@ -63,7 +64,7 @@
           <Property name="Brightness"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
-
+          <Property name="TypeActive"/>
           <Property name="ActiveParticleType"/>
           <Property name="ActiveParticleSettings"/>
           <Property name="IntensityScalars"/>
@@ -129,6 +130,13 @@
 
       <IntVectorProperty name="LogIntensity"
         command="SetLogIntensity"
+        number_of_elements="1"
+        default_values="1">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty name="TypeActive"
+        command="SetTypeActive"
         number_of_elements="1"
         default_values="1">
         <BooleanDomain name="bool"/>

@@ -61,6 +61,9 @@ public:
   void   SetLogIntensity(int l);
   int    GetLogIntensity();
 
+  void   SetTypeActive(int l);
+  int    GetTypeActive();
+
   void   SetGrayAbsorption(double b);
   double GetGrayAbsorption();
 

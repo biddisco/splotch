@@ -87,7 +87,7 @@
         <item>
          <widget class="QLabel" name="label_3">
           <property name="text">
-           <string>Colour Controls for Particle Type</string>
+           <string>Controls for Particle Type</string>
           </property>
          </widget>
         </item>
@@ -113,7 +113,7 @@
         </item>
        </layout>
       </item>
-      <item row="5" column="0" rowspan="2">
+      <item row="6" column="0" rowspan="2">
        <widget class="QLabel" name="label">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
@@ -129,13 +129,13 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="1">
+      <item row="6" column="1">
        <widget class="QLabel" name="label_2">
         <property name="frameShape">
          <enum>QFrame::NoFrame</enum>
         </property>
         <property name="text">
-         <string>-5.....................0.....................5</string>
+         <string>-5....................0....................5+</string>
         </property>
         <property name="textFormat">
          <enum>Qt::PlainText</enum>
@@ -145,7 +145,7 @@
         </property>
        </widget>
       </item>
-      <item row="6" column="1">
+      <item row="7" column="1">
        <widget class="QSlider" name="Brightness">
         <property name="minimum">
          <number>-500</number>
@@ -170,7 +170,7 @@
         </property>
        </widget>
       </item>
-      <item row="8" column="0" colspan="2">
+      <item row="9" column="0" colspan="2">
        <layout class="QHBoxLayout" name="horizontalLayout">
         <item>
          <widget class="QPushButton" name="EditColorMapButton">
@@ -191,14 +191,14 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="0">
+      <item row="2" column="0">
        <widget class="QLabel" name="IntensityLabel">
         <property name="text">
          <string>Intensity</string>
         </property>
        </widget>
       </item>
-      <item row="1" column="1">
+      <item row="2" column="1">
        <widget class="QComboBox" name="IntensityArray">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -209,16 +209,6 @@
        </widget>
       </item>
       <item row="3" column="1">
-       <widget class="QCheckBox" name="LogIntensity">
-        <property name="text">
-         <string>Intensity is Logarithmic</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
        <widget class="QComboBox" name="RadiusArray">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -228,10 +218,30 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="RadiusArrayLabel">
         <property name="text">
          <string>Radius</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QCheckBox" name="TypeActive">
+        <property name="text">
+         <string>Active</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QCheckBox" name="LogIntensity">
+        <property name="text">
+         <string>Intensity is Logarithmic</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
       </item>

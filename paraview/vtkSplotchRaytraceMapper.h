@@ -71,6 +71,9 @@ public:
   void SetLogColour(int ptype, int);
   int GetLogColour(int ptype);
 
+  void SetTypeActive(int ptype, int);
+  int GetTypeActive(int ptype);
+
   vtkGetMacro(GrayAbsorption,double);
   vtkSetMacro(GrayAbsorption,double);
 
@@ -94,6 +97,7 @@ protected:
   std::vector<double>      Brightness;
   std::vector<int>         LogIntensity;
   std::vector<int>         LogColour;
+  std::vector<int>         TypeActive;
 
 private:
   vtkSplotchRaytraceMapper(const vtkSplotchRaytraceMapper&); // Not implemented.

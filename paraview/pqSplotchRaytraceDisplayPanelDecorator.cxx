@@ -194,6 +194,10 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
     reprProxy, reprProxy->GetProperty("LogIntensity"));
   
   this->Internals->Links.addPropertyLink(
+    this->Internals->TypeActive, "checked", SIGNAL(toggled(bool)),
+    reprProxy, reprProxy->GetProperty("TypeActive"));
+
+  this->Internals->Links.addPropertyLink(
     this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
     reprProxy, reprProxy->GetProperty("GrayAbsorption"));
   
@@ -285,17 +289,21 @@ void pqSplotchRaytraceDisplayPanelDecorator::ActiveParticleTypeChanged(int v)
   int ptype = ActiveParticleSettings.at(0).toString().toInt();
   if (ptype==this->Internals->ActiveParticleType->value()) {
     double brightness = ActiveParticleSettings.at(1).toString().toDouble();
-    bool logI = ActiveParticleSettings.at(2).toString().toInt();
     this->Internals->Brightness->setValue(log10(brightness)*100);
-    this->Internals->LogIntensity->setChecked(logI);
-    int t = this->Internals->IntensityArray->findText(ActiveParticleSettings.at(3).toString());
     //
+    bool logI = ActiveParticleSettings.at(2).toString().toInt();
+    this->Internals->LogIntensity->setChecked(logI);
+    //
+    int t = this->Internals->IntensityArray->findText(ActiveParticleSettings.at(3).toString());
     if (t==-1) { t=0; }
     this->Internals->IntensityArray->setCurrentIndex(t);
     //
     t = this->Internals->RadiusArray->findText(ActiveParticleSettings.at(4).toString());
     if (t==-1) { t=0; }
     this->Internals->RadiusArray->setCurrentIndex(t);
+    //
+    bool active = ActiveParticleSettings.at(5).toString().toInt();
+    this->Internals->TypeActive->setChecked(active);
   }  
   for (int i=0; i<ActiveParticleSettings.size(); i++) {
     std::cout << ActiveParticleSettings.at(i).toString().toAscii().data() << std::endl;

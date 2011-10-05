@@ -124,13 +124,14 @@ vtkStringArray *vtkSplotchRaytraceRepresentation::GetActiveParticleSettings()
 {
   this->Settings->Initialize();
   this->Settings->SetNumberOfComponents(1);
-  this->Settings->SetNumberOfTuples(5);
+  this->Settings->SetNumberOfTuples(6);
 
   this->Settings->SetValue(0, NumToStr<int>(this->ActiveParticleType).c_str());
   this->Settings->SetValue(1, NumToStr<double>(this->GetBrightness()).c_str());
   this->Settings->SetValue(2, NumToStr<int>(this->GetLogIntensity()).c_str());
   this->Settings->SetValue(3, this->GetIntensityScalars());
   this->Settings->SetValue(4, this->GetRadiusScalars());
+  this->Settings->SetValue(5, NumToStr<int>(this->GetTypeActive()).c_str());
   //
 
   return this->Settings;
@@ -157,6 +158,17 @@ void vtkSplotchRaytraceRepresentation::SetLogIntensity(int l)
 int vtkSplotchRaytraceRepresentation::GetLogIntensity()
 {
   return this->SplotchMapper->GetLogIntensity(this->ActiveParticleType);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRaytraceRepresentation::SetTypeActive(int l)
+{
+  if (this->SplotchMapper) this->SplotchMapper->SetTypeActive(this->ActiveParticleType, l);
+  if (this->LODSplotchMapper) this->LODSplotchMapper->SetTypeActive(this->ActiveParticleType, l);
+}
+//----------------------------------------------------------------------------
+int vtkSplotchRaytraceRepresentation::GetTypeActive()
+{
+  return this->SplotchMapper->GetTypeActive(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRaytraceRepresentation::SetGrayAbsorption(double g)

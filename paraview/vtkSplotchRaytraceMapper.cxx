@@ -75,14 +75,12 @@ vtkSplotchRaytraceMapper::vtkSplotchRaytraceMapper()
   this->GrayAbsorption = 0.001;
   MPI_Manager::GetInstance();
 }
-
 // ---------------------------------------------------------------------------
 vtkSplotchRaytraceMapper::~vtkSplotchRaytraceMapper()
 {
   delete []this->TypeScalars;
   delete []this->ActiveScalars;
 }
-
 // ---------------------------------------------------------------------------
 int vtkSplotchRaytraceMapper::FillInputPortInformation(int port,
   vtkInformation *info)
@@ -90,14 +88,12 @@ int vtkSplotchRaytraceMapper::FillInputPortInformation(int port,
   info->Set(vtkAlgorithm::INPUT_REQUIRED_DATA_TYPE(), "vtkPointSet");
   return 1;
 }
-
 // ---------------------------------------------------------------------------
 double *vtkSplotchRaytraceMapper::GetBounds()
 {
   this->GetBounds(this->Bounds);
   return this->Bounds;
 }
-
 // ---------------------------------------------------------------------------
 void vtkSplotchRaytraceMapper::GetBounds(double *bounds)
 {
@@ -130,6 +126,7 @@ void vtkSplotchRaytraceMapper::SetNumberOfParticleTypes(int N)
   this->RadiusScalars.resize(this->NumberOfParticleTypes,"");
   this->Brightness.resize(this->NumberOfParticleTypes,10.5);
   this->LogIntensity.resize(this->NumberOfParticleTypes,0);
+  this->TypeActive.resize(this->NumberOfParticleTypes,0);
   this->LogColour.resize(this->NumberOfParticleTypes,0);
 }
 // ---------------------------------------------------------------------------
@@ -185,6 +182,19 @@ int vtkSplotchRaytraceMapper::GetLogIntensity(int ptype)
   return this->LogIntensity[ptype];
 }
 // ---------------------------------------------------------------------------
+void vtkSplotchRaytraceMapper::SetTypeActive(int ptype, int a)
+{
+  if (a!=this->TypeActive[ptype]) {
+    this->TypeActive[ptype] = a;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+int vtkSplotchRaytraceMapper::GetTypeActive(int ptype)
+{
+  return this->TypeActive[ptype];
+}
+// ---------------------------------------------------------------------------
 // don't need this?
 void vtkSplotchRaytraceMapper::SetLogColour(int ptype, int l)
 {
@@ -215,11 +225,14 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   vtkPointSet *input = this->GetInput();
   vtkPoints *pts = input->GetPoints();
   //
-  vtkDataArray *RadiusArray = (this->RadiusScalars[0].size()>0) ? 
-    input->GetPointData()->GetArray(this->RadiusScalars[0].c_str()) : NULL;
-  //
-  vtkDataArray *IntensityArray = (this->IntensityScalars[0].size()>0) ? 
-    input->GetPointData()->GetArray(this->IntensityScalars[0].c_str()) : NULL;  
+  std::vector<vtkDataArray *> radiusarrays(this->NumberOfParticleTypes);
+  std::vector<vtkDataArray *> intensityarrays(this->NumberOfParticleTypes);
+  for (int i=0; i<this->NumberOfParticleTypes; i++) {
+    radiusarrays[i] = (this->RadiusScalars[i].size()>0) ? 
+      input->GetPointData()->GetArray(this->RadiusScalars[i].c_str()) : NULL;
+    intensityarrays[i] = (this->IntensityScalars[i].size()>0) ? 
+      input->GetPointData()->GetArray(this->IntensityScalars[i].c_str()) : NULL;  
+  }
   //
   vtkDataArray *TypeArray = this->TypeScalars ? 
     input->GetPointData()->GetArray(this->TypeScalars) : NULL;  
@@ -231,7 +244,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   this->MapScalars( act->GetProperty()->GetOpacity() );
 
   // if one process has no points, pts will be NULL
-  double N = pts ? pts->GetNumberOfPoints() : 0;
+  vtkIdType N = pts ? pts->GetNumberOfPoints() : 0;
   double bounds[6];
   input->GetBounds(bounds);
   double length = input->GetLength();
@@ -253,30 +266,37 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
 
   double *brightness = &this->Brightness[0];
 
-  for (int i=0; i<N; i++) {
+  vtkIdType activeParticles = 0;
+  for (vtkIdType i=0; i<N; i++) {
+    int ptype               = TypeArray ? TypeArray->GetTuple1(i) : 0;
+    ptype = ptype<this->NumberOfParticleTypes ? ptype : this->NumberOfParticleTypes-1;
+    particle_data[activeParticles].type   = ptype;
+    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 0);
+    if (!active) continue;
+    particle_data[activeParticles].active = active;
+    //
     double *p = pts->GetPoint(i);
-    particle_data[i].x      = p[0];
-    particle_data[i].y      = p[1];
-    particle_data[i].z      = p[2];
-    particle_data[i].type   = TypeArray ? TypeArray->GetTuple1(i) : 0;
-    particle_data[i].r      = RadiusArray ? RadiusArray->GetTuple1(i) : radius;
-    particle_data[i].active = ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 0;
-    particle_data[i].I      = IntensityArray ? IntensityArray->GetTuple1(i) : 1.0;
+    particle_data[activeParticles].x      = p[0];
+    particle_data[activeParticles].y      = p[1];
+    particle_data[activeParticles].z      = p[2];
+    particle_data[activeParticles].r      = radiusarrays[ptype] ? radiusarrays[ptype]->GetTuple1(i) : radius;
+    particle_data[activeParticles].I      = intensityarrays[ptype] ? intensityarrays[ptype]->GetTuple1(i) : 1.0;
     if (cdata) {      
-      particle_data[i].e.r = (cdata[i*4+0]/255.0);
-      particle_data[i].e.g = (cdata[i*4+1]/255.0);
-      particle_data[i].e.b = (cdata[i*4+2]/255.0);
+      particle_data[activeParticles].e.r = (cdata[i*4+0]/255.0);
+      particle_data[activeParticles].e.g = (cdata[i*4+1]/255.0);
+      particle_data[activeParticles].e.b = (cdata[i*4+2]/255.0);
     }
     else { // we don't support any other mode
-      particle_data[i].e.r = 0.1;
-      particle_data[i].e.g = 0.1;
-      particle_data[i].e.b = 0.1;
-      particle_data[i].I   = 1.0;
+      particle_data[activeParticles].e.r = 0.1;
+      particle_data[activeParticles].e.g = 0.1;
+      particle_data[activeParticles].e.b = 0.1;
+      particle_data[activeParticles].I   = 1.0;
     }
+    activeParticles++;
   }
+  particle_data.resize(activeParticles);
 
   paramfile params;
-
   params.find("ptypes", this->NumberOfParticleTypes);
   params.find("xres", X);
   params.find("yres", Y);
@@ -311,20 +331,18 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   if(particle_data.size()>0) {
     particle_project(params, particle_data, campos, lookat, sky);
   }
-  for (int i=0; i<N; i++) {
-    if (particle_data[i].active) {
-      if (cdata) {      
-        double b = brightness[particle_data[i].type];
-        particle_data[i].e.r *= particle_data[i].I*b;
-        particle_data[i].e.g *= particle_data[i].I*b;
-        particle_data[i].e.b *= particle_data[i].I*b;
-      }
-      else { // we don't support any other mode
-        particle_data[i].e.r = 0.1;
-        particle_data[i].e.g = 0.1;
-        particle_data[i].e.b = 0.1;
-        particle_data[i].I   = 1.0;
-      }
+  for (int i=0; i<activeParticles; i++) {
+    if (cdata) {      
+      double b = brightness[particle_data[i].type];
+      particle_data[i].e.r *= particle_data[i].I*b;
+      particle_data[i].e.g *= particle_data[i].I*b;
+      particle_data[i].e.b *= particle_data[i].I*b;
+    }
+    else { // we don't support any other mode
+      particle_data[i].e.r = 0.1;
+      particle_data[i].e.g = 0.1;
+      particle_data[i].e.b = 0.1;
+      particle_data[i].I   = 1.0;
     }
   }
 
