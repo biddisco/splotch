@@ -46,12 +46,6 @@
 
 #include <assert.h>
 
-#ifdef VTK_USE_MPI
-  #include "vtkMPI.h"
-  #include "vtkMPIController.h"
-  #include "vtkMPICommunicator.h"
-#endif
-
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
@@ -384,7 +378,7 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
-    std::cout << "Ïmage dimensions are " << X << "," << Y << std::endl;
+    std::cout << "Ïage dimensions are " << X << "," << Y << std::endl;
     float vmin=VTK_FLOAT_MAX, vmax=VTK_FLOAT_MIN;
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
@@ -443,3 +437,4 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
     glPopMatrix();
   }
 }
+

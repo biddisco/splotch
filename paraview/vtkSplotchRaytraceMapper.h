@@ -21,8 +21,14 @@
 #ifndef __vtkSplotchRaytraceMapper_h
 #define __vtkSplotchRaytraceMapper_h
 
-#include "vtkToolkits.h" // For VTK_USE_MPI
 #include "vtkPainterPolyDataMapper.h"
+#include "vtkToolkits.h" // For VTK_USE_MPI
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+
 #include <vtkstd/vector> // needed for our arrays
 #include <vtkstd/string> // needed for our arrays
 
