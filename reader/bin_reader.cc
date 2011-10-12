@@ -67,7 +67,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
 
   }
 
-void bin_reader_finish (vector<particle_sim> &points)
+void bin_reader_finish (vector<particle_sim> &points, bifstream &inp)
   {
   float minr=1e30;
   float maxr=-1e30;
@@ -79,6 +79,7 @@ void bin_reader_finish (vector<particle_sim> &points)
     }
   mpiMgr.allreduce(maxr,MPI_Manager::Max);
   mpiMgr.allreduce(minr,MPI_Manager::Min);
+  inp.close();
   }
 
 } // unnamed namespace
@@ -110,12 +111,13 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
     points[i].z = buffer[qty_idx[2]];
     points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : smooth_factor;
     points[i].I = (qty_idx[4]>=0) ? buffer[qty_idx[4]] : 0.5;
-    points[i].e.r = buffer[qty_idx[5]];
+    points[i].e.r = (qty_idx[5]>=0) ? buffer[qty_idx[5]] : 1.0;
+    //points[i].e.r = buffer[qty_idx[5]];
     points[i].e.g = have_c2c3 ? buffer[qty_idx[6]] : 0.0;
     points[i].e.b = have_c2c3 ? buffer[qty_idx[7]] : 0.0;
     }
 
-  bin_reader_finish (points);
+  bin_reader_finish (points, inp);
   }
 
 /* In this case we expect the file to be written as
@@ -164,5 +166,5 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points)
 
 #undef CASEMACRO__
 
-  bin_reader_finish (points);
+  bin_reader_finish (points, inp);
   }

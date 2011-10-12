@@ -22,4 +22,5 @@ void visivo_reader();
 long bin_reader_block_mpi (paramfile &params, std::vector<particle_sim> &points, float *maxr, float *minr, int mype, int npes);
 void mesh_reader(paramfile &params, std::vector<particle_sim> &points);
 void hdf5_reader(paramfile &params, std::vector<particle_sim> &points);
+void tipsy_reader(paramfile &params, std::vector<particle_sim> &points);
 #endif
