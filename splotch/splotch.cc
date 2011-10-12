@@ -158,14 +158,16 @@ int main (int argc, const char **argv)
     mpiMgr.allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
-    exptable<float32> xexp(-20.0);
+    exptable<float32> xexp(-50000.0);
     if (mpiMgr.master() && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
           {
+          //cout << "pre  " << pic[ix][iy].r << " " << pic[ix][iy].g << " "<< pic[ix][iy].b << "\n";
           pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+          //cout << "post  " << pic[ix][iy].r << " " << pic[ix][iy].g << " "<< pic[ix][iy].b << "\n";
           }
 
     tstack_replace("Post-processing","Output");
