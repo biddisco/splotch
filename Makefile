@@ -36,6 +36,9 @@ SYSTYPE="generic"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
+#SYSTYPE="VIZ"
+#SYSTYPE="EIGER"
+SYSTYPE="PALU"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
 ### generic SLES11 Linux machines at the Garching computing center (RZG):
@@ -84,6 +87,16 @@ ifeq ($(SYSTYPE),"RZG-SLES11-VIZ")
  OMP       = -fopenmp
 endif
 
+# configuration for PALU at CSCS
+ifeq ($(SYSTYPE),"PALU")
+ ifeq (HDF5,$(findstring HDF5,$(OPT)))
+  HDF5_HOME = 
+  LIB_HDF5  = 
+  HDF5_INCL = 
+ endif
+ CC       =  CC
+ OPTIMIZE += -O3
+endif
 
 # Configuration for SLES11 Linux clusters at the Garching computing centre (RZG):
 # ->  gcc/IntelMPI_4.0.0, requires "module load impi"
@@ -115,6 +128,31 @@ ifeq ($(SYSTYPE),"SP6")
  OPTIMIZE =  -q64 -O3 -qarch=auto -qtune=auto -qinline
  LIB_OPT	 =  -bstackpsize:64k -bdatapsize:64k -btextpsize:64k
  OMP =
+endif
+
+ifeq ($(SYSTYPE),"EIGER")
+ifeq (HDF5,$(findstring HDF5,$(OPT)))
+HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.4_ser/xl--10.1
+LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/sz
+lib/2.1/xl--10.1/lib/ -lsz
+HDF5_INCL = -I$(HDF5_HOME)/include
+endif
+ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+CC       =  mpic++
+else
+CC       =  c++
+endif
+#EIGER again
+ifeq (CUDA,$(findstring CUDA,$(OPT)))
+NVCC       =  nvcc -g
+CUDA_HOME  =  /apps/eiger/Cuda-4.0/cuda
+#LIB_OPT  += -L$(CUDA_HOME)/lib -L$(CUDA_HOME)/lib64 -lcudart
+LIB_OPT  += -L$(CUDA_HOME)/lib64 -lcudart
+SUP_INCL += -I/apps/eiger/NVIDIA_GPU_Computing_SDK/C/common/inc/ -I$(CUDA_HOME)/include#-I$(CUDAUTIL_INC) -I$(NVCC_HOME)/include
+endif
+
+OPTIMIZE =  -O3
+OMP =
 endif
 
 ifeq ($(SYSTYPE),"GP")
@@ -171,13 +209,14 @@ OPTIONS = $(OPTIMIZE) $(OPT)
 
 EXEC = Splotch5-$(SYSTYPE)
 
-OBJS = kernel/transform.o cxxsupport/error_handling.o \
-       reader/mesh_reader.o reader/visivo_reader.o \
-       cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
-       reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o \
-       splotch/splotchutils.o splotch/splotch.o \
-       splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
-		 booster/p_selector.o booster/randomizer.o booster/m_rotation.o booster/mesh_creator.o
+OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
+        reader/mesh_reader.o reader/visivo_reader.o \
+	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
+	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o reader/tipsy_reader.o \
+	splotch/splotchutils.o splotch/splotch.o \
+	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
+	booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
  OBJS += reader/hdf5_reader.o
