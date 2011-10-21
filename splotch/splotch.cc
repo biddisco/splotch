@@ -63,10 +63,10 @@ int main (int argc, const char **argv)
   paramfile params (argv[1],false);
 #endif
   
-
-#if (!defined(CUDA) && !defined(OPENCL))
   vector<particle_sim> particle_data; //raw data from file
   vector<particle_sim> r_points;
+
+#if (!defined(CUDA) && !defined(OPENCL))
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
 #else //ifdef CUDA they will be global vars
@@ -131,9 +131,9 @@ int main (int argc, const char **argv)
     bool boost = params.find<bool>("boost",false);
     if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
 
-#if (!defined(CUDA) && !defined(OPENCL))
     if(particle_data.size()>0)
     {
+#if (!defined(CUDA) && !defined(OPENCL))
       if(boost)
       {
 #ifdef SPLVISIVO
@@ -148,11 +148,11 @@ int main (int argc, const char **argv)
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
 #endif
       }
-    }
 #else
-// BOOST not implemented here
-    cuda_rendering(mydevID, nDevProc, pic);
+      if(boost) cuda_rendering(mydevID, nDevProc, pic, r_points, b_brightness);
+      else cuda_rendering(mydevID, nDevProc, pic, particle_data, b_brightness);
 #endif
+    }
 
     tstack_push("Post-processing");
     mpiMgr.allreduceRaw
@@ -215,9 +215,8 @@ int main (int argc, const char **argv)
 
 #if (defined(OPENCL) || defined(CUDA))
     cuda_timeReport(params);
-#else
-    timeReport();
 #endif
+    timeReport();
     }
 
 #ifdef VS
