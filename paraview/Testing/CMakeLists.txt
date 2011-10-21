@@ -1,4 +1,11 @@
 #--------------------------------------------------
+# Tests here are added using the 
+# ADD_TEST(NAME ... COMMAND ...)
+# form and will only run when ctest is run using
+# ctest -C Release / ctest -C Debug / etc
+#--------------------------------------------------
+
+#--------------------------------------------------
 # Test splotch raytracer
 #--------------------------------------------------
 INCLUDE_DIRECTORIES(
@@ -22,7 +29,7 @@ IF(USE_TRILINOS)
 ENDIF(USE_TRILINOS)
 
 # --------------------------------------------------
-# Optional Trilinos support 
+# Optional Splotch+HDF5 test
 # --------------------------------------------------
 IF (USE_HDF5)
   ADD_EXECUTABLE(TestSplotchMapper TestSplotchMapper.cxx)
@@ -31,12 +38,16 @@ IF (USE_HDF5)
     pv_splotch
     splotchio
     )
-  ADD_TEST(TestSplotchMapper 
-    vglrun ${PROJECT_BINARY_DIR}/../bin/TestSplotchMapper
-      -s /scratch/eiger/biddisco/data/splotch/splotch.par 
-      -D /scratch/eiger/biddisco/data/splotch/ 
-      -F splotch.h5part 
-      -R
-  )
 
+  ADD_TEST(
+    NAME TestSplotchMapper 
+    COMMAND 
+#      ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS}
+      $<TARGET_FILE:TestSplotchMapper> 
+      -D ${PROJECT_SOURCE_DIR}/Testing/data/ 
+      -F splotch.h5part 
+      -T ${PLUGIN_TEST_DIR}
+      -R
+      -V ${PROJECT_SOURCE_DIR}/Testing/baseline/TestSplotchMapper.png
+  )  
 ENDIF (USE_HDF5)
