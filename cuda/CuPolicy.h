@@ -10,21 +10,30 @@ All 'magic numbers' are out of this class.
 
 #include "cxxsupport/paramfile.h"
 #include "cuda/splotch_cuda.h"
+
+#ifdef __CUDACC__
 #include <cuda.h>
-#include <cutil_inline.h>
+#else
+struct dim3;
+#endif
+
+using namespace std;
 
 class CuPolicy
   {
   private:
     int m_blockSize, maxregion, fbsize;
+    pair <int,int> res;
     size_t gmsize;
   public:
     CuPolicy(paramfile &Param);
 
+    pair <int,int> GetResolution();
     int GetMaxRegion();
     int GetFBufSize();
+    int GetIndexSize();
     int GetGMemSize();
-    size_t GetSizeDPD(int n);
+    int GetImageSize();
     void GetDimsBlockGrid(int n, dim3 *dimGrid, dim3 *dimBlock);
   };
 
