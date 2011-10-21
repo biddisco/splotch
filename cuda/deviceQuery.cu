@@ -41,16 +41,16 @@
 #include <string.h>
 
 // includes, project
-#include <cutil.h>
+#include <cuda.h>
 
 int check_device(int rank)
 {
     int deviceCount;
-    CUDA_SAFE_CALL(cudaGetDeviceCount(&deviceCount));
+    cudaGetDeviceCount(&deviceCount);
     if (deviceCount == 1)
     {
       cudaDeviceProp deviceProp;
-      CUDA_SAFE_CALL(cudaGetDeviceProperties(&deviceProp, 0));
+      cudaGetDeviceProperties(&deviceProp, 0);
       if (deviceProp.major == 9999 && deviceProp.minor == 9999) // emulation mode
       {
         printf("Rank %d: There is no device supporting CUDA\n", rank);
@@ -64,7 +64,7 @@ int check_device(int rank)
 void print_device_info(int rank, int dev)
 {
    cudaDeviceProp deviceProp;
-   CUDA_SAFE_CALL(cudaGetDeviceProperties(&deviceProp, dev));
+   cudaGetDeviceProperties(&deviceProp, dev);
   
     printf("\nRank %d - Device %d: \"%s\"\n", rank, dev, deviceProp.name);
     printf("  Major revision number:                         %d\n",
