@@ -87,6 +87,7 @@ struct cu_gpu_vars //variables used by each gpu
   cu_particle_sim     *d_pd;             //device_particle_data
   cu_particle_splotch *d_ps_render;
   void                *d_fbuf;
+  int                 *d_pixel;
   cu_color            *d_pic;
   int                 colormap_size;
   int                 colormap_ptypes; 
@@ -94,24 +95,17 @@ struct cu_gpu_vars //variables used by each gpu
 
 //functions
 
-void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky);
-void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-size_t cu_allocate_fbuf(int nP, cu_gpu_vars* pgv);
-void cu_transform (unsigned int n, cu_particle_splotch *h_ps, cu_gpu_vars* pgv);
-//void cu_transform (unsigned int n, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
+int cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float b_brightness);
+int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
+int cu_transform (unsigned int n, cu_particle_splotch *h_ps, cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
-void cu_colorize(int n, cu_gpu_vars* pgv);
-//void cu_colorize(cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
-void cu_realloc_particles_to_render(int n, cu_gpu_vars* pgv);
-void cu_allocate_particles(unsigned int nP, cu_gpu_vars* pgv);
-void cu_copy_particles_to_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
+int cu_copy_particles_to_render(cu_particle_splotch *p,int n, cu_gpu_vars* pgv);
 void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
-void cu_get_fbuf (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void cu_end (cu_gpu_vars* pgv);
-//int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy);
-int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy, size_t psize, float pfactor);
+int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, float pfactor);
 void getCuTransformParams(cu_param &para_trans,
       paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
-
+void cu_clear(int n, cu_gpu_vars* pgv);
+void cu_update_image(int n, bool a_eq_e,cu_gpu_vars* pgv);
 
 #endif
