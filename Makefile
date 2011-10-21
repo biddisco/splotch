@@ -3,7 +3,7 @@
 #######################################################################
 
 #--------------------------------------- Switch on DataSize
-OPT += -DLONGIDS
+#OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
 #OPT += -DUSE_MPI
@@ -19,8 +19,8 @@ OPT += -DLONGIDS
 
 #--------------------------------------- CUDA options
 
-#OPT += -DCUDA
-#OPT += -DNO_WIN_THREAD
+OPT += -DCUDA
+OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- OpenCL options
 
@@ -31,14 +31,14 @@ OPT += -DLONGIDS
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
+#SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-#SYSTYPE="PLX"
+SYSTYPE="PLX"
 #SYSTYPE="BGP"
 #SYSTYPE="VIZ"
 #SYSTYPE="EIGER"
-SYSTYPE="PALU"
+#SYSTYPE="PALU"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
 ### generic SLES11 Linux machines at the Garching computing center (RZG):
@@ -181,20 +181,17 @@ endif
 
 ifeq ($(SYSTYPE),"PLX")
  ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
-  CC       =  mpiCC -g 
+  CC  =  mpiCC -g 
+ else
+  CC  = g++
  endif
  OPTIMIZE = -O2 -DDEBUG
  OMP = -fopenmp
-endif
-
-# please put these definitions in a SYSTYPE if block
-#NVCC = nvcc -g 
-#OPTIMIZE = -O2
-
-ifeq (CUDA,$(findstring CUDA,$(OPT)))
- LIB_OPT  =  -L$(CUDA_HOME)/lib64 -lcudart
- SUP_INCL += -I$(CUDA_HOME)/include -I$(CUDA_SDK)/CUDALibraries/common/inc 
-else
+ ifeq (CUDA,$(findstring CUDA,$(OPT)))
+  NVCC = nvcc -g
+  LIB_OPT  =  -L$(CUDA_HOME)/lib64 -lcudart
+  SUP_INCL += -I$(CUDA_HOME)/include -I$(CUDA_SDK)/CUDALibraries/common/inc 
+ endif
  ifeq (OPENCL,$(findstring OPENCL,$(OPT)))
   LIB_OPT  =  -L$(CUDA_HOME)/lib64   -Llib -lshrutil_x86_64 -lOpenCL  -loclUtil_x86_64 
   SUP_INCL += -I$(CUDA_HOME)/include   -Iinc 
