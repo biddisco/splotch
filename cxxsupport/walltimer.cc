@@ -184,7 +184,8 @@ void tstack_replace(const string &name2)
     it=curnode->child.insert(make_pair(name2,tstack_node(name2,curnode))).first;
   curnode=&(it->second);
   double t=wallTime();
-  savenode->wt.stop(t); curnode->wt.start(t);
+  savenode->wt.stop(t);
+  curnode->wt.start(t);
   }
 void tstack_replace(const string &name1, const string &name2)
   {

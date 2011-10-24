@@ -102,11 +102,26 @@ void announce (const string &name)
   cout << endl;
   }
 
+void module_startup (const string &name, bool argc_valid, const string &usage,
+  bool verbose)
+  {
+  if (verbose) announce (name);
+  if (argc_valid) return;
+  if (verbose) cerr << usage << endl;
+  planck_fail_quietly ("Incorrect usage");
+  }
+
 void module_startup (const string &name, int argc, const char **,
   int argc_expected, const string &argv_expected, bool verbose)
   {
-  if (verbose) announce (name);
-  if (argc==argc_expected) return;
-  if (verbose) cerr << "Usage: " << name << " " << argv_expected << endl;
-  planck_fail_quietly ("Incorrect usage");
+  module_startup (name,argc==argc_expected,
+    string("Usage: ")+name+" "+argv_expected, verbose);
+  }
+
+void module_startup (const std::string &name, int argc, const char ** /*argv*/,
+  bool verbose)
+  {
+  module_startup (name,argc>=2,
+    string("Usage:\n  ")+name+" <parameter file / init object>\nor:\n  "
+                        +name+" par1=val1 par2=val2 ...", verbose);
   }
