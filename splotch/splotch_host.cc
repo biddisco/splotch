@@ -263,7 +263,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #pragma omp parallel
 {
   int mythread=openmp_thread_num();
-  int i, imax=p.size();
+  int64 i, imax=p.size();
 
 #pragma omp for schedule(guided)
   for (i=0; i<imax; ++i)
@@ -465,7 +465,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   if (master)
     cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
   particle_colorize(params, particles, amap, b_brightness);
-  tstack_replace("Particle coloring","Particle sorting");
+  tstack_replace("Particle coloring","Particle elimination");
 
 // ------------------------------------
 // -- Eliminating inactive particles --
@@ -486,6 +486,8 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
   if (master)
     cout << npart_all << " particles left" << endl;
+
+  tstack_replace("Particle elimination", "Particle sorting");
 
 // --------------------------------
 // ----------- Sorting ------------
