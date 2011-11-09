@@ -30,6 +30,7 @@
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils_cxx.h"
 #include "cxxsupport/string_utils.h"
+#include "cxxsupport/openmp_support.h"
 
 #define SPLOTCH_CLASSIC
 
@@ -247,7 +248,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   int xres=pic.size1(), yres=pic.size2();
   int ncx=(xres+chunkdim-1)/chunkdim, ncy=(yres+chunkdim-1)/chunkdim;
 
-  arr2<vector<uint32> > idx(ncx,ncy);
+  arr3<vector<uint32> > idx(openmp_max_threads(),ncx,ncy);
   float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
   float32 cmid0=0.5f*(chunkdim-1);
 
@@ -259,8 +260,13 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   pic.fill(COLOUR(0,0,0));
 
   tstack_push("Chunk preparation");
+#pragma omp parallel
+{
+  int mythread=openmp_thread_num();
+  int i, imax=p.size();
 
-  for (tsize i=0; i<p.size(); ++i)
+#pragma omp for schedule(guided)
+  for (i=0; i<imax; ++i)
     {
     particle_sim &pp(p[i]);
     float32 rfacr = rfac*pp.r;
@@ -279,11 +285,12 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           float32 cy=cmid0+iy*chunkdim;
           float32 rtot2 = (pp.x-cx)*(pp.x-cx) + (pp.y-cy)*(pp.y-cy);
           if (rtot2<sumsq)
-            idx[ix][iy].push_back(i);
+            idx(mythread,ix,iy).push_back(i);
           }
         }
       }
     }
+} // end of parallel region
 
   tstack_replace("Chunk preparation","Rendering proper");
 
@@ -312,99 +319,101 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #endif
     int cx, cy;
     wd.chunk_info_idx(chunk,cx,cy);
-    const vector<uint32> &v(idx[cx][cy]);
-
-    for (tsize m=0; m<v.size(); ++m)
+    for (int t=0; t<openmp_max_threads(); ++t)
       {
-      const particle_sim &pp(p[v[m]]);
-      float32 rfacr=pp.r*rfac;
-      float32 posx=pp.x, posy=pp.y;
-      posx-=x0s; posy-=y0s;
-      int minx=int(posx-rfacr+1);
-      minx=max(minx,x0);
-      int maxx=int(posx+rfacr+1);
-      maxx=min(maxx,x1);
-      int miny=int(posy-rfacr+1);
-      miny=max(miny,y0);
-      int maxy=int(posy+rfacr+1);
-      maxy=min(maxy,y1);
+      const vector<uint32> &v(idx(t,cx,cy));
 
-      float32 radsq = rfacr*rfacr;
-      float32 sigma = h2sigma*pp.r;
-      float32 stp = -1.f/(sigma*sigma);
-
-      COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
-#ifdef PLANCK_HAVE_SSE
-      V4sf va(a.r,a.g,a.b,0.f);
-#endif
-
-      for (int y=miny; y<maxy; ++y)
-        pre1[y]=xexp(stp*(y-posy)*(y-posy));
-
-      if (a_eq_e)
+      for (tsize m=0; m<v.size(); ++m)
         {
-        for (int x=minx; x<maxx; ++x)
-          {
-          float32 dxsq=(x-posx)*(x-posx);
-          float32 dy=sqrt(radsq-dxsq);
-          int miny2=max(miny,int(posy-dy+1)),
-              maxy2=min(maxy,int(posy+dy+1));
-          float32 pre2 = xexp(stp*dxsq);
-          for (int y=miny2; y<maxy2; ++y)
-            {
-            float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE
-            lpic[x][y]+=va*att;
-#else
-            lpic[x][y].r += att*a.r;
-            lpic[x][y].g += att*a.g;
-            lpic[x][y].b += att*a.b;
-#endif
-            }
-          }
-        }
-      else
-        {
-        COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
-                 pp.e.g/(pp.e.g+grayabsorb),
-                 pp.e.b/(pp.e.b+grayabsorb));
-#ifdef PLANCK_HAVE_SSE
-        float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
-        V4sf vq(q.r,q.g,q.b,0.f);
-#endif
+        const particle_sim &pp(p[v[m]]);
+        float32 rfacr=pp.r*rfac;
+        float32 posx=pp.x, posy=pp.y;
+        posx-=x0s; posy-=y0s;
+        int minx=int(posx-rfacr+1);
+        minx=max(minx,x0);
+        int maxx=int(posx+rfacr+1);
+        maxx=min(maxx,x1);
+        int miny=int(posy-rfacr+1);
+        miny=max(miny,y0);
+        int maxy=int(posy+rfacr+1);
+        maxy=min(maxy,y1);
 
-        for (int x=minx; x<maxx; ++x)
+        float32 radsq = rfacr*rfacr;
+        float32 sigma = h2sigma*pp.r;
+        float32 stp = -1.f/(sigma*sigma);
+
+        COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
+  #ifdef PLANCK_HAVE_SSE
+        V4sf va(a.r,a.g,a.b,0.f);
+  #endif
+
+        for (int y=miny; y<maxy; ++y)
+          pre1[y]=xexp(stp*(y-posy)*(y-posy));
+
+        if (a_eq_e)
           {
-          float32 dxsq=(x-posx)*(x-posx);
-          float32 dy=sqrt(radsq-dxsq);
-          int miny2=max(miny,int(posy-dy+1)),
-              maxy2=min(maxy,int(posy+dy+1));
-          float32 pre2 = xexp(stp*dxsq);
-          for (int y=miny2; y<maxy2; ++y)
+          for (int x=minx; x<maxx; ++x)
             {
-            float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE
-            if ((maxa*att)<taylorlimit)
-              lpic[x][y]+=(lpic[x][y]-vq)*va*att;
-            else
+            float32 dxsq=(x-posx)*(x-posx);
+            float32 dy=sqrt(radsq-dxsq);
+            int miny2=max(miny,int(posy-dy+1)),
+                maxy2=min(maxy,int(posy+dy+1));
+            float32 pre2 = xexp(stp*dxsq);
+            for (int y=miny2; y<maxy2; ++y)
               {
-              V4sf::Tu tmp;
-              tmp.v=lpic[x][y].v;
-              tmp.d[0] += xexp.expm1(att*a.r)*(tmp.d[0]-q.r);
-              tmp.d[1] += xexp.expm1(att*a.g)*(tmp.d[1]-q.g);
-              tmp.d[2] += xexp.expm1(att*a.b)*(tmp.d[2]-q.b);
-              lpic[x][y]=tmp.v;
+              float32 att = pre1[y]*pre2;
+  #ifdef PLANCK_HAVE_SSE
+              lpic[x][y]+=va*att;
+  #else
+              lpic[x][y].r += att*a.r;
+              lpic[x][y].g += att*a.g;
+              lpic[x][y].b += att*a.b;
+  #endif
               }
-#else
-            lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
-            lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
-            lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
-#endif
             }
           }
-        }
-      } // for particle
+        else
+          {
+          COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
+                  pp.e.g/(pp.e.g+grayabsorb),
+                  pp.e.b/(pp.e.b+grayabsorb));
+  #ifdef PLANCK_HAVE_SSE
+          float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
+          V4sf vq(q.r,q.g,q.b,0.f);
+  #endif
 
+          for (int x=minx; x<maxx; ++x)
+            {
+            float32 dxsq=(x-posx)*(x-posx);
+            float32 dy=sqrt(radsq-dxsq);
+            int miny2=max(miny,int(posy-dy+1)),
+                maxy2=min(maxy,int(posy+dy+1));
+            float32 pre2 = xexp(stp*dxsq);
+            for (int y=miny2; y<maxy2; ++y)
+              {
+              float32 att = pre1[y]*pre2;
+  #ifdef PLANCK_HAVE_SSE
+              if ((maxa*att)<taylorlimit)
+                lpic[x][y]+=(lpic[x][y]-vq)*va*att;
+              else
+                {
+                V4sf::Tu tmp;
+                tmp.v=lpic[x][y].v;
+                tmp.d[0] += xexp.expm1(att*a.r)*(tmp.d[0]-q.r);
+                tmp.d[1] += xexp.expm1(att*a.g)*(tmp.d[1]-q.g);
+                tmp.d[2] += xexp.expm1(att*a.b)*(tmp.d[2]-q.b);
+                lpic[x][y]=tmp.v;
+                }
+  #else
+              lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
+              lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
+              lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
+  #endif
+              }
+            }
+          }
+        } // for particle
+      }
     for (int ix=0;ix<x1;ix++)
       for (int iy=0;iy<y1;iy++)
 #ifdef PLANCK_HAVE_SSE
