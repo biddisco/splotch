@@ -11,16 +11,16 @@
 
 #--------------------------------------- Switch on HDF5
 
-#OPT += -DHDF5
-#OPT += -DH5_USE_16_API
+OPT += -DHDF5
+OPT += -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT += -DVS
 
 #--------------------------------------- CUDA options
 
-OPT += -DCUDA
-OPT += -DNO_WIN_THREAD
+#OPT += -DCUDA
+#OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- OpenCL options
 
@@ -34,10 +34,10 @@ OPT += -DNO_WIN_THREAD
 #SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-SYSTYPE="PLX"
+#SYSTYPE="PLX"
 #SYSTYPE="BGP"
 #SYSTYPE="VIZ"
-#SYSTYPE="EIGER"
+SYSTYPE="EIGER"
 #SYSTYPE="PALU"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
@@ -132,9 +132,8 @@ endif
 
 ifeq ($(SYSTYPE),"EIGER")
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
-HDF5_HOME = /cineca/prod/libraries/hdf5/1.8.4_ser/xl--10.1
-LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -L/cineca/prod/libraries/zlib/1.2.3/xl--10.1/lib/ -lz -L/cineca/prod/libraries/sz
-lib/2.1/xl--10.1/lib/ -lsz
+HDF5_HOME = /scratch/eiger/cgheller/hdf5-1.8.7/install/
+LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5
 HDF5_INCL = -I$(HDF5_HOME)/include
 endif
 ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
@@ -205,15 +204,23 @@ endif
 OPTIONS = $(OPTIMIZE) $(OPT)
 
 EXEC = Splotch5-$(SYSTYPE)
+EXEC1 = Galaxy
 
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o \
-	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o reader/galaxy_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o reader/tipsy_reader.o \
 	splotch/splotchutils.o splotch/splotch.o \
 	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
 	booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o
+
+OBJS1 = galaxy/Galaxy.o galaxy/GaussRFunc.o galaxy/Box_Muller.o galaxy/ReadBMP.o \
+	galaxy/CalculateDensity.o galaxy/CalculateColours.o galaxy/GlobularCluster.o
+
+OBJSC = cxxsupport/paramfile.o cxxsupport/error_handling.o cxxsupport/mpi_support.o \
+	c_utils/walltime_c.o cxxsupport/string_utils.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o cxxsupport/walltimer.o
 
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
  OBJS += reader/hdf5_reader.o
@@ -257,10 +264,16 @@ LIBS   = $(LIB_OPT) $(OMP)
 $(EXEC): $(OBJS)
 	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC) $(LIB_MPIIO) $(LIB_HDF5)
 
+$(EXEC1): $(OBJS1) $(OBJSC)
+	$(CC) $(OPTIONS) $(OBJS1) $(OBJSC) $(LIBS) -o $(EXEC1) $(LIB_HDF5)
+
 $(OBJS): $(INCL)
 
 clean:
 	rm -f $(OBJS)
+
+cleangalaxy:
+	rm -f $(OBJS1)
 
 realclean: clean
 	rm -f $(EXEC)
