@@ -296,7 +296,6 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #pragma omp single
   {
   idx.alloc(nthreads);
-  cout << idx.size() << endl;
   }
 #pragma omp barrier
 #pragma omp critical (render1)
