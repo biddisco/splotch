@@ -17,15 +17,29 @@ class sceneMaker
 private:
   struct scene
   {
+    std::map<std::string,std::string> sceneParameters;
+    // --- the following variables are kept for compatibility with the SPLVISIVO case ---
     vec3 campos, lookat, sky;
+    // ----------------------------------------------------------------------------------
     double fidx;
     std::string outname;
+    //
     bool keep_particles, reuse_particles;
-    // constructor w/o time and redshift
+    //
+    // standard "old" constructor
     scene (const vec3 &c, const vec3 &l, const vec3 &s, double fdx,
            const std::string &oname, bool keep, bool reuse)
       : campos(c), lookat(l), sky(s), fidx(fdx), outname(oname),
         keep_particles(keep), reuse_particles(reuse) {}
+    //
+    // "new" constructor for variable parameters
+    scene (std::map<std::string,std::string> &scnParms, double fdx,
+           const std::string &oname, bool keep, bool reuse)
+      : sceneParameters(scnParms), fidx(fdx), outname(oname),
+        keep_particles(keep), reuse_particles(reuse)
+      { /** one might set (campos, lookat, sky) here, however,
+         *  for testing purposes we rely on the map sceneParameters*/
+      }
   };
 
   std::vector<scene> scenes;

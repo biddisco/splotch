@@ -11,8 +11,8 @@
 
 #--------------------------------------- Switch on HDF5
 
-OPT += -DHDF5
-OPT += -DH5_USE_16_API
+#OPT += -DHDF5
+#OPT += -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT += -DVS
@@ -31,13 +31,12 @@ OPT += -DH5_USE_16_API
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
-#SYSTYPE="generic"
+SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
-#SYSTYPE="VIZ"
-SYSTYPE="EIGER"
+#SYSTYPE="EIGER"
 #SYSTYPE="PALU"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
@@ -209,7 +208,7 @@ EXEC1 = Galaxy
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o \
-	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o reader/galaxy_reader.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o reader/tipsy_reader.o \
 	splotch/splotchutils.o splotch/splotch.o \
 	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
