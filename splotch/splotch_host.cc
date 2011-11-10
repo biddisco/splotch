@@ -245,10 +245,11 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
     "MPI only supported for A==E so far");
 
+  int maxthreads=1; //openmp_max_threads();
   int xres=pic.size1(), yres=pic.size2();
   int ncx=(xres+chunkdim-1)/chunkdim, ncy=(yres+chunkdim-1)/chunkdim;
 
-  arr3<vector<uint32> > idx(openmp_max_threads(),ncx,ncy);
+  arr3<vector<uint32> > idx(maxthreads,ncx,ncy);
   float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
   float32 cmid0=0.5f*(chunkdim-1);
 
@@ -260,12 +261,12 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   pic.fill(COLOUR(0,0,0));
 
   tstack_push("Chunk preparation");
-#pragma omp parallel
+//#pragma omp parallel
 {
-  int mythread=openmp_thread_num();
+  int mythread=0; //openmp_thread_num();
   int64 i, imax=p.size();
 
-#pragma omp for schedule(guided)
+//#pragma omp for schedule(guided)
   for (i=0; i<imax; ++i)
     {
     particle_sim &pp(p[i]);
@@ -319,7 +320,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #endif
     int cx, cy;
     wd.chunk_info_idx(chunk,cx,cy);
-    for (int t=0; t<openmp_max_threads(); ++t)
+    for (int t=0; t<maxthreads; ++t)
       {
       const vector<uint32> &v(idx(t,cx,cy));
 
