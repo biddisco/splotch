@@ -245,11 +245,10 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
     "MPI only supported for A==E so far");
 
-  int maxthreads=1; //openmp_max_threads();
   int xres=pic.size1(), yres=pic.size2();
   int ncx=(xres+chunkdim-1)/chunkdim, ncy=(yres+chunkdim-1)/chunkdim;
 
-  arr3<vector<uint32> > idx(maxthreads,ncx,ncy);
+  arr<arr2<vector<uint32> > > idx;
   float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
   float32 cmid0=0.5f*(chunkdim-1);
 
@@ -261,13 +260,15 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   pic.fill(COLOUR(0,0,0));
 
   tstack_push("Chunk preparation");
-//#pragma omp parallel
+#pragma omp parallel
 {
-  int mythread=0; //openmp_thread_num();
-  int64 i, imax=p.size();
+  arr2<vector<uint32> > lidx(ncx,ncy);
+  int mythread=openmp_thread_num(),
+      nthreads=openmp_num_threads();
 
-//#pragma omp for schedule(guided)
-  for (i=0; i<imax; ++i)
+  int64 lo, hi;
+  calcShareGeneral (0, p.size(), nthreads, mythread, lo, hi);
+  for (int64 i=lo; i<hi; ++i)
     {
     particle_sim &pp(p[i]);
     float32 rfacr = rfac*pp.r;
@@ -286,11 +287,22 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
           float32 cy=cmid0+iy*chunkdim;
           float32 rtot2 = (pp.x-cx)*(pp.x-cx) + (pp.y-cy)*(pp.y-cy);
           if (rtot2<sumsq)
-            idx(mythread,ix,iy).push_back(i);
+            lidx[ix][iy].push_back(i);
           }
         }
       }
     }
+#pragma omp barrier
+#pragma omp single
+  {
+  idx.alloc(nthreads);
+  cout << idx.size() << endl;
+  }
+#pragma omp barrier
+#pragma omp critical (render1)
+  {
+  idx[mythread].swap(lidx);
+  }
 } // end of parallel region
 
   tstack_replace("Chunk preparation","Rendering proper");
@@ -320,9 +332,9 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
 #endif
     int cx, cy;
     wd.chunk_info_idx(chunk,cx,cy);
-    for (int t=0; t<maxthreads; ++t)
+    for (tsize t=0; t<idx.size(); ++t)
       {
-      const vector<uint32> &v(idx(t,cx,cy));
+      const vector<uint32> &v(idx[t][cx][cy]);
 
       for (tsize m=0; m<v.size(); ++m)
         {
@@ -466,11 +478,13 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   if (master)
     cout << endl << "host: calculating colors (" << npart_all << ") ..." << endl;
   particle_colorize(params, particles, amap, b_brightness);
-  tstack_replace("Particle coloring","Particle elimination");
+  tstack_pop("Particle coloring");
 
+#if 0
 // ------------------------------------
 // -- Eliminating inactive particles --
 // ------------------------------------
+  tstack_push("Particle elimination");
   if (master)
     cout << endl << "host: eliminating inactive particles ..." << endl;
   tdiff i1=0, i2=particles.size()-1;
@@ -487,12 +501,13 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
   if (master)
     cout << npart_all << " particles left" << endl;
-
-  tstack_replace("Particle elimination", "Particle sorting");
+  tstack_pop("Particle elimination");
+#endif
 
 // --------------------------------
 // ----------- Sorting ------------
 // --------------------------------
+  tstack_push("Particle sorting");
   if (!params.find<bool>("a_eq_e",true))
     {
     if (master)
