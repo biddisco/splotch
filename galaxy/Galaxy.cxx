@@ -208,7 +208,7 @@ int main (int argc, const char **argv)
         field[5] = "Red";
         field[6] = "Green";
         field[7] = "Blue";
-        field[8] = "floatRed";
+        field[8] = "Type";
         field[9] = "floatGreen";
         field[10] = "floatBlue";
 
@@ -364,9 +364,9 @@ int main (int argc, const char **argv)
           arrdata =  H5Dcreate(file_id, field[7].c_str(), H5T_NATIVE_UINT, dtotspace, H5P_DEFAULT);
           H5Dwrite (arrdata, H5T_NATIVE_UINT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cblue);
           H5Dclose(arrdata);
-// write float Red
+// write float particle_type
           arrdata =  H5Dcreate(file_id, field[8].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
-          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, floatRed);
+          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, particle_type);
           H5Dclose(arrdata);
  
 	  H5Fclose(file_id);
