@@ -61,14 +61,39 @@ void sceneMaker::particle_normalize(paramfile &params, std::vector<particle_sim>
       int t=p[m].type;
 
       if (log_int[t])
-        p[m].I = log10(p[m].I);
-      inorm[t].collect(p[m].I);
+	{
+	  if(p[m].I > 0)
+	    {
+	      p[m].I = log10(p[m].I);
+	      inorm[t].collect(p[m].I);
+	    }
+	  else
+	    {
+	      p[m].I = -38;
+	    }
+	}
+      else
+	inorm[t].collect(p[m].I);
 
       if (log_col[t])
-        p[m].e.r = log10(p[m].e.r);
-      if (asinh_col[t])
-        p[m].e.r = my_asinh(p[m].e.r);
-      cnorm[t].collect(p[m].e.r);
+	{
+	  if(p[m].e.r > 0)
+	    {
+	      p[m].e.r = log10(p[m].e.r);
+	      cnorm[t].collect(p[m].e.r);
+	    }
+	  else
+	    {
+	      p[m].e.r =-38;
+	    }
+	}
+      else 
+	{
+	  if (asinh_col[t])
+	    p[m].e.r = my_asinh(p[m].e.r);
+	  cnorm[t].collect(p[m].e.r);
+	}
+
       if (col_vector[t])
       {
         if (log_col[t])
