@@ -31,11 +31,7 @@
 
 using namespace std;
 
-// why???
-//namespace {
-
-//void particle_normalize(paramfile &params, vector<particle_sim> &p, bool verbose)
-void sceneMaker::particle_normalize(paramfile &params, std::vector<particle_sim> &p, bool verbose)
+void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
 {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
@@ -176,10 +172,6 @@ void sceneMaker::particle_normalize(paramfile &params, std::vector<particle_sim>
     }
   }
 } // END particle_normalize
-
-
-
-//} // unnamed namespace
 
 // Higher order interpolation would be:
 // Time between snapshots (cosmology!)
@@ -396,13 +388,13 @@ sceneMaker::sceneMaker (paramfile &par)
     if (sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
           &tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl)==10)
     {
-      cerr << "DEBUG: old geometry file format detected." << endl;
+      //cerr << "DEBUG: old geometry file format detected." << endl;
       line.assign("camera_x camera_y camera_z lookat_x lookat_y lookat_z sky_x sky_y sky_z fidx");
       inp.seekg(0, ios_base::beg);
     }
     else
     {
-      cerr << "DEBUG: new geometry file format detected." << endl;
+      //cerr << "DEBUG: new geometry file format detected." << endl;
     }
     //
     std::vector<std::string> sceneParameterKeys, sceneParameterValues;
@@ -415,22 +407,18 @@ sceneMaker::sceneMaker (paramfile &par)
     {
       std::map<std::string,std::string> sceneParameters;
       sceneParameters.clear();
-//      sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
-//             &campos.x,&campos.y,&campos.z,
-//             &lookat.x,&lookat.y,&lookat.z,
-//             &sky.x,&sky.y,&sky.z,&fidx);
       string outfilen = outfile+intToString(current_scene,4) + ".tga";
       split(line, sceneParameterValues);
       //
       if (sceneParameterKeys.size()==sceneParameterValues.size())
       {
-        for (int i=0; i<sceneParameterKeys.size(); i++)
+        for (unsigned int i=0; i<sceneParameterKeys.size(); i++)
           sceneParameters.insert
             (pair<std::string,std::string>(sceneParameterKeys[i], sceneParameterValues[i]));
       }
       else
       {
-        cerr << "ERROR in scene file, please check!  Quitting." << endl;
+        cerr << "ERROR in scene file detected, please check!  Quitting." << endl;
         exit(1);
       }
       //
@@ -441,7 +429,6 @@ sceneMaker::sceneMaker (paramfile &par)
         if (approx(fidx,scenes[scenes.size()-1].fidx))
           scenes[scenes.size()-1].keep_particles=reuse=true;
       //
-      //scenes.push_back(scene(campos,lookat,sky,fidx,outfilen,false,reuse));
       scenes.push_back(scene(sceneParameters,fidx,outfilen,false,reuse));
       //
       current_scene += scene_incr;
@@ -663,7 +650,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
   if (mpiMgr.master())
     cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
-  particle_normalize(params, particle_data, true);
+  particle_normalize(particle_data, true);
   tstack_pop("Particle ranging");
 
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
@@ -693,11 +680,14 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   if (tsize(++cur_scene) >= scenes.size()) return false;
 
   const scene &scn=scenes[cur_scene];
+
+  // patch the params object with parameter values relevant to the current scene
   std::map<std::string,std::string> sceneParameters=scn.sceneParameters;
   for (std::map<std::string,std::string>::iterator it=sceneParameters.begin(); it!=sceneParameters.end(); ++it)
   {
     params.setParam(it->first, it->second);
   }
+
 
 #ifdef SPLVISIVO
   campos=scn.campos;
@@ -706,7 +696,6 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
 #else
   if (params.find<string>("geometry_file","")=="")
   {
-    //
     campos=scn.campos;
     lookat=scn.lookat;
     sky=scn.sky;
@@ -714,8 +703,8 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   else
   {
     // Fetch the values from the param object which may have been altered by the scene file.
-    // These lines serve as an example on how arbitrary temporally changing parameters (e.g. brightness) are
-    // implemented; we could of course pull these values from scn--if the constructor there would initialize them.
+    // We cannot get these values from "scn" any more since there may be "scene files" which don't
+    // alter {campos, lookat, sky} at all!
     campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),params.find<double>("camera_z"));
     lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
     sky   =vec3(params.find<double>("sky_x",0), params.find<double>("sky_y",0), params.find<double>("sky_z",0));
