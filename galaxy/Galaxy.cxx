@@ -45,13 +45,6 @@ int main (int argc, const char **argv)
 	printf("=======================================\n");
 
 
-// BE CAREFUL: I choose nx as basic normalization factor for distances
-// FURTHERMORE I assume that galaxy is ALWAYS centered on (0,0,0)
-
-        string galaxyR = params.find<string>("GalaxyFileR","NONE");
-        string galaxyG = params.find<string>("GalaxyFileG","NONE");
-        string galaxyB = params.find<string>("GalaxyFiler","NONE");
-        string galaxyI = params.find<string>("GalaxyFileI","NONE");
 
         nx = params.find<long>("xres",1000);
         ny = params.find<long>("yres",1000);
@@ -78,20 +71,25 @@ int main (int argc, const char **argv)
 	F_Blue  = new unsigned int [nx*ny];
 	F_Green = new unsigned int [nx*ny];
 
-// THIS ISJUSR FOR NOW:
-        imagefile = galaxyR;
-        imagefile1 = galaxyI;
-	
-	numberofstars = ReadBMP(params, imagefile, imagefile1, nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
-/*
-// Read Fibra
+        int infiletype = params.find<int>("InFileType",0);
 
-	long idum;	
-	idum = ReadBMP(fibrafile, nx, ny, -1, -1, -1, F_Red, F_Green, F_Blue, F_starx, F_stary);
-	unsigned int MMM=0;
-	unsigned int mmm=1000;
-	for (long i=0; i<nx*ny; i++) zdeep[i] = 2.0*(float)(F_Red[i]+1)/fibra_range- 1.0;
-*/	
+        if (infiletype == 0)
+        {
+// BE CAREFUL: I choose nx as basic normalization factor for distances
+// FURTHERMORE I assume that galaxy is ALWAYS centered on (0,0,0)
+
+           string galaxyR = params.find<string>("GalaxyFileR","NONE");
+           string galaxyG = params.find<string>("GalaxyFileG","NONE");
+           string galaxyB = params.find<string>("GalaxyFiler","NONE");
+           string galaxyI = params.find<string>("GalaxyFileI","NONE");
+           imagefile = galaxyR;
+           imagefile1 = galaxyI;
+	
+	   numberofstars = ReadBMP(params, imagefile, imagefile1, 
+                           nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
+        } else {
+           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, starx, stary);
+        }
 
 // Generate random components
 

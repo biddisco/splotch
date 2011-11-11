@@ -28,6 +28,11 @@ void CalculateColours (long npart, unsigned int * cred, unsigned int * cgreen, u
 long GlobularCluster (paramfile &params, string ComponentName, long number_of_points, long ntot,
                       float * coordx, float * coordy, float * coordz);
 
+long ReadBMP (paramfile &params, unsigned int Rmin, unsigned int * RRR,
+              unsigned int * GGG, unsigned int * BBB, float * xx, float * yy);
+
+long ReadImages (paramfile &params, long numx, long numy, unsigned int Rmin, unsigned int * RRR,
+                 unsigned int * GGG, unsigned int * BBB, float * xx, float * yy);
 
 const int NUM_OF_FIELDS = 11;
 
