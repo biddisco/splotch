@@ -46,7 +46,7 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
   }
 
   int npart=p.size();
-
+  tstack_push("minmax");
   #pragma omp parallel
   {
     arr<Normalizer<float32> > inorm(nt), cnorm(nt);
@@ -149,11 +149,13 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
            intnorm[t].maxv << " (max) " << endl;
     }
   }
+  tstack_pop("minmax");
 
   // set variables for the output to the image log file
   colmin0=params.find<float>("color_min0",colnorm[0].minv);
   colmax0=params.find<float>("color_max0",colnorm[0].maxv);
   bright0=params.find<float>("brightness0",1.0);
+  tstack_push("clamp");
 
   #pragma omp parallel
   {
@@ -171,6 +173,7 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
       }
     }
   }
+  tstack_pop("clamp");
 } // END particle_normalize
 
 // Higher order interpolation would be:
