@@ -525,6 +525,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new1 " << snr1 << endl;
         gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+	mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id1.begin(),id1.end(),idx1);
         tstack_replace("Particle index generation","Input");
@@ -534,6 +535,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new2 " << snr2 << endl;
         gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
+	mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id2.begin(),id2.end(),idx2);
         tstack_replace("Particle index generation","Input");
@@ -599,6 +601,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new1 " << snr1 << endl;
         gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,redshift1,boxsize);
+	mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id1.begin(),id1.end(),idx1);
         tstack_replace("Particle index generation","Input");
@@ -608,6 +611,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new2 " << snr2 << endl;
         gadget_hdf5_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,redshift2,boxsize);
+	mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id2.begin(),id2.end(),idx2);
         tstack_replace("Particle index generation","Input");
@@ -634,6 +638,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       break;
     }
 
+  mpiMgr.barrier();
   tstack_pop("Input");
 
   if (interpol_mode>0)
