@@ -49,7 +49,9 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
   tstack_push("minmax");
   #pragma omp parallel
   {
-    arr<Normalizer<float32> > inorm(nt), cnorm(nt);
+    // FIXME: the "+20" serves as protection against false sharing,
+    // should be done more elegantly
+    arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20);
     int m;
     #pragma omp for schedule(guided,1000)
     for (m=0; m<npart; ++m) // do log calculations if requested
