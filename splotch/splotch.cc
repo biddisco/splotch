@@ -52,17 +52,13 @@ int main (int argc, const char **argv)
   bool master = mpiMgr.master();
 #ifdef SPLVISIVO
 //  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
-  if(opt.splotchpar.empty())
-  {	
-	std::cout<<"usage: --splotch <parameter file>"<<std::endl;
-	return -1;
-   }
+  planck_assert(!opt.splotchpar.empty(),"usage: --splotch <parameter file>");
   paramfile params (opt.splotchpar.c_str(),false);
-#else  
+#else
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   paramfile params (argv[1],false);
 #endif
-  
+
   vector<particle_sim> particle_data; //raw data from file
   vector<particle_sim> r_points;
 
@@ -104,19 +100,19 @@ int main (int argc, const char **argv)
 #endif // CUDA
 
 #ifdef SPLVISIVO
-  get_colourmaps(params,amap,opt); 
+  get_colourmaps(params,amap,opt);
 #else
-  get_colourmaps(params,amap); 
+  get_colourmaps(params,amap);
 #endif
   tstack_pop("Setup");
   string outfile;
 
 
 #ifdef SPLVISIVO
-  sceneMaker sMaker(params,opt);  
+  sceneMaker sMaker(params,opt);
   while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile,opt))
 #else
-  sceneMaker sMaker(params);  
+  sceneMaker sMaker(params);
   while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile))
 #endif
     {
@@ -126,7 +122,6 @@ int main (int argc, const char **argv)
     arr2<COLOUR> pic(xres,yres);
 
 // calculate boost factor for brightness
-    
     float b_brightness = 1.0;
     bool boost = params.find<bool>("boost",false);
     if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
@@ -139,13 +134,13 @@ int main (int argc, const char **argv)
 #ifdef SPLVISIVO
         host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, opt);
 #else
-        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness); 
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
 #endif
       } else {
 #ifdef SPLVISIVO
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, opt);
 #else
-        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
 #endif
       }
 #else
@@ -163,11 +158,9 @@ int main (int argc, const char **argv)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
           {
-          //cout << "pre  " << pic[ix][iy].r << " " << pic[ix][iy].g << " "<< pic[ix][iy].b << "\n";
           pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
           pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
           pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
-          //cout << "post  " << pic[ix][iy].r << " " << pic[ix][iy].g << " "<< pic[ix][iy].b << "\n";
           }
 
     tstack_replace("Post-processing","Output");
