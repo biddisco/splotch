@@ -68,7 +68,7 @@ int main (int argc, const char **argv)
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   paramfile params (argv[1],false);
 
-  if(params.param_present("geometry_file")
+  if(params.param_present("geometry_file"))
     {
       cout << "Creating of animations has been changed, use \"scene_file\" instead of \"geometry_file\" ... " << endl;
       return -1;
