@@ -18,21 +18,13 @@ class sceneMaker
     struct scene
     {
       std::map<std::string,std::string> sceneParameters;
-      vec3 campos, lookat, sky;
-      double fidx;
+
       std::string outname;
       bool keep_particles, reuse_particles;
-      //
-      // standard "old" constructor
-      scene (const vec3 &c, const vec3 &l, const vec3 &s, double fdx,
+
+      scene (std::map<std::string,std::string> &scnParms,
           const std::string &oname, bool keep, bool reuse)
-      : campos(c), lookat(l), sky(s), fidx(fdx), outname(oname),
-        keep_particles(keep), reuse_particles(reuse) {}
-      //
-      // "new" constructor for variable parameters
-      scene (std::map<std::string,std::string> &scnParms, double fdx,
-          const std::string &oname, bool keep, bool reuse)
-      : sceneParameters(scnParms), fidx(fdx), outname(oname),
+      : sceneParameters(scnParms), outname(oname),
         keep_particles(keep), reuse_particles(reuse) {}
     };
 

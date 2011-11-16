@@ -25,6 +25,7 @@
 #include "cxxsupport/lsconstants.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/cxxutils.h"
+//#include "cxxsupport/psort.h"
 #include "reader/reader.h"
 //boost
 #include "booster/mesh_vis.h"
@@ -330,24 +331,26 @@ sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
 #endif
 {
-  // do nothing if we are only analyzing ...
+  double fidx = params.find<double>("fidx",0);
 
-  vec3 campos, lookat, sky;
-  // initialize trivially in order to avoid compiler warnings
-  campos=lookat=sky=vec3(0.,0.,0.);
+  std::map<std::string,std::string> sceneParameters;
+  sceneParameters.clear();
 
 #ifdef SPLVISIVO
   string outfile = opt.imageName;
 #else
   string outfile = params.find<string>("outfile","demo");
 #endif
+
+  // do nothing if we are only analyzing ...
   if (params.find<bool>("AnalyzeSimulationOnly",false))
   {
-    scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
+    string outfilen = outfile+intToString(0,4);
+    scenes.push_back(scene(sceneParameters,outfilen,false,false));
     return;
   }
 
-  string geometry_file = params.find<string>("geometry_file","");
+  string geometry_file = params.find<string>("scene_file","");
   interpol_mode = params.find<int>("interpolation_mode",0);
 #ifdef SPLVISIVO
   interpol_mode=0; //Visivo does not use the dynamical evolution: forced to 0
@@ -355,27 +358,8 @@ sceneMaker::sceneMaker (paramfile &par)
 #endif
   if (geometry_file=="")
   {
-#ifdef SPLVISIVO
-    campos=vec3(opt.spPosition[0],
-                opt.spPosition[1],
-                opt.spPosition[2]);
-    lookat=vec3(opt.spLookat[0],
-                opt.spLookat[1],
-                opt.spLookat[2]);
-    sky=vec3(params.find<double>("sky_x",0),
-             params.find<double>("sky_y",0),
-             params.find<double>("sky_z",1));
-
-#else
-    campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),
-                params.find<double>("camera_z"));
-    lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),
-                params.find<double>("lookat_z"));
-    sky=vec3(params.find<double>("sky_x",0),params.find<double>("sky_y",0),
-             params.find<double>("sky_z",0));
-#endif
-    scenes.push_back(scene(campos,lookat,sky,-1.,outfile,false,false));
-
+    string outfilen = outfile+intToString(0,4);
+    scenes.push_back(scene(sceneParameters,outfilen,false,false));
   }
   else
   {
@@ -383,9 +367,9 @@ sceneMaker::sceneMaker (paramfile &par)
       planck_assert(mpiMgr.num_ranks()==1,
                     "Sorry, interpolating between files is not yet MPI parallelized ...");
     ifstream inp(geometry_file.c_str());
-    planck_assert (inp, "could not open geometry file '" + geometry_file +"'");
-    int current_scene = params.find<int>("geometry_start",0);
-    int scene_incr = params.find<int>("geometry_incr",1);
+    planck_assert (inp, "could not open scene file '" + geometry_file +"'");
+    int current_scene = params.find<int>("scene_start",0);
+    int scene_incr = params.find<int>("scene_incr",1);
     //
     string line;
     getline(inp, line);
@@ -393,33 +377,36 @@ sceneMaker::sceneMaker (paramfile &par)
     if (sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
           &tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl)==10)
     {
-      //cerr << "DEBUG: old geometry file format detected." << endl;
+      //      cerr << "DEBUG: old geometry file format detected." << endl;
       line.assign("camera_x camera_y camera_z lookat_x lookat_y lookat_z sky_x sky_y sky_z fidx");
       inp.seekg(0, ios_base::beg);
     }
     else
     {
-      //cerr << "DEBUG: new geometry file format detected." << endl;
+      //      cerr << "DEBUG: new geometry file format detected." << endl;
     }
     //
     std::vector<std::string> sceneParameterKeys, sceneParameterValues;
     split(line, sceneParameterKeys);
-    //
+
+    cout << endl << "Found following parameters to be modulated in the scene file: " << endl;
+    for(unsigned int i=0;i<sceneParameterKeys.size();i++)
+      cout << sceneParameterKeys[i] << endl;
+
     for (int i=0; i<current_scene; ++i)
       getline(inp, line);
     //
     while (getline(inp, line))
     {
-      std::map<std::string,std::string> sceneParameters;
       sceneParameters.clear();
-      string outfilen = outfile+intToString(current_scene,4) + ".tga";
+      string outfilen = outfile+intToString(current_scene,4);
       split(line, sceneParameterValues);
       //
       if (sceneParameterKeys.size()==sceneParameterValues.size())
       {
         for (unsigned int i=0; i<sceneParameterKeys.size(); i++)
-          sceneParameters.insert
-            (pair<std::string,std::string>(sceneParameterKeys[i], sceneParameterValues[i]));
+	  sceneParameters.insert
+	    (pair<std::string,std::string>(sceneParameterKeys[i], sceneParameterValues[i]));
       }
       else
       {
@@ -428,13 +415,15 @@ sceneMaker::sceneMaker (paramfile &par)
       }
       //
       bool reuse=false;
-      double fidx;
-      stringToData(sceneParameters.find("fidx")->second, fidx);
+
+      fidx = params.find<double>("fidx",0);
+
       if (scenes.size()>0)
-        if (approx(fidx,scenes[scenes.size()-1].fidx))
+        if (approx(fidx,stringToData<double>(scenes[scenes.size()-1].sceneParameters.find("fidx")->second)))
           scenes[scenes.size()-1].keep_particles=reuse=true;
+
       //
-      scenes.push_back(scene(sceneParameters,fidx,outfilen,false,reuse));
+      scenes.push_back(scene(sceneParameters,outfilen,false,reuse));
       //
       current_scene += scene_incr;
       for (int i=0; i<scene_incr-1; ++i)
@@ -454,21 +443,34 @@ sceneMaker::sceneMaker (paramfile &par)
       sa.keep_particles=true;
       sb.keep_particles=false;
       sb.reuse_particles=true;
-      vec3 view = sa.lookat - sa.campos;
+
+      vec3 lookat(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
+      vec3 campos(params.find<double>("campos_x"),params.find<double>("campos_y"),params.find<double>("campos_z"));
+      vec3 sky(params.find<double>("sky_x",0),params.find<double>("sky_y",0),params.find<double>("sky_z",1));
+
+      vec3 view = lookat - campos;
 
       // Real sky vector 'sky_real' is the given sky vector 'sky' projected into the plane
       // which lies orthogonal to the looking vector 'view', which connects the
       // camera 'campos' with the lookat point 'look'
 
-      double cosa = dotprod (view,sa.sky) / (view.Length() * sa.sky.Length());
+      double cosa = dotprod (view,sky) / (view.Length() * sky.Length());
 
-      vec3 sky_real = sa.sky - view * cosa * sa.sky.Length() / view.Length();
-      vec3 right = crossprod (sa.sky,view);
+      vec3 sky_real = sky - view * cosa * sky.Length() / view.Length();
+      vec3 right = crossprod (sky,view);
 
       double distance = eye_separation * view.Length();
 
-      sa.campos -= right / right.Length() * distance*0.5;
-      sb.campos += right / right.Length() * distance*0.5;
+      vec3 campos_r = campos - right / right.Length() * distance*0.5;
+      sa.sceneParameters["campos_x"] = dataToString(campos_r.x);
+      sa.sceneParameters["campos_y"] = dataToString(campos_r.y);
+      sa.sceneParameters["campos_z"] = dataToString(campos_r.z);
+
+      vec3 campos_l = campos + right / right.Length() * distance*0.5;
+      sb.sceneParameters["campos_x"] = dataToString(campos_l.x);
+      sb.sceneParameters["campos_y"] = dataToString(campos_l.y);
+      sb.sceneParameters["campos_z"] = dataToString(campos_l.z);
+
       sa.outname = "left_"+sa.outname;
       sb.outname = "right_"+sb.outname;
     }
@@ -550,7 +552,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     else
     {
       intRedshift=-1.0;  // (khr) Is redshift available by default from Gadget data?
-      gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,intTime,boxsize);
+      gadget_reader(params,interpol_mode,particle_data,id1,vel1,snr1,intTime,boxsize);
     }
     break;
   case 3:
@@ -698,34 +700,18 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
     params.setParam(it->first, it->second);
   }
 
-
-#ifdef SPLVISIVO
-  campos=scn.campos;
-  lookat=scn.lookat;
-  sky=scn.sky;
-#else
-  if (params.find<string>("geometry_file","")=="")
-  {
-    campos=scn.campos;
-    lookat=scn.lookat;
-    sky=scn.sky;
-  }
-  else
-  {
-    // Fetch the values from the param object which may have been altered by the scene file.
-    // We cannot get these values from "scn" any more since there may be "scene files" which don't
-    // alter {campos, lookat, sky} at all!
-    campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),params.find<double>("camera_z"));
-    lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
-    sky   =vec3(params.find<double>("sky_x",0), params.find<double>("sky_y",0), params.find<double>("sky_z",0));
-  }
-#endif
+  // Fetch the values from the param object which may have been altered by the scene file or copied from the opt object.
+  campos=vec3(params.find<double>("camera_x"),params.find<double>("camera_y"),params.find<double>("camera_z"));
+  lookat=vec3(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
+  sky   =vec3(params.find<double>("sky_x",0), params.find<double>("sky_y",0), params.find<double>("sky_z",1));
 
   outfile=scn.outname;
+  double fidx=params.find<double>("fidx",0);
+
 #ifdef SPLVISIVO
-  fetchFiles(particle_data,scn.fidx,opt);
+  fetchFiles(particle_data,fidx,opt);
 #else
-  fetchFiles(particle_data,scn.fidx);
+  fetchFiles(particle_data,fidx);
 #endif
 
   if (params.find<bool>("periodic",true))
@@ -773,20 +759,10 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   if ( mpiMgr.master() && ((simtype==2)||(simtype==8)))
   {
     string logFileName;
-    string suffix=outfile.substr( outfile.length()-3, 3 );
-    // remove the suffix "tga" before building the name for the log file
-    if (suffix.compare("tga")==0)
-    {
-      logFileName.assign( outfile.substr(0,outfile.length()-4) );
-    }
-    else
-    {
-      logFileName.assign(outfile);
-    }
+    logFileName.assign(outfile);
     logFileName.append(".log");
 
-
-    ofstream logFile( logFileName.c_str() );
+    ofstream logFile(logFileName.c_str());
     //
     logFile << "campos "   << campos; // endl is included in the overloaded "<<" operator
     logFile << "lookat "   << lookat;
@@ -794,7 +770,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
     //
     if (interpol_mode > 0)
     {
-      logFile << "fidx "   << scn.fidx    << endl;
+      logFile << "fidx "   << fidx    << endl;
     }
     logFile << "redshift " << intRedshift << endl;
     logFile << "time "     << intTime     << endl;

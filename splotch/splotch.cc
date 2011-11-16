@@ -54,9 +54,26 @@ int main (int argc, const char **argv)
 //  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   planck_assert(!opt.splotchpar.empty(),"usage: --splotch <parameter file>");
   paramfile params (opt.splotchpar.c_str(),false);
+
+  params.setParam("camera_x",opt.spPosition[0]);
+  params.setParam("camera_y",opt.spPosition[1]);
+  params.setParam("camera_z",opt.spPosition[2]);
+
+  params.setParam("lookat_x",opt.spLookat[0]);
+  params.setParam("lookat_y",opt.spLookat[1]);
+  params.setParam("lookat_z",opt.spLookat[2]);
+
 #else
+
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   paramfile params (argv[1],false);
+
+  if(params.param_present("geometry_file")
+    {
+      cout << "Creating of animations has been changed, use \"scene_file\" instead of \"geometry_file\" ... " << endl;
+      return -1;
+    }
+
 #endif
 
   vector<particle_sim> particle_data; //raw data from file
@@ -186,16 +203,16 @@ int main (int argc, const char **argv)
         switch(pictype)
           {
           case 0:
-            img.write_TGA(outfile);
+            img.write_TGA(outfile+".tga");
             break;
           case 1:
             planck_fail("ASCII PPM no longer supported");
             break;
           case 2:
-            img.write_PPM(outfile);
+            img.write_PPM(outfile+".ppm");
             break;
           case 3:
-            img.write_TGA_rle(outfile);
+            img.write_TGA_rle(outfile+".tga");
             break;
           default:
             planck_fail("No valid image file type given ...");
