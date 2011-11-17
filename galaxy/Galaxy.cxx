@@ -23,17 +23,14 @@ int main (int argc, const char **argv)
 	float * zdeep;
         float * particle_type;
 	float fibra_range=32.0;
-	unsigned int * Red;
-	unsigned int * Blue;
-	unsigned int * Green;
-	unsigned int * III;
-	unsigned int * F_Red;
-	unsigned int * F_Blue;
-	unsigned int * F_Green;
+	float * Red;
+	float * Blue;
+	float * Green;
+	float * III;
 	long nx, ny;
-	unsigned int Rth;
-	unsigned int Gth;
-	unsigned int Bth;
+	float Rth;
+	float Gth;
+	float Bth;
 	long star_factor = 10;
 
 
@@ -49,9 +46,9 @@ int main (int argc, const char **argv)
         nx = params.find<long>("xres",1000);
         ny = params.find<long>("yres",1000);
 
-        Rth = params.find<uint>("Rth",0);
-        Gth = params.find<uint>("Gth",0);
-        Bth = params.find<uint>("Bth",0);
+        Rth = params.find<float>("Rth",0);
+        Gth = params.find<float>("Gth",0);
+        Bth = params.find<float>("Bth",0);
 
 	float xmax = (float)nx;
 	float ymax = (float)nx;
@@ -63,13 +60,10 @@ int main (int argc, const char **argv)
 	F_starx = new float [nx*ny];
 	F_stary = new float [nx*ny];
 	zdeep = new float [nx*ny];
-	Red   = new unsigned int [nx*ny];
-	Blue  = new unsigned int [nx*ny];
-	Green = new unsigned int [nx*ny];
-	III   = new unsigned int [nx*ny];
-	F_Red   = new unsigned int [nx*ny];
-	F_Blue  = new unsigned int [nx*ny];
-	F_Green = new unsigned int [nx*ny];
+	Red   = new float [nx*ny];
+	Blue  = new float [nx*ny];
+	Green = new float [nx*ny];
+	III   = new float [nx*ny];
 
         int infiletype = params.find<int>("InFileType",0);
 
@@ -85,10 +79,10 @@ int main (int argc, const char **argv)
            imagefile = galaxyR;
            imagefile1 = galaxyI;
 	
-	   numberofstars = ReadBMP(params, imagefile, imagefile1, 
-                           nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
+	   //numberofstars = ReadBMP(params, imagefile, imagefile1, 
+           //                nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
         } else {
-           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, starx, stary);
+           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, III, starx, stary);
         }
 
 // Generate random components
@@ -218,10 +212,10 @@ int main (int argc, const char **argv)
 	float * ycoord;
 	float * zcoord;
 	float * floatRed;
-        unsigned int * cred;
-        unsigned int * cgreen;
-        unsigned int * cblue;
-        unsigned int * ciii;
+        float * cred;
+        float * cgreen;
+        float * cblue;
+        float * ciii;
 
 	xcoord = new float [nobjects]; 	
 	ycoord = new float [nobjects]; 	
@@ -305,10 +299,10 @@ int main (int argc, const char **argv)
 	printf("======== Calculating Colours ========\n");
 	printf("=====================================\n");
 
-	cred   = new unsigned int [nobjects]; 	
-	cgreen = new unsigned int [nobjects]; 	
-	cblue  = new unsigned int [nobjects]; 	
-	ciii   = new unsigned int [nobjects]; 	
+	cred   = new float [nobjects]; 	
+	cgreen = new float [nobjects]; 	
+	cblue  = new float [nobjects]; 	
+	ciii   = new float [nobjects]; 	
 
 	CalculateColours(nobjects, cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcoord, ycoord, nx, ny);
 
@@ -326,7 +320,7 @@ int main (int argc, const char **argv)
 
 	  dims[0] = nobjects;
 
-          for (long ii=0; ii<nobjects; ii++)floatRed[ii]=(float)ciii[ii];	  
+          //for (long ii=0; ii<nobjects; ii++)floatRed[ii]=(float)ciii[ii];	  
 
 // create geometry
           dtotspace = H5Screate_simple (rank, dims, NULL);
@@ -353,16 +347,16 @@ int main (int argc, const char **argv)
           H5Dclose(arrdata);
 */
 // write red
-          arrdata =  H5Dcreate(file_id, field[5].c_str(), H5T_NATIVE_UINT, dtotspace, H5P_DEFAULT);
-          H5Dwrite (arrdata, H5T_NATIVE_UINT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cred);
+          arrdata =  H5Dcreate(file_id, field[5].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
+          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cred);
           H5Dclose(arrdata);
 // write green
-          arrdata =  H5Dcreate(file_id, field[6].c_str(), H5T_NATIVE_UINT, dtotspace, H5P_DEFAULT);
-          H5Dwrite (arrdata, H5T_NATIVE_UINT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cgreen);
+          arrdata =  H5Dcreate(file_id, field[6].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
+          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cgreen);
           H5Dclose(arrdata);
 // write blue
-          arrdata =  H5Dcreate(file_id, field[7].c_str(), H5T_NATIVE_UINT, dtotspace, H5P_DEFAULT);
-          H5Dwrite (arrdata, H5T_NATIVE_UINT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cblue);
+          arrdata =  H5Dcreate(file_id, field[7].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
+          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cblue);
           H5Dclose(arrdata);
 // write float particle_type
           arrdata =  H5Dcreate(file_id, field[8].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
@@ -373,9 +367,9 @@ int main (int argc, const char **argv)
 
 
 	  pFile = fopen("points.ascii", "w");
-          for(long ii=0; ii<nobjects; ii=ii+int(nobjects/10000))
+          for(long ii=0; ii<nobjects; ii=ii+int(nobjects/100000))
 	  {
-	     fprintf(pFile, "%f %f %f %f %f\n", xcoord[ii],ycoord[ii],zcoord[ii],floatRed[ii],particle_type[ii]);
+	     fprintf(pFile, "%f %f %f %f %f\n", xcoord[ii],ycoord[ii],zcoord[ii],ciii[ii],particle_type[ii]);
 	  }
 	  fclose(pFile);
 

@@ -8,18 +8,20 @@ GalaxyFileB=m51_8000x8000.raw
 GalaxyFileI=m51_8000x8000_256.raw
 xres=8000
 yres=8000
-Rth=100
+Rth=0.85
 Gth=0
 Bth=0
 ColorDepth=2
 # Bulge geometric parameters
-BulgeSize=10000000
+#BulgeSize=10000000
+BulgeSize=0
 GroupingBulge=0
 SigmaxBulge=0.025 
 SigmayBulge=0.025 
 SigmazBulge=0.02 
 # Disk geometric parameters
-DiskSize=10000000
+#DiskSize=10000000
+DiskSize=0
 GroupingDisk=0
 SigmaxDisk=0.45
 SigmayDisk=0.45

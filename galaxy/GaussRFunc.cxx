@@ -4,7 +4,7 @@ float box_muller(float m, float s);
 
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
 		 float * coordx, float * coordy, float * coordz,
-                 float xmax, float ymax, float zmax, float * zdeep, unsigned int * III, long nx, long ny) 
+                 float xmax, float ymax, float zmax, float * zdeep, float * III, long nx, long ny) 
 {
 	FILE * pFile;
 	float mean = 0.0;
@@ -50,11 +50,12 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
            ry = params.find<long>("Scaledyres"+ComponentName,1);
            compression = params.find<float>("CompressionFactor"+ComponentName,1.0);
 
-	   rx++;
-	   ry++;
+	   //rx++;
+	   //ry++;
 
 	   resolution = new float [rx*ry];
 	   long countin = 0;
+	   long countout = 0;
 
 	   for(long i=0; i<rx*ry; i++)
 	      resolution[i] = 0;
@@ -66,11 +67,18 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 
 	     //coordx[i] = box_muller(coordx[i], gsigmax);
 	     //coordy[i] = box_muller(coordy[i], gsigmay);
-             int ix = (int) round((0.5*(coordx[i]+1.0))*rx);
-             int iy = (int) round((0.5*(coordy[i]+1.0))*ry);
+             int ix = (int) round((0.5*(coordx[i]+1.0))*(rx));
+             int iy = (int) round((0.5*(coordy[i]+1.0))*(ry));
              int irx = (int) round((0.5*(coordx[i]+1.0))*nx);
              int iry = (int) round((0.5*(coordy[i]+1.0))*ny);
+/*
+             int ix =  (int) round((coordx[i]+0.5)*rx);
+             int iy =  (int) round((coordy[i]+0.5)*ry);
+             int irx = (int) round((coordx[i]+0.5)*nx);
+             int iry = (int) round((coordy[i]+0.5)*ny);
+*/
 	     
+
 	     coordz[i]=100000.0;
 
 	     long index = ix+iy*rx;
@@ -82,21 +90,22 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 	       if(resolution[index] == 0.0)
 	       {
 		  float compp; 
-		  if(III[rindex] >= 220)
+		  if(III[rindex] >= 0.8)
 		    {
-			compp = (float)III[rindex]/40.0;
+			compp = 6.5*III[rindex];
 		    }else{
 			compp = 1.0;
 		    }
 		  sigma_aux = sigma[2]/compp;
 		  coordz[i] = box_muller(mean, sigma_aux);
-                  resolution[index] = coordz[i];
+                  resolution[index] = 1.0;
 		  countin++;
 	       } else {
 //	          coordz[i] = resolution[index];
 		  coordx[i] = 0.0;
 		  coordy[i] = 0.0;
 		  coordz[i] = 0.0;
+                  countout++;
 
 	       }
 	     }
@@ -129,8 +138,9 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 	   delete [] xaux;
 	   delete [] yaux;
 	   delete [] zaux;
-	
+
 	   number_of_points = countin;
+
 
 
 	} else {

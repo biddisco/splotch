@@ -2,8 +2,8 @@
 
 float box_muller(float m, float s);
 
-void CalculateColours (long npart, unsigned int * cred, unsigned int * cgreen, unsigned int * cblue, unsigned int * ciii,
-                       unsigned int * Red, unsigned int * Green, unsigned int * Blue, unsigned int * III, float * xcoord, 
+void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, float * ciii,
+                       float * Red, float * Green, float * Blue, float * III, float * xcoord, 
                        float * ycoord, long nx, long ny)
 {
 
@@ -28,10 +28,10 @@ void CalculateColours (long npart, unsigned int * cred, unsigned int * cgreen, u
 	      if (xcol > 1.0) xcol = 0.0;
 
 	      
-	      cred[particlei]   = (unsigned int)(xcol*255);
-	      cgreen[particlei] = (unsigned int)(xcol*255);
-	      cblue[particlei]  = (unsigned int)(xcol*255);
-	      ciii[particlei]   = (unsigned int)(xcol*255);
+	      cred[particlei]   = xcol;
+	      cgreen[particlei] = xcol;
+	      cblue[particlei]  = xcol;
+	      ciii[particlei]   = xcol;
 
 	   } else {
 	      iaux = ii + jj*nx;
@@ -43,4 +43,4 @@ void CalculateColours (long npart, unsigned int * cred, unsigned int * cgreen, u
 	
 
 	}
-}\
+}
