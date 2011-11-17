@@ -5,7 +5,8 @@
 # This file can be downloaded from
 # http://www.mpa-garching.mpg.de/~kdolag/Splotch/Source/snap_092.gz
 # You'll have to unzip it afterwards
-infile=snap_092
+infile=snap_
+fidx=92
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
 # 6: mesh reader, 7: hdf7
@@ -56,7 +57,7 @@ color_max1=0
 
 # 0: TGA uncompressed, 1: PPM ASCII, 2: PPM binary, 3: TGA runlength-compressed
 pictype=0
-outfile=demo.tga
+outfile=demo
 xres=800
 
 gray_absorption=0.0001
