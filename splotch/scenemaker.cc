@@ -134,14 +134,17 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
            intnorm[t].maxv << " (max) " << endl;
     }
 
-    intnorm[t].minv = params.find<float>
-                      ("intensity_min"+dataToString(t),intnorm[t].minv);
-    intnorm[t].maxv = params.find<float>
-                      ("intensity_max"+dataToString(t),intnorm[t].maxv);
-    colnorm[t].minv = params.find<float>
-                      ("color_min"+dataToString(t),colnorm[t].minv);
-    colnorm[t].maxv = params.find<float>
-                      ("color_max"+dataToString(t),colnorm[t].maxv);
+    if(params.param_present("intensity_min"+dataToString(t)))
+      intnorm[t].minv = params.find<float>("intensity_min"+dataToString(t));
+
+    if(params.param_present("intensity_max"+dataToString(t)))
+      intnorm[t].maxv = params.find<float>("intensity_max"+dataToString(t));
+
+    if(params.param_present("color_min"+dataToString(t)))
+      colnorm[t].minv = params.find<float>("color_min"+dataToString(t));
+
+    if(params.param_present("color_max"+dataToString(t)))
+      colnorm[t].maxv = params.find<float>("color_max"+dataToString(t));
 
     if (verbose && mpiMgr.master())
     {
@@ -155,9 +158,21 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
   tstack_pop("minmax");
 
   // set variables for the output to the image log file
-  colmin0=params.find<float>("color_min0",colnorm[0].minv);
-  colmax0=params.find<float>("color_max0",colnorm[0].maxv);
-  bright0=params.find<float>("brightness0",1.0);
+  if(params.param_present("color_min0"))
+    colmin0=params.find<float>("color_min0");
+  else
+    colmin0=colnorm[0].minv;
+
+  if(params.param_present("color_max0"))
+    colnax0=params.find<float>("color_max0");
+  else
+    colmax0=colnorm[0].maxv;
+
+  if(params.param_present("brightness0"))
+    bright0=params.find<float>("brightness0");
+  else
+    bright0=1.0;
+
   tstack_push("clamp");
 
   #pragma omp parallel
