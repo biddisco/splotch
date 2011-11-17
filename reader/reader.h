@@ -23,4 +23,5 @@ long bin_reader_block_mpi (paramfile &params, std::vector<particle_sim> &points,
 void mesh_reader(paramfile &params, std::vector<particle_sim> &points);
 void hdf5_reader(paramfile &params, std::vector<particle_sim> &points);
 void tipsy_reader(paramfile &params, std::vector<particle_sim> &points);
+void galaxy_reader(paramfile &params, std::vector<particle_sim> &points);
 #endif
