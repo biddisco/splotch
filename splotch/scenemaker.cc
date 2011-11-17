@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010
+ * Copyright (c) 2004-2011
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -25,7 +25,6 @@
 #include "cxxsupport/lsconstants.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/cxxutils.h"
-//#include "cxxsupport/psort.h"
 #include "reader/reader.h"
 //boost
 #include "booster/mesh_vis.h"
@@ -164,7 +163,7 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
     colmin0=colnorm[0].minv;
 
   if(params.param_present("color_max0"))
-    colnax0=params.find<float>("color_max0");
+    colmax0=params.find<float>("color_max0");
   else
     colmax0=colnorm[0].maxv;
 
@@ -213,9 +212,6 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
 
 Mesh_vis * Mesh = NULL;
 Mesh_dim MeshD;
-//vector<particle_sim> r_points;
-
-// THIS IS particle_interpolate function
 
 void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
 {
@@ -267,7 +263,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
 
   #pragma omp parallel
   {
-    tsize i;
+    int i;
     #pragma omp for schedule(guided,1000)
     for (i=0; i<npart; ++i)
     {
@@ -338,24 +334,15 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
 }
 
 
-#ifdef SPLVISIVO
-sceneMaker::sceneMaker (paramfile &par, VisIVOServerOptions &opt)
-  : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
-#else
 sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
-#endif
 {
   double fidx = params.find<double>("fidx",0);
 
   std::map<std::string,std::string> sceneParameters;
   sceneParameters.clear();
 
-#ifdef SPLVISIVO
-  string outfile = opt.imageName;
-#else
   string outfile = params.find<string>("outfile","demo");
-#endif
 
   // do nothing if we are only analyzing ...
   if (params.find<bool>("AnalyzeSimulationOnly",false))
@@ -367,10 +354,6 @@ sceneMaker::sceneMaker (paramfile &par)
 
   string geometry_file = params.find<string>("scene_file","");
   interpol_mode = params.find<int>("interpolation_mode",0);
-#ifdef SPLVISIVO
-  interpol_mode=0; //Visivo does not use the dynamical evolution: forced to 0
-  params.setParam("interpolation_mode","0");
-#endif
   if (geometry_file=="")
   {
     string outfilen = outfile+intToString(0,4);
@@ -492,13 +475,7 @@ sceneMaker::sceneMaker (paramfile &par)
   }
 }
 
-// THIS IS fetchFiles function
-
-#ifdef SPLVISIVO
-void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx,VisIVOServerOptions &opt)
-#else
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
-#endif
 {
   if (scenes[cur_scene].reuse_particles)
   {
@@ -509,11 +486,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   tstack_push("Input");
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
-#ifdef SPLVISIVO
-  int simtype=params.find<int>("simtype",10);
-#else
   int simtype = params.find<int>("simtype");
-#endif
   int spacing = params.find<double>("snapshot_spacing",1);
   int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
   double frac=(fidx-snr1)/spacing;
@@ -694,15 +667,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 
 }
 
-// THIS IS function getNextScene
-
-#ifdef SPLVISIVO
-bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<particle_sim> &r_points,
-                               vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile,VisIVOServerOptions &opt)
-#else
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<particle_sim> &r_points,
                                vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
-#endif
 {
   if (tsize(++cur_scene) >= scenes.size()) return false;
 
@@ -723,11 +689,7 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   outfile=scn.outname;
   double fidx=params.find<double>("fidx",0);
 
-#ifdef SPLVISIVO
-  fetchFiles(particle_data,fidx,opt);
-#else
   fetchFiles(particle_data,fidx);
-#endif
 
   if (params.find<bool>("periodic",true))
   {

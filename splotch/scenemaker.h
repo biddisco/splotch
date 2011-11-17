@@ -8,10 +8,6 @@
 #include "cxxsupport/paramfile.h"
 #include "splotch/splotchutils.h"
 
-#ifdef SPLVISIVO
-#include "optionssetter.h"
-#endif
-
 class sceneMaker
 {
   private:
@@ -60,24 +56,13 @@ class sceneMaker
 
     void particle_normalize(std::vector<particle_sim> &p, bool verbose);
 
-#ifdef SPLVISIVO
-    void fetchFiles(std::vector<particle_sim> &particle_data, double fidx,VisIVOServerOptions &opt);
-#else
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
-#endif
 
   public:
-#ifdef SPLVISIVO
-    sceneMaker (paramfile &par, VisIVOServerOptions &opt);
-    bool getNextScene (std::vector<particle_sim> &particle_data,
-        std::vector<particle_sim> &r_points, vec3 &campos,
-        vec3 &lookat, vec3 &sky, std::string &outfile, VisIVOServerOptions &opt);
-#else
   sceneMaker (paramfile &par);
   bool getNextScene (std::vector<particle_sim> &particle_data,
       std::vector<particle_sim> &r_points, vec3 &campos,
       vec3 &lookat, vec3 &sky, std::string &outfile);
-#endif
 };
 
 #endif

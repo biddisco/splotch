@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010
+ * Copyright (c) 2004-2011
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -47,11 +47,10 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
-  tstack_push("Splotch total time");
+  tstack_push("Splotch");
   tstack_push("Setup");
   bool master = mpiMgr.master();
 #ifdef SPLVISIVO
-//  module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   planck_assert(!opt.splotchpar.empty(),"usage: --splotch <parameter file>");
   paramfile params (opt.splotchpar.c_str(),false);
 
@@ -62,6 +61,11 @@ int main (int argc, const char **argv)
   params.setParam("lookat_x",opt.spLookat[0]);
   params.setParam("lookat_y",opt.spLookat[1]);
   params.setParam("lookat_z",opt.spLookat[2]);
+  params.setParam("outfile",visivoOpt->imageName);
+  params.setParam("interpolation_mode",0);
+  params.setParam("simtype",10);
+  params.setParam("fov",opt.spFov);
+  params.setParam("ptypes",1);
 
 #else
 
@@ -120,18 +124,12 @@ int main (int argc, const char **argv)
   get_colourmaps(params,amap,opt);
 #else
   get_colourmaps(params,amap);
-#endif
+#endif // CUDA
   tstack_pop("Setup");
   string outfile;
 
-
-#ifdef SPLVISIVO
-  sceneMaker sMaker(params,opt);
-  while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile,opt))
-#else
   sceneMaker sMaker(params);
   while (sMaker.getNextScene (particle_data, r_points, campos, lookat, sky, outfile))
-#endif
     {
     bool a_eq_e = params.find<bool>("a_eq_e",true);
     int xres = params.find<int>("xres",800),
@@ -147,19 +145,9 @@ int main (int argc, const char **argv)
     {
 #if (!defined(CUDA) && !defined(OPENCL))
       if(boost)
-      {
-#ifdef SPLVISIVO
-        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, opt);
-#else
         host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
-#endif
-      } else {
-#ifdef SPLVISIVO
-        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, opt);
-#else
+      else
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
-#endif
-      }
 #else
       if(boost) cuda_rendering(mydevID, nDevProc, pic, r_points, b_brightness);
       else cuda_rendering(mydevID, nDevProc, pic, particle_data, b_brightness);

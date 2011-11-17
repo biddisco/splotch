@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010
+ * Copyright (c) 2004-2011
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -60,13 +60,9 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap, VisIVOServerOpt
 void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
 #endif
 {
-bool VisIVOPalette=false;  
-#ifdef SPLVISIVO
-    int ptypes=1; //VISIVO ptypes could contain also dark and star: now we have only gas
-#else
-    int ptypes = params.find<int>("ptypes",1);
-#endif
-    
+  bool VisIVOPalette=false;
+  int ptypes = params.find<int>("ptypes",1);
+
   bool master = mpiMgr.master();
   amap.resize(ptypes);
 
@@ -121,7 +117,6 @@ bool VisIVOPalette=false;
         }
       } //if(!VisIVOPalette)
 
-	
       }
     amap[itype].sortMap();
     }
@@ -130,7 +125,7 @@ bool VisIVOPalette=false;
 void timeReport()
   {
   if (mpiMgr.master())
-    tstack_report("Splotch total time");
+    tstack_report("Splotch");
   }
 
 void hostTimeReport(wallTimerSet &Timers)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2010
+ * Copyright (c) 2004-2011
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -32,7 +32,6 @@
 #include "optionssetter.h"
 #include "luteditor.h"
 #endif
-
 
 #ifdef LONGIDS
 #define MyIDType uint64
