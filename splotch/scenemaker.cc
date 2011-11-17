@@ -393,25 +393,17 @@ sceneMaker::sceneMaker (paramfile &par)
 
     for (int i=0; i<current_scene; ++i)
       getline(inp, line);
-    //
+
     while (getline(inp, line))
     {
       sceneParameters.clear();
       string outfilen = outfile+intToString(current_scene,4);
       split(line, sceneParameterValues);
-      //
-      if (sceneParameterKeys.size()==sceneParameterValues.size())
-      {
-        for (unsigned int i=0; i<sceneParameterKeys.size(); i++)
-	  sceneParameters.insert
-	    (pair<std::string,std::string>(sceneParameterKeys[i], sceneParameterValues[i]));
-      }
-      else
-      {
-        cerr << "ERROR in scene file detected, please check!  Quitting." << endl;
-        exit(1);
-      }
-      //
+
+      planck_assert(sceneParameterKeys.size()==sceneParameterValues.size(),
+        "ERROR in scene file detected, please check!  Quitting.");
+      for (unsigned int i=0; i<sceneParameterKeys.size(); i++)
+        sceneParameters[sceneParameterKeys[i]] = sceneParameterValues[i];
       bool reuse=false;
 
       fidx = params.find<double>("fidx",0);
@@ -420,9 +412,7 @@ sceneMaker::sceneMaker (paramfile &par)
         if (approx(fidx,stringToData<double>(scenes[scenes.size()-1].sceneParameters.find("fidx")->second)))
           scenes[scenes.size()-1].keep_particles=reuse=true;
 
-      //
       scenes.push_back(scene(sceneParameters,outfilen,false,reuse));
-      //
       current_scene += scene_incr;
       for (int i=0; i<scene_incr-1; ++i)
         getline(inp, line);

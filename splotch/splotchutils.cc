@@ -59,8 +59,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap, VisIVOServerOpt
 #else
 void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
 #endif
-{
-  bool VisIVOPalette=false;
+  {
   int ptypes = params.find<int>("ptypes",1);
 
   bool master = mpiMgr.master();
@@ -77,45 +76,45 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
       }
     else
       {
+      bool VisIVOPalette=false;
 #ifdef SPLVISIVO
 //reading colortable from visivo
-	string paletteFile=params.find<string>("palette"+dataToString(itype),"none"); //itype is 0 in VisIVO
-	if(paletteFile=="none")  //VisIVO color table
-        {	
-	  int nVVColours=0;
-	  SelectLookTable(&opt);  //the Table is loaded only one time
-	  nVVColours=opt.extPalR.size();
-	    double step = 1./(nVVColours-1);
-	    for (int i=0; i<opt.extPalR.size(); i++)
-	    {
-	      float rrr,ggg,bbb;
-	      rrr=(float)opt.extPalR[i]; //these vale are already normalized to 255
-	      ggg=(float)opt.extPalG[i];
-	      bbb=(float)opt.extPalB[i];   
-	      amap[itype].addVal(i*step,COLOUR(rrr,ggg,bbb));
-	     }
-	     VisIVOPalette=true;
-	  }
-
-#endif
-      if(!VisIVOPalette)
-      {
-      ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
-      planck_assert (infile,"could not open palette file  <" +
-        params.find<string>("palette"+dataToString(itype)) + ">");
-      string dummy;
-      int nColours;
-      infile >> dummy >> dummy >> nColours;
-      if (master)
-        cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
-      double step = 1./(nColours-1);
-      for (int i=0; i<nColours; i++)
+      string paletteFile=params.find<string>("palette"+dataToString(itype),"none"); //itype is 0 in VisIVO
+      if(paletteFile=="none")  //VisIVO color table
         {
-        float rrr,ggg,bbb;
-        infile >> rrr >> ggg >> bbb;
-        amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
+        int nVVColours=0;
+        SelectLookTable(&opt);  //the Table is loaded only one time
+        nVVColours=opt.extPalR.size();
+        double step = 1./(nVVColours-1);
+        for (int i=0; i<opt.extPalR.size(); i++)
+          {
+          float rrr,ggg,bbb;
+          rrr=(float)opt.extPalR[i]; //these vale are already normalized to 255
+          ggg=(float)opt.extPalG[i];
+          bbb=(float)opt.extPalB[i];
+          amap[itype].addVal(i*step,COLOUR(rrr,ggg,bbb));
+          }
+        VisIVOPalette=true;
         }
-      } //if(!VisIVOPalette)
+#endif
+      if (!VisIVOPalette)
+        {
+        ifstream infile (params.find<string>("palette"+dataToString(itype)).c_str());
+        planck_assert (infile,"could not open palette file  <" +
+          params.find<string>("palette"+dataToString(itype)) + ">");
+        string dummy;
+        int nColours;
+        infile >> dummy >> dummy >> nColours;
+        if (master)
+          cout << " loading " << nColours << " entries of color table of ptype " << itype << endl;
+        double step = 1./(nColours-1);
+        for (int i=0; i<nColours; i++)
+          {
+          float rrr,ggg,bbb;
+          infile >> rrr >> ggg >> bbb;
+          amap[itype].addVal(i*step,COLOUR(rrr/255,ggg/255,bbb/255));
+          }
+        } //if(!VisIVOPalette)
 
       }
     amap[itype].sortMap();
@@ -132,7 +131,7 @@ void hostTimeReport(wallTimerSet &Timers)
   {
   cout << "Ranging Data (secs)        : " << Timers.acc("range") << endl;
   cout << "Build Index List (secs)    : " << Timers.acc("buildindex") << endl;
-  cout << "Interpolating Data (secs)  : " << Timers.acc("interoplate") << endl;
+  cout << "Interpolating Data (secs)  : " << Timers.acc("interpolate") << endl;
   cout << "Transforming Data (secs)   : " << Timers.acc("transform") << endl;
   cout << "Sorting Data (secs)        : " << Timers.acc("sort") << endl;
   cout << "Coloring Sub-Data (secs)   : " << Timers.acc("coloring") << endl;

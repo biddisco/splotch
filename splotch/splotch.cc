@@ -66,18 +66,13 @@ int main (int argc, const char **argv)
   params.setParam("simtype",10);
   params.setParam("fov",opt.spFov);
   params.setParam("ptypes",1);
-
 #else
-
   module_startup ("splotch",argc,argv,2,"<parameter file>",master);
   paramfile params (argv[1],false);
 
-  if(params.param_present("geometry_file"))
-    {
-      cout << "Creating of animations has been changed, use \"scene_file\" instead of \"geometry_file\" ... " << endl;
-      return -1;
-    }
-
+  planck_assert(!params.param_present("geometry_file"),
+    "Creating of animations has been changed, use \"scene_file\" instead of "
+    "\"geometry_file\" ... ");
 #endif
 
   vector<particle_sim> particle_data; //raw data from file
@@ -102,19 +97,15 @@ int main (int argc, const char **argv)
     {
     mydevID = myID;
     if (mydevID >= nDevNode) mydevID = myID%nDevNode;
-    if ( mydevID >= nDevNode)
-      {
-      cout << "There isn't a gpu available for process = " << myID << endl;
-      cout << "Configuration supported is 1 gpu for each mpi process" <<endl;
-      mpiMgr.abort();
-      }
+    planck_assert(mydevID<nDevNode,
+      string("There isn't a gpu available for process = ") +dataToString(myID)
+      +"\nConfiguration supported is 1 gpu for each mpi process");
     }
   // b) or processes run on different nodes and use a number of GPUs >= 1 and <= nDevNode
-  else if (nDevNode < nDevProc)
-    {
-    cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required = " << nDevProc << endl;
-    mpiMgr.abort();
-    }
+  else
+    planck_assert(nDevNode>=nDevProc, string("Number of GPUs available = ")
+      +dataToString(nDevNode) + " is lower than the number of GPUs required = "
+      +dataToString(nDevProc));
 
   bool gpu_info = params.find<bool>("gpu_info",false);
   if (gpu_info) print_device_info(myID, mydevID);
@@ -137,9 +128,9 @@ int main (int argc, const char **argv)
     arr2<COLOUR> pic(xres,yres);
 
 // calculate boost factor for brightness
-    float b_brightness = 1.0;
     bool boost = params.find<bool>("boost",false);
-    if(boost) b_brightness = float(particle_data.size())/float(r_points.size());
+    float b_brightness = boost ?
+      float(particle_data.size())/float(r_points.size()) : 1.0;
 
     if(particle_data.size()>0)
     {
