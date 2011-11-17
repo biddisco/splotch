@@ -59,7 +59,7 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
   }
 
-int gadget_read_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal, double &boxsize, paramfile &params)
+int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params)
   {
   double h,O,L;
   int blocksize = gadget_find_block (file,"HEAD");
@@ -99,8 +99,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
   arr<long> NPartThisTask(NTasks);
 
-  if (interpol_mode>0)
-    infilename += intToString(snr,3);
+  infilename += intToString(snr,3);
 
   if (params.find<bool>("snapdir",false))
     infilename = "snapdir_"+intToString(snr,3)+"/"+infilename;
@@ -143,15 +142,15 @@ void gadget_reader(paramfile &params, int interpol_mode,
       for(int f=0;f<NFilePerRead;f++)
         {
         int file=rt*NFilePerRead+f;
-        int npartthis[6],nparttotal[6];
+        unsigned int npartthis[6],nparttotal[6];
         filename=infilename;
         if(numfiles>1) filename+="."+dataToString(file);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
         gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
         infile.close();
-	if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
-	  cout << "    Timestamp from file : t=" << time << endl;
+//	if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
+//	  cout << "    Timestamp from file : t=" << time << endl;
 	if(rt==0 && f==0)
 	  {
 	    cout << "    Total number of particles in file :" << endl;
@@ -262,13 +261,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int present=1+2+4+8+16+32;
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
-      if(!params.find<bool>("AnalyzeSimulationOnly"))
-	cout << " Task: " << ThisTask << " reading file " << filename << endl;
+//    if(!params.find<bool>("AnalyzeSimulationOnly"))
+//	cout << " Task: " << ThisTask << " reading file " << filename << endl;
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
       gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
@@ -284,7 +283,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             infile.skip(4*3*npartthis[s]);
         arr<float32> ftmp(3*npartthis[type]);
         infile.get(&ftmp[0],ftmp.size());
-        for(int m=0; m<npartthis[type]; ++m)
+        for(unsigned int m=0; m<npartthis[type]; ++m)
           {
           if(ThisTask == ToTask)
             {
@@ -400,7 +399,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
         for(int f=0;f<NFilePerRead;f++)
           {
-	  int npartthis[6],nparttotal[6];
+	  unsigned int npartthis[6],nparttotal[6];
           int present=1+2+4+8+16+32;
           int LastType=-1;
           filename=infilename;
@@ -418,7 +417,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
                 infile.skip(4*3*npartthis[s]);
             arr<float32> ftmp(3*npartthis[type]);
             infile.get(&ftmp[0],ftmp.size());
-            for(int m=0; m<npartthis[type]; ++m)
+            for(unsigned int m=0; m<npartthis[type]; ++m)
               {
               if(ThisTask == ToTask)
                 {
@@ -477,7 +476,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
       for(int f=0;f<NFilePerRead;f++)
         {
-	int npartthis[6],nparttotal[6];
+	unsigned int npartthis[6],nparttotal[6];
         int present=1+2+4+8+16+32;
         int LastType=-1;
         filename=infilename;
@@ -511,7 +510,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 		ftmp[m] = ftmp[m] + 536870912;           // adding 2^29
 	    }
 
-          for(int m=0; m<npartthis[type]; ++m)
+          for(unsigned int m=0; m<npartthis[type]; ++m)
             {
             if(ThisTask == ToTask)
               {
@@ -558,7 +557,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
@@ -583,7 +582,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           }
         arr<float32> ftmp(npartthis[type]);
         if (fix_size == 0.0) infile.get(&ftmp[0],ftmp.size());
-        for (int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]; ++m)
           {
           if(ThisTask == ToTask)
             {
@@ -628,7 +627,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
@@ -664,7 +663,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         if ((read_col>0) && col_vector) fnread=3*npartthis[type];
         arr<float32> ftmp(fnread);
         infile.get(&ftmp[0],ftmp.size());
-        for (int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]; ++m)
           {
           if(ThisTask == ToTask)
             {
@@ -725,7 +724,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    for (int m=0; m<NPartThisTask[ThisTask]; ++m)
+    for (unsigned int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].e.Set(v1_tmp[m],v2_tmp[m],v3_tmp[m]);
     }
 
@@ -739,7 +738,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
     for(int f=0;f<NFilePerRead;f++)
       {
-      int npartthis[6],nparttotal[6];
+      unsigned int npartthis[6],nparttotal[6];
       int LastType=-1;
       filename=infilename;
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
@@ -764,7 +763,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             cout << " Cannot find intensity field <" << label_int << "> ..." << endl;
         arr<float32> ftmp(npartthis[type]);
         if (read_int>0) infile.get(&ftmp[0],ftmp.size());
-        for (int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]; ++m)
           {
           if(ThisTask == ToTask)
             {
@@ -790,7 +789,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         }
       infile.close();
       }
-    planck_assert(ncount == 0,"Some Particles where left when reading Colors ...");
+    planck_assert(ncount == 0,"Some particles where left when reading Colors ...");
     }
   else
     {
