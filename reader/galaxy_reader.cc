@@ -121,8 +121,8 @@ void galaxy_reader (paramfile &params, vector<particle_sim> &points)
   qty_idx[3] = 1;
   qty_idx[4] = 1;
   qty_idx[5] = 1;
-  qty_idx[6] = 0;
-  qty_idx[7] = 0;
+  qty_idx[6] = -1;
+  qty_idx[7] = -1;
   qty_idx[8] = 1;
 
   hdf5_reader_prep (params, &file_id, npart, &start_local, field);
@@ -142,7 +142,6 @@ void galaxy_reader (paramfile &params, vector<particle_sim> &points)
   hsize_t * count     = new hsize_t [rank];
   hsize_t * block     = new hsize_t [rank];
 
-  cout << start_local << " ......... " << npart << endl;
   start[0]  = (hsize_t)start_local;
   stride[0] = 1;
   count[0]  = npart;
@@ -151,8 +150,9 @@ void galaxy_reader (paramfile &params, vector<particle_sim> &points)
   for (int i=0; i<9; i++)
   {
      hid_t memoryspace;
-     if(i<6)
+     if(qty_idx[i] >= 0)
      {
+      cout << "working on " << i << endl;
       dataset_id = H5Dopen(file_id,field[i].c_str());
       dataset_space = H5Dget_space(dataset_id);
       H5Sselect_hyperslab(dataset_space, H5S_SELECT_SET, start, stride, count, block);
@@ -193,7 +193,7 @@ void galaxy_reader (paramfile &params, vector<particle_sim> &points)
   } 
   delete [] fbuffer;
 
-  for (int64 ii=0; ii<npart; ++ii) points[ii].active = true; \
+  for (int64 ii=0; ii<npart; ++ii) points[ii].active = true; 
 
   H5Fclose(file_id);
   
