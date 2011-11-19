@@ -6,13 +6,13 @@
 #OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-#OPT += -DUSE_MPI
+OPT += -DUSE_MPI
 #OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
 
-#OPT += -DHDF5
-#OPT += -DH5_USE_16_API
+OPT += -DHDF5
+OPT += -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT += -DVS
@@ -31,13 +31,14 @@
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
+#SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
+#SYSTYPE="VIZ"
 #SYSTYPE="EIGER"
-#SYSTYPE="PALU"
+SYSTYPE="TODI"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
 ### generic SLES11 Linux machines at the Garching computing center (RZG):
@@ -86,15 +87,20 @@ ifeq ($(SYSTYPE),"RZG-SLES11-VIZ")
  OMP       = -fopenmp
 endif
 
-# configuration for PALU at CSCS
-ifeq ($(SYSTYPE),"PALU")
+# configuration for TODI at CSCS
+ifeq ($(SYSTYPE),"TODI")
  ifeq (HDF5,$(findstring HDF5,$(OPT)))
-  HDF5_HOME = 
-  LIB_HDF5  = 
-  HDF5_INCL = 
+  HDF5_HOME = /opt/cray/hdf5/1.8.6/gnu/46/
+  LIB_HDF5  = -L$(HDF5_HOME)/lib -lhdf5 -lz
+  HDF5_INCL = -I$(HDF5_HOME)/include
  endif
- CC       =  CC
- OPTIMIZE += -O3
+ ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
+   CC       = CC 
+ else
+   CC       = g++
+ endif
+ OPTIMIZE = -O3
+ OMP      = 
 endif
 
 # Configuration for SLES11 Linux clusters at the Garching computing centre (RZG):
@@ -208,7 +214,7 @@ EXEC1 = Galaxy
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o \
-	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o reader/galaxy_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o reader/tipsy_reader.o \
 	splotch/splotchutils.o splotch/splotch.o \
 	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
