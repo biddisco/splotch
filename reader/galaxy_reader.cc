@@ -202,6 +202,8 @@ void galaxy_reader (paramfile &params, vector<particle_sim> &points)
 
 #else
 
+using namespace std;
+
 void hdf5_reader (paramfile &params, vector<particle_sim> &points)
 {
     cout << "HDF5 I/O not supported... Exiting... " << endl;
