@@ -11,8 +11,8 @@ OPT += -DUSE_MPI
 
 #--------------------------------------- Switch on HDF5
 
-OPT += -DHDF5
-OPT += -DH5_USE_16_API
+#OPT += -DHDF5
+#OPT += -DH5_USE_16_API
 
 #--------------------------------------- Visual Studio Option
 #OPT += -DVS
@@ -31,14 +31,14 @@ OPT += -DH5_USE_16_API
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Select target Computer
-#SYSTYPE="generic"
+SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
 #SYSTYPE="BGP"
 #SYSTYPE="VIZ"
 #SYSTYPE="EIGER"
-SYSTYPE="TODI"
+#SYSTYPE="TODI"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
 ### generic SLES11 Linux machines at the Garching computing center (RZG):
@@ -79,10 +79,11 @@ ifeq ($(SYSTYPE),"RZG-SLES11-VIZ")
  else
   CC       = g++
  endif
- OPT      += -DHDF5 -DH5_USE_16_API
- HDF5_HOME = /u/system/hdf5/1.8.7/serial
- LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
- HDF5_INCL = -I$(HDF5_HOME)/include
+ ifeq (HDF5,$(findstring HDF5,$(OPT)))
+  HDF5_HOME = /u/system/hdf5/1.8.7/serial
+  LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+  HDF5_INCL = -I$(HDF5_HOME)/include
+ endif
  OPTIMIZE += -O3 -march=native -mtune=native
  OMP       = -fopenmp
 endif
@@ -111,10 +112,11 @@ ifeq ($(SYSTYPE),"RZG-SLES11-generic")
  else
   CC       = g++
  endif
- OPT      += -DHDF5 -DH5_USE_16_API
- HDF5_HOME = /afs/ipp/home/k/khr/soft/amd64_sles11/opt/hdf5/1.8.7
- LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
- HDF5_INCL = -I$(HDF5_HOME)/include
+ ifeq (HDF5,$(findstring HDF5,$(OPT)))
+  HDF5_HOME = /afs/ipp/home/k/khr/soft/amd64_sles11/opt/hdf5/1.8.7
+  LIB_HDF5  = -L$(HDF5_HOME)/lib -Wl,-rpath,$(HDF5_HOME)/lib -lhdf5 -lz
+  HDF5_INCL = -I$(HDF5_HOME)/include
+ endif
  OPTIMIZE += -O3 -msse3
  OMP       = -fopenmp
 endif
@@ -214,7 +216,7 @@ EXEC1 = Galaxy
 OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
         reader/mesh_reader.o reader/visivo_reader.o \
 	cxxsupport/mpi_support.o cxxsupport/paramfile.o cxxsupport/string_utils.o \
-	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o reader/galaxy_reader.o \
+	cxxsupport/announce.o cxxsupport/ls_image.o reader/gadget_reader.o \
 	reader/millenium_reader.o reader/bin_reader.o reader/bin_reader_mpi.o reader/tipsy_reader.o \
 	splotch/splotchutils.o splotch/splotch.o \
 	splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
@@ -231,6 +233,7 @@ OBJSC = cxxsupport/paramfile.o cxxsupport/error_handling.o cxxsupport/mpi_suppor
 ifeq (HDF5,$(findstring HDF5,$(OPT)))
  OBJS += reader/hdf5_reader.o
  OBJS += reader/gadget_hdf5_reader.o
+ OBJS += reader/galaxy_reader.o
 endif
 
 ifeq (OPENCL,$(findstring OPENCL,$(OPT)))
