@@ -5,7 +5,10 @@
 # include <string>
 # include <iostream>
 # include "cxxsupport/paramfile.h"
+#include "cxxsupport/bstream.h"
+#ifdef HDF5
 # include "hdf5.h"
+#endif
 
 using namespace std;
 

@@ -111,13 +111,14 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 
 	  printf("=== NUMBER OF ACTIVE PIXELS : %ld ===\n", counter);
 
+	  /*
           pFile = fopen("test.txt", "w");
           for(long ii=0; ii<counter; ii++)
           {
              fprintf(pFile, "%f %f 0.0\n", xx[ii],yy[ii]);
           }
           fclose(pFile);
-
+	  */
 	  return (counter);
 
 }

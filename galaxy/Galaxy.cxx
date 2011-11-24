@@ -1,5 +1,9 @@
 # include "Galaxy.h"
 
+#define N_COMP 6
+#define MAXSTARSPERGLOBE 10000
+#define STAR_FACTOR 10
+
 int main (int argc, const char **argv)
 {
 
@@ -15,9 +19,6 @@ int main (int argc, const char **argv)
 	string imagefile1;
 	string imagefile;
 	long numberofstars;
-	float * starx;
-	float * stary;
-	float * starz;
 	float * F_starx;
 	float * F_stary;
 	float * zdeep;
@@ -31,12 +32,20 @@ int main (int argc, const char **argv)
 	float Rth;
 	float Gth;
 	float Bth;
-	long star_factor = 10;
 
 
 	printf("=======================================\n");
 	printf("===== Start Generating the Galaxy =====\n");
 	printf("=======================================\n");
+
+#ifdef HDF5
+	cout << "Writing hdf5 data ..." << endl;
+#else
+	cout << "Writing Gadget format ..." << endl;
+	bofstream file(outfile.c_str(),false);
+	int32 blocksize=0, blksize=8;
+#endif
+
 	printf("=======================================\n");
 	printf("======== Processing the Image =========\n");
 	printf("=======================================\n");
@@ -54,9 +63,6 @@ int main (int argc, const char **argv)
 	float ymax = (float)nx;
 	float zmax = (float)nx;
 
-	starx = new float [star_factor*nx*ny];
-	stary = new float [star_factor*nx*ny];
-	starz = new float [star_factor*nx*ny];
 	F_starx = new float [nx*ny];
 	F_stary = new float [nx*ny];
 	zdeep = new float [nx*ny];
@@ -82,116 +88,214 @@ int main (int argc, const char **argv)
 	   //numberofstars = ReadBMP(params, imagefile, imagefile1, 
            //                nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
         } else {
-           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, III, starx, stary);
+           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, III, F_starx, F_stary);
         }
 
 // Generate random components
 
 	long totpoints;
-	const int N_COMP = 4;
+
 	string ComponentsName[N_COMP];
-        ComponentsName[0] = "Bulge";
-        ComponentsName[1] = "Disk";
-        ComponentsName[2] = "Arms";
+	ComponentsName[0] = "Gas";
+        ComponentsName[1] = "Bulge";
+        ComponentsName[2] = "Disk";
         ComponentsName[3] = "GCluster";
+        ComponentsName[4] = "Stars";
+	ComponentsName[5] = "BHs";
+	int32 npart[N_COMP];
 
-	printf("=====================================\n");
-	printf("======= Generating the Bulge ========\n");
-	printf("=====================================\n");
+	vector<float32> x;
 
-	long bulgesize;
-	float * bulgex;
-	float * bulgey;
-	float * bulgez;
-	long nbulge;
+	float * xcomp;
+	float * ycomp;
+	float * zcomp;
 
-        bulgesize = params.find<long>("BulgeSize",0);
+	float * cred;
+	float * cgreen;
+	float * cblue;
+	float * ciii;
 
-	bulgex = new float [bulgesize];
-	bulgey = new float [bulgesize];
-	bulgez = new float [bulgesize];
-	totpoints = bulgesize;
+	long nwant,nfinal,counter;
 
-        nbulge=GaussRFunc (params, ComponentsName[0], bulgesize, totpoints, bulgex, bulgey, bulgez, xmax, ymax, zmax, zdeep, III, nx, ny);
+	for(int itype=0;itype<N_COMP;itype++)
+	  {
+	    printf("=====================================\n");
+	    switch(itype)
+	      {
+	      case 0:
+		printf("======= Nothing to do for Gas ==========\n");
+		nwant=0;
+		break;
+	      case 1:
+		printf("======= Generating the Bulge ========\n");
+		nwant = params.find<long>("BulgeSize",0);
+		break;
+	      case 2:
+		printf("======= Generating the Halo =========\n");
+		nwant = params.find<long>("DiskSize",0);
+		break;
+	      case 3:
+		printf("======= Generating Globular Clusters \n");
+		nwant = params.find<long>("NGlobes",0) * MAXSTARSPERGLOBE;
+		break;
+	      case 4:
+		printf("======= Generating the Stars =========\n");
+		nwant = STAR_FACTOR * nx * ny;
+		break;
+	      case 5:
+		printf("======= Nothing to do for BHs ==========\n");
+		nwant=0;
+		break;
+	      }
+	    printf("=====================================\n");
+	    xcomp = new float [nwant];
+	    ycomp = new float [nwant];
+	    zcomp = new float [nwant];
+	    switch(itype)
+	      {
+	      case 0:
+		nfinal=nwant;
+		break;
+	      case 1:
+		nfinal=GaussRFunc (params, ComponentsName[1], nwant, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
+		break;
+	      case 2:
+		nfinal=GaussRFunc (params, ComponentsName[2], nwant, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
+		break;
+	      case 3:
+		nfinal=GlobularCluster(params, ComponentsName[3], nwant, MAXSTARSPERGLOBE, xcomp, ycomp, zcomp);
+		break;
+	      case 4:
+		for(long ii=0;ii<numberofstars;ii++)
+		  {
+		    xcomp[ii] = F_starx[ii];
+		    ycomp[ii] = F_stary[ii];
+		  }
+		nfinal=GaussRFunc (params, ComponentsName[4], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
+		break;
+	      case 5:
+		nfinal=0;
+		break;
+	      }
+	    npart[itype] = nfinal;
+	    cout << nwant << " -> " << nfinal << endl;
+	    if(npart[itype] > 0)
+	      {
+
+		vector<float32> color(3*npart[itype]);
+		vector<float32> intensity(npart[itype]);
+		vector<float32> hsml(npart[itype]);
+
+		cred   = new float [npart[itype]]; 	
+		cgreen = new float [npart[itype]]; 	
+		cblue  = new float [npart[itype]]; 	
+		ciii   = new float [npart[itype]];
+
+		switch(itype)
+		  {
+		  case 0:
+		  case 1:
+		  case 2:
+		  case 3:
+		  case 4:
+		  case 5:
+		    CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+		    break;
+		  }
+
+		for (long i=counter=0; i<npart[itype]; i++)
+		  {
+		    x.push_back(xcomp[i]);
+		    x.push_back(ycomp[i]);
+		    x.push_back(zcomp[i]);
+
+		    hsml[i] = 0.00001;
+
+		    intensity[i] = ciii[i];
+
+		    color[counter++] = cred[i];
+		    color[counter++] = cgreen[i];
+		    color[counter++] = cblue[i];
+
+		  }
+
+#ifdef HDF5
+
+#else
+// write hsml
+		string label("HSM"+dataToString(itype));
+		file << blksize;
+		blocksize = npart[itype]*4 + 8;
+		file.put(label.c_str(),4);
+		file << blocksize;
+		file << blksize;
+
+		file << blocksize-8;
+		file.put(&hsml[0],npart[itype]);
+		file << blocksize-8;
+
+// write intensity
+		label = "INT"+dataToString(itype);
+		file << blksize;
+		blocksize = npart[itype]*4 + 8;
+		file.put(label.c_str(),4);
+		file << blocksize;
+		file << blksize;
+
+		file << blocksize-8;
+		file.put(&intensity[0],npart[itype]);
+		file << blocksize-8;
+
+// write color
+		label = "COL"+dataToString(itype);
+		file << blksize;
+		blocksize = 3*npart[itype]*4 + 8;
+		file.put(label.c_str(),4);
+		file << blocksize;
+		file << blksize;
+
+		file << blocksize-8;
+		file.put(&color[0],3*npart[itype]);
+		file << blocksize-8;
+#endif
+		delete [] cred;
+		delete [] cgreen;
+		delete [] cblue;
+		delete [] ciii;
+	      }
+
+	    delete [] xcomp;
+	    delete [] ycomp;
+	    delete [] zcomp;
+
+	  }
+
 
         printf("=====================================\n");
-        printf("======= Generating the Halo =========\n");
+        printf("======= Gas size     : %d\n", npart[0]);
+        printf("======= Bulge size   : %d\n", npart[1]);
+        printf("======= Halo  size   : %d\n", npart[2]);
+        printf("======= Globiularsize: %d\n", npart[3]);
+        printf("======= Stars size   : %d\n", npart[4]);
+        printf("======= BHs size     : %d\n", npart[5]);
         printf("=====================================\n");
 
-        long halosize;
-        float * halox;
-        float * haloy;
-        float * haloz;
-        long nhalo;
 
-        halosize = params.find<long>("DiskSize",0);
+#ifdef HDF5
 
-        halox = new float [halosize];
-        haloy = new float [halosize];
-        haloz = new float [halosize];
-        totpoints = halosize;
+#else
+// write positions
+	string label("POS ");
+	file << blksize;
+	blocksize = x.size()*4 + 8;
+	file.put(label.c_str(),4);
+	file << blocksize;
+	file << blksize;
 
-        nhalo=GaussRFunc (params, ComponentsName[1], halosize, totpoints, halox, haloy, haloz, xmax, ymax, zmax, zdeep, III, nx, ny);
-
-        printf("=====================================\n");
-        printf("======= Generating Globular Clusters \n");
-        printf("=====================================\n");
-
-        float * globex;
-        float * globey;
-        float * globez;
-        long nglobes;
-	long maxstarsperglobe=10000;
-	long globesize;
-	long globenumber;
-
-        nglobes = params.find<long>("NGlobes",0);
-	globesize = nglobes*maxstarsperglobe;
-
-        globex = new float [globesize];
-        globey = new float [globesize];
-        globez = new float [globesize];
-        totpoints = globesize;
-
-        globenumber=GlobularCluster(params, ComponentsName[3], nglobes, maxstarsperglobe, globex, globey, globez);
-
-	float * gx;
-	float * gy;
-	float * gz;
-	gx = new float [globenumber];
-	gy = new float [globenumber];
-	gz = new float [globenumber];
-	for (long kk=0; kk<globenumber; kk++)
-	{
-	   gx[kk] = globex[kk];
-	   gy[kk] = globey[kk];
-	   gz[kk] = globez[kk];
-	}
-
-	delete [] globex;
-	delete [] globey;
-	delete [] globez;
-
-
-        printf("=====================================\n");
-        printf("======= Generating the Arms =========\n");
-        printf("=====================================\n");
-
-	long nstars;
-        totpoints = star_factor*nx*ny;
-
-        nstars=GaussRFunc (params, ComponentsName[2], numberofstars, totpoints, starx, stary, starz, xmax, ymax, zmax, zdeep, III, nx, ny);
-
-// BUILD UP THE COMPLETE DATASET
-
-	long nobjects=nhalo+nbulge+nstars+globenumber;
-
-        printf("=====================================\n");
-        printf("======= Bulge size   : %d\n", nbulge);
-        printf("======= Halo  size   : %d\n", nhalo );
-        printf("======= Stars size   : %d\n", nstars);
-        printf("======= Globular size: %d\n", globenumber);
-        printf("=====================================\n");
+	file << blocksize-8;
+	file.put(&x[0],x.size());
+	file << blocksize-8;
+#endif
 
 	string field[NUM_OF_FIELDS];
         field[0] = "Xpos";
@@ -206,113 +310,22 @@ int main (int argc, const char **argv)
         field[9] = "floatGreen";
         field[10] = "floatBlue";
 
-        float * rho;
-        float * hsml;
-	float * xcoord;
-	float * ycoord;
-	float * zcoord;
-	float * floatRed;
-        float * cred;
-        float * cgreen;
-        float * cblue;
-        float * ciii;
-
-	xcoord = new float [nobjects]; 	
-	ycoord = new float [nobjects]; 	
-	zcoord = new float [nobjects]; 	
-	rho    = new float [nobjects]; 	
-	hsml   = new float [nobjects]; 	
-	floatRed   = new float [nobjects]; 	
-	particle_type  = new float [nobjects]; 	
-
-	long totcounter = 0;
-
-	for (long i=0; i<nstars; i++)
-	{
-	   xcoord[totcounter] = starx[i];
-	   ycoord[totcounter] = stary[i];
-	   zcoord[totcounter] = starz[i];
-	   rho[totcounter]    = 0.0;
-	   hsml[totcounter]   = 0.0;
-           particle_type[totcounter] = 0.0;
-	   totcounter++;
-	}
-	delete [] starx;
-	delete [] stary;
-	delete [] starz;
-
-        for (long i=0; i<nbulge; i++)
-        {
-           xcoord[totcounter] = bulgex[i];
-           ycoord[totcounter] = bulgey[i];
-           zcoord[totcounter] = bulgez[i];
-           rho[totcounter]    = 0.0;
-           hsml[totcounter]   = 0.0;
-           particle_type[totcounter] = 1.0;
-	   totcounter++;
-        }
-        delete [] bulgex;
-        delete [] bulgey;
-        delete [] bulgez;
-
-        for (long i=0; i<nhalo; i++)
-        {
-           xcoord[totcounter] = halox[i];
-           ycoord[totcounter] = haloy[i];
-           zcoord[totcounter] = haloz[i];
-           rho[totcounter]    = 0.0;
-           hsml[totcounter]   = 0.0;
-           particle_type[totcounter] = 2.0;
-           totcounter++;
-        }
-        delete [] halox;
-        delete [] haloy;
-        delete [] haloz;
-
-        for (long i=0; i<globenumber; i++)
-        {
-           xcoord[totcounter] = gx[i];
-           ycoord[totcounter] = gy[i];
-           zcoord[totcounter] = gz[i];
-           rho[totcounter]    = 0.0;
-           hsml[totcounter]   = 0.0;
-           particle_type[totcounter] = 3.0;
-           totcounter++;
-        }
-        delete [] gx;
-        delete [] gy;
-        delete [] gz;
-
-
-	printf("=====================================\n");
-	printf("======== Calculating Density ========\n");
-	printf("=====================================\n");
-
-
 // calculate rho
 
-        float smooth = params.find<float>("Smooth",0);
+//        float smooth = params.find<float>("Smooth",0);
 
      //   CalculateDensity(hsml, rho, xcoord, ycoord, zcoord, nobjects, smooth);
 
-	printf("=====================================\n");
-	printf("======== Calculating Colours ========\n");
-	printf("=====================================\n");
 
-	cred   = new float [nobjects]; 	
-	cgreen = new float [nobjects]; 	
-	cblue  = new float [nobjects]; 	
-	ciii   = new float [nobjects]; 	
-
-	CalculateColours(nobjects, cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcoord, ycoord, nx, ny);
-
+#ifdef HDF5
+	cout << "Writing hdf5 data ..." << endl;
 // write data in HDF5
 
 	  hid_t file_id = H5Fcreate(outfile.c_str(), H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
 	  
           hid_t obj_id;
           hid_t dspace;
-          int rank = 1;
+#define rank 1
           hsize_t dims[rank];
           hsize_t maxdims[rank];
           hid_t dtotspace;
@@ -364,18 +377,36 @@ int main (int argc, const char **argv)
           H5Dclose(arrdata);
  
 	  H5Fclose(file_id);
+#else
+// write head
+          int32 dummy[64];
+	  for(int i=0;i<64;i++)
+	    dummy[i]=0;
 
+	  file << blksize;
+          blocksize = 256 + 8;
+	  file.put("HEAD",4);
+	  file << blocksize;
+	  file << blksize;
 
+	  file << blocksize-8;
+	  file.put(npart,6);
+	  file.put(&dummy[0],18);
+	  file.put(npart,6);
+	  file.put(&dummy[0],64-6-18-6);
+	  file << blocksize-8;
+
+	  file.close();
+#endif
+
+#ifdef WRITE_ASCII
 	  pFile = fopen("points.ascii", "w");
           for(long ii=0; ii<nobjects; ii=ii+int(nobjects/100000))
 	  {
 	     fprintf(pFile, "%f %f %f %f %f\n", xcoord[ii],ycoord[ii],zcoord[ii],ciii[ii],particle_type[ii]);
 	  }
 	  fclose(pFile);
-
-	  delete [] xcoord;
-	  delete [] ycoord;
-	  delete [] zcoord;
+#endif
 
         
 }
