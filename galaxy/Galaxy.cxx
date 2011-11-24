@@ -104,7 +104,7 @@ int main (int argc, const char **argv)
 	ComponentsName[5] = "BHs";
 	int32 npart[N_COMP];
 
-	vector<float32> x;
+	vector<float32> xyz;
 
 	float * xcomp;
 	float * ycomp;
@@ -197,17 +197,17 @@ int main (int argc, const char **argv)
 		  case 1:
 		  case 2:
 		  case 3:
-		  case 4:
 		  case 5:
+		  case 4:
 		    CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
 		    break;
 		  }
 
 		for (long i=counter=0; i<npart[itype]; i++)
 		  {
-		    x.push_back(xcomp[i]);
-		    x.push_back(ycomp[i]);
-		    x.push_back(zcomp[i]);
+		    xyz.push_back(xcomp[i]);
+		    xyz.push_back(ycomp[i]);
+		    xyz.push_back(zcomp[i]);
 
 		    hsml[i] = 0.00001;
 
@@ -287,13 +287,13 @@ int main (int argc, const char **argv)
 // write positions
 	string label("POS ");
 	file << blksize;
-	blocksize = x.size()*4 + 8;
+	blocksize = xyz.size()*4 + 8;
 	file.put(label.c_str(),4);
 	file << blocksize;
 	file << blksize;
 
 	file << blocksize-8;
-	file.put(&x[0],x.size());
+	file.put(&xyz[0],xyz.size());
 	file << blocksize-8;
 #endif
 
@@ -399,14 +399,16 @@ int main (int argc, const char **argv)
 	  file.close();
 #endif
 
-#ifdef WRITE_ASCII
+//#ifdef WRITE_ASCII
 	  pFile = fopen("points.ascii", "w");
-          for(long ii=0; ii<nobjects; ii=ii+int(nobjects/100000))
+          long iaux=0;
+          for(long ii=0; ii<xyz.size()/3; ii=ii+int(xyz.size()/3/100000))
 	  {
-	     fprintf(pFile, "%f %f %f %f %f\n", xcoord[ii],ycoord[ii],zcoord[ii],ciii[ii],particle_type[ii]);
+             iaux=ii*3; 
+	     fprintf(pFile, "%f %f %f\n", xyz[iaux],xyz[iaux+1],xyz[iaux+2]);
 	  }
 	  fclose(pFile);
-#endif
+//#endif
 
         
 }
