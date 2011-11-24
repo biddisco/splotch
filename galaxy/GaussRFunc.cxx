@@ -97,6 +97,9 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 			compp = 1.0;
 		    }
 		  sigma_aux = sigma[2]/compp;
+/* KLAUS
+                  sigma_aux=f(signal[rindex]); where f is an appropriate function
+*/
 		  coordz[i] = box_muller(mean, sigma_aux);
                   resolution[index] = 1.0;
 		  countin++;
@@ -191,13 +194,12 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 	      //{
 	      for(long jj=0; jj<npergroup; jj++)
 	      {
-		 //gsigma = (float)rand()/((float)RAND_MAX*300.0);
-		 //if(gsigma < 0.0001)gsigma=0.0001;
                  coordx[abscounter] = box_muller(coordx[ii], gsigmax);
                  coordy[abscounter] = box_muller(coordy[ii], gsigmay);
-		 ///coordx[abscounter] = coordx[ii]+gsigmax*((float)rand()/((float)RAND_MAX)-0.5);
-		 ///coordy[abscounter] = coordy[ii]+gsigmay*((float)rand()/((float)RAND_MAX)-0.5);
-                 ///coordz[abscounter] = coordz[ii]+box_muller(0, gsigmaz);
+/* KLAUS
+                 sigma_aux=f(signal[rindex]); where f is an appropriate function
+                 gsigmaz = sigma_aux/compression; 
+*/
                  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
 		 abscounter++;
 	      }
