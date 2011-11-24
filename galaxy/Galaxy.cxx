@@ -197,8 +197,8 @@ int main (int argc, const char **argv)
 		  case 1:
 		  case 2:
 		  case 3:
-		  case 5:
 		  case 4:
+		  case 5:
 		    CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
 		    break;
 		  }
