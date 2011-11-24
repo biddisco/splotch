@@ -615,9 +615,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       planck_fail("Invalid read data ...");
     break;
 #endif
-    case 11:
-      tipsy_reader(params,particle_data);
-	break;
+  case 11:
+    tipsy_reader(params,particle_data);
+    break;
+#ifdef HDF5
+  case 12:
+    galaxy_reader(params,particle_data);
+    break;
+#endif
     default:
       planck_fail("No valid file type given ...");
       break;
