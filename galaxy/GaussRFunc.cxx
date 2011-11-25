@@ -196,11 +196,11 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 	      {
                  coordx[abscounter] = box_muller(coordx[ii], gsigmax);
                  coordy[abscounter] = box_muller(coordy[ii], gsigmay);
-		 /* CLAUDIO:  rindex is not defined here !!!
-                 float sigma_aux = sigma[2]*(0.5+III[rindex]);
-                 gsigmaz = sigma_aux/compression;
-		 */ 
-
+                 int irx = (int) round((0.5*(coordx[ii]+1.0))*nx);
+                 int iry = (int) round((0.5*(coordy[ii]+1.0))*ny);
+	         long rindex = irx+iry*nx;
+                 sigma_aux = sigma[2]*(0.5+III[rindex]);
+                 float gsigmaz = sigma_aux/compression;
                  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
 		 abscounter++;
 	      }
