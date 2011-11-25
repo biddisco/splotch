@@ -38,3 +38,11 @@ float box_muller(float m, float s)	/* normal random variate generator */
 
 	return( ran_result );
 }
+
+float box_uniform(float m, float s)	/* normal random variate generator */
+{				        /* mean m, uniform within s */
+  float y1 = ((float)rand())/(float)RAND_MAX-0.5;
+  float ran_result = ( m + y1 * s );
+
+  return( ran_result );
+}

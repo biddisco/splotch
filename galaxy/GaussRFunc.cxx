@@ -1,6 +1,7 @@
 # include "Galaxy.h"
 
 float box_muller(float m, float s);
+float box_uniform(float m, float s);
 
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
 		 float * coordx, float * coordy, float * coordz,
@@ -97,9 +98,8 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 			compp = 1.0;
 		    }
 		  sigma_aux = sigma[2]/compp;
-/* KLAUS
-                  sigma_aux=f(signal[rindex]); where f is an appropriate function
-*/
+                  sigma_aux = sigma[2]*(0.5+III[rindex]); 
+
 		  coordz[i] = box_muller(mean, sigma_aux);
                   resolution[index] = 1.0;
 		  countin++;
@@ -196,10 +196,11 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 	      {
                  coordx[abscounter] = box_muller(coordx[ii], gsigmax);
                  coordy[abscounter] = box_muller(coordy[ii], gsigmay);
-/* KLAUS
-                 sigma_aux=f(signal[rindex]); where f is an appropriate function
-                 gsigmaz = sigma_aux/compression; 
-*/
+		 /* CLAUDIO:  rindex is not defined here !!!
+                 float sigma_aux = sigma[2]*(0.5+III[rindex]);
+                 gsigmaz = sigma_aux/compression;
+		 */ 
+
                  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
 		 abscounter++;
 	      }
@@ -213,5 +214,95 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 		
 
         return nnnn;
+
+}
+
+
+
+long DiscRFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
+		 float * coordx, float * coordy, float * coordz,
+                 float xmax, float ymax, float zmax, float * zdeep, float * III, long nx, long ny) 
+{
+  srand(time(NULL));
+
+  float sigma = params.find<float>("Sigmaz"+ComponentName,0);
+  long npergroup = params.find<long>("NperGroup"+ComponentName,0);
+  long rx = params.find<long>("Scaledxres"+ComponentName,1);
+  long ry = params.find<long>("Scaledyres"+ComponentName,1);
+  float compression = params.find<float>("CompressionFactor"+ComponentName,1.0);
+  float * resolution;
+
+  resolution = new float [rx*ry];
+  long countin = 0;
+  long countout = 0;
+
+  for(long i=0; i<rx*ry; i++)
+    resolution[i] = 0;
+
+  for (long i=0; i<number_of_points; i++)    // find unique points related to low res image description
+    {
+      int ix = (int) round((0.5*(coordx[i]+1.0))*(rx));
+      int iy = (int) round((0.5*(coordy[i]+1.0))*(ry));
+      int irx = (int) round((0.5*(coordx[i]+1.0))*nx);
+      int iry = (int) round((0.5*(coordy[i]+1.0))*ny);
+
+      long index = ix+iy*rx;
+      long rindex = irx+iry*nx;
+      
+      if(resolution[index] == 0.0)
+	{
+	  if(III[rindex] > 0)
+	    {
+	      coordz[i] = III[rindex];
+	      resolution[index] = 1.0;
+	      countin++;
+	    }
+	  else
+	    {
+	      coordz[i] = 0.0;
+	      countout++;
+	    }
+	} 
+      else 
+	{
+	  coordz[i] = 0.0;
+	  countout++;
+	}
+    }
+
+  delete [] resolution;
+
+  long iaux = 0;
+
+  for (long i=0; i<number_of_points; i++)    // copy pixel positions to the leading of the array
+    {
+      if(coordz[i] == 0.0)
+	continue;
+      coordx[iaux] = coordx[i];
+      coordy[iaux] = coordy[i];
+      coordz[iaux] = coordz[i];
+      iaux++;
+    }
+
+  long abscounter = countin;
+
+  long ii = 0;
+  float pixsizex = 1./nx;
+  float pixsizey = 1./ny;
+  while (abscounter < ntot-npergroup && ii < countin)
+    {
+      float gsigmaz = sigma * (0.5+coordy[ii]);
+      coordz[ii] = box_muller(0.0, gsigmaz);
+      for(long jj=0; jj<npergroup; jj++)
+	{
+	  coordx[abscounter] = box_muller(coordx[ii], pixsizex);
+	  coordy[abscounter] = box_muller(coordy[ii], pixsizey);
+	  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
+	  abscounter++;
+	}
+      ii++;
+    }
+
+  return abscounter-1;
 
 }

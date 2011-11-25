@@ -12,6 +12,10 @@
 
 using namespace std;
 
+long DiscRFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz,
+                 float xmax, float ymax, float zmax, float * ddd, float * II, long nnx, long nny);
+
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
                  float * coordy, float * coordz,
                  float xmax, float ymax, float zmax, float * ddd, float * II, long nnx, long nny);

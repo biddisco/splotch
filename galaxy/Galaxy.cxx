@@ -3,6 +3,7 @@
 #define N_COMP 6
 #define MAXSTARSPERGLOBE 10000
 #define STAR_FACTOR 10
+#define GAS_FACTOR 10
 
 int main (int argc, const char **argv)
 {
@@ -115,7 +116,7 @@ int main (int argc, const char **argv)
 	float * cblue;
 	float * ciii;
 
-	long nwant,nfinal,counter;
+	long nwant,nfinal,counter,ngas,nstars;
 
 	for(int itype=0;itype<N_COMP;itype++)
 	  {
@@ -123,8 +124,12 @@ int main (int argc, const char **argv)
 	    switch(itype)
 	      {
 	      case 0:
-		printf("======= Nothing to do for Gas ==========\n");
-		nwant=0;
+		printf("======= Generating Gas disk ==========\n");
+		ngas = params.find<long>("DoGas",0);
+		if(ngas > 0)
+		  nwant = GAS_FACTOR * nx * ny;
+		else
+		  nwant = 0;
 		break;
 	      case 1:
 		printf("======= Generating the Bulge ========\n");
@@ -140,7 +145,8 @@ int main (int argc, const char **argv)
 		break;
 	      case 4:
 		printf("======= Generating the Stars =========\n");
-		nwant = STAR_FACTOR * nx * ny;
+		nstars=params.find<long>("DoStars",0);
+		nwant = nstars * STAR_FACTOR * nx * ny;
 		break;
 	      case 5:
 		printf("======= Nothing to do for BHs ==========\n");
@@ -151,10 +157,19 @@ int main (int argc, const char **argv)
 	    xcomp = new float [nwant];
 	    ycomp = new float [nwant];
 	    zcomp = new float [nwant];
+
 	    switch(itype)
 	      {
 	      case 0:
-		nfinal=nwant;
+		if(nwant > 0)
+		  {
+		    for(long ii=0;ii<numberofstars;ii++)
+		      {
+			xcomp[ii] = F_starx[ii];
+			ycomp[ii] = F_stary[ii];
+		      }
+		    nfinal=DiscRFunc (params, ComponentsName[0], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
+		  }
 		break;
 	      case 1:
 		nfinal=GaussRFunc (params, ComponentsName[1], nwant, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
@@ -166,12 +181,15 @@ int main (int argc, const char **argv)
 		nfinal=GlobularCluster(params, ComponentsName[3], nwant, MAXSTARSPERGLOBE, xcomp, ycomp, zcomp);
 		break;
 	      case 4:
-		for(long ii=0;ii<numberofstars;ii++)
+		if(nwant > 0)
 		  {
-		    xcomp[ii] = F_starx[ii];
-		    ycomp[ii] = F_stary[ii];
+		    for(long ii=0;ii<numberofstars;ii++)
+		      {
+			xcomp[ii] = F_starx[ii];
+			ycomp[ii] = F_stary[ii];
+		      }
+		    nfinal=GaussRFunc (params, ComponentsName[4], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
 		  }
-		nfinal=GaussRFunc (params, ComponentsName[4], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
 		break;
 	      case 5:
 		nfinal=0;
