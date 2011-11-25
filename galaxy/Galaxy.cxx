@@ -3,7 +3,7 @@
 #define N_COMP 6
 #define MAXSTARSPERGLOBE 10000
 #define STAR_FACTOR 10
-#define GAS_FACTOR 10
+#define GAS_FACTOR 20
 
 int main (int argc, const char **argv)
 {

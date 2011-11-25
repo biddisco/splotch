@@ -287,16 +287,16 @@ long DiscRFunc (paramfile &params, string ComponentName, long number_of_points, 
   long abscounter = countin;
 
   long ii = 0;
-  float pixsizex = 1./nx;
-  float pixsizey = 1./ny;
+  float pixsizex = 2./rx;
+  float pixsizey = 2./ry;
   while (abscounter < ntot-npergroup && ii < countin)
     {
-      float gsigmaz = sigma * (0.5+coordy[ii]);
+      float gsigmaz = sigma * (0.1+coordy[ii]);
       coordz[ii] = box_muller(0.0, gsigmaz);
       for(long jj=0; jj<npergroup; jj++)
 	{
-	  coordx[abscounter] = box_muller(coordx[ii], pixsizex);
-	  coordy[abscounter] = box_muller(coordy[ii], pixsizey);
+	  coordx[abscounter] = box_uniform(coordx[ii], pixsizex);
+	  coordy[abscounter] = box_uniform(coordy[ii], pixsizey);
 	  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
 	  abscounter++;
 	}
