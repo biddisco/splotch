@@ -2,8 +2,8 @@
 # include "Galaxy.h"
 
 
-long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RRR,
-                 float * GGG, float * BBB, float * III, float * xx, float * yy)
+long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, float * RRR,
+                 float * GGG, float * BBB, float * III, float * xx, float * yy, long nwant)
 {
 
 	  FILE * pFile;
@@ -19,10 +19,18 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 // Read Data: this part will be changed with FITSIO reading three different files
 // one for each color. For testing, we just refer to the single raw file
 
-          string infile = params.find<string>("GalaxyFileR","NONE");
-	  pFile = fopen(infile.c_str(), "rb");
-          string infile1 = params.find<string>("GalaxyFileI","NONE");
-	  pFile1 = fopen(infile1.c_str(), "rb");
+	  if(!(pFile = fopen(infile_rgb.c_str(), "rb")))
+	    {
+	      printf("   could not open RGB file #%s#\n",infile_rgb.c_str());
+	      exit(3);
+	    }
+	  if(!(pFile1 = fopen(infile_mask.c_str(), "rb")))
+	    {
+	      printf("   could not open Mask file #%s#\n",infile_mask.c_str());
+	      exit(3);
+	    }
+
+	  printf("    reading image (%d,%d)\n",numx,numy);
 
 // image size will be read from the FITS file: at the moment it's an input
 
@@ -43,12 +51,9 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 	 float yyy=0.0;
 
 // set the center of the galaxy (at the moment in term of pixels (default center of image)
-         float norm0 = 0.5*(float)numx;
-	 float xc0 = (float)numx/2/norm0;
-	 float yc0 = (float)numy/2/norm0;
-         float norm = params.find<float>("Gnorm", norm0);
-         float xc = params.find<float>("Gcenterx",xc0);
-         float yc = params.find<float>("Gcentery",yc0);
+         float norm = 0.5*(float)numx;
+	 float xc = (float)numx/2/norm;
+	 float yc = (float)numy/2/norm;
 
          long i=0;
           for (int iy=0; iy<numy; iy++)
@@ -63,18 +68,10 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 	  fclose(pFile);
 	  fclose(pFile1);
 
-// When FITSIO implemented other two files to be read
-
-          infile = params.find<string>("GalaxyFileG","NONE");
-// Read Green file
-
-          infile = params.find<string>("GalaxyFileB","NONE");
-// Read Blue file
-
 // Now data processing
+	  printf("    extracting mask\n",numx,numy);
 
           i=0;
-          float THR = 0;
           for (int iy=0; iy<numy; iy++)
           for (int ix=0; ix<numx; ix++)
           {
@@ -89,17 +86,16 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 		x[i] = x[i]/norm-xc;
 		y[i] = y[i]/norm-yc;
 
-                //THR = max(RRR[i], GGG[i]);
-                //THR = max(THR, BBB[i]);
-                THR = III[i];
- 
-		if(THR >= Rmin)
-///////		if(THR >= Rmin && RRR[i] < 1.0)
-///////		if(RRR[i] >= Rmin)
+		if(III[i] > 0.0)
 		{
 		   xx[counter] = x[i];
 		   yy[counter] = y[i];
 		   counter++;
+		   if(counter > nwant)
+		     {
+		       printf("Image mask produces more particles than desired (%d>-%d), have to stop her ...\n",counter,nwant);
+		       exit(3);
+		     }
 		}
 		i++;
 	  }
@@ -109,7 +105,7 @@ long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RR
 	  delete [] BB;
 	  delete [] II;
 
-	  printf("=== NUMBER OF ACTIVE PIXELS : %ld ===\n", counter);
+	  printf("    Number of active pixels in mask: %ld\n", counter);
 
 	  /*
           pFile = fopen("test.txt", "w");

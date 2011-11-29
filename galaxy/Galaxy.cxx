@@ -2,8 +2,6 @@
 
 #define N_COMP 6
 #define MAXSTARSPERGLOBE 10000
-#define STAR_FACTOR 10
-#define GAS_FACTOR 20
 
 int main (int argc, const char **argv)
 {
@@ -17,22 +15,16 @@ int main (int argc, const char **argv)
 
 // image related variables
 
-	string imagefile1;
-	string imagefile;
-	long numberofstars;
+	long numberofparticles;
+	long maxstarsperglobe;
 	float * F_starx;
 	float * F_stary;
-	float * zdeep;
-        float * particle_type;
 	float fibra_range=32.0;
 	float * Red;
 	float * Blue;
 	float * Green;
 	float * III;
 	long nx, ny;
-	float Rth;
-	float Gth;
-	float Bth;
 
 
 	printf("=======================================\n");
@@ -48,49 +40,8 @@ int main (int argc, const char **argv)
 #endif
 
 	printf("=======================================\n");
-	printf("======== Processing the Image =========\n");
+	printf("======== Processing the Object ========\n");
 	printf("=======================================\n");
-
-
-
-        nx = params.find<long>("xres",1000);
-        ny = params.find<long>("yres",1000);
-
-        Rth = params.find<float>("Rth",0);
-        Gth = params.find<float>("Gth",0);
-        Bth = params.find<float>("Bth",0);
-
-	float xmax = (float)nx;
-	float ymax = (float)nx;
-	float zmax = (float)nx;
-
-	F_starx = new float [nx*ny];
-	F_stary = new float [nx*ny];
-	zdeep = new float [nx*ny];
-	Red   = new float [nx*ny];
-	Blue  = new float [nx*ny];
-	Green = new float [nx*ny];
-	III   = new float [nx*ny];
-
-        int infiletype = params.find<int>("InFileType",0);
-
-        if (infiletype == 0)
-        {
-// BE CAREFUL: I choose nx as basic normalization factor for distances
-// FURTHERMORE I assume that galaxy is ALWAYS centered on (0,0,0)
-
-           string galaxyR = params.find<string>("GalaxyFileR","NONE");
-           string galaxyG = params.find<string>("GalaxyFileG","NONE");
-           string galaxyB = params.find<string>("GalaxyFiler","NONE");
-           string galaxyI = params.find<string>("GalaxyFileI","NONE");
-           imagefile = galaxyR;
-           imagefile1 = galaxyI;
-	
-	   //numberofstars = ReadBMP(params, imagefile, imagefile1, 
-           //                nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
-        } else {
-           numberofstars = ReadImages(params, nx, ny, Rth, Red, Green, Blue, III, F_starx, F_stary);
-        }
 
 // Generate random components
 
@@ -120,172 +71,199 @@ int main (int argc, const char **argv)
 
 	for(int itype=0;itype<N_COMP;itype++)
 	  {
-	    printf("=====================================\n");
-	    switch(itype)
-	      {
-	      case 0:
-		printf("======= Generating Gas disk ==========\n");
-		ngas = params.find<long>("DoGas",0);
-		if(ngas > 0)
-		  nwant = GAS_FACTOR * nx * ny;
-		else
-		  nwant = 0;
-		break;
-	      case 1:
-		printf("======= Generating the Bulge ========\n");
-		nwant = params.find<long>("BulgeSize",0);
-		break;
-	      case 2:
-		printf("======= Generating the Halo =========\n");
-		nwant = params.find<long>("DiskSize",0);
-		break;
-	      case 3:
-		printf("======= Generating Globular Clusters \n");
-		nwant = params.find<long>("NGlobes",0) * MAXSTARSPERGLOBE;
-		break;
-	      case 4:
-		printf("======= Generating the Stars =========\n");
-		nstars=params.find<long>("DoStars",0);
-		nwant = nstars * STAR_FACTOR * nx * ny;
-		break;
-	      case 5:
-		printf("======= Nothing to do for BHs ==========\n");
-		nwant=0;
-		break;
-	      }
-	    printf("=====================================\n");
-	    xcomp = new float [nwant];
-	    ycomp = new float [nwant];
-	    zcomp = new float [nwant];
+	    printf("Generating %s component \n",ComponentsName[itype].c_str());
+            long component_type = params.find<long>("Do"+ComponentsName[itype],0);
 
-	    switch(itype)
+	    if(component_type == 0)
 	      {
-	      case 0:
-		if(nwant > 0)
+		printf("  Component switched off\n");
+                nwant = nfinal = npart[itype] = 0;
+	      }
+	    else
+	      {
+		nwant = params.find<long>("N"+ComponentsName[itype],0);
+		xcomp = new float [nwant];
+		ycomp = new float [nwant];
+		zcomp = new float [nwant];
+
+		if(component_type == 3 || component_type == 4)
 		  {
-		    for(long ii=0;ii<numberofstars;ii++)
+		    printf("  Reading color & mask images\n");
+
+		    string imagefile_rgb = params.find<string>(ComponentsName[itype]+"FileRGB","NONE");
+		    string imagefile_mask = params.find<string>(ComponentsName[itype]+"FileMask","NONE");
+
+		    nx = params.find<long>(ComponentsName[itype]+"xres",1000);
+		    ny = params.find<long>(ComponentsName[itype]+"yres",1000);
+
+		    F_starx = new float [nx*ny];
+		    F_stary = new float [nx*ny];
+		    Red   = new float [nx*ny];
+		    Blue  = new float [nx*ny];
+		    Green = new float [nx*ny];
+		    III   = new float [nx*ny];
+
+		    long infiletype =  params.find<long>("InFileType"+ComponentsName[itype],1);
+		    if (infiletype == 0)
+		      {
+			//numberofstars = ReadBMP(imagefile_rgb, imagefile_maks, 
+			//                nx, ny, Rth, Gth, Bth, Red, Green, Blue, III, starx, stary);
+		      } 
+		    else 
+		      {
+			numberofparticles = ReadImages(imagefile_rgb, imagefile_mask, nx, ny, Red, Green, Blue, III, F_starx, F_stary, nwant);
+		      }
+
+		    for(long ii=0;ii<numberofparticles;ii++)
 		      {
 			xcomp[ii] = F_starx[ii];
 			ycomp[ii] = F_stary[ii];
 		      }
-		    nfinal=DiscRFunc (params, ComponentsName[0], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
 		  }
-		break;
-	      case 1:
-		nfinal=GaussRFunc (params, ComponentsName[1], nwant, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
-		break;
-	      case 2:
-		nfinal=GaussRFunc (params, ComponentsName[2], nwant, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
-		break;
-	      case 3:
-		nfinal=GlobularCluster(params, ComponentsName[3], nwant, MAXSTARSPERGLOBE, xcomp, ycomp, zcomp);
-		break;
-	      case 4:
-		if(nwant > 0)
-		  {
-		    for(long ii=0;ii<numberofstars;ii++)
-		      {
-			xcomp[ii] = F_starx[ii];
-			ycomp[ii] = F_stary[ii];
-		      }
-		    nfinal=GaussRFunc (params, ComponentsName[4], numberofstars, nwant, xcomp, ycomp, zcomp, xmax, ymax, zmax, zdeep, III, nx, ny);
-		  }
-		break;
-	      case 5:
-		nfinal=0;
-		break;
-	      }
-	    npart[itype] = nfinal;
-	    cout << nwant << " -> " << nfinal << endl;
-	    if(npart[itype] > 0)
-	      {
 
-		vector<float32> color(3*npart[itype]);
-		vector<float32> intensity(npart[itype]);
-		vector<float32> hsml(npart[itype]);
+		printf("  Generating particle distribution\n");
 
-		cred   = new float [npart[itype]]; 	
-		cgreen = new float [npart[itype]]; 	
-		cblue  = new float [npart[itype]]; 	
-		ciii   = new float [npart[itype]];
-
-		switch(itype)
+		switch(component_type)
 		  {
 		  case 0:
+		    printf("    Component switched off\n");
+		    break;
 		  case 1:
+		    printf("    Exponential Spheroid\n");
+		    nfinal=GaussRFunc (params, ComponentsName[itype], nwant, xcomp, ycomp, zcomp);
+		    break;
 		  case 2:
+		    printf("    Globular Clusters like\n");
+		    maxstarsperglobe = params.find<long>("Nmaxper"+ComponentsName[itype],0);
+		    nfinal=GlobularCluster(params, ComponentsName[itype], nwant, maxstarsperglobe, xcomp, ycomp, zcomp);
+		    break;
 		  case 3:
+		    printf("    Generating disk from image\n");
+		    nfinal=GaussRDiscFunc (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, nx, ny);
+		    break;
 		  case 4:
+		    printf("    Gas distribution from image\n");
+		    nfinal=RDiscFunc (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
+		    break;
 		  case 5:
-		    CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+		    printf("    Nothing to do for BHs\n");
+		    nwant=0;
 		    break;
 		  }
 
-		for (long i=counter=0; i<npart[itype]; i++)
+		npart[itype] = nfinal;
+		printf("    generated %d particles instead of %d\n", nfinal, nwant);
+
+		if(npart[itype] > 0)
 		  {
-		    xyz.push_back(xcomp[i]);
-		    xyz.push_back(ycomp[i]);
-		    xyz.push_back(zcomp[i]);
+		    vector<float32> color(3*npart[itype]);
+		    vector<float32> intensity(npart[itype]);
+		    vector<float32> hsml(npart[itype]);
 
-		    hsml[i] = 0.00001;
+		    cred   = new float [npart[itype]]; 	
+		    cgreen = new float [npart[itype]]; 	
+		    cblue  = new float [npart[itype]]; 	
+		    ciii   = new float [npart[itype]];
 
-		    intensity[i] = ciii[i];
+		    switch(component_type)
+		      {
+		      case 0:
+			printf("    Nothing to do\n");
+			break;
+		      case 1:
+			printf("    Assigning white color\n");
+			for (long i=counter=0; i<npart[itype]; i++)
+			  cred[i] = cgreen[i] = cblue[i] = ciii[i] = 1.0;
+			break;
+		      case 2:
+			printf("    Assigning white color\n");
+			for (long i=counter=0; i<npart[itype]; i++)
+			  cred[i] = cgreen[i] = cblue[i] = ciii[i] = 1.0;
+			break;
+		      case 3:
+		      case 4:
+			printf("    Assigning color from image file\n");
+			CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			break;
+		      }
 
-		    color[counter++] = cred[i];
-		    color[counter++] = cgreen[i];
-		    color[counter++] = cblue[i];
+		    printf("    Assigning fixed hsml\n");
+		    float set_hsml = params.find<float>("hsml"+ComponentsName[itype],0.001); 
 
-		  }
+		    for (long i=counter=0; i<npart[itype]; i++)
+		      {
+			xyz.push_back(xcomp[i]);
+			xyz.push_back(ycomp[i]);
+			xyz.push_back(zcomp[i]);
+
+			hsml[i] = set_hsml;
+
+			intensity[i] = ciii[i];
+
+			color[counter++] = cred[i];
+			color[counter++] = cgreen[i];
+			color[counter++] = cblue[i];
+		      }
 
 #ifdef HDF5
 
 #else
 // write hsml
-		string label("HSM"+dataToString(itype));
-		file << blksize;
-		blocksize = npart[itype]*4 + 8;
-		file.put(label.c_str(),4);
-		file << blocksize;
-		file << blksize;
+		    string label("HSM"+dataToString(itype));
+		    file << blksize;
+		    blocksize = npart[itype]*4 + 8;
+		    file.put(label.c_str(),4);
+		    file << blocksize;
+		    file << blksize;
 
-		file << blocksize-8;
-		file.put(&hsml[0],npart[itype]);
-		file << blocksize-8;
+		    file << blocksize-8;
+		    file.put(&hsml[0],npart[itype]);
+		    file << blocksize-8;
 
 // write intensity
-		label = "INT"+dataToString(itype);
-		file << blksize;
-		blocksize = npart[itype]*4 + 8;
-		file.put(label.c_str(),4);
-		file << blocksize;
-		file << blksize;
+		    label = "INT"+dataToString(itype);
+		    file << blksize;
+		    blocksize = npart[itype]*4 + 8;
+		    file.put(label.c_str(),4);
+		    file << blocksize;
+		    file << blksize;
 
-		file << blocksize-8;
-		file.put(&intensity[0],npart[itype]);
-		file << blocksize-8;
+		    file << blocksize-8;
+		    file.put(&intensity[0],npart[itype]);
+		    file << blocksize-8;
 
 // write color
-		label = "COL"+dataToString(itype);
-		file << blksize;
-		blocksize = 3*npart[itype]*4 + 8;
-		file.put(label.c_str(),4);
-		file << blocksize;
-		file << blksize;
+		    label = "COL"+dataToString(itype);
+		    file << blksize;
+		    blocksize = 3*npart[itype]*4 + 8;
+		    file.put(label.c_str(),4);
+		    file << blocksize;
+		    file << blksize;
 
-		file << blocksize-8;
-		file.put(&color[0],3*npart[itype]);
-		file << blocksize-8;
+		    file << blocksize-8;
+		    file.put(&color[0],3*npart[itype]);
+		    file << blocksize-8;
 #endif
-		delete [] cred;
-		delete [] cgreen;
-		delete [] cblue;
-		delete [] ciii;
+		    delete [] cred;
+		    delete [] cgreen;
+		    delete [] cblue;
+		    delete [] ciii;
+		  }
+
+		if(component_type == 3 || component_type ==4)
+		  {
+		    delete [] F_starx;
+		    delete [] F_stary;
+		    delete [] Red;
+		    delete [] Blue;
+		    delete [] Green;
+		    delete [] III;
+		  }
+
+		delete [] xcomp;
+		delete [] ycomp;
+		delete [] zcomp;
 	      }
-
-	    delete [] xcomp;
-	    delete [] ycomp;
-	    delete [] zcomp;
-
 	  }
 
 
@@ -390,9 +368,9 @@ int main (int argc, const char **argv)
           H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, cblue);
           H5Dclose(arrdata);
 // write float particle_type
-          arrdata =  H5Dcreate(file_id, field[8].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
-          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, particle_type);
-          H5Dclose(arrdata);
+//          arrdata =  H5Dcreate(file_id, field[8].c_str(), H5T_NATIVE_FLOAT, dtotspace, H5P_DEFAULT);
+//          H5Dwrite (arrdata, H5T_NATIVE_FLOAT,  H5S_ALL,  H5S_ALL, H5P_DEFAULT, particle_type);
+//          H5Dclose(arrdata);
  
 	  H5Fclose(file_id);
 #else

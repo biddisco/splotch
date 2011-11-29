@@ -12,13 +12,15 @@
 
 using namespace std;
 
-long DiscRFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
-                 float * coordy, float * coordz,
-                 float xmax, float ymax, float zmax, float * ddd, float * II, long nnx, long nny);
+long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz, float * II, long nnx, long nny);
 
-long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
-                 float * coordy, float * coordz,
-                 float xmax, float ymax, float zmax, float * ddd, float * II, long nnx, long nny);
+long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, float * coordx,
+                 float * coordy, float * coordz);
+
+long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz, long nnx, long nny);
+
 
 void CalculateDensity (float * hsml, float * rho, float * xcoord, float * ycoord,
                        float * zcoord, long numofpart, float smooth);
@@ -30,8 +32,8 @@ void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, 
 long GlobularCluster (paramfile &params, string ComponentName, long number_of_points, long ntot,
                       float * coordx, float * coordy, float * coordz);
 
-long ReadImages (paramfile &params, long numx, long numy, float Rmin, float * RRR,
-                 float * GGG, float * BBB, float * III, float * xx, float * yy);
+long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, float * RRR,
+                 float * GGG, float * BBB, float * III, float * xx, float * yy, long nwant);
 
 const int NUM_OF_FIELDS = 11;
 
