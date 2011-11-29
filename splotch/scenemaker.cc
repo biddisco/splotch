@@ -32,106 +32,102 @@
 using namespace std;
 
 void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
-{
+  {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
   arr<Normalizer<float32> > intnorm(nt), colnorm(nt);
 
   for(int t=0; t<nt; t++)
-  {
+    {
     log_int[t] = params.find<bool>("intensity_log"+dataToString(t),false);
     log_col[t] = params.find<bool>("color_log"+dataToString(t),false);
     asinh_col[t] = params.find<bool>("color_asinh"+dataToString(t),false);
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
-  }
+    }
 
   int npart=p.size();
   tstack_push("minmax");
-  #pragma omp parallel
-  {
-    // FIXME: the "+20" serves as protection against false sharing,
-    // should be done more elegantly
-    arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20);
-    int m;
-    #pragma omp for schedule(guided,1000)
-    for (m=0; m<npart; ++m) // do log calculations if requested
+#pragma omp parallel
+{
+  // FIXME: the "+20" serves as protection against false sharing,
+  // should be done more elegantly
+  arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20);
+  int m;
+#pragma omp for schedule(guided,1000)
+  for (m=0; m<npart; ++m) // do log calculations if requested
     {
-      int t=p[m].type;
+    int t=p[m].type;
 
-      if (log_int[t])
-	{
-	  if(p[m].I > 0)
-	    {
-	      p[m].I = log10(p[m].I);
-	      inorm[t].collect(p[m].I);
-	    }
-	  else
-	    {
-	      p[m].I = -38;
-	    }
-	}
-      else
-	inorm[t].collect(p[m].I);
-
-      if (log_col[t])
-	{
-	  if(p[m].e.r > 0)
-	    {
-	      p[m].e.r = log10(p[m].e.r);
-	      cnorm[t].collect(p[m].e.r);
-	    }
-	  else
-	    {
-	      p[m].e.r =-38;
-	    }
-	}
-      else 
-	{
-	  if (asinh_col[t])
-	    p[m].e.r = my_asinh(p[m].e.r);
-	  cnorm[t].collect(p[m].e.r);
-	}
-
-      if (col_vector[t])
+    if (log_int[t])
       {
-        if (log_col[t])
+      if(p[m].I > 0)
         {
-          p[m].e.g = log10(p[m].e.g);
-          p[m].e.b = log10(p[m].e.b);
+        p[m].I = log10(p[m].I);
+        inorm[t].collect(p[m].I);
         }
-        if (asinh_col[t])
+      else
+        p[m].I = -38;
+      }
+    else
+      inorm[t].collect(p[m].I);
+
+    if (log_col[t])
+      {
+      if(p[m].e.r > 0)
         {
-          p[m].e.g = my_asinh(p[m].e.g);
-          p[m].e.b = my_asinh(p[m].e.b);
+        p[m].e.r = log10(p[m].e.r);
+        cnorm[t].collect(p[m].e.r);
         }
-        cnorm[t].collect(p[m].e.g);
-        cnorm[t].collect(p[m].e.b);
+      else
+        p[m].e.r =-38;
+      }
+    else
+      {
+      if (asinh_col[t])
+        p[m].e.r = my_asinh(p[m].e.r);
+      cnorm[t].collect(p[m].e.r);
+      }
+
+    if (col_vector[t])
+      {
+      if (log_col[t])
+        {
+        p[m].e.g = log10(p[m].e.g);
+        p[m].e.b = log10(p[m].e.b);
+        }
+      if (asinh_col[t])
+        {
+        p[m].e.g = my_asinh(p[m].e.g);
+        p[m].e.b = my_asinh(p[m].e.b);
+        }
+      cnorm[t].collect(p[m].e.g);
+      cnorm[t].collect(p[m].e.b);
       }
     }
-    #pragma omp critical
-    for(int t=0; t<nt; t++)
+#pragma omp critical
+  for(int t=0; t<nt; t++)
     {
-      intnorm[t].collect(inorm[t]);
-      colnorm[t].collect(cnorm[t]);
+    intnorm[t].collect(inorm[t]);
+    colnorm[t].collect(cnorm[t]);
     }
   }
 
   for(int t=0; t<nt; t++)
-  {
+    {
     mpiMgr.allreduce(intnorm[t].minv,MPI_Manager::Min);
     mpiMgr.allreduce(colnorm[t].minv,MPI_Manager::Min);
     mpiMgr.allreduce(intnorm[t].maxv,MPI_Manager::Max);
     mpiMgr.allreduce(colnorm[t].maxv,MPI_Manager::Max);
 
     if (verbose && mpiMgr.master())
-    {
+      {
       cout << " For particles of type " << t << ":" << endl;
       cout << " From data: " << endl;
       cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
            colnorm[t].maxv << " (max) " << endl;
       cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
            intnorm[t].maxv << " (max) " << endl;
-    }
+      }
 
     if(params.param_present("intensity_min"+dataToString(t)))
       intnorm[t].minv = params.find<float>("intensity_min"+dataToString(t));
@@ -146,52 +142,44 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
       colnorm[t].maxv = params.find<float>("color_max"+dataToString(t));
 
     if (verbose && mpiMgr.master())
-    {
+      {
       cout << " Restricted to: " << endl;
       cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
            colnorm[t].maxv << " (max) " << endl;
       cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
            intnorm[t].maxv << " (max) " << endl;
+      }
     }
-  }
   tstack_pop("minmax");
 
   // set variables for the output to the image log file
-  if(params.param_present("color_min0"))
-    colmin0=params.find<float>("color_min0");
-  else
-    colmin0=colnorm[0].minv;
-
-  if(params.param_present("color_max0"))
-    colmax0=params.find<float>("color_max0");
-  else
-    colmax0=colnorm[0].maxv;
-
-  if(params.param_present("brightness0"))
-    bright0=params.find<float>("brightness0");
-  else
-    bright0=1.0;
+  colmin0 = params.param_present("color_min0") ?
+    params.find<float>("color_min0") : colnorm[0].minv;
+  colmax0 = params.param_present("color_max0") ?
+    params.find<float>("color_max0") : colnorm[0].maxv;
+  bright0 = params.param_present("brightness0") ?
+    params.find<float>("brightness0") : 1.0;
 
   tstack_push("clamp");
 
-  #pragma omp parallel
-  {
-    int m;
-    #pragma omp for schedule(guided,1000)
-    for(m=0; m<npart; ++m)
+#pragma omp parallel
+{
+  int m;
+#pragma omp for schedule(guided,1000)
+  for(m=0; m<npart; ++m)
     {
-      int t=p[m].type;
-      intnorm[t].normAndClamp(p[m].I);
-      colnorm[t].normAndClamp(p[m].e.r);
-      if (col_vector[t])
+    int t=p[m].type;
+    intnorm[t].normAndClamp(p[m].I);
+    colnorm[t].normAndClamp(p[m].e.r);
+    if (col_vector[t])
       {
-        colnorm[t].normAndClamp(p[m].e.g);
-        colnorm[t].normAndClamp(p[m].e.b);
+      colnorm[t].normAndClamp(p[m].e.g);
+      colnorm[t].normAndClamp(p[m].e.b);
       }
     }
-  }
+}
   tstack_pop("clamp");
-} // END particle_normalize
+  } // END particle_normalize
 
 // Higher order interpolation would be:
 // Time between snapshots (cosmology!)
