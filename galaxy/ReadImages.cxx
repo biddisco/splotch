@@ -93,7 +93,7 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 		   counter++;
 		   if(counter > nwant)
 		     {
-		       printf("Image mask produces more particles than desired (%d>-%d), have to stop her ...\n",counter,nwant);
+		       printf("Image mask produces more particles than desired (%d>%d), have to stop her ...\n",counter,nwant);
 		       exit(3);
 		     }
 		}
@@ -104,17 +104,20 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 	  delete [] GG;
 	  delete [] BB;
 	  delete [] II;
+	  delete [] x;
+	  delete [] y;
 
 	  printf("    Number of active pixels in mask: %ld\n", counter);
 
-	  /*
+#ifdef WRITE_ASCII
           pFile = fopen("test.txt", "w");
           for(long ii=0; ii<counter; ii++)
           {
              fprintf(pFile, "%f %f 0.0\n", xx[ii],yy[ii]);
           }
           fclose(pFile);
-	  */
+#endif
+
 	  return (counter);
 
 }

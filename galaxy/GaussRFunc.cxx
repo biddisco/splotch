@@ -37,20 +37,42 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
   float sigma_z = params.find<float>("Sigmaz"+ComponentName,0.01);
   long n_per_pixel = params.find<float>("NperPixel"+ComponentName,1);
 
-  printf("      disk with sigma_z = %f\n", sigma_z);
+  printf("      disk with sigma_z = %f, %d particles per pixel\n", sigma_z, n_per_pixel);
 
   long count = 0;
 
-// x/y/z coord
+  float* coordx_save;
+  float* coordy_save;
+  coordx_save = new float [number_of_points];
+  coordy_save = new float [number_of_points];
+
+  for (long i=0; i<number_of_points; i++)
+    {
+      coordx_save[i] = coordx[i];
+      coordy_save[i] = coordy[i];
+    }
 
   float pixsizex = 2./nx;
   float pixsizey = 2./ny;
   for (long i=0; i<number_of_points; i++)
     {
-      for(long k=0; k<n_per_pixel; k++)
+      float x0=coordx_save[i];
+      float y0=coordy_save[i];
+
+      coordx[count] = x0;
+      coordy[count] = y0;
+      coordz[count] = box_muller(0.0, sigma_z);
+      count++;
+      if(count >= ntot)
 	{
-	  coordx[count] = box_uniform(coordx[i], pixsizex);
-	  coordy[count] = box_uniform(coordy[i], pixsizey);
+	  printf("Generating more particles than allowed (%d>=%d)\n",count,ntot);
+	  exit(3);
+	}
+
+      for(long k=1; k<n_per_pixel; k++)
+	{
+	  coordx[count] = box_uniform(x0, pixsizex);
+	  coordy[count] = box_uniform(y0, pixsizey);
 	  coordz[count] = box_muller(0.0, sigma_z);
 	  count++;
 	  if(count >= ntot)
@@ -60,6 +82,9 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 	    }
 	}
     }
+
+  delete [] coordx_save;
+  delete [] coordy_save;
 
   return count;
 
@@ -142,7 +167,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
     {
       float gsigmaz = sigma * (sigma_fixed + coordy[ii]);
       coordz[ii] = box_muller(0.0, gsigmaz);
-      for(long jj=0; jj<npergroup; jj++)
+      for(long jj=1; jj<npergroup; jj++)
 	{
 	  coordx[abscounter] = box_uniform(coordx[ii], pixsizex);
 	  coordy[abscounter] = box_uniform(coordy[ii], pixsizey);
@@ -152,6 +177,6 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
       ii++;
     }
 
-  return abscounter-1;
+  return abscounter;
 
 }

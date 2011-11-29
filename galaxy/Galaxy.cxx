@@ -6,8 +6,6 @@
 int main (int argc, const char **argv)
 {
 
-        FILE * pFile;
-
 // Setparameter file and finaloutput filename
 	string outfile;
         paramfile params (argv[1],false);
@@ -15,11 +13,10 @@ int main (int argc, const char **argv)
 
 // image related variables
 
-	long numberofparticles;
+	long numberofparticles=0;
 	long maxstarsperglobe;
 	float * F_starx;
 	float * F_stary;
-	float fibra_range=32.0;
 	float * Red;
 	float * Blue;
 	float * Green;
@@ -67,7 +64,7 @@ int main (int argc, const char **argv)
 	float * cblue;
 	float * ciii;
 
-	long nwant,nfinal,counter,ngas,nstars;
+	long nwant,nfinal=0;
 
 	for(int itype=0;itype<N_COMP;itype++)
 	  {
@@ -142,7 +139,7 @@ int main (int argc, const char **argv)
 		    nfinal=GaussRDiscFunc (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, nx, ny);
 		    break;
 		  case 4:
-		    printf("    Gas distribution from image\n");
+		    printf("    Generating Gas distribution from image\n");
 		    nfinal=RDiscFunc (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
 		    break;
 		  case 5:
@@ -156,9 +153,9 @@ int main (int argc, const char **argv)
 
 		if(npart[itype] > 0)
 		  {
-		    vector<float32> color(3*npart[itype]);
-		    vector<float32> intensity(npart[itype]);
-		    vector<float32> hsml(npart[itype]);
+		    vector<float32> color;
+		    vector<float32> intensity;
+		    vector<float32> hsml;
 
 		    cred   = new float [npart[itype]]; 	
 		    cgreen = new float [npart[itype]]; 	
@@ -172,15 +169,18 @@ int main (int argc, const char **argv)
 			break;
 		      case 1:
 			printf("    Assigning white color\n");
-			for (long i=counter=0; i<npart[itype]; i++)
+			for (long i=0; i<npart[itype]; i++)
 			  cred[i] = cgreen[i] = cblue[i] = ciii[i] = 1.0;
 			break;
 		      case 2:
 			printf("    Assigning white color\n");
-			for (long i=counter=0; i<npart[itype]; i++)
+			for (long i=0; i<npart[itype]; i++)
 			  cred[i] = cgreen[i] = cblue[i] = ciii[i] = 1.0;
 			break;
 		      case 3:
+			printf("    Assigning color from image file\n");
+			CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			break;
 		      case 4:
 			printf("    Assigning color from image file\n");
 			CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
@@ -190,19 +190,19 @@ int main (int argc, const char **argv)
 		    printf("    Assigning fixed hsml\n");
 		    float set_hsml = params.find<float>("hsml"+ComponentsName[itype],0.001); 
 
-		    for (long i=counter=0; i<npart[itype]; i++)
+		    for (long i=0; i<npart[itype]; i++)
 		      {
 			xyz.push_back(xcomp[i]);
 			xyz.push_back(ycomp[i]);
 			xyz.push_back(zcomp[i]);
 
-			hsml[i] = set_hsml;
+			hsml.push_back(set_hsml);
 
-			intensity[i] = ciii[i];
+			intensity.push_back(ciii[i]);
 
-			color[counter++] = cred[i];
-			color[counter++] = cgreen[i];
-			color[counter++] = cblue[i];
+			color.push_back(cred[i]);
+			color.push_back(cgreen[i]);
+			color.push_back(cblue[i]);
 		      }
 
 #ifdef HDF5
@@ -395,7 +395,8 @@ int main (int argc, const char **argv)
 	  file.close();
 #endif
 
-//#ifdef WRITE_ASCII
+#ifdef WRITE_ASCII
+	  file *pFile;
 	  pFile = fopen("points.ascii", "w");
           long iaux=0;
           for(long ii=0; ii<xyz.size()/3; ii=ii+int(xyz.size()/3/100000))
@@ -404,7 +405,7 @@ int main (int argc, const char **argv)
 	     fprintf(pFile, "%f %f %f\n", xyz[iaux],xyz[iaux+1],xyz[iaux+2]);
 	  }
 	  fclose(pFile);
-//#endif
+#endif
 
         
 }
