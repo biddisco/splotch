@@ -421,12 +421,12 @@ sceneMaker::sceneMaker (paramfile &par)
       sb.reuse_particles=true;
 
       // FIXME: For all components: we have to first test if they are present in the sa.sceneParameters
-      //        and if not readrthem from the param file.
-      //        For the moment we assume that camera us in sceneParameters and the rest in the param file
+      //        and if not read them from the param file.
+      //        For the moment we assume that camera is in sceneParameters and the rest in the param file
       vec3 lookat(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
-      vec3 campos(strtod(sa.sceneParameters["camera_x"].c_str(),NULL),
-                  strtod(sa.sceneParameters["camera_y"].c_str(),NULL),
-                  strtod(sa.sceneParameters["camera_z"].c_str(),NULL));
+      vec3 campos(stringToData<double>(sa.sceneParameters["camera_x"]),
+                  stringToData<double>(sa.sceneParameters["camera_y"]),
+                  stringToData<double>(sa.sceneParameters["camera_z"]));
       vec3 sky(params.find<double>("sky_x",0),params.find<double>("sky_y",0),params.find<double>("sky_z",1));
 
       vec3 view = lookat - campos;
