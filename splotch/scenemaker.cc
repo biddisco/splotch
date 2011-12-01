@@ -421,7 +421,7 @@ sceneMaker::sceneMaker (paramfile &par)
       sb.reuse_particles=true;
 
       vec3 lookat(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
-      vec3 campos(params.find<double>("campos_x"),params.find<double>("campos_y"),params.find<double>("campos_z"));
+      vec3 campos(params.find<double>("camera_x"),params.find<double>("camera_y"),params.find<double>("camera_z"));
       vec3 sky(params.find<double>("sky_x",0),params.find<double>("sky_y",0),params.find<double>("sky_z",1));
 
       vec3 view = lookat - campos;
@@ -438,14 +438,14 @@ sceneMaker::sceneMaker (paramfile &par)
       double distance = eye_separation * view.Length();
 
       vec3 campos_r = campos - right / right.Length() * distance*0.5;
-      sa.sceneParameters["campos_x"] = dataToString(campos_r.x);
-      sa.sceneParameters["campos_y"] = dataToString(campos_r.y);
-      sa.sceneParameters["campos_z"] = dataToString(campos_r.z);
+      sa.sceneParameters["camera_x"] = dataToString(campos_r.x);
+      sa.sceneParameters["camera_y"] = dataToString(campos_r.y);
+      sa.sceneParameters["camera_z"] = dataToString(campos_r.z);
 
       vec3 campos_l = campos + right / right.Length() * distance*0.5;
-      sb.sceneParameters["campos_x"] = dataToString(campos_l.x);
-      sb.sceneParameters["campos_y"] = dataToString(campos_l.y);
-      sb.sceneParameters["campos_z"] = dataToString(campos_l.z);
+      sb.sceneParameters["camera_x"] = dataToString(campos_l.x);
+      sb.sceneParameters["camera_y"] = dataToString(campos_l.y);
+      sb.sceneParameters["camera_z"] = dataToString(campos_l.z);
 
       sa.outname = "left_"+sa.outname;
       sb.outname = "right_"+sb.outname;
