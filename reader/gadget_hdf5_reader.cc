@@ -40,17 +40,16 @@ using namespace std;
 void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *attribute, hid_t hdf5_datatype )
 {
   hid_t   hdf5_attribute, hdf5_dataSpace;
-  herr_t  hdf5_status;
   int     rank;
   hsize_t sdim[64];
   //
   hdf5_attribute = H5Aopen_name(hdf5_group, attrName);
   hdf5_dataSpace = H5Aget_space(hdf5_attribute);
   rank           = H5Sget_simple_extent_ndims(hdf5_dataSpace);
-  hdf5_status    = H5Sget_simple_extent_dims(hdf5_dataSpace, sdim, NULL);
-  hdf5_status    = H5Aread(hdf5_attribute, hdf5_datatype, attribute);
-  hdf5_status    = H5Sclose(hdf5_dataSpace);
-  hdf5_status    = H5Aclose(hdf5_attribute);
+  H5Sget_simple_extent_dims(hdf5_dataSpace, sdim, NULL);
+  H5Aread(hdf5_attribute, hdf5_datatype, attribute);
+  H5Sclose(hdf5_dataSpace);
+  H5Aclose(hdf5_attribute);
 }
 
 
@@ -583,7 +582,9 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         {
           int type = params.find<int>("ptype"+dataToString(itype),0);
 
-          arr<MyIDType> ftmp(npartthis[type]);
+          //arr<MyIDType> ftmp(npartthis[type]);
+          // TODO: implement support for long IDs
+          arr<uint32> ftmp(npartthis[type]);
 
           if(npartthis[type]==0) continue;
 
@@ -595,20 +596,31 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
           readHDF5DataArray(group_id, "ParticleIDs", H5T_NATIVE_UINT, (void*) &ftmp[0]);
           H5Gclose(group_id);
 
-
+/*
           if(type == 0)
           {
             cout << "WARNING: Patching IDs for gas particles in Magneticum runs !!!" << endl;
             for(unsigned int m=0; m<ftmp.size(); m++)
               ftmp[m] = ftmp[m] & 3221225471;           // remove upper 2 bits opf 32bit value 2^30-1
           }
-
           if(type == 4)
           {
             cout << "WARNING: Patching IDs for star particles in Magneticum runs !!!" << endl;
             for(unsigned int m=0; m<ftmp.size(); m++)
-              ftmp[m] = ftmp[m] + 536870912;           // adding 2^29
+              ftmp[m] = ftmp[m] + gca;           // adding 2^29
           }
+*/
+
+          if(type == 4)
+          {
+            cout << "WARNING: Patching IDs for star particles!" << endl;
+            // TODO  - think about a better way to make star IDs unique
+            //       - what if there are more than 2 Billion non-star particles?
+            // max for uint32 is 4.294.967.295
+            for(unsigned int m=0; m<ftmp.size(); m++)
+              ftmp[m] = ftmp[m] + 2000000000;
+          }
+
 
           for(int m=0; m<npartthis[type]; ++m)
           {

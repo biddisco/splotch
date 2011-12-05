@@ -31,10 +31,11 @@ class sceneMaker
     double boxsize;
 
     // only used if interpol_mode>0
-    std::vector<particle_sim> p1,p2;
-    std::vector<MyIDType> id1,id2;
-    std::vector<uint32> idx1,idx2;
-    int snr1_now,snr2_now;
+    std::vector<particle_sim> p1,   p2;
+    std::vector<MyIDType>     id1,  id2;
+    std::vector<MyIDType>     idx1, idx2;
+
+    int snr1_now, snr2_now;
 
     // buffers to hold the times relevant to the *currently loaded snapshots*
     double time1, time2;
@@ -46,7 +47,7 @@ class sceneMaker
     double colmin0, colmax0, bright0; // color and brightness values of species 0
 
     // only used if interpol_mode>1
-    std::vector<vec3f> vel1,vel2;
+    std::vector<vec3f> vel1, vel2;
 
     // only used if the same particles are used for more than one scene
     std::vector<particle_sim> p_orig;
@@ -57,6 +58,26 @@ class sceneMaker
     void particle_normalize(std::vector<particle_sim> &p, bool verbose);
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
+
+    // --- routines and variables necessary for the MPI parallelization of the interpolation ---|
+    // routine which actually does the particle exchange
+    void MpiFetchRemoteParticles();
+    // class-global variable to save the number of particles which are initially in p2
+    MyIDType numberOfLocalParticles;
+    //
+    std::vector<particle_sim> p2Backup;
+    std::vector<MyIDType>     id2Backup;
+    std::vector<MyIDType>     idx2Backup;
+    //
+    // switch debug messages on
+    bool MpiDebugMsg;
+    bool MpiPatchP2;
+    // routine which strips remote particles from p2
+    void MpiStripRemoteParticles();
+    // create debug output
+    void MpiDumpDebug(std::vector<particle_sim> &pvect, std::vector<MyIDType> &pvectid, std::string &debugFileName);
+    void MpiDumpDebug(std::vector<particle_sim> &pvect, std::string &debugFileName);
+    // --- routines and variables necessary for the MPI parallelization of the interpolation ---/
 
   public:
   sceneMaker (paramfile &par);

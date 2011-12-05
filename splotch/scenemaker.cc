@@ -20,14 +20,17 @@
  */
 #include <iostream>
 #include <fstream>
+#include <limits>
 
 #include "splotch/scenemaker.h"
+#include "splotch/splotchutils.h"
 #include "cxxsupport/lsconstants.h"
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/cxxutils.h"
+#include "cxxsupport/datatypes.h"
 #include "reader/reader.h"
-//boost
 #include "booster/mesh_vis.h"
+
 
 using namespace std;
 
@@ -203,7 +206,7 @@ Mesh_dim MeshD;
 
 void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
 {
-  cout << " Time1/2 = " << time1 << "," << time2 << endl;
+  cout << "particle_interpolate() : Time 1,2 = " << time1 << "," << time2 << endl << flush;
 
   releaseMemory(p);
 
@@ -317,8 +320,10 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   intRedshift = (1.-frac)*redshift1 + frac*redshift2;
 
   if(mpiMgr.master())
-    cout << " found " << p.size() << " common particles ..." << endl;
-
+  {
+    cout << "particle_interpolate() : p1.size(), p2.size(), p.size() : "
+        << p1.size() << ", " << p2.size() << ", " << p.size() << endl << flush;
+  }
 }
 
 
@@ -349,9 +354,12 @@ sceneMaker::sceneMaker (paramfile &par)
   }
   else
   {
+/*
     if (interpol_mode>0)
       planck_assert(mpiMgr.num_ranks()==1,
                     "Sorry, interpolating between files is not yet MPI parallelized ...");
+*/
+
     ifstream inp(geometry_file.c_str());
     planck_assert (inp, "could not open scene file '" + geometry_file +"'");
     int current_scene = params.find<int>("scene_start",0);
@@ -490,6 +498,9 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       if (snr1==snr2_now)
       {
         cout << " old2 = new1!" << endl;
+        //
+        MpiStripRemoteParticles();
+        //
         p1.swap(p2);
         id1.swap(id2);
         idx1.swap(idx2);
@@ -503,7 +514,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new1 " << snr1 << endl;
         gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
-	mpiMgr.barrier();
+        mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id1.begin(),id1.end(),idx1);
         tstack_replace("Particle index generation","Input");
@@ -513,11 +524,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new2 " << snr2 << endl;
         gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
-	mpiMgr.barrier();
+        mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id2.begin(),id2.end(),idx2);
         tstack_replace("Particle index generation","Input");
         snr2_now = snr2;
+        //
+        MpiFetchRemoteParticles();
+        mpiMgr.barrier();
       }
     }
     else
@@ -566,6 +580,9 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       if (snr1==snr2_now)
       {
         cout << " old2 = new1!" << endl;
+        //
+        MpiStripRemoteParticles();
+        //
         p1.swap(p2);
         id1.swap(id2);
         idx1.swap(idx2);
@@ -579,7 +596,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new1 " << snr1 << endl;
         gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,redshift1,boxsize);
-	mpiMgr.barrier();
+        mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id1.begin(),id1.end(),idx1);
         tstack_replace("Particle index generation","Input");
@@ -589,11 +606,15 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       {
         cout << " reading new2 " << snr2 << endl;
         gadget_hdf5_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,redshift2,boxsize);
-	mpiMgr.barrier();
+        mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id2.begin(),id2.end(),idx2);
         tstack_replace("Particle index generation","Input");
         snr2_now = snr2;
+        //
+        MpiFetchRemoteParticles();
+        //
+        mpiMgr.barrier();
       }
     }
     else
@@ -748,4 +769,425 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   }
 
   return true;
+}
+
+
+
+/**
+ * Routines for MPI parallel interpolation below.  Testing is needed.  Klaus Reuter, RZG
+ */
+
+// MpiFetchRemoteParticles() adds particles from remote processes to p2
+void sceneMaker::MpiFetchRemoteParticles ()
+{
+  if (mpiMgr.num_ranks()==1)
+    return;
+
+  // switch: output debug messages, particle counts etc ...
+  MpiDebugMsg=false;
+  // switch: patch the "real" vector p2 with remote particles required for interpolation
+  //   or
+  // create a temporary copy of p2 with local and remote data
+  MpiPatchP2=true;
+
+
+  if (MpiDebugMsg)
+  {
+    cout << "MpiFetchRemoteParticles() : BEGIN" << endl << flush;
+    cout << "MpiFetchRemoteParticles() : Determining required particles ..." << endl << flush;
+  }
+
+  if (MpiPatchP2)
+  {
+    // save the number of particles which are initially in p2
+    // this information is needed in MpiStripRemoteParticles()
+    numberOfLocalParticles=p2.size();
+  }
+  else
+  {
+    // create a backup copy of p2 and the related data structures
+    p2Backup   = p2;
+    id2Backup  = id2;
+    idx2Backup = idx2;
+  }
+
+  // data structures ("q2") which collect data and are used to patch p2 and id2
+  vector<particle_sim> q2;  q2.clear();
+  vector<MyIDType> idQ2;    idQ2.clear();
+
+  vector<MyIDType> requiredRemoteParticleIds;
+  requiredRemoteParticleIds.clear();
+
+  if (MpiPatchP2)
+  {
+    //search for the particles that are *really* needed
+    //
+    tsize i1=0;
+    tsize i2=0;
+    tsize nZeros=0;
+    //
+    while(i1<p1.size() && i2<p2.size())
+    {
+      if (id1[idx1[i1]]==id2[idx2[i2]])
+      {
+        // particle is present in both, p1 and p2
+        if (id1[idx1[i1]]==0)
+          nZeros++;
+        i1++;
+        i2++;
+      }
+      else if (id1[idx1[i1]]<id2[idx2[i2]])
+      {
+        // particle is present in p1 but not in p2
+        if (id1[idx1[i1]]>0)
+          requiredRemoteParticleIds.push_back( id1[idx1[i1]] );
+        i1++;
+      }
+      else if (id1[idx1[i1]]>id2[idx2[i2]])
+      {
+        // particle is present in p2 but not in p1
+        i2++;
+      }
+    }
+    //
+    if (MpiDebugMsg)
+      cout << "MpiFetchRemoteParticles() : nZeros : " << nZeros << endl << flush;
+  }
+  else
+  {
+    // "dumb" method: set all required Ids to id1
+    requiredRemoteParticleIds=id1;
+  }
+
+
+  int numberOfRequiredRemoteParticleIds;
+  numberOfRequiredRemoteParticleIds = requiredRemoteParticleIds.size();
+
+  if (MpiDebugMsg)
+    cout << "MpiFetchRemoteParticles() : Required particles : " << numberOfRequiredRemoteParticleIds << endl << flush;
+
+
+  //
+  // In each MPI rank, we now have:
+  //  requiredRemoteParticleIds         : list of particle IDs which are not in p2 and needed from other MPI processes
+  //  numberOfRequiredRemoteParticleIds : the number of particles needed from other MPI processes
+  //
+  // We now loop over all ranks, where iRank is the rank
+  // which shall receive required data from all other ranks
+  // the vectors q2 and idQ2 collect the data and the indices
+  //
+  for (int iRank=0; iRank<mpiMgr.num_ranks(); iRank++)
+  {
+
+    if (MpiDebugMsg)
+      cout << "MpiFetchRemoteParticles() : Redistributing required particles -- begin, iRank=" << iRank << endl << flush;
+
+    if (iRank==mpiMgr.rank())
+    {
+      q2.clear();
+      idQ2.clear();
+    }
+
+
+    // communicate the number of particles iRank needs to all other ranks
+    MyIDType nParticles;
+    if (iRank==mpiMgr.rank())
+      nParticles=numberOfRequiredRemoteParticleIds;
+    mpiMgr.bcastRaw(&nParticles, 1, iRank);
+
+
+    // communicate the actual particle Ids iRank needs to all other ranks
+    vector<MyIDType> needParticleIds;
+    needParticleIds.clear();
+    //
+    if (iRank==mpiMgr.rank())
+      needParticleIds=requiredRemoteParticleIds;
+    else
+      needParticleIds.resize(nParticles);
+    //
+    mpiMgr.bcastRaw(&needParticleIds[0], nParticles/*no sizeof() needed here!!!*/, iRank);
+
+
+    // in each rank, we build an index for the particles iRank needs
+    vector<MyIDType> needIdx;
+    needIdx.clear();
+    buildIndex(needParticleIds.begin(),needParticleIds.end(),needIdx);
+
+
+    // now we need to find out if the current rank has some of the particles needed by iRank
+    int haveNParticleIds;   haveNParticleIds = 0;
+    // save particle data if it is found
+    vector<particle_sim> haveParticleData;  haveParticleData.clear();
+    vector<MyIDType> haveParticleId;        haveParticleId.clear();
+    //
+    if ((!MpiPatchP2) || ((MpiPatchP2)&&(iRank!=mpiMgr.rank())))
+    {
+      if (MpiDebugMsg)
+        cout << "MpiFetchRemoteParticles() : Redistributing required particles -- searching, iRank=" << iRank << endl << flush;
+
+      tsize i1=0, i2=0;
+      while(i1<needParticleIds.size() && i2<p2.size())
+      {
+        if (needParticleIds[needIdx[i1]]==id2[idx2[i2]])
+        {
+          // particle is present in both, needParticleIds *and* id2
+          haveParticleData.push_back(  p2[idx2[i2]] );
+          haveParticleId.push_back(   id2[idx2[i2]] );
+          haveNParticleIds++;
+          i1++;
+          i2++;
+        }
+        else if (needParticleIds[needIdx[i1]]<id2[idx2[i2]])
+        {
+          // particle is present in needParticleIds but not in id2
+          i1++;
+        }
+        else if (needParticleIds[needIdx[i1]]>id2[idx2[i2]])
+        {
+          // particle is present in id2 but not in needParticleIds
+          i2++;
+        }
+      }
+    }
+    mpiMgr.barrier();
+
+
+    // now we need to communicate back to iRank
+    // the number of particles each rank has to offer
+    vector<int> numberOfParticlesFromRank;
+    numberOfParticlesFromRank.clear();
+    {
+      arr<int> numPartTmp;
+      numPartTmp.alloc(mpiMgr.num_ranks());
+      // for convenience, we use gather_m which supports the arr datatype
+      mpiMgr.gather_m(haveNParticleIds, numPartTmp, iRank);
+      //
+      if (iRank==mpiMgr.rank())
+      {
+        for (int jRank=0; jRank<mpiMgr.num_ranks(); jRank++)
+        {
+          numberOfParticlesFromRank.push_back( numPartTmp[jRank] );
+        }
+        if (MpiDebugMsg)
+        {
+          cout << "MpiFetchRemoteParticles() : numberOfParticlesFromRank, jRank" << endl;
+          for (int jRank=0; jRank<mpiMgr.num_ranks(); jRank++)
+          {
+            cout << "   " << numberOfParticlesFromRank[jRank] << ", " << jRank << endl;
+          }
+          cout << flush;
+        }
+      }
+      numPartTmp.dealloc();
+    }
+    mpiMgr.barrier();
+
+
+    // now we need to actually communicate the particle data and the Ids back to iRank
+    //
+    if (MpiDebugMsg)
+      cout << "MpiFetchRemoteParticles() : Redistributing required particles -- sending particle IDs, iRank=" << iRank << endl << flush;
+    //
+    for (int jRank=0; jRank<mpiMgr.num_ranks(); jRank++)
+    {
+      if (iRank!=jRank)
+      {
+        if (iRank==mpiMgr.rank())
+        {
+          // receive particle Ids
+          vector<MyIDType> idQ2Tmp;
+          idQ2Tmp.resize( numberOfParticlesFromRank[jRank] );
+          // receive particle_sim objects from rank jRank
+          mpiMgr.recvRawVoid(&(idQ2Tmp[0]), NAT_CHAR, numberOfParticlesFromRank[jRank]*sizeof(MyIDType), jRank);
+          // append these objects to q2
+          for (vector<MyIDType>::iterator it=idQ2Tmp.begin(); it!=idQ2Tmp.end(); ++it)
+          {
+            idQ2.push_back(*it);
+          }
+          idQ2Tmp.clear();
+        }
+        else if (jRank==mpiMgr.rank())
+        {
+          // send particle Ids
+          mpiMgr.sendRawVoid(&(haveParticleId[0]), NAT_CHAR, haveParticleId.size()*sizeof(MyIDType), iRank);
+        }
+      }
+      else // (iRank==jRank)
+      {
+        if ((!MpiPatchP2) && (iRank==mpiMgr.rank()))
+          idQ2.insert(idQ2.end(), haveParticleId.begin(), haveParticleId.end());
+      }
+      mpiMgr.barrier();
+    }
+
+    if (MpiDebugMsg)
+      cout << "MpiFetchRemoteParticles() : Redistributing required particles -- sending particle data, iRank=" << iRank << endl << flush;
+
+    for (int jRank=0; jRank<mpiMgr.num_ranks(); jRank++)
+    {
+      if (iRank!=jRank)
+      {
+        if (iRank==mpiMgr.rank())
+        {
+          // receive particle data
+          vector<particle_sim> q2Tmp;
+          q2Tmp.resize( numberOfParticlesFromRank[jRank] );
+          // receive particle_sim objects from rank jRank
+          tsize nBytes=numberOfParticlesFromRank[jRank]*sizeof(particle_sim);
+          //
+          // TODO : cut MPI message into pieces
+          planck_assert(nBytes < std::numeric_limits<int>::max(), "Ooops, too many elements in MPI message.");
+          //
+          tsize source=jRank;
+          if (MpiDebugMsg)
+            cout << "nBytes, source : " << nBytes << ", " << source << endl << flush;
+          //
+          mpiMgr.recvRawVoid(&(q2Tmp[0]), NAT_CHAR, nBytes, source);
+          // append these objects to q2
+          for (vector<particle_sim>::iterator it=q2Tmp.begin(); it!=q2Tmp.end(); ++it)
+          {
+            q2.push_back(*it);
+          }
+          q2Tmp.clear();
+        }
+        else if (jRank==mpiMgr.rank())
+        {
+          // send particle data
+          tsize nBytes=haveParticleData.size()*sizeof(particle_sim);
+          //
+          // TODO : cut MPI message into pieces
+          planck_assert(nBytes<std::numeric_limits<int>::max(), "Ooops, too many elements in MPI message.");
+          //
+          tsize target=iRank;
+          if (MpiDebugMsg)
+            cout << "nBytes, target : " << nBytes << ", " << target << endl << flush;
+          //
+          mpiMgr.sendRawVoid(&(haveParticleData[0]), NAT_CHAR, nBytes, target);
+        }
+      }
+      else // (iRank==jRank)
+      {
+        if ((!MpiPatchP2) && (iRank==mpiMgr.rank()))
+          q2.insert(q2.end(), haveParticleData.begin(), haveParticleData.end());
+      }
+      mpiMgr.barrier();
+    }
+
+    if (MpiDebugMsg)
+      cout << "MpiFetchRemoteParticles() : end of iRank loop ..." << endl << flush;
+
+  } // end of the outer loop over iRank
+
+  mpiMgr.barrier();
+
+  // Status: On each MPI process, the vectors
+  //   idQ2 hold the particle Ids for "remote" particles,
+  //   q2   holds the particle data - " -
+  if (MpiDebugMsg)
+  {
+    cout << "MpiFetchRemoteParticles() : appending new particles ..." << endl;
+    cout << "p1Size, id1Size  : " << p1.size() << ", " << id1.size()  << endl;
+    cout << "p2Size, id2Size  : " << p2.size() << ", " << id2.size()  << endl;
+    cout << "q2Size, idQ2Size : " << q2.size() << ", " << idQ2.size() << endl << flush;
+  }
+
+  if (MpiPatchP2)
+  {
+    for (vector<particle_sim>::iterator it=q2.begin(); it!=q2.end(); ++it)
+    {
+      p2.push_back(*it);
+    }
+    for (vector<MyIDType>::iterator it=idQ2.begin(); it!=idQ2.end(); ++it)
+    {
+      id2.push_back(*it);
+    }
+  }
+  else
+  {
+    p2.swap(q2);
+    id2.swap(idQ2);
+  }
+
+  q2.clear();
+  idQ2.clear();
+
+
+  if (MpiDebugMsg)
+    cout << "MpiFetchRemoteParticles() : recreating index idx2 ..." << endl << flush;
+
+  // regenerate the indices as new particles and ids were appended
+  tstack_replace("Input","Particle index generation");
+  idx2.clear();
+  buildIndex(id2.begin(), id2.end(), idx2);
+  tstack_replace("Particle index generation","Input");
+
+  mpiMgr.barrier();
+
+  if (MpiDebugMsg)
+    cout << "MpiFetchRemoteParticles() : END" << endl << flush;
+
+  return;
+}
+
+
+
+// MpiStripRemoteParticles() removes particles from p2
+void sceneMaker::MpiStripRemoteParticles ()
+{
+  if (mpiMgr.num_ranks()==1)
+    return;
+
+  if (MpiDebugMsg)
+    cout << "MpiStripRemoteParticles() : removing remote data ..." << endl << flush;
+
+  if (MpiPatchP2)
+  {
+    p2.erase(  p2.begin() + numberOfLocalParticles,  p2.end());
+    id2.erase(id2.begin() + numberOfLocalParticles, id2.end());
+
+    if (MpiDebugMsg)
+      cout << "MpiStripRemoteParticles() : regenerating idx2 ..." << endl << flush;
+
+    // regenerate the indices as some particles and ids were removed
+    tstack_replace("Input","Particle index generation");
+    idx2.clear();
+    buildIndex(id2.begin(), id2.end(), idx2);
+    tstack_replace("Particle index generation","Input");
+  }
+  else
+  {
+    p2.swap(p2Backup);
+    id2.swap(id2Backup);
+    idx2.swap(idx2Backup);
+    p2Backup.clear();
+    id2Backup.clear();
+    idx2Backup.clear();
+  }
+
+  return;
+}
+
+
+void sceneMaker::MpiDumpDebug(std::vector<particle_sim> &pvect, std::vector<MyIDType> &pvectid, std::string &debugFileName)
+{
+  std::ofstream myfile;
+  myfile.open( debugFileName.c_str() );
+  uint32 count;  count=0;
+  for (vector<particle_sim>::iterator it=pvect.begin(); it!=pvect.end(); ++it, ++count)
+  {
+    myfile << pvectid[count] << ", " << (*it).r << ", " << (*it).I << endl;
+  }
+  myfile.close();
+}
+void sceneMaker::MpiDumpDebug(std::vector<particle_sim> &pvect, std::string &debugFileName)
+{
+  std::ofstream myfile;
+  myfile.open( debugFileName.c_str() );
+  cout << "Writing " << debugFileName << "... ";
+  for (vector<particle_sim>::iterator it=pvect.begin(); it!=pvect.end(); ++it)
+  {
+    myfile << (*it).r << ", " << (*it).I << endl;
+  }
+  cout << "done." << endl << flush;
+  myfile.close();
 }
