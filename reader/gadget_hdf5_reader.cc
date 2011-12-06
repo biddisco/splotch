@@ -655,7 +655,6 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
               ftmp[m] = ftmp[m] + 2000000000;
           }
 
-
           for(int m=0; m<npartthis[type]; ++m)
           {
             if(ThisTask == ToTask)

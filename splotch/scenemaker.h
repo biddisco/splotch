@@ -68,6 +68,7 @@ class sceneMaker
     std::vector<particle_sim> p2Backup;
     std::vector<MyIDType>     id2Backup;
     std::vector<MyIDType>     idx2Backup;
+    std::vector<vec3f>        vel2Backup;
     //
     // switch debug messages on
     bool MpiDebugMsg;

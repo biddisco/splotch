@@ -47,9 +47,19 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
+
   tstack_push("Splotch");
   tstack_push("Setup");
   bool master = mpiMgr.master();
+
+  // Prevent the rendering to quit if the "stop" file
+  // has been forgotten before Splotch was started
+  if (master)
+  {
+    if (fopen("stop", "r"))
+      unlink("stop");
+  }
+
 #ifdef SPLVISIVO
   planck_assert(!opt.splotchpar.empty(),"usage: --splotch <parameter file>");
   paramfile params (opt.splotchpar.c_str(),false);
@@ -206,6 +216,16 @@ int main (int argc, const char **argv)
     cuda_timeReport(params);
 #endif
     timeReport();
+
+    mpiMgr.barrier();
+    // Abandon ship if a file named "stop" is found in the working directory.
+    // ==>  Allows to stop rendering conveniently using a simple "touch stop".
+    if (fopen("stop", "r"))
+    {
+      mpiMgr.~MPI_Manager();
+      break;
+    }
+
     }
 
 #ifdef VS
