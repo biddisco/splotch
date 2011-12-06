@@ -53,23 +53,29 @@ void read_hdf5_group_attribute( hid_t hdf5_group, const char *attrName, void *at
 }
 
 
-// Function to read data from the Gadget HDF5 header, similar to the standard gadget reader function
-//    <int gadget_read_hdf5_header(bifstream &file, int32 *npart, double &time, int32 *nparttotal)>.
-//
 int gadget_read_hdf5_header(hid_t hdf5_file, unsigned int *npart, double &time, double &redshift, 
-                            unsigned int *nparttotal, double &boxsize)
+                            unsigned int *nparttotal, double &boxsize, paramfile &params)
 {
   hid_t  hdf5_header;
   herr_t hdf5_status;
+  double tmpDbl;
 
   hdf5_header = H5Gopen(hdf5_file, "/Header", H5P_DEFAULT);
-  //
+
   read_hdf5_group_attribute(hdf5_header, "NumPart_ThisFile", npart,      H5T_NATIVE_UINT);
   read_hdf5_group_attribute(hdf5_header, "Time_GYR",         &time,      H5T_NATIVE_DOUBLE);
   read_hdf5_group_attribute(hdf5_header, "Redshift",         &redshift,  H5T_NATIVE_DOUBLE);
   read_hdf5_group_attribute(hdf5_header, "NumPart_Total",    nparttotal, H5T_NATIVE_UINT);
   read_hdf5_group_attribute(hdf5_header, "BoxSize",          &boxsize,   H5T_NATIVE_DOUBLE);
-  //
+
+  // read information necessary for the high order interpolation
+  read_hdf5_group_attribute(hdf5_header, "HubbleParam",      &tmpDbl,    H5T_NATIVE_DOUBLE);
+  params.setParam("hubble",dataToString(tmpDbl));
+  read_hdf5_group_attribute(hdf5_header, "Omega0",           &tmpDbl,    H5T_NATIVE_DOUBLE);
+  params.setParam("omega",dataToString(tmpDbl));
+  read_hdf5_group_attribute(hdf5_header, "OmegaLambda",      &tmpDbl,    H5T_NATIVE_DOUBLE);
+  params.setParam("lambda",dataToString(tmpDbl));
+
   hdf5_status = H5Gclose(hdf5_header);
 
   return 0;
@@ -134,22 +140,43 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
                         double &time, double &redshift, double &boxsize)
 {
   int numfiles = params.find<int>("numfiles",1);
-  string infilename = params.find<string>("infile");
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
   int ptype_found = -1, ntot = 1;
 
+  string infilename = params.find<string>("infile");
+  string snapdir    = params.find<string>("snapdir",string(""));
+  string datadir    = params.find<string>("datadir",string(""));
   string filename;
 
   int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
   arr<long> NPartThisTask(NTasks);
 
-  if (interpol_mode>0)
-    infilename += intToString(snr,3);
 
-  if (params.find<bool>("snapdir",false))
-    infilename = "snapdir_"+intToString(snr,3)+"/"+infilename;
+  // --- construct the filename (prefix) for the data files ---
+  //     (uses the variable filename as temporary variable)
+  filename.clear();
+  // (1) add a data directory, if present
+  //     e.g. "/data/"
+  if (datadir.size()>0)
+    filename += datadir+"/";
+  //
+  // (2) below the data directory, add a snapshot directory
+  //     which is numbered by definition
+  //     e.g. "/data/snapshot_000/"
+  if (snapdir.size()>0)
+  {
+    filename += snapdir+intToString(snr,3)+"/";
+  }
+  //
+  // (3) add a number to the filename, which is done always based on snr
+  //     e.g. "/data/snapshot_000/snap_000"
+  filename += infilename+intToString(snr,3);
+  infilename = filename;
+  filename.clear();
+  // ---
+
 
   planck_assert(numfiles >= readparallel,
     "Number of files must be larger or equal number of parallel reads ...");
@@ -193,18 +220,14 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         filename=infilename;
 
         if (numfiles>1)
-          filename+="."+dataToString(file)+".hdf5";
+          filename+="."+dataToString(file);
 
-        //infile.open(filename.c_str(),doswap);
-        //planck_assert (infile,"could not open input file! <" + filename + ">");
-        //gadget_read_header(infile,npartthis,time,nparttotal,boxsize);
-        //infile.close();
+        filename+=".hdf5";
 
-        // OK, now in HDF5 ...
+
         hid_t file_id;
         file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        // gadget_read_hdf5_header(file_id, npartthis, time, nparttotal, boxsize);
-        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
         H5Fclose(file_id);
 
         if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
@@ -328,15 +351,18 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       int LastType=-1;
       filename=infilename;
 
+//      if (numfiles>1)
+//        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
       if (numfiles>1)
-        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+        filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+      filename+=".hdf5";
 
       if(!params.find<bool>("AnalyzeSimulationOnly"))
         cout << " Task: " << ThisTask << " reading file " << filename << endl;
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
 
       for(int itype=0; itype<ptypes; itype++)
@@ -483,12 +509,16 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
           filename=infilename;
 
+//          if (numfiles>1)
+//            filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
           if (numfiles>1)
-            filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+            filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+          filename+=".hdf5";
+
 
           hid_t file_id;
           file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-          gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+          gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
           for(int itype=0; itype<ptypes; itype++)
           {
@@ -572,11 +602,15 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
         int LastType=-1;
         filename=infilename;
 
+//        if (numfiles>1)
+//          filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
         if (numfiles>1)
-          filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+          filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+        filename+=".hdf5";
+
         hid_t file_id;
         file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+        gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
         for(int itype=0; itype<ptypes; itype++)
         {
@@ -613,7 +647,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
           if(type == 4)
           {
-            cout << "WARNING: Patching IDs for star particles!" << endl;
+            cout << " WARNING: Patching IDs for star particles!" << endl;
             // TODO  - think about a better way to make star IDs unique
             //       - what if there are more than 2 Billion non-star particles?
             // max for uint32 is 4.294.967.295
@@ -674,12 +708,15 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       int LastType=-1;
       filename=infilename;
 
+//      if (numfiles>1)
+//        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
       if (numfiles>1)
-        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+        filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+      filename+=".hdf5";
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
       for(int itype=0; itype<ptypes; itype++)
       {
@@ -751,12 +788,15 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       int LastType=-1;
       filename=infilename;
 
+//      if (numfiles>1)
+//        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
       if (numfiles>1)
-        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+        filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+      filename+=".hdf5";
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
       for(int itype=0; itype<ptypes; itype++)
       {
@@ -869,12 +909,15 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
       int LastType=-1;
       filename=infilename;
 
+//      if (numfiles>1)
+//        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
       if (numfiles>1)
-        filename+="."+dataToString(ThisTaskReads[ThisTask]+f)+".hdf5";
+        filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
+      filename+=".hdf5";
 
       hid_t file_id;
       file_id = H5Fopen(filename.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
-      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize);
+      gadget_read_hdf5_header(file_id, npartthis, time, redshift, nparttotal, boxsize, params);
 
       for(int itype=0; itype<ptypes; itype++)
       {
