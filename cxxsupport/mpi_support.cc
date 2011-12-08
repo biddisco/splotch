@@ -204,22 +204,13 @@ void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
     MPI_STATUS_IGNORE);
   }
 
-void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
-const
-{
-  assert_unequal(in,out);
-  //  MPI_Datatype dtype = ndt2mpi(type);
-  //  MPI_Gather(const_cast<void *>(in),1,dtype,out,num,dtype,0,LS_COMM);
-  MPI_Manager::gatherRawVoid (in, num, out, type, 0);
-}
-void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type, int root)
-const
-{
+void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type,
+  int root) const
+  {
   assert_unequal(in,out);
   MPI_Datatype dtype = ndt2mpi(type);
   MPI_Gather(const_cast<void *>(in),1,dtype,out,num,dtype,root,LS_COMM);
-}
-
+  }
 void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
   const int *nval, const int *offset, NDT type) const
   {
@@ -293,23 +284,17 @@ void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
   planck_assert (sendcnt==recvcnt, "inconsistent call");
   memcpy (recvbuf, sendbuf, sendcnt*ndt2size(type));
   }
-
-void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
-  tsize dest, void *recvbuf, tsize recvcnt, tsize src) const
-  {
-  assert_unequal(sendbuf,recvbuf);
-  planck_assert ((dest==0) && (src==0), "inconsistent call");
-  planck_assert (sendcnt==recvcnt, "inconsistent call");
-  memcpy (recvbuf, sendbuf, sendcnt);
-  }
-
 void MPI_Manager::sendrecv_replaceRawVoid (void *, NDT, tsize, tsize dest,
   tsize src) const
   { planck_assert ((dest==0) && (src==0), "inconsistent call"); }
 
-void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type)
-  const
-  { assert_unequal(in,out); memcpy (out, in, num*ndt2size(type)); }
+void MPI_Manager::gatherRawVoid (const void *in, tsize num, void *out, NDT type,
+  int root) const
+  {
+  planck_assert(root==0, "invalid root task");
+  assert_unequal(in,out);
+  memcpy (out, in, num*ndt2size(type));
+  }
 void MPI_Manager::gathervRawVoid (const void *in, tsize num, void *out,
   const int *, const int *, NDT type) const
   { assert_unequal(in,out); memcpy (out, in, num*ndt2size(type)); }

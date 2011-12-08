@@ -42,9 +42,8 @@ class MPI_Manager
   private:
     void gatherv_helper1_m (int nval_loc, arr<int> &nval, arr<int> &offset,
       int &nval_tot) const;
-    void gatherRawVoid (const void *in, tsize num, void *out, NDT type) const;
-    void gatherRawVoid (const void *in, tsize num, void *out, NDT type, int root) const;
-
+    void gatherRawVoid (const void *in, tsize num, void *out, NDT type,
+      int root=0) const;
     void gathervRawVoid (const void *in, tsize num, void *out,
       const int *nval, const int *offset, NDT type) const;
     void all2allv_easy_prep (tsize insz, const arr<int> &numin, arr<int> &disin,
@@ -68,7 +67,6 @@ class MPI_Manager
       { calcShareGeneral(glo,ghi,num_ranks_,rank_,lo,hi); }
 
     void sendRawVoid (const void *data, NDT type, tsize num, tsize dest) const;
-
     template<typename T> void sendRaw (const T *data, tsize num, tsize dest)
       const
       { sendRawVoid(data, nativeType<T>(), num, dest); }
@@ -78,7 +76,6 @@ class MPI_Manager
       { sendRaw(&data, 1, dest); }
 
     void recvRawVoid (void *data, NDT type, tsize num, tsize src) const;
-
     template<typename T> void recvRaw (T *data, tsize num, tsize src) const
       { recvRawVoid(data, nativeType<T>(), num, src); }
     template<typename T> void recv (arr<T> &data, tsize src) const
@@ -88,7 +85,6 @@ class MPI_Manager
 
     void sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
       tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const;
-
     template<typename T> void sendrecvRaw (const T *sendbuf, tsize sendcnt,
       tsize dest, T *recvbuf, tsize recvcnt, tsize src) const
       {
@@ -117,21 +113,14 @@ class MPI_Manager
       tsize src) const
       { sendrecv_replaceRaw(&data, 1, dest, src); }
 
-    template<typename T> void gather_m (const T &in, arr<T> &out) const
+    template<typename T> void gather_m (const T &in, arr<T> &out, int root=0)
+      const
       {
       out.alloc(num_ranks_);
-      gatherRawVoid (&in,1,&out[0],nativeType<T>());
-      }
-
-    // same as above but with an arbitrary rank as root
-    template<typename T> void gather_m (const T &in, arr<T> &out, int root) const
-    {
-      out.alloc(num_ranks_);
       gatherRawVoid (&in,1,&out[0],nativeType<T>(),root);
-    }
-
-    template<typename T> void gather_s (const T &in) const
-      { gatherRawVoid (&in,1,0,nativeType<T>()); }
+      }
+    template<typename T> void gather_s (const T &in, int root=0) const
+      { gatherRawVoid (&in,1,root,nativeType<T>()); }
 
     template<typename T> void gatherv_m (const arr<T> &in, arr<T> &out) const
       {
