@@ -59,26 +59,26 @@ class sceneMaker
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 
+
+
     // --- routines and variables necessary for the MPI parallelization of the interpolation ---|
-    // routine which actually does the particle exchange
+    // routine which actually does the particle exchange before rendering takes place
     void MpiFetchRemoteParticles();
-    // class-global variable to save the number of particles which are initially in p2
+    // routine which resets the data structures after rendering
+    void MpiStripRemoteParticles();
+    // variable to save the number of particles which are initially in p2
     MyIDType numberOfLocalParticles;
-    //
+    // vectors to hold a backup of the data at time2
     std::vector<particle_sim> p2Backup;
     std::vector<MyIDType>     id2Backup;
     std::vector<MyIDType>     idx2Backup;
     std::vector<vec3f>        vel2Backup;
-    //
-    // switch debug messages on
-    bool MpiDebugMsg;
-    bool MpiPatchP2;
-    // routine which strips remote particles from p2
-    void MpiStripRemoteParticles();
-    // create debug output
+    // auxiliary debug output routines
     void MpiDumpDebug(std::vector<particle_sim> &pvect, std::vector<MyIDType> &pvectid, std::string &debugFileName);
     void MpiDumpDebug(std::vector<particle_sim> &pvect, std::string &debugFileName);
     // --- routines and variables necessary for the MPI parallelization of the interpolation ---/
+
+
 
   public:
   sceneMaker (paramfile &par);

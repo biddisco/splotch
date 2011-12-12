@@ -1,14 +1,12 @@
 /**
  *  Reader for Gadget HDF5 output (started from <gadget_reader.cc>).
  *
- *  TODO  - implement support for 64bit integer IDs
- *        - implement improved error handling of HDF5 calls
+ *  TODO  - implement improved error handling of HDF5 calls
  *        - merge with <gadget_reader.cc> as a significant amount
  *          of code is shared?
  *
  *                                               (Klaus Reuter, RZG)
  */
-
 
 #include <iostream>
 #include <cmath>
@@ -209,6 +207,14 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 
   if(mpiMgr.master())
   {
+    {
+      cout << "NOTE: Splotch was compiled to use ";
+      if (sizeof(MyIDType)==4)
+        cout << "32";
+      else if (sizeof(MyIDType)==8)
+        cout << "64";
+      cout << "bit ParticleIDs." << endl;
+    }
     int itask=0;
     for(int rt=0; rt<readparallel; rt++)
     {
@@ -630,21 +636,6 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
           readHDF5DataArray(group_id, "ParticleIDs", H5T_NATIVE_UINT, (void*) &ftmp[0]);
           H5Gclose(group_id);
 
-/*
-          if(type == 0)
-          {
-            cout << "WARNING: Patching IDs for gas particles in Magneticum runs !!!" << endl;
-            for(unsigned int m=0; m<ftmp.size(); m++)
-              ftmp[m] = ftmp[m] & 3221225471;           // remove upper 2 bits opf 32bit value 2^30-1
-          }
-          if(type == 4)
-          {
-            cout << "WARNING: Patching IDs for star particles in Magneticum runs !!!" << endl;
-            for(unsigned int m=0; m<ftmp.size(); m++)
-              ftmp[m] = ftmp[m] + gca;           // adding 2^29
-          }
-*/
-
           if(type == 4)
           {
             cout << " WARNING: Patching IDs for star particles!" << endl;
@@ -976,7 +967,7 @@ void gadget_hdf5_reader(paramfile &params, int interpol_mode,
 }
 
 #else
-// we compile the code without HDF5 support ...
+// No HDF5 support ...
 
 void gadget_hdf5_reader(paramfile &params, int interpol_mode,
                         vector<particle_sim> &p, vector<MyIDType> &id, vector<vec3f> &vel, int snr,
