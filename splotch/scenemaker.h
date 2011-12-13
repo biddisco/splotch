@@ -31,20 +31,15 @@ class sceneMaker
     double boxsize;
 
     // only used if interpol_mode>0
-    std::vector<particle_sim> p1,   p2;
-    std::vector<MyIDType>     id1,  id2;
-    std::vector<MyIDType>     idx1, idx2;
+    std::vector<particle_sim> p1, p2;
+    std::vector<MyIDType> id1, id2;
+    std::vector<MyIDType> idx1, idx2;
 
     int snr1_now, snr2_now;
 
     // buffers to hold the times relevant to the *currently loaded snapshots*
     double time1, time2;
     double redshift1, redshift2;
-    // *** helper variables to dump data about a frame into a logfile,
-    //     mainly for making postprocessing of frames easier ***
-    double intTime;                   // actual time from linear interpolation
-    double intRedshift;               //    "   redshift  "
-    double colmin0, colmax0, bright0; // color and brightness values of species 0
 
     // only used if interpol_mode>1
     std::vector<vec3f> vel1, vel2;
@@ -59,26 +54,19 @@ class sceneMaker
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 
-
-
-    // --- routines and variables necessary for the MPI parallelization of the interpolation ---|
-    // routine which actually does the particle exchange before rendering takes place
+    // --- routines and variables for the MPI parallelization of the particle interpolation ---
+    // exchange particle IDs
     void MpiFetchRemoteParticles();
-    // routine which resets the data structures after rendering
+    // reset the data structures after rendering
     void MpiStripRemoteParticles();
-    // variable to save the number of particles which are initially in p2
+    // save the number of particles which are initially in p2
     MyIDType numberOfLocalParticles;
     // vectors to hold a backup of the data at time2
     std::vector<particle_sim> p2Backup;
-    std::vector<MyIDType>     id2Backup;
-    std::vector<MyIDType>     idx2Backup;
-    std::vector<vec3f>        vel2Backup;
-    // auxiliary debug output routines
-    void MpiDumpDebug(std::vector<particle_sim> &pvect, std::vector<MyIDType> &pvectid, std::string &debugFileName);
-    void MpiDumpDebug(std::vector<particle_sim> &pvect, std::string &debugFileName);
+    std::vector<MyIDType> id2Backup;
+    std::vector<MyIDType> idx2Backup;
+    std::vector<vec3f> vel2Backup;
     // --- routines and variables necessary for the MPI parallelization of the interpolation ---/
-
-
 
   public:
   sceneMaker (paramfile &par);
