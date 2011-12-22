@@ -164,7 +164,9 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
   for(m=0; m<npart; ++m)
     {
     int t=p[m].type;
+#ifndef NO_I_NORM
     intnorm[t].normAndClamp(p[m].I);
+#endif
     colnorm[t].normAndClamp(p[m].e.r);
     if (col_vector[t])
       {
