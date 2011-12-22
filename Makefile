@@ -6,7 +6,7 @@
 #OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-OPT += -DUSE_MPI
+#OPT += -DUSE_MPI
 #OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -29,6 +29,9 @@ OPT += -DUSE_MPI
 
 #--------------------------------------- Turn on VisIVO stuff
 #OPT += -DSPLVISIVO
+
+#--------------------------------------- Turn off Intensity  normalization
+OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
 SYSTYPE="generic"
@@ -57,6 +60,7 @@ endif
 # optimization and warning flags (g++)
 OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast
 ifeq ($(SYSTYPE),"generic")
+# OPTIMIZE += -O2 -g -D TWOGALAXIES
  OPTIMIZE += -O2 -g
 endif
 
