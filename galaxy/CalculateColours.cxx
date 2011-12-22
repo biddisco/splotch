@@ -2,7 +2,8 @@
 
 float box_muller(float m, float s);
 
-void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, float * ciii,
+void CalculateColours (paramfile &params, string ComponentsName,long npart, 
+                       float * cred, float * cgreen, float * cblue, float * ciii,
                        float * Red, float * Green, float * Blue, float * III, float * xcoord, 
                        float * ycoord, long nx, long ny)
 {
@@ -11,6 +12,14 @@ void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, 
 	long ii, jj, iaux;
         float x_rand_max = (float) RAND_MAX;
 	float xcolaux;
+
+
+	float brightness;
+	float brightness_fact;
+	brightness_fact = params.find<float>("Brightness"+ComponentsName,1.0);
+	brightness = 1.0/(float)npart;
+	brightness = brightness_fact*pow(brightness, 0.3333333f);
+	cout << "--> Coloring " << ComponentsName.c_str() << " with brightness " << brightness << endl;
 
 	for (long particlei=0; particlei<npart; particlei++)
 	{
@@ -24,7 +33,7 @@ void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, 
 	   {
 //              xcol = ((float)rand())/x_rand_max;
 	      xcolaux = box_muller(0, 0.25);
-	      xcol = fabs(xcolaux);
+	      xcol = brightness*fabs(xcolaux);
 	      if (xcol > 1.0) xcol = 0.0;
 
 	      
@@ -38,7 +47,7 @@ void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, 
 	      cred[particlei]   = Red[iaux];
 	      cgreen[particlei] = Green[iaux];
 	      cblue[particlei]  = Blue[iaux];
-	      ciii[particlei]   = III[iaux];
+	      ciii[particlei]   = brightness*III[iaux];
 	   }
 	
 

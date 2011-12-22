@@ -54,6 +54,7 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 
   float pixsizex = 2./nx;
   float pixsizey = 2./ny;
+  float coordz_aux;
   for (long i=0; i<number_of_points; i++)
     {
       float x0=coordx_save[i];
@@ -62,6 +63,8 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
       coordx[count] = x0;
       coordy[count] = y0;
       coordz[count] = box_muller(0.0, sigma_z);
+      coordz_aux = coordz[count];
+      
       count++;
       if(count >= ntot)
 	{
@@ -71,9 +74,12 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 
       for(long k=1; k<n_per_pixel; k++)
 	{
-	  coordx[count] = box_uniform(x0, pixsizex);
-	  coordy[count] = box_uniform(y0, pixsizey);
-	  coordz[count] = box_muller(0.0, sigma_z);
+	  //coordx[count] = box_uniform(x0, pixsizex);
+	  //coordy[count] = box_uniform(y0, pixsizey);
+	  coordx[count] = box_muller(x0, pixsizex);
+	  coordy[count] = box_muller(y0, pixsizey);
+	  // the factor of 4.0 just below is set "experimetally"
+	  coordz[count] = box_muller(coordz_aux, sigma_z/4.0);
 	  count++;
 	  if(count >= ntot)
 	    {
@@ -125,7 +131,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
       
       if(resolution[index] == 0.0)
 	{
-	  if(III[rindex] > 0)
+	  if(III[rindex] > 0.0)
 	    {
 	      coordz[i] = III[rindex];
 	      resolution[index] = 1.0;
@@ -148,6 +154,10 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 
   long iaux = 0;
 
+  float xmin=1e10;
+  float xmax=-1e10;
+  float ymin=1e10;
+  float ymax=-1e10;
   for (long i=0; i<number_of_points; i++)    // copy pixel positions to the leading of the array
     {
       if(coordz[i] == 0.0)
@@ -155,23 +165,46 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
       coordx[iaux] = coordx[i];
       coordy[iaux] = coordy[i];
       coordz[iaux] = coordz[i];
+      xmax = max(coordx[iaux],xmax);
+      ymax = max(coordy[iaux],ymax);
+      xmin = min(coordx[iaux],xmin);
+      ymin = min(coordy[iaux],ymin);
       iaux++;
     }
+
+  float ref_size = ((xmax-xmin)+(ymax-ymin))/2.0;
+  cout << "CHARCHTERISTIC SIZE = " << ref_size << "\n";
 
   long abscounter = countin;
 
   long ii = 0;
-  float pixsizex = 2./rx;
-  float pixsizey = 2./ry;
+  float pixsizex = 4./rx;
+  float pixsizey = 4./ry;
   while (abscounter < ntot-npergroup && ii < countin)
     {
-      float gsigmaz = sigma * (sigma_fixed + coordy[ii]);
+      //original by Klaus
+      //float gsigmaz = sigma * (sigma_fixed + coordy[ii]);
+      //Claudio:
+      float weight = coordz[ii];
+      float thick = sqrt(weight)*ref_size;
+      //float gsigmaz = sqrt(sigma) * 0.25* thick;
+      float gsigmaz = sigma * thick;
+      
+
       coordz[ii] = box_muller(0.0, gsigmaz);
-      for(long jj=1; jj<npergroup; jj++)
+      for(long jj=1; jj<(long)(weight*npergroup); jj++)
 	{
-	  coordx[abscounter] = box_uniform(coordx[ii], pixsizex);
-	  coordy[abscounter] = box_uniform(coordy[ii], pixsizey);
-	  coordz[abscounter] = box_muller(coordz[ii], gsigmaz);
+	  //coordx[abscounter] = box_uniform(coordx[ii], pixsizex);
+	  //coordy[abscounter] = box_uniform(coordy[ii], pixsizey);
+	  coordx[abscounter] = box_muller(coordx[ii], pixsizex*1.0);
+	  coordy[abscounter] = box_muller(coordy[ii], pixsizey*1.0);
+	  float zaux;
+	  do {zaux = box_muller(coordz[ii], sigma_fixed*gsigmaz);}
+	  //////////do {zaux = box_muller(coordz[ii], sigma_fixed);}
+	  //while (zaux*zaux > 0.25*ref_size*ref_size);
+	  while (zaux*zaux > 0.65*ref_size*ref_size);
+          coordz[abscounter] = zaux;
+
 	  abscounter++;
 	}
       ii++;

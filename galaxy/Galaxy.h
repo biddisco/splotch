@@ -25,7 +25,8 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 void CalculateDensity (float * hsml, float * rho, float * xcoord, float * ycoord,
                        float * zcoord, long numofpart, float smooth);
 
-void CalculateColours (long npart, float * cred, float * cgreen, float * cblue, float * ciii, 
+void CalculateColours (paramfile &params, string ComponentName, long npart, 
+                       float * cred, float * cgreen, float * cblue, float * ciii, 
                        float * Red, float * Green, float * Blue, float * III, float * xcoord, 
                        float * ycoord, long nxxx, long nyyy);
 

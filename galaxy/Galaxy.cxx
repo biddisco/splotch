@@ -149,7 +149,7 @@ int main (int argc, const char **argv)
 		  }
 
 		npart[itype] = nfinal;
-		printf("    generated %d particles instead of %d\n", nfinal, nwant);
+		printf("    generated %ld particles instead of %ld\n", nfinal, nwant);
 
 		if(npart[itype] > 0)
 		  {
@@ -179,11 +179,15 @@ int main (int argc, const char **argv)
 			break;
 		      case 3:
 			printf("    Assigning color from image file\n");
-			CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			CalculateColours(params, ComponentsName[itype], npart[itype], 
+			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			
 			break;
 		      case 4:
 			printf("    Assigning color from image file\n");
-			CalculateColours(npart[itype], cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			CalculateColours(params, ComponentsName[itype], npart[itype], 
+			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			//for(int iii=0;iii<100000;iii++)if(ciii[iii] > 0)cout << ciii[iii] << endl;
 			break;
 		      }
 
@@ -271,7 +275,7 @@ int main (int argc, const char **argv)
         printf("======= Gas size     : %d\n", npart[0]);
         printf("======= Bulge size   : %d\n", npart[1]);
         printf("======= Halo  size   : %d\n", npart[2]);
-        printf("======= Globiularsize: %d\n", npart[3]);
+        printf("======= Globular size: %d\n", npart[3]);
         printf("======= Stars size   : %d\n", npart[4]);
         printf("======= BHs size     : %d\n", npart[5]);
         printf("=====================================\n");
@@ -395,17 +399,19 @@ int main (int argc, const char **argv)
 	  file.close();
 #endif
 
-#ifdef WRITE_ASCII
-	  file *pFile;
+//#ifdef WRITE_ASCII
+	  FILE *pFile;
 	  pFile = fopen("points.ascii", "w");
           long iaux=0;
-          for(long ii=0; ii<xyz.size()/3; ii=ii+int(xyz.size()/3/100000))
+	  cout << "WRITING " << xyz.size()/3 << " DATA\n";
+          //for(long ii=0; ii<xyz.size()/3; ii=ii+int(xyz.size()/3/100000))
+          for(long ii=0; ii<xyz.size()/3; ii=ii+30)
 	  {
              iaux=ii*3; 
 	     fprintf(pFile, "%f %f %f\n", xyz[iaux],xyz[iaux+1],xyz[iaux+2]);
 	  }
 	  fclose(pFile);
-#endif
+//#endif
 
         
 }
