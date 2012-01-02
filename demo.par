@@ -12,7 +12,7 @@ fidx=92
 # 6: mesh reader, 7: hdf7
 simtype=2
 snapshot_spacing=1
-snapdir=FALSE
+#snapdir=FALSE
 periodic=FALSE
 
 # Additional flags for Gadget
