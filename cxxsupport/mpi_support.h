@@ -120,7 +120,7 @@ class MPI_Manager
       gatherRawVoid (&in,1,&out[0],nativeType<T>(),root);
       }
     template<typename T> void gather_s (const T &in, int root=0) const
-      { gatherRawVoid (&in,1,root,nativeType<T>()); }
+      { gatherRawVoid (&in,1,0,nativeType<T>(),root); }
 
     template<typename T> void gatherv_m (const arr<T> &in, arr<T> &out) const
       {
