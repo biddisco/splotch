@@ -31,7 +31,7 @@
 #OPT += -DSPLVISIVO
 
 #--------------------------------------- Turn off Intensity  normalization
-OPT += -DNO_I_NORM
+#OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
 SYSTYPE="generic"
