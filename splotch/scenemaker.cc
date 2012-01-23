@@ -503,11 +503,11 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           // re-read the data set since no backup copy can be expected to exist in memory
           cout << " re-reading new1 " << snr1 << endl;
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+          redshift1=-1.0;
           mpiMgr.barrier();
           tstack_replace("Input","Particle index generation");
           buildIndex(id1.begin(),id1.end(),idx1);
           tstack_replace("Particle index generation","Input");
-          redshift1 = -1.0; // khr: does the Gadget format contain redshift by default?
         }
         else
         {
@@ -516,24 +516,26 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           MpiStripRemoteParticles();
           mpiMgr.barrier();
           //
-          p1.swap(p2);
-          id1.swap(id2);
-          idx1.swap(idx2);
-          vel1.swap(vel2);
+          p1.clear();   p1.swap(p2);
+          id1.clear();  id1.swap(id2);
+          idx1.clear(); idx1.swap(idx2);
+          vel1.clear(); vel1.swap(vel2);
+          //
           time1 = time2;
-          //redshift1 = redshift2;
         }
         snr1_now = snr1;
       }
       if (snr1_now!=snr1)
       {
         cout << " reading new1 " << snr1 << endl;
+        //
         gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+        redshift1=-1.0;
         mpiMgr.barrier();
         tstack_replace("Input","Particle index generation");
         buildIndex(id1.begin(),id1.end(),idx1);
         tstack_replace("Particle index generation","Input");
-        redshift1 = -1.0;
+        //
         snr1_now = snr1;
       }
       if (snr2_now!=snr2)
@@ -618,10 +620,11 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           MpiStripRemoteParticles();
           mpiMgr.barrier();
           //
-          p1.swap(p2);
-          id1.swap(id2);
-          idx1.swap(idx2);
-          vel1.swap(vel2);
+          p1.clear();   p1.swap(p2);
+          id1.clear();  id1.swap(id2);
+          idx1.clear(); idx1.swap(idx2);
+          vel1.clear(); vel1.swap(vel2);
+          //
           time1 = time2;
           redshift1 = redshift2;
         }
