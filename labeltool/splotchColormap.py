@@ -17,7 +17,7 @@ def splotchColormap(time=-1.0,               # for time>0, a time stamp is print
                     yinches=8,               # height of the image | the dimensions 1200x800
                     myFontSize="large",
                     myFontColor="white",
-                    putMinerva=True):       # place the MPG minerva logo in the top right corner
+                    putMinerva=False):       # place the MPG minerva logo in the top right corner
 
    # import necessary modules
    import numpy as np
@@ -94,9 +94,9 @@ def splotchColormap(time=-1.0,               # for time>0, a time stamp is print
    F.savefig(plotFile, transparent=True, dpi=myDPI)
 
 
-   # *** put Minerva on top using ImageMagick convert ***
+   # *** put a logo (e.g. MPG Minerva) on top using ImageMagick convert ***
    if putMinerva:
-      minervaFile="/afs/ipp/home/k/khr/RZG/RZG-Logos/minerva-white-96.png"
+      minervaFile="__INSERT_VALID_PATH__/minerva-white-96.png"
       xoffset=str(int( (xinches*myDPI)*0.895 ))
       yoffset=str(int( (yinches*myDPI)*0.005 ))
       #print (xoffset, yoffset)

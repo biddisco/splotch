@@ -3,14 +3,13 @@
 #  Simple driver script which runs the labeling tool <splotchColormap.py>
 #  on the files in the output directory of Splotch.  The script evaluates
 #  the .log files which contain information on the color scale, time and 
-#  redshift.  It needs to be run in the directory where the Splotch
+#  redshift.  It must be run in the directory where the Splotch
 #  frames (*.tga) and the associated log files (*.log) are located.
 #
 #                                           (Klaus Reuter, RZG, Sep 2011)
 
 
 # adapt the following line to your local environment
-#LABELTOOL="/afs/ipp/home/k/khr/RZG/SPH-Visualization/Splotch/colortable.py/splotchColormap.py"
 LABELTOOL="splotchColormap.py"
 
 OVERLAYDIR="./overlays"
@@ -29,12 +28,12 @@ do
 
    # Build arguments and call <splotchColormap.py>
    OVERLAY=${OVERLAYDIR}/${BASENAME}-overlay.png
-   TIME=`cat $FILE    | grep -e "time"     | cut -d' ' -f2`
-   REDS=`cat $FILE    | grep -e "redshift" | cut -d' ' -f2`
-#   COLMIN0=`cat $FILE | grep -e "colmin0"  | cut -d' ' -f2`
-#   COLMAX0=`cat $FILE | grep -e "colmax0"  | cut -d' ' -f2`
-   COLMIN0=2.0
-   COLMAX0=6.0
+   TIME=`cat $FILE    | grep -e "time"     | cut -d'=' -f2`
+   REDS=`cat $FILE    | grep -e "redshift" | cut -d'=' -f2`
+   COLMIN0=`cat $FILE | grep -e "colmin0"  | cut -d'=' -f2`
+   COLMAX0=`cat $FILE | grep -e "colmax0"  | cut -d'=' -f2`
+#   COLMIN0=2.0
+#   COLMAX0=6.0
    #
    ARGS="--outfile=$OVERLAY --time=$TIME --redshift=$REDS --colormin=$COLMIN0 --colormax=$COLMAX0"
    #
