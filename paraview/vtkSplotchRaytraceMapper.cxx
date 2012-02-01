@@ -231,32 +231,35 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
-        pic[ix][iy].r=-xexp.expm1(pic[ix][iy].r);
-        pic[ix][iy].g=-xexp.expm1(pic[ix][iy].g);
-        pic[ix][iy].b=-xexp.expm1(pic[ix][iy].b);
+        pic[ix][iy].r= -xexp.expm1(pic[ix][iy].r);
+        pic[ix][iy].g= -xexp.expm1(pic[ix][iy].g);
+        pic[ix][iy].b= -xexp.expm1(pic[ix][iy].b);
       }
     }
   }
 
-  int viewport[4];
-  glGetIntegerv(GL_VIEWPORT, viewport);
-  glMatrixMode(GL_PROJECTION);
-  glPushMatrix();
-  glLoadIdentity();
-  glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
-  glMatrixMode(GL_MODELVIEW);
-  glLoadIdentity();
 
-  for (int i=0; i<X; i++) {
-    glRasterPos2i(X-1-i, 0);
-    COLOUR *ptr = &pic[i][0];
-    float *x0 = &ptr->r;
-    glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
+
+  if (MPI_Manager::GetInstance()->master()) {
+    int viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    for (int i=0; i<X; i++) {
+      glRasterPos2i(X-1-i, 0);
+      COLOUR *ptr = &pic[i][0];
+      float *x0 = &ptr->r;
+      glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
+    }
+
+    glMatrixMode( GL_PROJECTION );
+    glPopMatrix();
+    glMatrixMode( GL_MODELVIEW );   
+    glPopMatrix();
   }
-
-  glMatrixMode( GL_PROJECTION );
-  glPopMatrix();
-  glMatrixMode( GL_MODELVIEW );   
-  glPopMatrix();
-
 }

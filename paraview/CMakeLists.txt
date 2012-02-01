@@ -108,6 +108,7 @@ SET( splotch_plugin_WRAPPED_SRCS
   vtkSplotchRaytraceRepresentation.cxx
 )
 
+IF(PARAVIEW_BUILD_QT_GUI)
 #--------------------------------------------------
 # Qt .ui files that are wrapped and added to plugin
 #--------------------------------------------------
@@ -134,6 +135,8 @@ add_paraview_display_panel_decorator(
   IFACE_SRCS
   CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
   PANEL_TYPES pqDisplayProxyEditor)
+
+ENDIF(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
 # Define Plugin
