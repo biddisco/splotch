@@ -40,7 +40,6 @@
 #include "vtkInformation.h"
 #include "vtkDebugLeaks.h"
 #include "vtkElevationFilter.h"
-#include "vtkH5PartWriter.h"
 #include "vtkH5PartReader.h"
 #include "vtkMaskPoints.h"
 #include "vtkProperty.h"
@@ -51,6 +50,7 @@
 #include "vtkFloatArray.h"
 #include "vtkTimerLog.h"
 #include "vtkColorTransferFunction.h"
+#include "vtkSmartPointer.h"
 //
 #include <vtksys/SystemTools.hxx>
 #include <sstream>
