@@ -18,9 +18,9 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, float * coordx,
                  float * coordy, float * coordz);
 
-long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
-                 float * coordy, float * coordz, long nnx, long nny);
+long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx, float * coordy, float * coordz, long nnx, long nny);
 
+long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, float * coordx, float * coordy, float * coordz, float * III, long nx, long ny);
 
 void CalculateDensity (float * hsml, float * rho, float * xcoord, float * ycoord,
                        float * zcoord, long numofpart, float smooth);

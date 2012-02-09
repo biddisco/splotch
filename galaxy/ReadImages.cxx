@@ -15,6 +15,8 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
           unsigned char * II;
           float * x;
 	  float * y;
+          float * xM;
+	  float * yM;
 
 // Read Data: this part will be changed with FITSIO reading three different files
 // one for each color. For testing, we just refer to the single raw file
@@ -43,6 +45,8 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
          II = new unsigned char[num];
 	 x = new float [num];
 	 y = new float [num];
+	 xM = new float [num];
+	 yM = new float [num];
 
 	 long counter = 0;
 	 float dist = 0.0;
