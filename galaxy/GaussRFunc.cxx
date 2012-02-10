@@ -345,23 +345,28 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
              long IIIth=0;
              float r_0;
              float x_ref;
+             float x_x;
+             float sigma_L;
              if(III[index] > 0.0 && max_mask[index] != 1.0) 
                {
                  //IIIth = long(50*III[index]+3); 
                  IIIth = 20;
-                 r_0 = ref_size*0.4;
-                 x_ref = 0.5;
+                 r_0 = ref_size*0.3;
+                 x_ref = 0.6;
                  r_dist=1.0;
+                 x_x = radius_min / r_0;
+                 if(x_x < x_ref) x_x = x_ref; 
+                 sigma_L = exp(-x_x) * r_0;
                } else if (max_mask[index] == 1.0) {
                  IIIth = long(npergroup*III[index]+10); 
                  r_0 = ref_size*0.8;
                  x_ref = 0.0;
                  r_dist=sigma_fixed;
+                 x_x = radius_min / r_0;
+                 if(x_x < x_ref) x_x = x_ref; 
+                 sigma_L = x_x * exp(-x_x) * r_0;
                }
 
-             float x_x = radius_min / r_0;
-             if(x_x < x_ref) x_x = x_ref; 
-             float sigma_L = x_x * exp(-x_x) * r_0;
              float radius = box_muller(0,sigma_L);
              float zcenter = radius;
              float zavg=0.0;
