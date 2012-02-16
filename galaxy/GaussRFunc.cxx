@@ -55,30 +55,33 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
   float pixsizex = 2./nx;
   float pixsizey = 2./ny;
   float coordz_aux;
-  for (long i=0; i<number_of_points; i++)
+  for (long i=0; i<number_of_points; i+=1)
     {
       float x0=coordx_save[i];
       float y0=coordy_save[i];
 
-      coordx[count] = x0;
-      coordy[count] = y0;
-      coordz[count] = box_muller(0.0, sigma_z);
-      coordz_aux = coordz[count];
+      ///coordx[count] = x0;
+      ///coordy[count] = y0;
+      ///coordz[count] = box_muller(0.0, sigma_z);
+      ///coordz_aux = coordz[count];
+
+      coordz_aux = box_muller(0.0, sigma_z);
       
-      count++;
+      ///count++;
       if(count >= ntot)
 	{
 	  printf("Generating more particles than allowed (%d>=%d)\n",count,ntot);
 	  exit(3);
 	}
 
-      for(long k=1; k<n_per_pixel; k++)
+      ///for(long k=1; k<n_per_pixel; k++)
+      for(long k=0; k<n_per_pixel; k++)
 	{
 	  //coordx[count] = box_uniform(x0, pixsizex);
 	  //coordy[count] = box_uniform(y0, pixsizey);
 	  coordx[count] = box_muller(x0, pixsizex);
 	  coordy[count] = box_muller(y0, pixsizey);
-	  // the factor of 4.0 just below is set "experimetally"
+	  // the factor of 4.0 just below is set "experimentally"
 	  coordz[count] = box_muller(coordz_aux, sigma_z/4.0);
 	  count++;
 	  if(count >= ntot)
@@ -173,7 +176,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
     }
 
   float ref_size = ((xmax-xmin)+(ymax-ymin))/2.0;
-  cout << "CHARCHTERISTIC SIZE = " << ref_size << "\n";
+  cout << "    CHARCHTERISTIC SIZE = " << ref_size << "\n";
 
   long abscounter = countin;
 
@@ -189,7 +192,6 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
       float thick = sqrt(weight)*ref_size;
       //float gsigmaz = sqrt(sigma) * 0.25* thick;
       float gsigmaz = sigma * thick;
-      
 
       coordz[ii] = box_muller(0.0, gsigmaz);
       for(long jj=1; jj<(long)(weight*npergroup); jj++)
@@ -199,12 +201,12 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 	  coordx[abscounter] = box_muller(coordx[ii], pixsizex*1.0);
 	  coordy[abscounter] = box_muller(coordy[ii], pixsizey*1.0);
 	  float zaux;
+
 	  do {zaux = box_muller(coordz[ii], sigma_fixed*gsigmaz);}
 	  //////////do {zaux = box_muller(coordz[ii], sigma_fixed);}
 	  //while (zaux*zaux > 0.25*ref_size*ref_size);
 	  while (zaux*zaux > 0.65*ref_size*ref_size);
           coordz[abscounter] = zaux;
-
 	  abscounter++;
 	}
       ii++;
@@ -275,7 +277,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
              if(IIImax == III[index] && IIImax > 0.75)
                {
                    max_mask[index] = 1.0; 
-                   cout << ix<< " " << iy << " " << max_mask[index] << endl;
+                   //cout << ix<< " " << iy << " " << max_mask[index] << endl;
                    maxcount++;
                }
 
@@ -323,10 +325,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
         yy = new float [nfinal]; 
         zz = new float [nfinal]; 
         float r_dist;
-        long * p_map = new long [nfinal];
-        for(long iii=0; iii<nfinal; iii++)p_map[iii]=-1;
         long pcounter = 0;
-        long p_i=0;
         cout << "SIZE " << ref_size << endl;
         for (int iy=0; iy<ny; iy++)
         for (int ix=0; ix<nx; ix++)
@@ -347,46 +346,36 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
              float x_ref;
              float x_x;
              float sigma_L;
-             if(III[index] > 0.0 && max_mask[index] != 1.0) 
+             if (max_mask[index] == 1.0) 
                {
-                 //IIIth = long(50*III[index]+3); 
-                 IIIth = 20;
-                 r_0 = ref_size*0.3;
-                 x_ref = 0.6;
-                 r_dist=1.0;
-                 x_x = radius_min / r_0;
-                 if(x_x < x_ref) x_x = x_ref; 
-                 sigma_L = exp(-x_x) * r_0;
-               } else if (max_mask[index] == 1.0) {
-                 IIIth = long(npergroup*III[index]+10); 
+                 IIIth = long((npergroup/5)*III[index]*III[index]*III[index]+10); 
                  r_0 = ref_size*0.8;
                  x_ref = 0.0;
                  r_dist=sigma_fixed;
                  x_x = radius_min / r_0;
                  if(x_x < x_ref) x_x = x_ref; 
                  sigma_L = x_x * exp(-x_x) * r_0;
-               }
 
-             float radius = box_muller(0,sigma_L);
-             float zcenter = radius;
-             float zavg=0.0;
-             int navg=0;
-
-             if(IIIth > 0)
-             {
-               p_map[p_i] = pcounter;
-               p_i++;
-               long nrandom=IIIth;   
-               for (int ii=0;ii<nrandom;ii++)
-               {
-                 xx[pcounter]=box_muller(xcenter,r_dist);
-                 yy[pcounter]=box_muller(ycenter,r_dist);
-                 zz[pcounter]=box_muller(zcenter,r_dist);
-                 pcounter++;
+                 float radius = box_muller(0,sigma_L);
+                 float zcenter = radius;
+                 long nrandom = IIIth;   
+                 for (int ii=0;ii<nrandom;ii++)
+                 {
+                   xx[pcounter]=box_muller(xcenter,r_dist);
+                   yy[pcounter]=box_muller(ycenter,r_dist);
+                   zz[pcounter]=box_muller(zcenter,r_dist);
+                   pcounter++;
+                 }
+                 nrandom = 1.5*npergroup;
+                 for (int ii=0;ii<nrandom;ii++)
+                 {
+                   xx[pcounter]=box_muller(xcenter,20.0*r_dist);
+                   yy[pcounter]=box_muller(ycenter,20.0*r_dist);
+                   zz[pcounter]=box_muller(zcenter,5.0*r_dist);
+                   pcounter++;
+                 }
                }
-             }
            }
-           p_map[p_i]=pcounter;
 
            for (long ii=0; ii<pcounter; ii++) 
            {  

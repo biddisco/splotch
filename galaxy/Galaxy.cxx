@@ -143,6 +143,7 @@ int main (int argc, const char **argv)
 		    nfinal=RDiscFunc (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
 		    break;
 		  case 5:
+		    printf("    Generating spherical symmetric stars distribution from image\n");
 		    nfinal=GaussRGlobFunc(params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
 			//for(int iii=0;iii<nfinal;iii++)cout << xcomp[iii]<< " " << ycomp[iii] << " " << zcomp[iii]  << endl;
 		    break;
