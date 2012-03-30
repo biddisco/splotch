@@ -79,29 +79,45 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   }
 
 
-int cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float brightness)
+int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float brightness)
   {
   cudaError_t error;
   cudaSetDevice (devID); // initialize cuda runtime
+ 
+  // particle vector  
+  size_t size = nP * sizeof(cu_particle_sim);
+  error = cudaMalloc((void**) &pgv->d_pd, size);
+  if (error != cudaSuccess) 
+  {
+   cout << "Device Memory: particle data allocation error!" << endl;
+   return 1;
+  }
   
-  //now prepare memory for d_particle_splotch.
-  //one more for dums
-  size_t s = nP* sizeof(cu_particle_splotch);
-  error = cudaMalloc((void**) &pgv->d_ps_render, s+sizeof(cu_particle_splotch));
-  if (error != cudaSuccess) return 1;
+  // particle size/position vector
+  size = nP * sizeof(unsigned long);
+  error = cudaMalloc((void**) &pgv->d_posInFragBuf, size);
+  if (error != cudaSuccess)
+   {
+     cout << "Device Malloc " << size << " bytes: size particles vector allocation error!" << endl;
+     return 1;
+   }
+  // particle active flag vector
+  size = nP * sizeof(bool);
+  error = cudaMalloc((void**) &pgv->d_active, size);
+  if (error != cudaSuccess)
+   {
+     cout << "Device Malloc: active flag vector allocation error!" << endl;
+     return 1;
+   }
 
-  // fragment buffer
-  size_t size = pgv->policy->GetFBufSize() <<20;
-  error = cudaMalloc((void**) &pgv->d_fbuf, size); 
-  if (error != cudaSuccess) return 1;
-  // index fragment buffer (index pixels)
-  size = pgv->policy->GetIndexSize() <<20;
-  error = cudaMalloc((void**) &pgv->d_pixel, size); 
-  if (error != cudaSuccess) return 1;
   // image
-  size = pgv->policy->GetImageSize() <<20;
+  size = pgv->policy->GetImageSize();
   error = cudaMalloc((void**) &pgv->d_pic, size); 
-  if (error != cudaSuccess) return 1;
+  if (error != cudaSuccess)
+   {
+     cout << "Device Malloc: image allocation error!" << endl;
+     return 1;
+   }
 
   //retrieve parameters
   cu_param tparams;
@@ -121,7 +137,11 @@ int cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campo
 
   //dump parameters to device
   error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
-  if (error != cudaSuccess) return 1;
+  if (error != cudaSuccess)
+   {
+     cout << "Device Malloc: parameters allocation error!" << endl;
+     return 1;
+   }
   return 0;
   }
 
@@ -129,44 +149,50 @@ int cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campo
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv)
   {
   cudaError_t error;
-  size_t size = (n+1)*sizeof(cu_particle_sim);
-  //one more space allocated for the dumb
-  error = cudaMalloc((void**) &pgv->d_pd, size);
-  if (error != cudaSuccess) 
-  {
-   cout << "Device Memory: allocation particle data error!" << endl;
-   return 1;
-  }
-
-  //copy particle data to device
+  size_t size = n*sizeof(cu_particle_sim);
   error = cudaMemcpy(pgv->d_pd, h_pd, size, cudaMemcpyHostToDevice);
   if (error != cudaSuccess)
   {
-   cout << "Device Memory: copy particle data error!" << endl;
+   cout << "Device Memory: particle data copy error!" << endl;
    return 1;
   }
   return 0;
   }
 
-
-int cu_transform (unsigned int n, cu_particle_splotch *h_ps, cu_gpu_vars* pgv)
-  {
+int cu_allocateFragmentBuffer(long n, cu_gpu_vars* pgv)
+{
   cudaError_t error;
+  // fragment buffer
+  size_t size = n*sizeof(cu_fragment_AeqE);
+  error = cudaMalloc((void**) &pgv->d_fbuf, size); 
+  if (error != cudaSuccess) 
+   {
+     cout << "Device Malloc: fragment buffer allocation error!" << endl;
+     return 1;
+   }
+  // index fragment buffer (index pixels)
+  size = n*sizeof(int);
+  error = cudaMalloc((void**) &pgv->d_pixel, size); 
+  if (error != cudaSuccess)
+   {
+     cout << "Device Malloc: pixel indexes allocation error!" << endl;
+     return 1;
+   }
+  return 0;
+}
+
+
+int cu_transform (int n, cu_gpu_vars* pgv)
+  {
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
+  int MaxBlock = pgv->policy->GetMaxBlockSize();
 
   //call device transformation
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_ps_render, n);
-
-  //copy the result out
-  size_t size = n* sizeof(cu_particle_splotch);
-  error = cudaMemcpy(h_ps, pgv->d_ps_render, size, cudaMemcpyDeviceToHost);
-  if (error != cudaSuccess) 
-   {
-     cout << "Device Memcpy: particle data copy error!" << endl;
-     return 1;
-   } 
+  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, MaxBlock);
+  cudaThreadSynchronize();
+ 
   return 0;
   }
 
@@ -184,42 +210,16 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   pgv->colormap_ptypes = h_info.ptypes;
   }
 
-/*
+
 void cu_colorize(int n, cu_gpu_vars* pgv)
   {
-
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-
-  cudaEvent_t start,stop;
-  cudaEventCreate(&start);
-  cudaEventCreate(&stop);
-  cudaEventRecord( start, 0);
-
-  k_colorize<<<dimGrid,dimBlock>>>(n, pgv->d_ps_render, pgv->colormap_size, pgv->colormap_ptypes);
-
-  cudaEventRecord( stop, 0);
-  cudaEventSynchronize(stop);
- // float elapsedTime;
- // cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
-  cudaEventDestroy(start);
-  cudaEventDestroy(stop);
-
-  //particle_splotch memory on device will be freed in cu_end
+  k_colorize<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->colormap_size, pgv->colormap_ptypes, n);
+  cudaThreadSynchronize();
   }
-*/
 
-int cu_copy_particles_to_render(cu_particle_splotch *p,
-  int n, cu_gpu_vars* pgv)
-  {
-  cudaError_t error;
-  //copy filtered particles into device
-  size_t size = n *sizeof(cu_particle_splotch);
-  error = cudaMemcpy(pgv->d_ps_render, p,size, cudaMemcpyHostToDevice);
-  if (error != cudaSuccess) return 1;
-  return 0;
-  }
 
 void cu_clear(int n, cu_gpu_vars* pgv)
   {
@@ -238,71 +238,51 @@ void cu_update_image(int n, bool a_eq_e, cu_gpu_vars* pgv)
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
 
   k_combine<<<dimGrid,dimBlock>>>(n, a_eq_e, pgv->d_pic, pgv->d_pixel, pgv->d_fbuf);
-
 }
 
 
 void cu_render1
-  (int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
+  (int grid, unsigned int maxsizeP, int nP, int End_cu_ps, unsigned long FragRendered,
+   bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
   {
-//  cudaEvent_t start,stop;
-//  cudaEventCreate(&start);
-//  cudaEventCreate(&stop);
-//  cudaEventRecord( start, 0);
- 
   //get dims from pgv->policy object first
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
-  int yres = (pgv->policy->GetResolution()).second;
+  dim3 dimGrid = dim3(grid); 
+  dim3 dimBlock = dim3(maxsizeP);
+//  pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
 
   //call device
-  k_render1<<<dimGrid, dimBlock>>>(pgv->d_ps_render, nP,
-    pgv->d_fbuf, pgv->d_pixel, a_eq_e, grayabsorb, pgv->colormap_size, pgv->colormap_ptypes, yres);
-
-//  cudaEventRecord( stop, 0);
-//  cudaEventSynchronize(stop);
-//  float elapsedTime;
-//  cutilSafeCall( cudaEventElapsedTime(&elapsedTime,start,stop));
-//  cudaEventDestroy(start);
-//  cudaEventDestroy(stop);
+  k_render1<<<dimGrid, dimBlock>>>(pgv->d_posInFragBuf+End_cu_ps, nP, FragRendered, pgv->d_pd+End_cu_ps, pgv->d_fbuf, pgv->d_pixel, a_eq_e, grayabsorb);
+  cudaThreadSynchronize();
   }
 
-/*
-void cu_get_fbuf
-  (void *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv)
+void cu_endChunk(cu_gpu_vars* pgv)
   {
-  size_t size;
-  if (a_eq_e)
-    size =n* sizeof(cu_fragment_AeqE);
-  else
-    size =n* sizeof(cu_fragment_AneqE);
-
-  cudaMemcpy(h_fbuf, pgv->d_fbuf,size,cudaMemcpyDeviceToHost);
-  }
-*/
-
-void cu_end(cu_gpu_vars* pgv)
-  {
-  CLEAR_MEM((pgv->d_ps_render));
   CLEAR_MEM((pgv->d_fbuf));
   CLEAR_MEM((pgv->d_pixel));
+  }
+
+void cu_endThread(cu_gpu_vars* pgv)
+  {
+  CLEAR_MEM((pgv->d_pd));
+  CLEAR_MEM((pgv->d_posInFragBuf));
+  CLEAR_MEM((pgv->d_active));
   CLEAR_MEM((pgv->d_pic));
 
   delete pgv->policy;
   cudaThreadExit();
   }
 
-int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, float pfactor)
+long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, float pfactor)
   {
-   int gMemSize = policy->GetGMemSize();
-   int fBufSize = policy->GetFBufSize();
-   int ImSize = policy->GetImageSize();
-   int IndexSize = policy->GetIndexSize();
-   if (gMemSize <= fBufSize) return 0;
+   size_t gMemSize = policy->GetGMemSize();
+   size_t fBufSize = policy->GetFBufSize();
+   size_t ImSize = policy->GetImageSize();
+   size_t IndexSize = policy->GetIndexSize();
+  // if (gMemSize <= fBufSize) return 0;
 
-   int spareMem = 20;
-   int arrayParticleSize = gMemSize - 3*fBufSize -ImSize - spareMem;
-   int len = (int) (arrayParticleSize/(psize*pfactor))*(1<<20); 
+   size_t spareMem = 20*(1<<20);
+   long int arrayParticleSize = gMemSize - 2*fBufSize - 2*IndexSize - ImSize - spareMem;
+   long int len = (long int) (arrayParticleSize/(psize*pfactor)); 
 
    return len;
   }

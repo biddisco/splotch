@@ -22,18 +22,20 @@ using namespace std;
 class CuPolicy
   {
   private:
-    int m_blockSize, maxregion, fbsize;
+    int m_gridSize, pix_blockSize, p_blockSize;
+    size_t fbsize;
     pair <int,int> res;
     size_t gmsize;
   public:
     CuPolicy(paramfile &Param);
 
     pair <int,int> GetResolution();
-    int GetMaxRegion();
-    int GetFBufSize();
-    int GetIndexSize();
-    int GetGMemSize();
-    int GetImageSize();
+    size_t GetFBufSize();
+    size_t GetIndexSize();
+    size_t GetGMemSize();
+    size_t GetImageSize();
+    int GetMaxGridSize();
+    int GetMaxBlockSize();
     void GetDimsBlockGrid(int n, dim3 *dimGrid, dim3 *dimBlock);
   };
 

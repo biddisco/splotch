@@ -3,6 +3,11 @@
 
 #include "cuda/splotch_cuda.h"
 
+//#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
+//#define printf(f, ...) ((void)(f, __VA_ARGS__),0)
+//#endif
+
+
 //MACROs
 #define Pi 3.14159265358979323846264338327950288
 #define get_xy_from_sn(sn, xmin, ymin, ymax, x, y)\
@@ -29,6 +34,77 @@ __device__ __forceinline__ void clamp (float minv, float maxv, float &val)
   val = min(maxv, max(minv, val));
   }
 
+//Transform by kernel
+__global__ void k_transform
+  (cu_particle_sim *p, unsigned long *p_region, bool *p_active, int n, int MaxBlock)
+  {
+  //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >=n) return;
+
+  //now do x,y,z
+  float x,y,z;
+  x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
+  y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
+  z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
+
+  //do r
+  float xfac = dparams.xfac;
+  const float   res2 = 0.5f*dparams.xres;
+  const float   ycorr = 0.5f*(dparams.yres-dparams.xres);
+  if (!dparams.projection)
+    {
+    x = res2 * (x+dparams.fovfct*dparams.dist)*xfac;
+    y = res2 * (y+dparams.fovfct*dparams.dist)*xfac + ycorr;
+    }
+  else
+    {
+    xfac=1.0f/(dparams.fovfct*z);
+    x = res2 * (x+dparams.fovfct*z)*xfac;
+    y = res2 * (y+dparams.fovfct*z)*xfac + ycorr;
+    }
+
+  float r = p[m].r;
+  p[m].I /= r;
+  r *= res2*xfac;
+
+  const float rfac= sqrt(r*r + 0.25f*dparams.minrad_pix*dparams.minrad_pix)/r;
+  r *= rfac;
+  p[m].I /= rfac;
+
+  p[m].x = x;
+  p[m].y = y;
+  p[m].r = r;
+
+  p[m].active = false;
+  p_active[m] = false;
+
+  // compute region occupied by the partile
+  const float rfacr=dparams.rfac*r;
+  int minx=int(x-rfacr+1.f);
+  if (minx>=dparams.xres) return;
+  minx=max(minx,0);
+
+  int maxx=int(x+rfacr+1.f);
+  if (maxx<=0) return;
+  maxx=min(maxx,dparams.xres);
+  if (minx>=maxx) return;
+
+  int miny=int(y-rfacr+1.f);
+  if (miny>=dparams.yres) return;
+  miny=max(miny,0);
+
+  int maxy=int(y+rfacr+1.f);
+  if (maxy<=0) return;
+  maxy=min(maxy,dparams.yres);
+  if (miny>=maxy) return;
+ 
+  p[m].active = true;
+  p_region[m] = (unsigned long) (maxx-minx)*(maxy-miny);
+  if (p_region[m] > (unsigned long) MaxBlock)   p_active[m] = false;
+  else  p_active[m] = true;
+  }
+
 //fetch a color from color table on device
 __device__ __forceinline__ cu_color get_color(int ptype, float val, int mapSize, int ptypes)
   {
@@ -41,9 +117,9 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int mapSize,
   int     start, end;
   start =ptype_points[ptype];
   if ( ptype == map_ptypes-1)//the last type
-    end =map_size-1;
+    end = map_size-1;
   else
-    end =ptype_points[ptype+1]-1;
+    end = ptype_points[ptype+1]-1;
 
   //search the section of this type to find the val
   int i=start;
@@ -60,22 +136,22 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int mapSize,
   }
 
 //colorize by kernel
-__device__ void k_colorize
-  (cu_particle_splotch *p2, int mapSize, int types)
+__global__ void k_colorize
+  (cu_particle_sim *p2, int mapSize, int types, int n)
   {
   //first get the index m of this thread
-  //int m=blockIdx.x *blockDim.x + threadIdx.x;
-  //if (m >n) m =n;
-
-  int ptype = p2->type;
-  float col1=p2->e.r,col2=p2->e.g,col3=p2->e.b;
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >= n) return; 
+  
+  int ptype = p2[m].type;
+  float col1=p2[m].e.r,col2=p2[m].e.g,col3=p2[m].e.b;
   clamp (0.0000001,0.9999999,col1);
   if (dparams.col_vector[ptype])
     {
     clamp (0.0000001,0.9999999,col2);
     clamp (0.0000001,0.9999999,col3);
     }
-  float intensity=p2->I;
+  float intensity = p2[m].I;
   clamp (0.0000001,0.9999999,intensity);
   intensity *= dparams.brightness[ptype];
 
@@ -97,25 +173,74 @@ __device__ void k_colorize
         e.b *= intensity;
       }
       else
-      { e.r =e.g =e.b =0.0; }
+      { e.r = e.g = e.b = 0.0f; }
     }
-  p2->e=e;
-
-  }
+  p2[m].e.r = e.r;
+  p2[m].e.g = e.g;
+  p2[m].e.b = e.b;
+ }
 
 //device render function k_render1
 __global__ void k_render1
-  (cu_particle_splotch *p, int nP, void *buf, int *index, 
-   bool a_eq_e, float grayabsorb, int mapSize, int types, int yres)
+  (unsigned long *pos, int nP, unsigned long FragRendered, cu_particle_sim *part,
+   void *buf, int *index, bool a_eq_e, float grayabsorb)
 {
   //first get the index m of this thread
-  int m;
-  m =blockIdx.x *blockDim.x + threadIdx.x;
+  int m = blockIdx.x;    // particle id
+//  m =blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=nP)//m goes from 0 to nP-1
     return;
 
-  // coloring
-  k_colorize(&(p[m]), mapSize, types);
+  int npix = threadIdx.x;   // pixel number
+  
+  __shared__ int minx, maxx, miny, maxy, reg;
+  __shared__ float r, posx, posy;
+  __shared__ cu_color e,q;
+  __shared__ unsigned long ppos;
+  __shared__ float sigma0;
+  if (threadIdx.x == 0)
+  {
+   e.r = part[m].e.r; e.g = part[m].e.g; e.b = part[m].e.b;
+   r = part[m].r; posx = part[m].x; posy = part[m].y;
+   float rfacr = dparams.rfac*r;
+
+   minx=int(posx-rfacr+1.f);
+   minx=max(minx,0);
+   maxx=int(posx+rfacr+1.f);
+   maxx=min(maxx,dparams.xres);
+   miny=int(posy-rfacr+1.f);
+   miny=max(miny,0);
+   maxy=int(posy+rfacr+1.f);
+   maxy=min(maxy,dparams.yres);
+   reg = (maxx-minx)*(maxy-miny);
+ 
+   if (!a_eq_e)
+   {
+     q.r = e.r/(e.r+grayabsorb);
+     q.g = e.g/(e.g+grayabsorb);
+     q.b = e.b/(e.b+grayabsorb);
+   }
+
+   const float powtmp = __powf(Pi,1.0f/3.0f);
+   sigma0 = powtmp/sqrt(2.f*Pi);
+   const float intens = -0.5f/(2.f*sqrt(Pi)*powtmp);
+   e.r*=intens; e.g*=intens; e.b*=intens;
+
+   ppos = pos[m];     //particle m absolute end position
+ //  printf("part = %d, size = %d, ppos =%u \n",m,reg,ppos); 
+  }
+  __syncthreads();
+  if (npix > reg) return;
+
+ //now do the rendering
+  float radsq = 2.25f*r*r;
+  float stp = -0.5f/(r*r*sigma0*sigma0);
+
+  // relative starting position:
+  unsigned long fpos = ppos - FragRendered - (unsigned long) (reg - npix); 
+  //if (threadIdx.x == 0) printf("fpos = %u\n",fpos); 
+  int x = npix/(maxy-miny) + minx;
+  int y = npix%(maxy-miny) + miny;
 
   //make fbuf the right type
   cu_fragment_AeqE        *fbuf;
@@ -125,34 +250,13 @@ __global__ void k_render1
   else
     fbuf1 =(cu_fragment_AneqE*)buf;
 
-  //now do the rendering
-  const float powtmp = pow(Pi,1./3.);
-  const float sigma0 = powtmp/sqrt(2*Pi);
-
-  const float r = p[m].r;
-  const float radsq = 2.25*r*r;
-  const float stp = -0.5/(r*r*sigma0*sigma0);
-
-  cu_color q, e=p[m].e;
-  if (!a_eq_e)
-   {
-     q.r = e.r/(e.r+grayabsorb);
-     q.g = e.g/(e.g+grayabsorb);
-     q.b = e.b/(e.b+grayabsorb);
-   }
-  const float intens = -0.5/(2*sqrt(Pi)*powtmp);
-  e.r*=intens; e.g*=intens; e.b*=intens;
-
-  const float posx=p[m].x, posy=p[m].y;
-  unsigned int fpos =p[m].posInFragBuf;
-
   if (a_eq_e)
   {
-    for (int x=p[m].minx; x<p[m].maxx; ++x)
-    {
+ //   for (int x=minx; x<maxx; ++x)
+ //   {
      float dxsq=(x-posx)*(x-posx);
-     for (int y=p[m].miny; y<p[m].maxy; ++y)
-      {
+ //    for (int y=miny; y<maxy; ++y)
+ //     {
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
@@ -163,127 +267,53 @@ __global__ void k_render1
         }
         else
         {
-          fbuf[fpos].aR =0.0;
-          fbuf[fpos].aG =0.0;
-          fbuf[fpos].aB =0.0;
+          fbuf[fpos].aR = 0.0f;
+          fbuf[fpos].aG = 0.0f;
+          fbuf[fpos].aB = 0.0f;
         }
-        index[fpos] = x*yres+y;
-        fpos++;
-      }//y
-    }//x
+        index[fpos] = y+dparams.yres*x;  // pixel index in the image
+  //      fpos++;
+  //    }//y
+  //  }//x
   }
   else
   {
-    for (int x=p[m].minx; x<p[m].maxx; ++x)
-    {
+  //  for (int x=minx; x<maxx; ++x)
+  //  {
      float dxsq=(x-posx)*(x-posx);
-     for (int y=p[m].miny; y<p[m].maxy; ++y)
-      {
+  //   for (int y=miny; y<maxy; ++y)
+  //    {
         float dsq = (y-posy)*(y-posy) + dxsq;
         if (dsq<radsq)
         {
           float att = __expf(stp*dsq);
-          float   expm1;
-          expm1 =__expf(att*e.r)-1.0;
+          float expm1;
+          expm1 =__expf(att*e.r)-1.0f;
           fbuf1[fpos].aR = expm1;
           fbuf1[fpos].qR = q.r;
-          expm1 =__expf(att*e.g)-1.0;
+          expm1 =__expf(att*e.g)-1.0f;
           fbuf1[fpos].aG = expm1;
           fbuf1[fpos].qG = q.g;
-          expm1 =__expf(att*e.b)-1.0;
+          expm1 =__expf(att*e.b)-1.0f;
           fbuf1[fpos].aB = expm1;
           fbuf1[fpos].qB = q.b;
         }
         else
         {
-          fbuf1[fpos].aR =0.0;
-          fbuf1[fpos].aG =0.0;
-          fbuf1[fpos].aB =0.0;
-          fbuf1[fpos].qR =1.0;
-          fbuf1[fpos].qG =1.0;
-          fbuf1[fpos].qB =1.0;
+          fbuf1[fpos].aR = 0.0f;
+          fbuf1[fpos].aG = 0.0f;
+          fbuf1[fpos].aB = 0.0f;
+          fbuf1[fpos].qR = 1.0f;
+          fbuf1[fpos].qG = 1.0f;
+          fbuf1[fpos].qB = 1.0f;
         }
-        index[fpos] = x*yres+y;
-        fpos++;
-      }//y
-    }//x
+        index[fpos] = x*dparams.yres+y;
+   //     fpos++;
+   //   }//y
+   // }//x
   }
 }
 
-//Transform by kernel
-__global__ void k_transform
-  (cu_particle_sim *p, cu_particle_splotch *p2, int n)
-  {
-  //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n) return;
-
-  //now do x,y,z
-  float x,y,z;
-  x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
-  y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
-  z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
-
-  //do r
-  float xfac = dparams.xfac;
-  const float   res2 = 0.5*dparams.xres;
-  const float   ycorr = .5f*(dparams.yres-dparams.xres);
-  if (!dparams.projection)
-    {
-    x = res2 * (x+dparams.fovfct*dparams.dist)*xfac;
-    y = res2 * (y+dparams.fovfct*dparams.dist)*xfac + ycorr;
-    }
-  else
-    {
-    xfac=1./(dparams.fovfct*z);
-    x = res2 * (x+dparams.fovfct*z)*xfac;
-    y = res2 * (y+dparams.fovfct*z)*xfac + ycorr;
-    }
-
-  float r = p[m].r;
-  p[m].I /= r;
-  r *= res2*xfac;
-
-  const float rfac= sqrt(r*r + 0.25*dparams.minrad_pix*dparams.minrad_pix)/r;
-  r *= rfac;
-  p2[m].I = p[m].I/rfac;
-
-  p2[m].x = x;
-  p2[m].y = y;
-  p2[m].r = r;
-
-  p2[m].isValid = false;
-
-  // compute region occupied by the partile
-  const float rfacr=dparams.rfac*r;
-  int minx=int(x-rfacr+1);
-  if (minx>=dparams.xres) return;
-  minx=max(minx,0);
-
-  int maxx=int(x+rfacr+1);
-  if (maxx<=0) return;
-  maxx=min(maxx,dparams.xres);
-  if (minx>=maxx) return;
-
-  int miny=int(y-rfacr+1);
-  if (miny>=dparams.yres) return;
-  miny=max(miny,0);
-
-  int maxy=int(y+rfacr+1);
-  if (maxy<=0) return;
-  maxy=min(maxy,dparams.yres);
-  if (miny>=maxy) return; 
-
-  p2[m].minx =minx;  p2[m].miny =miny;
-  p2[m].maxx =maxx;  p2[m].maxy =maxy;
-
-
-  p2[m].e.r = (float) p[m].e.r;
-  p2[m].e.g = (float) p[m].e.g;
-  p2[m].e.b = (float) p[m].e.b;
-  p2[m].type = p[m].type;
-  p2[m].isValid = true;
-  }
 
 __global__ void k_clear(int n, cu_color *pic)
 {
@@ -291,9 +321,9 @@ __global__ void k_clear(int n, cu_color *pic)
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >n) m =n;
 
-   pic[m].r = 0.0;
-   pic[m].g = 0.0;
-   pic[m].b = 0.0;
+   pic[m].r = 0.0f;
+   pic[m].g = 0.0f;
+   pic[m].b = 0.0f;
 }
 
 __global__ void k_combine(int n, bool a_eq_e, cu_color *pic, int *index, void *fragBuf)
@@ -334,6 +364,15 @@ struct sum_op
     return sum; 
    } 
 };
+
+struct reg_notValid
+  {
+    __host__ __device__
+    bool operator()(const bool flag)
+    {
+      return !flag;
+    }
+  };
 
 #endif
 

@@ -145,16 +145,14 @@ THREADFUNC cu_thread_func(void *pinfo)
 
   //a new linear pic object that will carry the result
   COLOUR Pic_chunk[xres*yres];
-  //arr2<COLOUR> pic(pInfoOutput->pPic->size1(), pInfoOutput->pPic->size2());
-  //ti.pPic = &pic;
 
   // Initialize policy class
   CuPolicy *policy = new CuPolicy(*g_params); 
 
   // num particles to manage at once
   float factor = g_params->find<float>("particle_mem_factor", 3);
-  int len = cu_get_chunk_particle_count(policy, sizeof(cu_particle_sim), factor); 
-  if (len == 0)
+  long int len = cu_get_chunk_particle_count(policy, sizeof(cu_particle_sim), factor); 
+  if (len <= 0)
     {
     printf("\nGraphics memory setting error\n");
     mpiMgr.abort();
@@ -165,13 +163,11 @@ THREADFUNC cu_thread_func(void *pinfo)
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
   // enable device and allocate arrays
+  long int nP = ti.endP - ti.startP + 1;
+  if (len > nP) len = nP;
   int error;
   error = cu_init(pInfoOutput->devID, len, &gv, *g_params, campos, lookat, sky, b_brightness);
-  if (error)
-  {
-    cout << "Device Memory: allocation error!" << endl;
-  }
-  else
+  if (!error)
   {
     setup_colormap(ptypes, &gv);
 
@@ -194,7 +190,7 @@ THREADFUNC cu_thread_func(void *pinfo)
      ti.startP = ti.endP + 1;
     }
     pInfoOutput->times = ti.times;
-    cu_end(&gv);
+    cu_endThread(&gv);
   }
  }
 
@@ -259,10 +255,12 @@ void GPUReport(wallTimerSet &cuTimers)
   {
     cout << "Copy  (secs)               : " << cuTimers.acc("gcopy") << endl;
     cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
+    cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
+    cout << "Colorize Sub-Data (secs)   : " << cuTimers.acc("gcolor") << endl;
+    cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
     cout << "Sorting Fragments (secs)   : " << cuTimers.acc("gsort") << endl;
     cout << "Reduce Fragments (secs)    : " << cuTimers.acc("greduce") << endl;
-    cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
-    cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
+    cout << "Combine images (secs)      : " << cuTimers.acc("gcombine") << endl;
     cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl;
   }
 
