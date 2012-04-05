@@ -86,7 +86,7 @@ public:
 
 //-----------------------------------------------------------------------------
 pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
-  pqDisplayPanel* _panel):Superclass(_panel)
+  pqDisplayPanel* _panel) : Superclass(_panel)
 {
   pqDisplayProxyEditor *panel = qobject_cast<pqDisplayProxyEditor*> (_panel);
   pqRepresentation     *repr  = panel->getRepresentation();
@@ -103,9 +103,9 @@ pqSplotchRaytraceDisplayPanelDecorator::pqSplotchRaytraceDisplayPanelDecorator(
   this->setRepresentation(
     static_cast<pqPipelineRepresentation*> (panel->getRepresentation()));
   //
-  //
-  //
   this->setupGUIConnections();
+  //
+  this->UpdateParticleTypes();
 }
 //-----------------------------------------------------------------------------
 pqSplotchRaytraceDisplayPanelDecorator::~pqSplotchRaytraceDisplayPanelDecorator()
