@@ -14,7 +14,7 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_3">
-   <item row="15" column="0" colspan="2">
+   <item row="16" column="0" colspan="2">
     <spacer name="verticalSpacer">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -27,7 +27,7 @@
      </property>
     </spacer>
    </item>
-   <item row="12" column="0" colspan="2">
+   <item row="13" column="0" colspan="2">
     <widget class="QPushButton" name="RepaintButton">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -40,7 +40,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="0" colspan="2">
+   <item row="12" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_3">
      <item>
       <widget class="QLabel" name="label_4">
@@ -73,7 +73,7 @@
      </item>
     </layout>
    </item>
-   <item row="3" column="0" colspan="2">
+   <item row="4" column="0" colspan="2">
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string/>
@@ -255,17 +255,7 @@
      </property>
     </widget>
    </item>
-   <item row="0" column="1">
-    <widget class="QComboBox" name="TypeArray">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
+   <item row="2" column="1">
     <widget class="QComboBox" name="ActiveArray">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -275,14 +265,14 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="ActiveArrayLabel">
      <property name="text">
       <string>Active</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="3" column="0" colspan="2">
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
       <widget class="QLabel" name="label_5">
@@ -299,6 +289,9 @@
       </widget>
      </item>
     </layout>
+   </item>
+   <item row="0" column="1">
+    <widget class="QComboBox" name="TypeArray"/>
    </item>
   </layout>
  </widget>
