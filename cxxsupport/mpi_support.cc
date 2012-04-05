@@ -110,7 +110,9 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
 MPI_Manager::MPI_Manager (bool need_init)
   {
     this->initialized = false;
-    if (need_init) {
+    int mpi_already_initialized = 0;
+    MPI_Initialized(&mpi_already_initialized);
+    if (need_init || !mpi_already_initialized) {
       MPI_Init(0,0);
       MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
       this->initialized = true;
