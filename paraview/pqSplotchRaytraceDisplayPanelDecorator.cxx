@@ -158,78 +158,82 @@ void pqSplotchRaytraceDisplayPanelDecorator::setRepresentation(pqPipelineReprese
   // Intensity
   //
   prop = reprProxy->GetProperty("IntensityScalars");
-  // adaptor from combo to property
-  pqSignalAdaptorComboBox *adaptor = new pqSignalAdaptorComboBox(this->Internals->IntensityArray);
-  // domain to control the combo contents
-  new pqComboBoxDomain(this->Internals->IntensityArray, prop, "array_list");
-  // link gui changes to property and vice versa
-  this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
-  prop->UpdateDependentDomains();
 
+  // Some representations are not compatible with our mapper, jump out before segfaults occur
   //
-  // Radius
-  //
-  prop = reprProxy->GetProperty("RadiusScalars");
-  // adaptor from combo to property
-  adaptor = new pqSignalAdaptorComboBox(this->Internals->RadiusArray);
-  // domain to control the combo contents
-  new pqComboBoxDomain(this->Internals->RadiusArray, prop, "array_list");
-  // link gui changes to property and vice versa
-  this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
-  prop->UpdateDependentDomains();
+  if (prop) {
+    // adaptor from combo to property
+    pqSignalAdaptorComboBox *adaptor = new pqSignalAdaptorComboBox(this->Internals->IntensityArray);
+    // domain to control the combo contents
+    new pqComboBoxDomain(this->Internals->IntensityArray, prop, "array_list");
+    // link gui changes to property and vice versa
+    this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
+    prop->UpdateDependentDomains();
 
-  //
-  // Type
-  //
-  prop = reprProxy->GetProperty("TypeScalars");
-  // adaptor from combo to property
-  adaptor = new pqSignalAdaptorComboBox(this->Internals->TypeArray);
-  // domain to control the combo contents
-  new pqComboBoxDomain(this->Internals->TypeArray, prop, "array_list");
-  // link gui changes to property and vice versa
-  this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
-  prop->UpdateDependentDomains();
+    //
+    // Radius
+    //
+    prop = reprProxy->GetProperty("RadiusScalars");
+    // adaptor from combo to property
+    adaptor = new pqSignalAdaptorComboBox(this->Internals->RadiusArray);
+    // domain to control the combo contents
+    new pqComboBoxDomain(this->Internals->RadiusArray, prop, "array_list");
+    // link gui changes to property and vice versa
+    this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
+    prop->UpdateDependentDomains();
 
-  //
-  // Active
-  //
-  prop = reprProxy->GetProperty("ActiveScalars");
-  // adaptor from combo to property
-  adaptor = new pqSignalAdaptorComboBox(this->Internals->ActiveArray);
-  // domain to control the combo contents
-  new pqComboBoxDomain(this->Internals->ActiveArray, prop, "array_list");
-  // link gui changes to property and vice versa
-  this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
-  prop->UpdateDependentDomains();
+    //
+    // Type
+    //
+    prop = reprProxy->GetProperty("TypeScalars");
+    // adaptor from combo to property
+    adaptor = new pqSignalAdaptorComboBox(this->Internals->TypeArray);
+    // domain to control the combo contents
+    new pqComboBoxDomain(this->Internals->TypeArray, prop, "array_list");
+    // link gui changes to property and vice versa
+    this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
+    prop->UpdateDependentDomains();
 
-  //
-  // Simple controls
-  //
-  this->Internals->Links.addPropertyLink(
-    this->Internals->ActiveParticleType, "value", SIGNAL(valueChanged(int)),
-    reprProxy, reprProxy->GetProperty("ActiveParticleType"));
+    //
+    // Active
+    //
+    prop = reprProxy->GetProperty("ActiveScalars");
+    // adaptor from combo to property
+    adaptor = new pqSignalAdaptorComboBox(this->Internals->ActiveArray);
+    // domain to control the combo contents
+    new pqComboBoxDomain(this->Internals->ActiveArray, prop, "array_list");
+    // link gui changes to property and vice versa
+    this->Internals->Links.addPropertyLink(adaptor, "currentText", SIGNAL(currentTextChanged(const QString&)), reprProxy, prop);
+    prop->UpdateDependentDomains();
 
-  this->Internals->Links.addPropertyLink(
-    this->Internals->Brightness, "value", SIGNAL(valueChanged(int)),
-    reprProxy, reprProxy->GetProperty("Brightness"));
-  
-  this->Internals->Links.addPropertyLink(
-    this->Internals->LogIntensity, "checked", SIGNAL(toggled(bool)),
-    reprProxy, reprProxy->GetProperty("LogIntensity"));
-  
-  this->Internals->Links.addPropertyLink(
-    this->Internals->TypeActive, "checked", SIGNAL(toggled(bool)),
-    reprProxy, reprProxy->GetProperty("TypeActive"));
+    //
+    // Simple controls
+    //
+    this->Internals->Links.addPropertyLink(
+      this->Internals->ActiveParticleType, "value", SIGNAL(valueChanged(int)),
+      reprProxy, reprProxy->GetProperty("ActiveParticleType"));
 
-  this->Internals->Links.addPropertyLink(
-    this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
-    reprProxy, reprProxy->GetProperty("GrayAbsorption"));
-  
-  // Connect Property event to GUI
-  this->Internals->VTKConnect->Connect(
-    reprProxy->GetProperty("Representation"),
-    vtkCommand::ModifiedEvent, this, SLOT(representationTypeChanged()));
+    this->Internals->Links.addPropertyLink(
+      this->Internals->Brightness, "value", SIGNAL(valueChanged(int)),
+      reprProxy, reprProxy->GetProperty("Brightness"));
+    
+    this->Internals->Links.addPropertyLink(
+      this->Internals->LogIntensity, "checked", SIGNAL(toggled(bool)),
+      reprProxy, reprProxy->GetProperty("LogIntensity"));
+    
+    this->Internals->Links.addPropertyLink(
+      this->Internals->TypeActive, "checked", SIGNAL(toggled(bool)),
+      reprProxy, reprProxy->GetProperty("TypeActive"));
 
+    this->Internals->Links.addPropertyLink(
+      this->Internals->Gray, "value", SIGNAL(valueChanged(int)),
+      reprProxy, reprProxy->GetProperty("GrayAbsorption"));
+    
+    // Connect Property event to GUI
+    this->Internals->VTKConnect->Connect(
+      reprProxy->GetProperty("Representation"),
+      vtkCommand::ModifiedEvent, this, SLOT(representationTypeChanged()));
+  }
   this->representationTypeChanged();
 }
 //-----------------------------------------------------------------------------
