@@ -2,7 +2,9 @@
 
 float box_muller(float m, float s);
 float box_uniform(float m, float s);
+float pi=3.141592654;
 
+// this is used to create spheroids of points: OPTION 1
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, 
 		 float * coordx, float * coordy, float * coordz) 
 {
@@ -29,12 +31,20 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 
 }
 
+//this is used for the stars distribution in a face-on spiral galaxy: OPTION 3
+/* 
+MAIN PARAMETERS:
+sigma_z = thickness of the disk (dispersion of the seed points)
+Sigma_g = dispersion of point clouds around a "seed point"
+n_per_pixel = number of points around each seed
+*/
 long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
 		 float * coordx, float * coordy, float * coordz, long nx, long ny) 
 {
   srand(time(NULL));
 
   float sigma_z = params.find<float>("Sigmaz"+ComponentName,0.01);
+  float sigma_g = params.find<float>("Sigmag"+ComponentName,0.001);
   long n_per_pixel = params.find<float>("NperPixel"+ComponentName,1);
 
   printf("      disk with sigma_z = %f, %d particles per pixel\n", sigma_z, n_per_pixel);
@@ -54,17 +64,13 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 
   float pixsizex = 2./nx;
   float pixsizey = 2./ny;
+  pixsizex = 20*sigma_g;
+  pixsizey = 20*sigma_g;
   float coordz_aux;
   for (long i=0; i<number_of_points; i+=1)
     {
       float x0=coordx_save[i];
       float y0=coordy_save[i];
-
-      ///coordx[count] = x0;
-      ///coordy[count] = y0;
-      ///coordz[count] = box_muller(0.0, sigma_z);
-      ///coordz_aux = coordz[count];
-
       coordz_aux = box_muller(0.0, sigma_z);
       
       ///count++;
@@ -81,8 +87,7 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 	  //coordy[count] = box_uniform(y0, pixsizey);
 	  coordx[count] = box_muller(x0, pixsizex);
 	  coordy[count] = box_muller(y0, pixsizey);
-	  // the factor of 4.0 just below is set "experimentally"
-	  coordz[count] = box_muller(coordz_aux, sigma_z/4.0);
+	  coordz[count] = box_muller(coordz_aux, sigma_g);
 	  count++;
 	  if(count >= ntot)
 	    {
@@ -100,6 +105,14 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 }
 
 
+//This is used for the gas for any galaxy: OPTION 4
+/* 
+MAIN PARAMETERS:
+sigma = parameter to increase/decreas gas thickness in third dimension (with respect to the velocity dispersion)
+sigma_fixed = dispersion of point clouds around the corresponding seed point
+npergroup = number of points per seed
+rx, ry = rescaled resolutions (in pixels)
+*/
 
 long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
 		 float * coordx, float * coordy, float * coordz,
@@ -112,7 +125,6 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
   long rx = params.find<long>("Scaledxres"+ComponentName,1);
   long ry = params.find<long>("Scaledyres"+ComponentName,1);
-  float compression = params.find<float>("CompressionFactor"+ComponentName,1.0);
   float * resolution;
 
   resolution = new float [rx*ry];
@@ -176,7 +188,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
     }
 
   float ref_size = ((xmax-xmin)+(ymax-ymin))/2.0;
-  cout << "    CHARCHTERISTIC SIZE = " << ref_size << "\n";
+  cout << "    CHARACHTERISTIC SIZE = " << ref_size << "\n";
 
   long abscounter = countin;
 
@@ -216,6 +228,14 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 
 }
 
+//this is used for stars distribution in irregular galaxies: OPTION 5
+/* 
+MAIN PARAMETERS:
+npergroup = number of points around each seed (group points)
+ndiffuse_factor = number of diffused point per (group point)
+sigma_fixed = dispersion of point clouds around the corresponding seed point
+*/
+
 long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
 		 float * coordx, float * coordy, float * coordz, float * III, long nx, long ny) 
 {
@@ -225,6 +245,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
   float * zz;
 
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
+  float ndiffuse_factor = params.find<float>("NdiffuseFactor"+ComponentName,0);
   float sigma_fixed = params.find<float>("Sigmazfixed"+ComponentName,0.1);
 
 
@@ -234,22 +255,6 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
   float yc = (float)ny/2/norm;
 
   FILE * pFile;
-// read local maxima in the pixels distribution
-/*
-	string imagefile_max = params.find<string>(ComponentName+"FileMax","NONE");
-        unsigned char * max_mask = new unsigned char[nx*ny];
-        pFile = fopen(imagefile_max.c_str(), "rb");
-        int maxcount = 0;
-        for (int ix=0; ix<nx; ix++)
-        for (int iy=0; iy<ny; iy++)
-           {
-             long index = ix+iy*nx;
-             fread(&max_mask[index], sizeof(char), 1, pFile);
-             //if (max_mask[index] != 0)maxcount++;
-             if(max_mask[index] > 100)maxcount++;
-           }
-        fclose(pFile);
-*/
 
 // find local maxima in the pixels distribution and the charachteristic size of the galaxy
 
@@ -366,7 +371,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                    zz[pcounter]=box_muller(zcenter,r_dist);
                    pcounter++;
                  }
-                 nrandom = 1.5*npergroup;
+                 nrandom = long(ndiffuse_factor*npergroup);
                  for (int ii=0;ii<nrandom;ii++)
                  {
                    xx[pcounter]=box_muller(xcenter,20.0*r_dist);

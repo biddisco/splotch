@@ -1,4 +1,5 @@
 # include "Galaxy.h"
+#define MAX(a,b) ((a < b) ?  (b) : (a))
 
 float box_muller(float m, float s);
 
@@ -20,6 +21,8 @@ void CalculateColours (paramfile &params, string ComponentsName,long npart,
 	brightness = 1.0/(float)npart;
 	brightness = brightness_fact*pow(brightness, 0.3333333f);
 	cout << "--> Coloring " << ComponentsName.c_str() << " with brightness " << brightness << endl;
+
+        float iiimax=-1.0;
 
 	for (long particlei=0; particlei<npart; particlei++)
 	{
@@ -50,6 +53,9 @@ void CalculateColours (paramfile &params, string ComponentsName,long npart,
 	      ciii[particlei]   = brightness*III[iaux];
 	   }
 	
+           iiimax = MAX(iiimax, ciii[particlei]);
 
 	}
+        cout << "Maximum Brightness = " << iiimax << endl;
+	//for (long particlei=0; particlei<npart; particlei++)ciii[particlei] /= iiimax;
 }

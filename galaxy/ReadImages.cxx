@@ -18,8 +18,7 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
           float * xM;
 	  float * yM;
 
-// Read Data: this part will be changed with FITSIO reading three different files
-// one for each color. For testing, we just refer to the single raw file
+// Read Data from raw file
 
 	  if(!(pFile = fopen(infile_rgb.c_str(), "rb")))
 	    {
@@ -84,6 +83,7 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 		GGG[i] = (float)GG[i]/255.0;
 		BBB[i] = (float)BB[i]/255.0;
 		III[i] = (float)II[i]/255.0;
+                if(i%2 == 0)III[i] = 0;
 
 		x[i] = (float)ix;
 		y[i] = (float)iy;
