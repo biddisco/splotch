@@ -20,13 +20,20 @@
   #include <sys/time.h>
 #endif
 
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+// Otherwise
+#include "vtkMultiProcessController.h"
+
 #include "vtkActor.h"
 #include "vtkAppendPolyData.h"
 #include "vtkCamera.h"
 #include "vtkPointSource.h"
 #include "vtkDataSet.h"
 #include "vtkMath.h"
-#include "vtkMPIController.h"
 #include "vtkParallelFactory.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
@@ -147,7 +154,9 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
     // Read particles on N processes
     //
     vtkSmartPointer<vtkH5PartReader> reader = vtkSmartPointer<vtkH5PartReader>::New();
+#ifdef VTK_USE_MPI
     reader->SetController(NULL);
+#endif
     reader->SetFileName(fullname);
     reader->SetGenerateVertexCells(1);
     reader->Update();
@@ -256,9 +265,11 @@ int main (int argc, char* argv[])
     MPI_Init(&argc, &argv);
   }
 
-  // Note that this will create a vtkMPIController if MPI
-  // is configured, vtkThreadedController otherwise.
+#ifdef VTK_USE_MPI
   vtkMPIController* controller = vtkMPIController::New();
+#else
+  vtkMultiProcessController* controller = vtkMultiProcessController::GetGlobalController();
+#endif
 
   controller->Initialize(&argc, &argv, 1);
 
