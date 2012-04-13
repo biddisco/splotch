@@ -135,7 +135,7 @@ void MPI_Manager::barrier() const
 
 #else
 
-MPI_Manager::MPI_Manager ()
+MPI_Manager::MPI_Manager (bool need_init)
   : num_ranks_(1), rank_(0) {}
 MPI_Manager::~MPI_Manager () {}
 
