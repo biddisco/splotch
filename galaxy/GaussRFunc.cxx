@@ -1,4 +1,7 @@
 # include "Galaxy.h"
+#include"cxxsupport/arr.h"
+#include"kernel/colourmap.h"
+#include"cxxsupport/vec3.h"
 
 float box_muller(float m, float s);
 float box_uniform(float m, float s);
@@ -404,5 +407,134 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
          return pcounter;
 }
 
+//This is used for the gas for any galaxy: OPTION 5
+/* 
+MAIN PARAMETERS:
+TirificModel      = file containg parameters of the TiRiFiC model
+PixelToTirific    = Conversion factor between pixel size and TiRiFiC (radial) units
+TirificPartReduce = Reduction factor between region covered by TiRiFiC model and image size 
+*/
+
+long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_pixels, long ntot, 
+		 float * coordx, float * coordy, float * coordz,
+                 float * III, long nx, long ny) 
+{
+  srand(time(NULL));
+
+  float pixeltotirific = params.find<float>("PixelToTirific"+ComponentName,1.0);
+  float npartfix = params.find<float>("TirificPartReduce"+ComponentName,0.75);
+  float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
+  float rmax = params.find<float>("RmaxMask"+ComponentName,nx/2.);
+  COLOURMAP model;
+
+  ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
+  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  string dummy;
+  int nModel;
+  infile >> nModel;
+  infile >> dummy >> dummy >> dummy >> dummy >> dummy;
+  cout << "      loading " << nModel << " entries of tirific model table " << endl;
+  float rrr,vvv,zzz,iii,ppp;
+  for (int i=0; i<nModel; i++)
+    {
+      infile >> rrr >> vvv >> zzz >> iii >> ppp;
+      model.addVal(rrr,COLOUR(zzz,iii,ppp));
+      //      cout << rrr << " , " << zzz << " , " << iii << " , " << ppp << endl;
+    }
+
+  long ntrial = ntot * nx * ny / number_of_pixels * npartfix;
+  float particlesize = nx * ny / (float)ntrial;
+
+  long icount = 0;
+  float r0 = 0.0;
+
+  for (long i=0; i<ntrial; i++)    // loop over all possible particles
+    {
+      float r1m = sqrt( particlesize / 2 / M_PI + r0 * r0);     // radius associated to the particle 
+      float phi = box_uniform(1.0, 2.0) * M_PI;                 // random phase of particle
+  
+      // Interpolate the tirific model to this radial distance
+      COLOUR ring = model.getVal(r1m * pixeltotirific);
+      float thick = ring.r;
+      float pa = (ring.b + 180) / 180 * M_PI;
+      float inc = ring.g / 180 * M_PI;
+
+      //      cout << i << " " << r1m << " " << thick << " " << pa << " " << inc << " " << phi << endl;
+
+
+      // Calculate the normalized normal vector of the ring from the tirific model
+      vec3 nn(0,0,1);
+      vec3 m1_1(1,0,0),m1_2(0,cos(inc),-sin(inc)),m1_3(0,sin(inc),cos(inc));
+      vec3 m2_1(cos(pa),-sin(pa),0),m2_2(sin(pa),cos(pa),0),m2_3(0,0,1);
+      vec3 n1(dotprod(m1_1,nn),dotprod(m1_2,nn),dotprod(m1_3,nn));
+      vec3 n(dotprod(m2_1,n1),dotprod(m2_2,n1),dotprod(m2_3,n1));
+      n.Normalize();
+
+      // Find the radius vector within the x/y plane
+      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
+      float y0 = -(n.x/n.y)*x0;
+      vec3 rr(x0,y0,0);
+
+      // Rotate the radius vector arround the normal vector by phi
+      float sp = sin(phi);
+      float cp = cos(phi);
+      vec3 m3_1(n.x*n.x*(1-cp)+cp    ,n.x*n.y*(1-cp)-n.z*sp,n.x*n.z*(1-cp)+n.y*sp);
+      vec3 m3_2(n.y*n.x*(1-cp)+n.z*sp,n.y*n.y*(1-cp)+cp    ,n.y*n.z*(1-cp)-n.x*sp);
+      vec3 m3_3(n.z*n.x*(1-cp)-n.y*sp,n.z*n.y*(1-cp)+n.x*sp,n.z*n.z*(1-cp)+cp);
+      vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
+
+      // Use the thickness of the disk to displace the particle randomly withi the disk
+      float height = box_muller(0, thick / pixeltotirific * extenddisk);
+      vec3 xxx = xx + n * height;
+
+      // Convert coordinates into ranges [-1,1] ...
+      vec3 xxxx(2*xxx.x/nx,2*xxx.y/ny,2*xxx.z/(0.5*(nx+ny)));
+
+      // Find index in image
+      long ix = 0.5 * (xxxx.x + 1.0) * nx;
+      long iy = 0.5 * (xxxx.y + 1.0) * ny;
+      long index = ix + iy * nx;
+
+      if (index < nx * ny)
+	if(III[index] > 0.0)
+	  //	if(r1m < 100)
+	  {
+	    coordx[icount] = xxxx.x;
+	    coordy[icount] = xxxx.y;
+	    coordz[icount] = xxxx.z;
+	    icount++;
+	    if(icount >= ntot-1)
+	      {
+		cout << "More particles produced than intended, have to stop !!" << endl;
+		cout << "Reduce the value of <TirificPartReduce"+ComponentName+"> (currently " << npartfix << ")" << endl; 
+		cout << i << "/" << icount << "/" << ntot << " : " << r0 << " r1m = " << r1m << " t = " << thick << " pa = " << pa << " inc = " << inc << endl;
+		exit(0);
+	      }
+	  }
+
+      // This was the old idl part
+      //      nn=[0,0,1.]
+      //      m1=[[1,0,0],[0,cos(ic),-sin(ic)],[0,sin(ic),cos(ic)]]
+      //      m2=[[cos(pa),-sin(pa),0],[sin(pa),cos(pa),0],[0,0,1]]
+      //      n1=m1##nn
+      //      n=m2##n1
+      //      x0 = SQRT(r^2/(1+(n[0]/n[1])^2))
+      //      y0 = SQRT(r^2 - x0^2)
+      //      r0 = [x0,y0,0]
+      //      sp=sin(phi)
+      //      cp=cos(phi)
+      //      m3=[[n[0]*n[0]*(1-cp)+cp     ,n[0]*n[1]*(1-cp)-n[2]*sp,n[0]*n[2]*(1-cp)+n[1]*sp],$
+      //          [n[1]*n[0]*(1-cp)+n[2]*sp,n[1]*n[1]*(1-cp)+cp     ,n[1]*n[2]*(1-cp)-n[0]*sp],$
+      //          [n[2]*n[0]*(1-cp)-n[1]*sp,n[2]*n[1]*(1-cp)+n[0]*sp,n[2]*n[2]*(1-cp)+cp     ]]
+      //      xx=m3##r0
+
+      // Update covered radii
+      r0 = sqrt( particlesize / M_PI + r0 * r0);
+      if(r0 > rmax) 
+	break;
+    }
+  return icount;
+
+}
 
 

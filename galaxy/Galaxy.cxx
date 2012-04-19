@@ -83,7 +83,7 @@ int main (int argc, const char **argv)
 		ycomp = new float [nwant];
 		zcomp = new float [nwant];
 
-		if(component_type == 3 || component_type == 4 || component_type == 5)
+		if(component_type == 3 || component_type == 4 || component_type == 5 || component_type == 6)
 		  {
 		    printf("  Reading color & mask images\n");
 
@@ -147,6 +147,10 @@ int main (int argc, const char **argv)
 		    nfinal=GaussRGlobFunc(params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
 			//for(int iii=0;iii<nfinal;iii++)cout << xcomp[iii]<< " " << ycomp[iii] << " " << zcomp[iii]  << endl;
 		    break;
+		  case 6:
+		    printf("    Generating Gas distribution from TiRiFiC model\n");
+		    nfinal=RDiscFuncTirific (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
+		    break;
 		  }
 
 		npart[itype] = nfinal;
@@ -191,6 +195,11 @@ int main (int argc, const char **argv)
 			//for(int iii=0;iii<100000;iii++)if(ciii[iii] > 0)cout << ciii[iii] << endl;
 			break;
 		      case 5:
+			printf("    Assigning color from image file\n");
+			CalculateColours(params, ComponentsName[itype], npart[itype], 
+			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+			break;
+		      case 6:
 			printf("    Assigning color from image file\n");
 			CalculateColours(params, ComponentsName[itype], npart[itype], 
 			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
@@ -260,7 +269,7 @@ int main (int argc, const char **argv)
 		    delete [] ciii;
 		  }
 
-		if(component_type == 3 || component_type ==4)
+		if(component_type == 3 || component_type == 4 || component_type == 6)
 		  {
 		    delete [] F_starx;
 		    delete [] F_stary;

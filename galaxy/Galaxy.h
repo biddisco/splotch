@@ -15,6 +15,9 @@ using namespace std;
 long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
                  float * coordy, float * coordz, float * II, long nnx, long nny);
 
+long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz, float * II, long nnx, long nny);
+
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, float * coordx,
                  float * coordy, float * coordz);
 
