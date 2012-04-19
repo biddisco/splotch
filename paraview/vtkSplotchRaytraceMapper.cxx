@@ -51,6 +51,13 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/string_utils.h"
 
+#include "vtkToolkits.h" // For VTK_USE_MPI
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
+
 #undef min
 #undef max
 #include <algorithm>

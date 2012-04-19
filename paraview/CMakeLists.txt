@@ -12,10 +12,14 @@ ENDIF(COMMAND CMAKE_POLICY)
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 
-IF (VTK_USE_PARALLEL AND VTK_USE_MPI)
-  INCLUDE_DIRECTORIES(${VTK_MPI_INCLUDE_DIR})
+#------------------------------------------------------
+# MPI support if ParaView compiled with MPI
+#------------------------------------------------------
+IF (VTK_USE_MPI)
+  FIND_PACKAGE(MPI)   
+  INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
   ADD_DEFINITIONS(-DUSE_MPI)
-ENDIF (VTK_USE_PARALLEL AND VTK_USE_MPI)
+ENDIF (VTK_USE_MPI)
 
 #--------------------------------------------------
 # If not called from the splotch source directory
@@ -109,32 +113,32 @@ SET( splotch_plugin_WRAPPED_SRCS
 )
 
 IF(PARAVIEW_BUILD_QT_GUI)
-#--------------------------------------------------
-# Qt .ui files that are wrapped and added to plugin
-#--------------------------------------------------
-set(UI_FORMS
-  pqSplotchRaytraceDisplayPanelDecorator.ui
-)
-    
-qt4_wrap_ui(UI_SRCS 
-  ${UI_FORMS}
-)
-
-qt4_wrap_cpp(MOC_SRCS 
-  pqSplotchRaytraceDisplayPanelDecorator.h
-  pqSplotchColorScaleEditor.h
+  #--------------------------------------------------
+  # Qt .ui files that are wrapped and added to plugin
+  #--------------------------------------------------
+  set(UI_FORMS
+    pqSplotchRaytraceDisplayPanelDecorator.ui
   )
-   
-set(Plugin_SRCS
-  pqSplotchRaytraceDisplayPanelDecorator.cxx
-  pqSplotchColorScaleEditor.cxx
+      
+  qt4_wrap_ui(UI_SRCS 
+    ${UI_FORMS}
   )
 
-add_paraview_display_panel_decorator(
-  IFACES
-  IFACE_SRCS
-  CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
-  PANEL_TYPES pqDisplayProxyEditor)
+  qt4_wrap_cpp(MOC_SRCS 
+    pqSplotchRaytraceDisplayPanelDecorator.h
+    pqSplotchColorScaleEditor.h
+    )
+     
+  set(Plugin_SRCS
+    pqSplotchRaytraceDisplayPanelDecorator.cxx
+    pqSplotchColorScaleEditor.cxx
+    )
+
+  add_paraview_display_panel_decorator(
+    IFACES
+    IFACE_SRCS
+    CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
+    PANEL_TYPES pqDisplayProxyEditor)
 
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 

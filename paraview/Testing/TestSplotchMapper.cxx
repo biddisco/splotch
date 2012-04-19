@@ -20,6 +20,7 @@
   #include <sys/time.h>
 #endif
 
+#include "vtkToolkits.h" // For VTK_USE_MPI
 #ifdef VTK_USE_MPI
   #include "vtkMPI.h"
   #include "vtkMPIController.h"
@@ -154,9 +155,7 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
     // Read particles on N processes
     //
     vtkSmartPointer<vtkH5PartReader> reader = vtkSmartPointer<vtkH5PartReader>::New();
-#ifdef VTK_USE_MPI
     reader->SetController(NULL);
-#endif
     reader->SetFileName(fullname);
     reader->SetGenerateVertexCells(1);
     reader->Update();
