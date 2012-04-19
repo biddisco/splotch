@@ -71,6 +71,17 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 	  fclose(pFile);
 	  fclose(pFile1);
 
+	  //  for (long ix=1340; ix<1360; ix++)
+	  //    {
+	  //      for (long iy=1340; iy<1360; iy++)
+	  //	{
+	  //	  i = iy*numx + ix;
+	  //	  if (II[i] > 0) cout << "1"; else cout << "0";
+	  //	}
+	  //      cout << endl;
+	  //    }
+
+
 // Now data processing
 	  printf("    extracting mask\n",numx,numy);
 
@@ -83,7 +94,7 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 		GGG[i] = (float)GG[i]/255.0;
 		BBB[i] = (float)BB[i]/255.0;
 		III[i] = (float)II[i]/255.0;
-                if(i%2 == 0)III[i] = 0;
+		//                if(i%2 == 0)III[i] = 0;
 
 		x[i] = (float)ix;
 		y[i] = (float)iy;
