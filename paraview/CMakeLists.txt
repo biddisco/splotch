@@ -203,12 +203,11 @@ IF (BUILD_TESTING)
 ENDIF (BUILD_TESTING)  
 
 #--------------------------------------------------
-# Splotch format converter
+# Tools : Splotch format converter
 #--------------------------------------------------
-INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
-ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
-LINK_DIRECTORIES(
-  "C:/cmakebuild/trilinos/packages/zoltan/src/Debug"
-  "C:/cmakebuild/trilinos/packages/zoltan/src/"
-)
-TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
+IF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
+  ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
+  TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
+ENDIF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+
