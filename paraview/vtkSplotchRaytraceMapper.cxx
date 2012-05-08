@@ -12,6 +12,12 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+#include "vtkToolkits.h" // For VTK_USE_MPI
+#ifdef VTK_USE_MPI
+  #include "vtkMPI.h"
+  #include "vtkMPIController.h"
+  #include "vtkMPICommunicator.h"
+#endif
 
 #include "vtkSplotchRaytraceMapper.h"
 
@@ -51,12 +57,6 @@
 #include "splotch/splotch_host.h"
 #include "cxxsupport/string_utils.h"
 
-#include "vtkToolkits.h" // For VTK_USE_MPI
-#ifdef VTK_USE_MPI
-  #include "vtkMPI.h"
-  #include "vtkMPIController.h"
-  #include "vtkMPICommunicator.h"
-#endif
 
 #undef min
 #undef max
@@ -444,4 +444,3 @@ void vtkSplotchRaytraceMapper::Render(vtkRenderer *ren, vtkActor *act)
     glPopMatrix();
   }
 }
-
