@@ -16,6 +16,12 @@ endif(COMMAND cmake_policy)
 FIND_PACKAGE(ParaView REQUIRED)
 INCLUDE(${PARAVIEW_USE_FILE})
 
+#
+# For the Painter we need access to some IceT viewport info
+# It's awful, but there's no other way to get the image reduction factor
+#
+INCLUDE_DIRECTORIES(${ParaView_BINARY_DIR}/Utilities/IceT/src/include)
+
 #------------------------------------------------------
 # MPI support if ParaView compiled with MPI
 #------------------------------------------------------
@@ -46,13 +52,13 @@ IF (NOT TARGET splotchcore)
   # Include Directories
   #-----------------------------------------------------------------------------
   INCLUDE_DIRECTORIES(
-          ${CMAKE_CURRENT_SOURCE_DIR}/../
-          ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
-          ${CMAKE_CURRENT_SOURCE_DIR}/../reader
-          ${CMAKE_CURRENT_SOURCE_DIR}/../writer
-          ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
-          ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
+    ${CMAKE_CURRENT_SOURCE_DIR}/../
+    ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
+    ${CMAKE_CURRENT_SOURCE_DIR}/../reader
+    ${CMAKE_CURRENT_SOURCE_DIR}/../writer
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
   )
 
   #-----------------------------------------------------------------------------
@@ -77,15 +83,15 @@ IF (NOT TARGET splotchcore)
   # Source files for splotch core library
   #-----------------------------------------------------------------------------
   SET(SPLOTCH_CORE_LIB_SRCS
-          ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/transform.cxx
+    ${CMAKE_CURRENT_SOURCE_DIR}/../kernel/transform.cxx
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotchutils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/scenemaker.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch_host.cc
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
-          ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/error_handling.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/walltimer.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/m_rotation.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
@@ -112,8 +118,9 @@ INCLUDE_DIRECTORIES(
 # Source files, that are wrapped by Client/Server
 #--------------------------------------------------
 SET( splotch_plugin_WRAPPED_SRCS
-  vtkSplotchRaytraceMapper.cxx
-  vtkSplotchRaytraceRepresentation.cxx
+  vtkSplotchRepresentation.cxx  
+  vtkSplotchDefaultPainter.cxx
+  vtkSplotchPainter.cxx
 )
 
 IF(PARAVIEW_BUILD_QT_GUI)
@@ -121,7 +128,7 @@ IF(PARAVIEW_BUILD_QT_GUI)
   # Qt .ui files that are wrapped and added to plugin
   #--------------------------------------------------
   set(UI_FORMS
-    pqSplotchRaytraceDisplayPanelDecorator.ui
+    pqSplotchDisplayPanelDecorator.ui
   )
       
   qt4_wrap_ui(UI_SRCS 
@@ -129,19 +136,19 @@ IF(PARAVIEW_BUILD_QT_GUI)
   )
 
   qt4_wrap_cpp(MOC_SRCS 
-    pqSplotchRaytraceDisplayPanelDecorator.h
+    pqSplotchDisplayPanelDecorator.h
     pqSplotchColorScaleEditor.h
     )
      
   set(Plugin_SRCS
-    pqSplotchRaytraceDisplayPanelDecorator.cxx
+    pqSplotchDisplayPanelDecorator.cxx
     pqSplotchColorScaleEditor.cxx
     )
 
   add_paraview_display_panel_decorator(
     IFACES
     IFACE_SRCS
-    CLASS_NAME pqSplotchRaytraceDisplayPanelDecorator
+    CLASS_NAME pqSplotchDisplayPanelDecorator
     PANEL_TYPES pqDisplayProxyEditor)
 
 ENDIF(PARAVIEW_BUILD_QT_GUI)
@@ -156,7 +163,7 @@ ADD_PARAVIEW_PLUGIN(
   "1.0" 
 
   SERVER_MANAGER_XML 
-    ${CMAKE_CURRENT_SOURCE_DIR}/vtkSplotchRaytraceRepresentation.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/vtkSplotchRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${splotch_plugin_WRAPPED_SRCS}
   SERVER_SOURCES
