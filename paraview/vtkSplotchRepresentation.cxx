@@ -37,8 +37,10 @@ vtkSplotchRepresentation::vtkSplotchRepresentation()
 {
   this->SplotchDefaultPainter    = vtkSplotchDefaultPainter::New();
   this->LODSplotchDefaultPainter = vtkSplotchDefaultPainter::New();
-  this->SplotchPainter           = vtkSplotchPainter::New();
-  this->LODSplotchPainter        = vtkSplotchPainter::New();
+  this->SplotchPainter           = this->SplotchDefaultPainter->GetSplotchPainter();
+  this->LODSplotchPainter        = this->LODSplotchDefaultPainter->GetSplotchPainter();
+  this->SplotchPainter->Register(this);
+  this->LODSplotchPainter->Register(this);
   this->ActiveParticleType   = 0;
   this->ColorArrayName       = 0;
   this->ColorAttributeType   = POINT_DATA;
@@ -91,12 +93,10 @@ void vtkSplotchRepresentation::SetupDefaults()
   vtkPainterPolyDataMapper* painterMapper = vtkPainterPolyDataMapper::SafeDownCast(this->Mapper);
   this->SplotchDefaultPainter->SetDelegatePainter(painterMapper->GetPainter()->GetDelegatePainter());
   painterMapper->SetPainter(this->SplotchDefaultPainter);
-  this->SplotchDefaultPainter->SetSplotchPainter(this->SplotchPainter);
   // Setup LOD painters
   painterMapper = vtkPainterPolyDataMapper::SafeDownCast(this->LODMapper);
   this->LODSplotchDefaultPainter->SetDelegatePainter(painterMapper->GetPainter()->GetDelegatePainter());
   painterMapper->SetPainter(this->LODSplotchDefaultPainter);
-  this->LODSplotchDefaultPainter->SetSplotchPainter(this->LODSplotchPainter);
 }
 
 //----------------------------------------------------------------------------

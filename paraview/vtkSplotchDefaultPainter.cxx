@@ -23,7 +23,7 @@ vtkCxxSetObjectMacro(vtkSplotchDefaultPainter, SplotchPainter, vtkSplotchPainter
 //----------------------------------------------------------------------------
 vtkSplotchDefaultPainter::vtkSplotchDefaultPainter()
 {
-  this->SplotchPainter = NULL;
+  this->SplotchPainter = vtkSplotchPainter::New();
 }
 
 //----------------------------------------------------------------------------
