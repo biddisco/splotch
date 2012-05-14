@@ -1,20 +1,7 @@
-// DGraham Data
-// Ascii2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.plymouth.cfg -f H:/ParticleData/DGraham/DAT_t_6_2.ascii 
-// Ascii2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.plymouth.cfg -f H:/ParticleData/DGraham/Graham_wave_data_New.ascii 
-// Ascii2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.plymouth.cfg -f H:/ParticleData/DGraham/DATA_2.ascii 
 //
-// EDF Data
-// Ascii2H5Part -c C:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.edf.cfg -f C:/data/ParticleData/EDF/test_case_output95.dat
-// Ascii2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.edf.cfg -f H:\ParticleData\EDF\test_case\test_case_output1.dat
+// Splotch2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.plymouth.cfg -f H:/ParticleData/DGraham/DAT_t_6_2.ascii 
 //
-// UMan Data
-// Ascii2H5Part -c C:/cmakebuild/plugins/bin/ASCII2H5Part.manchester.cfg  -f C:/Data/ParticleData/UMan/Case6/PART_0001 -a C:/Data/ParticleData/UMan/Case6/PART_0000_point_attribs.txt   
-//
-// ECN Data
-// Ascii2H5Part -c C:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.ecn.cfg -f C:/Data/ParticleData/ECN/BGL_SPhere0POSX.dat
-// Ascii2H5Part -c D:/Code/CSCS/csviz/Shared/vtkCSCS/vtkH5Part/Tools/ASCII2H5Part.ecn.cfg -f D:/data/ecn/MillenISOP0POSX.dat 
-// 
-// Ascii2H5Part -c C:/Code/CSCS/cscs_plugins/vtkCSCSMeshless/h5part/tools/ASCII2H5Part.ens-lyon.cfg -d C:/data/AsciiData-ens-lyon -f dust_sph_030.out
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -59,7 +46,7 @@ int main(int argc, char **argv)
     << "-c full/path/to/.cfg "
     << "-a full/path/to/IdFile for optional point Id flagging "
     << "-t full/path/to/timefile.txt " 
-    << "-f full/path/to/input/file " << vtkstd::endl;
+    << "-f full/path/to/input/file.par " << vtkstd::endl;
   vtkSmartPointer<vtkTesting> test = vtkSmartPointer<vtkTesting>::New();
   for (int c=1; c<argc; c++ ) {
     test->AddArgument(argv[c]);

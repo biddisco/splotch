@@ -258,7 +258,7 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
 //----------------------------------------------------------------------------
 int main (int argc, char* argv[])
 {
-  // Check if MPI is already initialized because MPI_Manager in sploth calls it
+  // Check if MPI is already initialized because MPI_Manager in splotch calls it
   int initialized = false;
   if (MPI_Initialized(&initialized)==MPI_SUCCESS && !initialized) {
     MPI_Init(&argc, &argv);
