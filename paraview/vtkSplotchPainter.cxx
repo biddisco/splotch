@@ -301,7 +301,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     this->ArrayName, cellFlag);
   vtkScalarsToColors *lut = this->ScalarsToColorsPainter->GetLookupTable();
   //
-  vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetArray("Color"));
+  vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetScalars());
   unsigned char *cdata = colors ? colors->GetPointer(0) : NULL;
 
 

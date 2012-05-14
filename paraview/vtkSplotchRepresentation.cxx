@@ -143,12 +143,39 @@ vtkStringArray *vtkSplotchRepresentation::GetActiveParticleSettings()
 {
   this->Settings->Initialize();
   this->Settings->SetNumberOfComponents(1);
-  this->Settings->SetNumberOfTuples(2);
-  //
+  this->Settings->SetNumberOfTuples(6);
+
   this->Settings->SetValue(0, NumToStr<int>(this->ActiveParticleType).c_str());
-  this->Settings->SetValue(1, NumToStr<int>(this->GetTypeActive()).c_str());
+  this->Settings->SetValue(1, NumToStr<double>(this->GetBrightness()).c_str());
+  this->Settings->SetValue(2, NumToStr<int>(this->GetLogIntensity()).c_str());
+  this->Settings->SetValue(3, this->GetIntensityScalars());
+  this->Settings->SetValue(4, this->GetRadiusScalars());
+  this->Settings->SetValue(5, NumToStr<int>(this->GetTypeActive()).c_str());
   //
   return this->Settings;
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetBrightness(double b)
+{
+  double value = pow(10,(b/100.0));
+  if (this->SplotchPainter) this->SplotchPainter->SetBrightness(this->ActiveParticleType, value);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetBrightness(this->ActiveParticleType, value);
+}
+//----------------------------------------------------------------------------
+double vtkSplotchRepresentation::GetBrightness()
+{
+  return this->SplotchPainter->GetBrightness(this->ActiveParticleType);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetLogIntensity(int l)
+{
+  if (this->SplotchPainter) this->SplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+}
+//----------------------------------------------------------------------------
+int vtkSplotchRepresentation::GetLogIntensity()
+{
+  return this->SplotchPainter->GetLogIntensity(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetTypeActive(int l)
@@ -162,13 +189,39 @@ int vtkSplotchRepresentation::GetTypeActive()
   return this->SplotchPainter->GetTypeActive(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetGrayAbsorption(double g)
+{
+  double value = pow(10,(g/100.0));
+  if (this->SplotchPainter) this->SplotchPainter->SetGrayAbsorption(value);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetGrayAbsorption(value);
+}
+//----------------------------------------------------------------------------
+double vtkSplotchRepresentation::GetGrayAbsorption()
+{
+  return this->SplotchPainter->GetGrayAbsorption();
+}
+//----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetInputArrayToProcess(
   int idx, int port, int connection, int fieldAssociation, const char *name)
 {
   switch (idx) {
-    case 0: this->SetTypeScalars(name); break;
-    case 1: this->SetActiveScalars(name); break;
+    case 0: this->SetIntensityScalars(name); break;
+    case 1: this->SetRadiusScalars(name); break;
+    case 2: this->SetTypeScalars(name); break;
+    case 3: this->SetActiveScalars(name); break;
   }
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetIntensityScalars(const char *s)
+{
+  if (this->SplotchPainter) this->SplotchPainter->SetIntensityScalars(this->ActiveParticleType, s);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetIntensityScalars(this->ActiveParticleType, s);
+  }
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetRadiusScalars(const char *s)
+{
+  if (this->SplotchPainter) this->SplotchPainter->SetRadiusScalars(this->ActiveParticleType, s);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetRadiusScalars(this->ActiveParticleType, s);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetTypeScalars(const char *s)
@@ -177,16 +230,28 @@ void vtkSplotchRepresentation::SetTypeScalars(const char *s)
   if (this->LODSplotchPainter) this->LODSplotchPainter->SetTypeScalars(s);
 }
 //----------------------------------------------------------------------------
-const char *vtkSplotchRepresentation::GetTypeScalars()
-{
-  if (this->SplotchPainter) return this->SplotchPainter->GetTypeScalars();
-  return NULL;
-}
-//----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetActiveScalars(const char *s)
 {
   if (this->SplotchPainter) this->SplotchPainter->SetActiveScalars(s);
   if (this->LODSplotchPainter) this->LODSplotchPainter->SetActiveScalars(s);
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRepresentation::GetIntensityScalars()
+{
+  if (this->SplotchPainter) return this->SplotchPainter->GetIntensityScalars(this->ActiveParticleType);
+  return NULL;
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRepresentation::GetRadiusScalars()
+{
+  if (this->SplotchPainter) return this->SplotchPainter->GetRadiusScalars(this->ActiveParticleType);
+  return NULL;
+}
+//----------------------------------------------------------------------------
+const char *vtkSplotchRepresentation::GetTypeScalars()
+{
+  if (this->SplotchPainter) return this->SplotchPainter->GetTypeScalars();
+  return NULL;
 }
 //----------------------------------------------------------------------------
 const char *vtkSplotchRepresentation::GetActiveScalars()
