@@ -1,13 +1,3 @@
-// TestHDF5PartWriter -I -D D:/ -F test.h5
-
-// windows mpi command line
-// cd D:\cmakebuild\csviz\bin\relwithdebinfo
-// mpiexec --localonly -n 4 TestH5PartParallelWriter -I -D D:\ -F sph-test.h5 -R -X -N 1000000
-
-// horus slurm command line for auto allocation of nodes
-// mpirun -prot -srun -N 6 -n 6 TestH5PartParallelWriter -R -D . -N 1000000
-
-//
 #include <vector>
 #include <algorithm>
 #include "splotch/scenemaker.h"
@@ -70,7 +60,10 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 //
-#include "vtkSplotchRaytraceMapper.h"
+#include "vtkPainterPolyDataMapper.h"
+#include "vtkSplotchDefaultPainter.h"
+#include "vtkSplotchPainter.h"
+
 //----------------------------------------------------------------------------
 std::string usage = "\n"\
 "\t-D path to use for h5part file \n" \
@@ -173,24 +166,29 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
       vtkSmartPointer<vtkTimerLog> timer = vtkSmartPointer<vtkTimerLog>::New();
       timer->StartTimer();
       //
-      vtkSmartPointer<vtkSplotchRaytraceMapper> mapper = vtkSmartPointer<vtkSplotchRaytraceMapper>::New();
-      mapper->SetNumberOfParticleTypes(2);
-      mapper->SetTypeScalars("Type");
-      mapper->SetActiveScalars("Active");      
+
+      vtkSmartPointer<vtkPainterPolyDataMapper> mapper = vtkSmartPointer<vtkPainterPolyDataMapper>::New();
+      vtkSmartPointer<vtkSplotchDefaultPainter> defaultpainter = vtkSmartPointer<vtkSplotchDefaultPainter>::New();
+      vtkSmartPointer<vtkSplotchPainter> painter = defaultpainter->GetSplotchPainter();
+      mapper->SetPainter(defaultpainter);
+
+      painter->SetNumberOfParticleTypes(2);
+      painter->SetTypeScalars("Type");
+      painter->SetActiveScalars("Active");      
       // type 0
-      mapper->SetRadiusScalars(0,"Radius");
-      mapper->SetIntensityScalars(0,"Intensity");
-      mapper->SetBrightness(0,10.5);
-      mapper->SetLogIntensity(0,1);
-      mapper->SetLogColour(0,0);
-      mapper->SetTypeActive(0,1);
+      painter->SetRadiusScalars(0,"Radius");
+      painter->SetIntensityScalars(0,"Intensity");
+      painter->SetBrightness(0,10.5);
+      painter->SetLogIntensity(0,1);
+      painter->SetLogColour(0,0);
+      painter->SetTypeActive(0,1);
       // type 1
-      mapper->SetRadiusScalars(1,"Radius");
-      mapper->SetIntensityScalars(1,"Intensity");
-      mapper->SetBrightness(1,10.5);
-      mapper->SetLogIntensity(1,1);
-      mapper->SetLogColour(1,0);
-      mapper->SetTypeActive(1,1);
+      painter->SetRadiusScalars(1,"Radius");
+      painter->SetIntensityScalars(1,"Intensity");
+      painter->SetBrightness(1,10.5);
+      painter->SetLogIntensity(1,1);
+      painter->SetLogColour(1,0);
+      painter->SetTypeActive(1,1);
       //
       mapper->SetColorModeToMapScalars();
       mapper->SetScalarModeToUsePointFieldData();
