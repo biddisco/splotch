@@ -294,16 +294,26 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   //
   // Get the LUT and scalar array
   //
+  bool colourspresent = false;
   int cellFlag=0;
   vtkDataSet* ds = static_cast<vtkDataSet*>(input);
   vtkDataArray* scalars = vtkAbstractMapper::GetScalars(ds,
     this->ScalarMode, this->ArrayAccessMode, this->ArrayId,
     this->ArrayName, cellFlag);
-  vtkScalarsToColors *lut = this->ScalarsToColorsPainter->GetLookupTable();
-  //
-  vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetScalars());
-  unsigned char *cdata = colors ? colors->GetPointer(0) : NULL;
-
+  // if scalars are a RGB colour table, then we don't need to map them.
+  unsigned char *cdata3 = NULL;
+  unsigned char *cdata4 = NULL;
+  if (scalars && scalars->GetDataType()==VTK_UNSIGNED_CHAR && scalars->GetNumberOfComponents()==3) {
+    cdata3 = static_cast<unsigned char*>(scalars->GetVoidPointer(0));
+    colourspresent = true;
+  }
+  else {
+    vtkScalarsToColors *lut = this->ScalarsToColorsPainter->GetLookupTable();
+    //
+    vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetScalars());
+    cdata4 = colors ? colors->GetPointer(0) : NULL;
+    colourspresent = (cdata4!=NULL);
+  }
 
   // We need the viewport/viewsize scaled by the Image Reduction Factor when downsampling
   // with client server. This is a nasty hack because we can't access this information
@@ -383,10 +393,15 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     particle_data[activeParticles].z      = p[2];
     particle_data[activeParticles].r      = radiusarrays[ptype] ? radiusarrays[ptype]->GetTuple1(i) : radius;
     particle_data[activeParticles].I      = intensityarrays[ptype] ? intensityarrays[ptype]->GetTuple1(i) : 1.0;
-    if (cdata) {      
-      particle_data[activeParticles].e.r = (cdata[i*4+0]/255.0);
-      particle_data[activeParticles].e.g = (cdata[i*4+1]/255.0);
-      particle_data[activeParticles].e.b = (cdata[i*4+2]/255.0);
+    if (cdata3) {      
+      particle_data[activeParticles].e.r = (cdata3[i*3+0]/255.0);
+      particle_data[activeParticles].e.g = (cdata3[i*3+1]/255.0);
+      particle_data[activeParticles].e.b = (cdata3[i*3+2]/255.0);
+    }
+    else if (cdata4) {      
+      particle_data[activeParticles].e.r = (cdata4[i*4+0]/255.0);
+      particle_data[activeParticles].e.g = (cdata4[i*4+1]/255.0);
+      particle_data[activeParticles].e.b = (cdata4[i*4+2]/255.0);
     }
     else { // we don't support any other mode
       particle_data[activeParticles].e.r = 0.1;
@@ -410,19 +425,13 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     params.find(name, this->Brightness[i]);
   }
   params.find("gray_absorption", this->GrayAbsorption);
-
   params.find("zmin", zmin);
   params.find("zmax", zmax);
-//  params.find("color_log0", true);
-//  params.find("color_asinh0", false);
-//  params.find("color_is_vector0", false);
-
   params.find("fov", splotchFOV);
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
   params.find("colorbar", false);
-
   params.find("quality_factor", 0.001);
   params.find("boost", true);
 
@@ -434,7 +443,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     particle_project(params, particle_data, campos, lookat, sky);
   }
   for (int i=0; i<activeParticles; i++) {
-    if (cdata) {      
+    if (colourspresent) {      
       double b = brightness[particle_data[i].type];
       particle_data[i].e.r *= particle_data[i].I*b;
       particle_data[i].e.g *= particle_data[i].I*b;
