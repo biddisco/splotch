@@ -326,6 +326,9 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   double *viewPort = ren->GetViewport();
   viewPortRatio[0] = (vp[2]*(viewPort[2]-viewPort[0])) / 2.0 + viewsize[0]*viewPort[0];
   viewPortRatio[1] = (vp[3]*(viewPort[3]-viewPort[1])) / 2.0 + viewsize[1]*viewPort[1];
+  // Oops, we must use the IceT sizes not the renderwindow sizes.
+  X = vp[2];
+  Y = vp[3];
 
   //
   // We need the transform that reflects the transform point coordinates according to actor's transformation matrix
@@ -474,7 +477,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
-    std::cout << "Ïage dimensions are " << X << "," << Y << std::endl;
+    std::cout << "Image dimensions are " << X << "," << Y << std::endl;
     float vmin=VTK_FLOAT_MAX, vmax=VTK_FLOAT_MIN;
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
