@@ -97,12 +97,14 @@ int main (int argc, const char **argv)
 
   int myID = mpiMgr.rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
-//  if (nDevNode < 1)   mpiMgr.abort();
-  int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
+#ifdef CUDA
+  int nDevProc = 1;   // number of GPU required per process
+#else
+  int nDevProc = params.find<int>("gpu_number",1);
+#endif
   int nCoreNode = params.find<int>("cores_number",12); //number of cores per node
   int mydevID = -1;
-  // We assume a geometry where
-  // a) either processes use only one gpu if available
+  // We assume a geometry where processes use only one gpu if available
   if (nDevNode > 0 && nDevProc == 1)
   {
     mydevID = myID%nCoreNode; //ID within the node
@@ -110,12 +112,13 @@ int main (int argc, const char **argv)
       string("There isn't a gpu available for process = ") +dataToString(myID)
       +"\nConfiguration supported is 1 gpu for each mpi process");
   }
+#ifdef OPENCL
   // b) or all processes use a number of GPUs > 1 and <= nDevNode
   else
     planck_assert(nDevNode>=nDevProc, string("Number of GPUs available = ")
       +dataToString(nDevNode) + " is lower than the number of GPUs required = "
       +dataToString(nDevProc));
-
+#endif
   bool gpu_info = params.find<bool>("gpu_info",true);
   if (gpu_info) 
 	if (mydevID >= 0) print_device_info(myID, mydevID);
@@ -152,11 +155,11 @@ int main (int argc, const char **argv)
 #else
       if (mydevID >= 0)
       {
-        if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
+        if (!a_eq_e) planck_fail("CUDA and OpenCL only supported for A==E so far");
 #ifdef CUDA
         tstack_push("CUDA");
-        if(boost) cuda_rendering(mydevID, nDevProc, pic, r_points, b_brightness);
-        else cuda_rendering(mydevID, nDevProc, pic, particle_data, b_brightness);
+        if(boost) cuda_rendering(mydevID, pic, r_points, b_brightness);
+        else cuda_rendering(mydevID, pic, particle_data, b_brightness);
         tstack_pop("CUDA");
 #endif
 #ifdef OPENCL

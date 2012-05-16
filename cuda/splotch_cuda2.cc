@@ -14,7 +14,7 @@ vector<COLOURMAP> amap;
 vector<particle_sim> *particle_data;
 wallTimerSet cuWallTimers;
 
-void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, float b_brightness)
+void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &particle, float b_brightness)
   {
   wallTimerSet times;
   particle_data = &particle;

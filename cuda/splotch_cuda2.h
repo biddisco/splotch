@@ -26,7 +26,7 @@ extern wallTimerSet cuWallTimers;
 int check_device(int rank);
 void print_device_info(int rank, int dev);
 
-void cuda_rendering(int mydevID, int nDev, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, float brightness);
+void cuda_rendering(int mydevID, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, float brightness);
 //void DevideThreadsTasks(thread_info *tInfo, int nThread, bool bHostThread);
 //void cu_draw_chunk(void *pinfo, cu_gpu_vars* gv);
 void setup_colormap(int ptypes, cu_gpu_vars* gv);
