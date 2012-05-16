@@ -23,6 +23,7 @@ class CuPolicy
   {
   private:
     int m_gridSize, pix_blockSize, p_blockSize;
+    int max_part_size;
     size_t fbsize;
     pair <int,int> res;
     size_t gmsize;
@@ -30,6 +31,7 @@ class CuPolicy
     CuPolicy(paramfile &Param);
 
     pair <int,int> GetResolution();
+    int GetMaxPartSize();
     size_t GetFBufSize();
     size_t GetIndexSize();
     size_t GetGMemSize();

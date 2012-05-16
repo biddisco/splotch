@@ -107,5 +107,6 @@ void print_device_info(int rank, int dev)
     printf("  Concurrent copy and execution:                 %s\n",
                deviceProp.deviceOverlap ? "Yes" : "No");
 #endif
- 
+    if(!deviceProp.deviceOverlap)
+	printf("Device will not handle overlaps, so no speed up from streams \n");
 }

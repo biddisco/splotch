@@ -12,17 +12,24 @@ CuPolicy::CuPolicy(paramfile &Param)
     p_blockSize = deviceProp.maxThreadsPerBlock;
     m_gridSize = deviceProp.maxGridSize[0];
     gmsize = deviceProp.totalGlobalMem;
+    max_part_size = Param.find<int>("gpu_max_particle_size", p_blockSize); 
 
-    size_t fbsize_def = (size_t) p_blockSize; //min(res.first/20, p_blockSize);
+    // default number of fragments = n particles * max_particle_size
+    // where n = m_gridSize*max_part_size
+    size_t fbsize_def = (size_t) max_part_size*max_part_size;
     fbsize_def *= m_gridSize*sizeof(cu_color);
-    if ((8*fbsize_def) > gmsize) fbsize_def = gmsize/8;
+    if ((4*fbsize_def) > gmsize) fbsize_def = gmsize/4;
     fbsize = Param.find<int>("fragment_buffer_size", fbsize_def);
-    pix_blockSize = fbsize/(m_gridSize*sizeof(cu_color));
   }
 
 pair<int,int> CuPolicy::GetResolution()
   {
     return res;
+  }
+
+int CuPolicy::GetMaxPartSize()
+  {
+    return max_part_size;
   }
 
 size_t CuPolicy::GetFBufSize() // return dimension in terms of bytes
@@ -51,7 +58,7 @@ int CuPolicy::GetMaxGridSize()
 
 int CuPolicy::GetMaxBlockSize()
   { 
-    return pix_blockSize; 
+    return p_blockSize; 
   }
 
 size_t CuPolicy::GetImageSize()

@@ -1,7 +1,3 @@
-/*
-Try accelerating splotch with CUDA. July 2009.
-Copyright things go here.
-*/
 
 #include <stdlib.h>
 #include <math.h>
@@ -38,7 +34,6 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
       yres = params.find<int>("yres",xres);
   double fov = params.find<double>("fov",45); //in degrees
   double fovfct = tan(fov*0.5*degr2rad);
-  float64 xfac=0.0, dist=0.0;
 
   sky.Normalize();
   vec3 zaxis = (lookat-campos).Norm();
@@ -57,12 +52,10 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   trans=trans2;
   bool projection = params.find<bool>("projection",true);
 
+  float dist= (campos-lookat).Length();
+  float xfac=1./(fovfct*dist);
   if (!projection)
-    {
-    float64 dist= (campos-lookat).Length();
-    float64 xfac=1./(fovfct*dist);
     cout << " Field of fiew: " << 1./xfac*2. << endl;
-    }
 
   float minrad_pix = params.find<float>("minrad_pix",1.);
 
@@ -76,10 +69,23 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   para_trans.dist=dist;
   para_trans.xfac=xfac;
   para_trans.minrad_pix=minrad_pix;
+
+  float h2sigma = 0.5*pow(Pi,-1./6.);
+  para_trans.h2sigma=h2sigma;
+#ifdef SPLOTCH_CLASSIC
+  float powtmp = pow(Pi,1./3.);
+  float sigma0 = powtmp/sqrt(2*Pi);
+  para_trans.sigma0=sigma0;
+  para_trans.bfak=1./(2.*sqrt(Pi)*powtmp);
+  float rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
+#else
+  float rfac=1.;
+#endif
+  para_trans.rfac=rfac;
   }
 
 
-int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float brightness)
+int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float b_brightness)
   {
   cudaError_t error;
   cudaSetDevice (devID); // initialize cuda runtime
@@ -102,7 +108,7 @@ int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &
      return 1;
    }
   // particle active flag vector
-  size = nP * sizeof(bool);
+  size = nP * sizeof(char);
   error = cudaMalloc((void**) &pgv->d_active, size);
   if (error != cudaSuccess)
    {
@@ -133,7 +139,7 @@ int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &
     tparams.brightness[itype] *= b_brightness;
     tparams.col_vector[itype] = fparams.find<bool>("color_is_vector"+dataToString(itype),false);
     }
-  tparams.rfac=1.5;
+//  tparams.rfac=1.5;
 
   //dump parameters to device
   error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
@@ -187,10 +193,10 @@ int cu_transform (int n, cu_gpu_vars* pgv)
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-  int MaxBlock = pgv->policy->GetMaxBlockSize();
+  int maxPartSize = pgv->policy->GetMaxPartSize();
 
   //call device transformation
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, MaxBlock);
+  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, maxPartSize);
   cudaThreadSynchronize();
  
   return 0;
@@ -211,6 +217,7 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   }
 
 
+/*
 void cu_colorize(int n, cu_gpu_vars* pgv)
   {
   //fetch grid dim and block dim and call device
@@ -219,7 +226,6 @@ void cu_colorize(int n, cu_gpu_vars* pgv)
   k_colorize<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->colormap_size, pgv->colormap_ptypes, n);
   cudaThreadSynchronize();
   }
-
 
 void cu_clear(int n, cu_gpu_vars* pgv)
   {
@@ -230,6 +236,7 @@ void cu_clear(int n, cu_gpu_vars* pgv)
 
   k_clear<<<dimGrid,dimBlock>>>(n, pgv->d_pic);
   }
+*/
 
 void cu_update_image(int n, bool a_eq_e, cu_gpu_vars* pgv)
 {
@@ -242,17 +249,15 @@ void cu_update_image(int n, bool a_eq_e, cu_gpu_vars* pgv)
 
 
 void cu_render1
-  (int grid, unsigned int maxsizeP, int nP, int End_cu_ps, unsigned long FragRendered,
+  (int grid, int block, int nP, int End_cu_ps, unsigned long FragRendered,
    bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
   {
   //get dims from pgv->policy object first
   dim3 dimGrid = dim3(grid); 
-  dim3 dimBlock = dim3(maxsizeP);
-//  pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
+  dim3 dimBlock = dim3(block);
+ // size_t sizeSharedMem = block*sizeof(cu_particle_sim) ;
 
-  //call device
   k_render1<<<dimGrid, dimBlock>>>(pgv->d_posInFragBuf+End_cu_ps, nP, FragRendered, pgv->d_pd+End_cu_ps, pgv->d_fbuf, pgv->d_pixel, a_eq_e, grayabsorb);
-  cudaThreadSynchronize();
   }
 
 void cu_endChunk(cu_gpu_vars* pgv)

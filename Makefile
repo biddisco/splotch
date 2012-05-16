@@ -6,7 +6,7 @@
 #OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-#OPT += -DUSE_MPI
+OPT += -DUSE_MPI
 #OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -65,7 +65,7 @@ ifeq ($(SYSTYPE),"generic")
 endif
 
 # OpenMP compiler switch
-OMP      = -fopenmp
+OMP      = #-fopenmp
 
 SUP_INCL = -I. -Icxxsupport -Ic_utils
 
@@ -196,15 +196,15 @@ ifeq ($(SYSTYPE),"PLX")
   CC  = g++
  endif
  OPTIMIZE = -O2 -DDEBUG
- OMP = -fopenmp
+ OMP = #-fopenmp
  ifeq (CUDA,$(findstring CUDA,$(OPT)))
-  NVCC = nvcc -g
+  NVCC = nvcc -arch sm_20 -use_fast_math
   LIB_OPT  =  -L$(CUDA_HOME)/lib64 -lcudart
   SUP_INCL += -I$(CUDA_HOME)/include -I$(CUDA_SDK)/CUDALibraries/common/inc 
  endif
  ifeq (OPENCL,$(findstring OPENCL,$(OPT)))
-  LIB_OPT  =  -L$(CUDA_HOME)/lib64   -Llib -lshrutil_x86_64 -lOpenCL  -loclUtil_x86_64 
-  SUP_INCL += -I$(CUDA_HOME)/include   -Iinc 
+  LIB_OPT  =  -L$(CUDA_HOME)/lib64 -L$(CUDA_HOME)/lib -lOpenCL
+  SUP_INCL += -I$(CUDA_HOME)/include
  endif
 endif
 

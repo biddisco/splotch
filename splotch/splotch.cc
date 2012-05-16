@@ -97,28 +97,28 @@ int main (int argc, const char **argv)
 
   int myID = mpiMgr.rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
-  if (nDevNode < 1)   mpiMgr.abort();
-
+//  if (nDevNode < 1)   mpiMgr.abort();
   int nDevProc = params.find<int>("gpu_number",1);  // number of GPU required per process
-  int mydevID = 0;
+  int nCoreNode = params.find<int>("cores_number",12); //number of cores per node
+  int mydevID = -1;
   // We assume a geometry where
-  // a) either each process uses only one gpu
-  if (nDevProc == 1)
-    {
-    mydevID = myID;
-    if (mydevID >= nDevNode) mydevID = myID%nDevNode;
+  // a) either processes use only one gpu if available
+  if (nDevNode > 0 && nDevProc == 1)
+  {
+    mydevID = myID%nCoreNode; //ID within the node
     planck_assert(mydevID<nDevNode,
       string("There isn't a gpu available for process = ") +dataToString(myID)
       +"\nConfiguration supported is 1 gpu for each mpi process");
-    }
-  // b) or processes run on different nodes and use a number of GPUs >= 1 and <= nDevNode
+  }
+  // b) or all processes use a number of GPUs > 1 and <= nDevNode
   else
     planck_assert(nDevNode>=nDevProc, string("Number of GPUs available = ")
       +dataToString(nDevNode) + " is lower than the number of GPUs required = "
       +dataToString(nDevProc));
 
-  bool gpu_info = params.find<bool>("gpu_info",false);
-  if (gpu_info) print_device_info(myID, mydevID);
+  bool gpu_info = params.find<bool>("gpu_info",true);
+  if (gpu_info) 
+	if (mydevID >= 0) print_device_info(myID, mydevID);
 #endif // CUDA
 
 #ifdef SPLVISIVO
@@ -150,8 +150,26 @@ int main (int argc, const char **argv)
       else
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
 #else
-      if(boost) cuda_rendering(mydevID, nDevProc, pic, r_points, b_brightness);
-      else cuda_rendering(mydevID, nDevProc, pic, particle_data, b_brightness);
+      if (mydevID >= 0)
+      {
+        if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
+#ifdef CUDA
+        tstack_push("CUDA");
+        if(boost) cuda_rendering(mydevID, nDevProc, pic, r_points, b_brightness);
+        else cuda_rendering(mydevID, nDevProc, pic, particle_data, b_brightness);
+        tstack_pop("CUDA");
+#endif
+#ifdef OPENCL
+        tstack_push("OPENCL");
+ 	opencl_rendering(mydevID, nDevProc, pic);
+        tstack_pop("OPENCL");
+#endif
+      }
+      else
+      {
+        if(boost) host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);  
+        else host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
+      }
 #endif
     }
 
