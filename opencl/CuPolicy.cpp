@@ -1,12 +1,9 @@
-
 #include "opencl/Policy.h"
 
 CuPolicy::CuPolicy(paramfile &Param) {
 
-	gmsize = 512 * 1024 * 1024;
 	maxregion = Param.find<int>("max_region", 1024);
 
-	fbsize = GetGMemSize() / 4;
 }
 
 //Get size of device particle data
@@ -32,7 +29,7 @@ void CuPolicy::setGMemSize(size_t s) {
 	//if (s > 512 * 1024 * 1024)
 	//	fbsize = GetGMemSize() / 2;
 	//else
-		fbsize = GetGMemSize() / 4;
+	fbsize = GetGMemSize() / 4;
 
 }
 

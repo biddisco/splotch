@@ -4,6 +4,7 @@
 //#define opencl2
 #define OPENCL1
 //#define DEBUG
+//#define MEM_OPTIMISE
 #ifdef VS
 #define THREADFUNC DWORD WINAPI
 #else
@@ -11,9 +12,6 @@
 #endif
 #ifdef OPENCL1
 #include <CL/cl.h>
-#endif
-#ifdef opencl2
-#include <CL/cl.hpp>
 #endif
 #include <cstring>
 #include "cxxsupport/paramfile.h"
@@ -34,10 +32,15 @@ struct cu_color
   float r,g,b;
   };
 
+struct range_part
+  {
+ unsigned short  minx,miny,maxx,maxy;
+  };
+
 struct particle_sim2
   {
-	cu_color e;
-  float x,y,z,r,I;
+  cu_color e;
+  float x,y,r,I;
   unsigned short type;
   bool active;
   
@@ -77,9 +80,8 @@ struct cu_particle_splotch
   {
   float x,y,r,I;
   int type;
+  unsigned short maxx,minx;
   cu_color e;
-  bool isValid;
-  unsigned short minx, miny, maxx, maxy;
   unsigned long posInFragBuf;
   };
 
@@ -100,54 +102,35 @@ struct cu_gpu_vars //variables used by each gpu
   {
   CuPolicy            *policy;
 #ifdef OPENCL1
-  cl_mem d_pd; //particle_sim2
+ // cl_mem d_pd; //particle_sim2
     cl_mem d_ps_render; //cu_particle_splotch
     cl_mem d_fbuf; //void
     cl_mem d_pic; //cu_color
     cl_mem cu_col; //cu_color_map_entry *
+    cl_mem max_min;
    cl_mem ptype_points; //int *
     cl_mem par; //cu_param*
+    cl_mem output_combined_image;
 #endif
-
-cu_param param_h;
-  size_t sizeofd_pd;//device_particle_data
-
-  size_t sizeofd_ps_render;
-
-  int sizeofd_fbuf;
-
-  int sizeofd_pic;
+  cu_param param_h;
   int colormap_size;
   int colormap_ptypes;
-
-  size_t sizeof_cu_col;
-
-//cu_param par;
-
-
   };
 
 //functions
 
-void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky);
-void cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-size_t cu_allocate_fbuf(int nP, cu_gpu_vars* pgv);
-void cu_transform (unsigned int n, cu_particle_splotch *h_ps, cu_gpu_vars* pgv);
-//void cu_transform (unsigned int n, cu_particle_sim* h_pd, cu_gpu_vars* pgv);
+void cu_init(int devID, int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky,int pict_size);
+void load_ocl_program ();
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
-void cu_colorize(int n, cu_gpu_vars* pgv);
-//void cu_colorize(cu_particle_splotch *h_ps, int n, cu_gpu_vars* pgv);
-void cu_realloc_particles_to_render(int n, cu_gpu_vars* pgv);
-void cu_allocate_particles(unsigned int nP, cu_gpu_vars* pgv);
 void cu_copy_particles_to_render(cu_particle_splotch *p, int n, cu_gpu_vars* pgv);
 void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
 void cu_get_fbuf(cu_fragment_AeqE *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
-void transform(particle_sim2 *p,  cu_particle_splotch *p2,int n,  cu_param *dparams1);
+void transform(cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv,range_part* minmax);
 void cu_end (cu_gpu_vars* pgv);
-//int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy);
 int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy, size_t psize, float pfactor);
-void getCuTransformParams(cu_param &para_trans,
-      paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
+void getCuTransformParams(cu_param &para_trans, paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
 void cu_get_fbuf2(cu_fragment_AneqE *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
+void combine_chunk(int StartP, int EndP, cu_fragment_AeqE *fragBuf,  cu_color *pPic,int xres,int yres,range_part* minmax);
+void combine_chunk2(int StartP, int EndP, cu_fragment_AneqE *fragBuf,  cu_color *pPic,int xres,int yres,range_part* minmax);
 
 #endif
