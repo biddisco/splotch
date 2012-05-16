@@ -19,8 +19,8 @@ OPT += -DUSE_MPI
 
 #--------------------------------------- CUDA options
 
-#OPT += -DCUDA
-#OPT += -DNO_WIN_THREAD
+OPT += -DCUDA
+OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- OpenCL options
 
@@ -34,10 +34,10 @@ OPT += -DUSE_MPI
 #OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
+#SYSTYPE="generic"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
-#SYSTYPE="PLX"
+SYSTYPE="PLX"
 #SYSTYPE="BGP"
 #SYSTYPE="VIZ"
 #SYSTYPE="EIGER"
