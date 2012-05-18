@@ -20,7 +20,6 @@ OPT += -DUSE_MPI
 #--------------------------------------- CUDA options
 
 OPT += -DCUDA
-OPT += -DNO_WIN_THREAD
 
 #--------------------------------------- OpenCL options
 
