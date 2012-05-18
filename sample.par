@@ -94,18 +94,10 @@ fov=30
 #the maximun pixels in a rendering task
 max_region =800
 
-#the size of fragment buffer in Megabyte
-fragment_buffer_size =640
+#number of cores per node
+#cores_number=
 
-#the size of a CUDA block
-#block_size =512
 
 #number of GPUs to use
 gpu_number =1
 
-#the following is for testing now
-#test_load_balancing=false
-#gpu_load0=30
-#gpu_load=20
-#use_host_as_thread =true
-#host_load =80
