@@ -30,6 +30,7 @@
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/sse_utils_cxx.h"
 #include "string_utils.h"
+#include "openmp_support.h"
 
 #define SPLOTCH_CLASSIC
 
@@ -303,6 +304,8 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
         }
       }
     }
+
+  std::cout << "OpenMP Num Threads = " << omp_get_num_threads() << std::endl;
 
   work_distributor wd (xres,yres,chunkdim,chunkdim);
 #pragma omp parallel
