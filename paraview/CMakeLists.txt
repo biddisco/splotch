@@ -191,6 +191,7 @@ ADD_PARAVIEW_PLUGIN(
 )
 
 TARGET_LINK_LIBRARIES(pv_splotch splotchcore splotchio ${DEP_LIBS})
+SET_TARGET_PROPERTIES(pv_splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects

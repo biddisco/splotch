@@ -47,6 +47,8 @@
 #include "vtkScalarsToColorsPainter.h"
 #include "vtkCellArray.h"
 #include "vtkUnsignedCharArray.h"
+#include "vtkFloatArray.h"
+#include "vtkDoubleArray.h"
 //
 #ifdef VTK_USE_MPI
 #include "vtkMPICommunicator.h"
@@ -249,6 +251,25 @@ std::string NumToStrSPM(T data) {
   oss << data;
   return oss.str();
 }
+//----------------------------------------------------------------------------
+void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
+  if (dataarray && vtkFloatArray::SafeDownCast(dataarray)) {
+    F = vtkFloatArray::SafeDownCast(dataarray)->GetPointer(0);
+    D = NULL;
+  }
+  if (dataarray && vtkDoubleArray::SafeDownCast(dataarray)) {
+    D = vtkDoubleArray::SafeDownCast(dataarray)->GetPointer(0);
+    F = NULL;
+  }
+  //
+  if (dataarray && !F && !D) {
+    vtkGenericWarningMacro(<< dataarray->GetName() << "must be float or double");
+  }
+}
+//----------------------------------------------------------------------------
+#define FloatOrDouble(F, D, index) F ? F[index] : D[index]
+#define FloatOrDoubleSet(F, D) ((F!=NULL) || (D!=NULL))
+//----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 // IceT is not exported by paraview, so rather than force lots of include dirs
 // and libs, just manually set some defs which will keep the compiler happy
@@ -352,7 +373,12 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   // watch out, if one process has no points, pts array will be NULL
   //
   vtkIdType N = pts ? pts->GetNumberOfPoints() : 0;
-  
+  float *pointsF = NULL;
+  double *pointsD = NULL;
+  if (N>0) {
+    FloatOrDoubleArrayPointer(pts->GetData(), pointsF, pointsD);
+  }
+
   std::vector<particle_sim> particle_data; // raw data 
   vec3 campos, lookat, sky;
   double zmin,zmax;
@@ -369,30 +395,52 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   double length = input->GetLength();
   double radius = N>0 ? length/N : length/1000.0;
 
-  particle_data.assign(N, particle_sim());
+  particle_data.resize(N, particle_sim());
 
   double *brightness = &this->Brightness[0];
 
-  vtkIdType activeParticles = 0;
+//  vtkIdType activeParticles = 0;
+    #define activeParticles i 
+#pragma omp parallel for  
   for (vtkIdType i=0; i<N; i++) {
+    // for openmp, disable activeparticles
     // what particle type is this
-    int ptype = TypeArray ? TypeArray->GetTuple1(i) : 0;
+    int ptype = 0; // TypeArray ? TypeArray->GetTuple1(i) : 0;
     // clamp it to prevent array access faults
-    ptype = ptype<this->NumberOfParticleTypes ? ptype : 0;
+    // ptype = ptype<this->NumberOfParticleTypes ? ptype : 0;
     particle_data[activeParticles].type   = ptype;
     // is this particle active
-    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 1);
-    if (!active) continue;
-
+//    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 1);
+//    if (!active) continue;
     // if we are active, setup parameters
-    particle_data[activeParticles].active = active;
+    particle_data[activeParticles].active = true; // active;
     //
-    double *p = pts->GetPoint(i);
-    particle_data[activeParticles].x      = p[0];
-    particle_data[activeParticles].y      = p[1];
-    particle_data[activeParticles].z      = p[2];
-    particle_data[activeParticles].r      = radiusarrays[ptype] ? radiusarrays[ptype]->GetTuple1(i) : radius;
-    particle_data[activeParticles].I      = intensityarrays[ptype] ? intensityarrays[ptype]->GetTuple1(i) : 1.0;
+    if (pointsF) {
+      particle_data[activeParticles].x = pointsF[i*3+0];
+      particle_data[activeParticles].y = pointsF[i*3+1];
+      particle_data[activeParticles].z = pointsF[i*3+2];
+    }
+    else {
+      particle_data[activeParticles].x = pointsD[i*3+0];
+      particle_data[activeParticles].y = pointsD[i*3+1];
+      particle_data[activeParticles].z = pointsD[i*3+2];
+    }
+    double radiusdata[1];
+    if (radiusarrays[ptype]) {
+      radiusarrays[ptype]->GetTuple(i,radiusdata);
+      particle_data[activeParticles].r = radiusdata[0];
+    }
+    else {
+      particle_data[activeParticles].r = radius;
+    }
+    double intensitydata[1];
+    if (intensityarrays[ptype]) {
+      intensityarrays[ptype]->GetTuple(i,intensitydata);
+      particle_data[activeParticles].I = intensitydata[0];
+    }
+    else {
+      particle_data[activeParticles].I = 1.0;
+    }
     if (cdata3) {      
       particle_data[activeParticles].e.r = (cdata3[i*3+0]/255.0);
       particle_data[activeParticles].e.g = (cdata3[i*3+1]/255.0);
@@ -409,9 +457,9 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
       particle_data[activeParticles].e.b = 0.1;
       particle_data[activeParticles].I   = 1.0;
     }
-    activeParticles++;
+//    activeParticles++;
   }
-  particle_data.resize(activeParticles);
+//  particle_data.resize(activeParticles);
 
   paramfile params;
   params.find("ptypes", this->NumberOfParticleTypes);
@@ -442,7 +490,8 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   if(particle_data.size()>0) {
     particle_project(params, particle_data, campos, lookat, sky);
   }
-  for (int i=0; i<activeParticles; i++) {
+#pragma omp parallel for
+  for (int i=0; i<N/*activeParticles*/; i++) {
     if (colourspresent) {      
       double b = brightness[particle_data[i].type];
       particle_data[i].e.r *= particle_data[i].I*b;
@@ -487,20 +536,35 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
 
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
     std::cout << "Image dimensions are " << X << "," << Y << std::endl;
-    float vmin=VTK_FLOAT_MAX, vmax=VTK_FLOAT_MIN;
-    for (int ix=0;ix<X;ix++) {
-      for (int iy=0;iy<Y;iy++) {
-        vmin = std::min(pic[ix][iy].r, vmin);
-        vmin = std::min(pic[ix][iy].g, vmin);
-        vmin = std::min(pic[ix][iy].b, vmin);
-        vmax = std::max(pic[ix][iy].r, vmax);
-        vmax = std::max(pic[ix][iy].g, vmax);
-        vmax = std::max(pic[ix][iy].b, vmax);
+    //
+    float global_min=std::numeric_limits<double>::max();
+    float global_max=std::numeric_limits<double>::min();
+#pragma omp parallel 
+    {
+      float local_min=std::numeric_limits<double>::max();
+      float local_max=std::numeric_limits<double>::min();
+#pragma omp for nowait
+      for (int ix=0;ix<X;ix++) {
+        for (int iy=0;iy<Y;iy++) {
+          local_min = std::min(pic[ix][iy].r, local_min);
+          local_min = std::min(pic[ix][iy].g, local_min);
+          local_min = std::min(pic[ix][iy].b, local_min);
+          local_max = std::max(pic[ix][iy].r, local_max);
+          local_max = std::max(pic[ix][iy].g, local_max);
+          local_max = std::max(pic[ix][iy].b, local_max);
+        }
+      }
+#pragma omp critical 
+      {
+        global_min = std::min(global_min, local_min);
+        global_max = std::max(global_max, local_max);
       }
     }
-    std::cout << "vmin, vmax are {" << vmin << "," << vmax << "}" << std::endl;
-    exptable<float32> xexp(vmin);
+
+    std::cout << "global_min, global_max are {" << global_min << "," << global_max << "}" << std::endl;
+    exptable<float32> xexp(global_min);
     //
+#pragma omp parallel for
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
         pic[ix][iy].r = -xexp.expm1(pic[ix][iy].r);
@@ -511,6 +575,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   }
 
   if (!MPI_Manager::GetInstance()->master()) {
+#pragma omp parallel for
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
         pic[ix][iy].r = 0.0;
