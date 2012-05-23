@@ -1,5 +1,5 @@
 //
-// Splotch2H5Part -c D:/code/CSCS/pv-meshless/CSCS/vtkH5Part/Tools/Ascii2H5Part.plymouth.cfg -f H:/ParticleData/DGraham/DAT_t_6_2.ascii 
+// Splotch2H5Part -f 
 //
 
 #include <iostream>
@@ -42,64 +42,33 @@ vtkstd::string timeform, blockform, varform, filepattern;
 //----------------------------------------------------------------------------
 int main(int argc, char **argv)
 {
-  vtkstd::cout << "Usage : ASCII2H5Part "  
-    << "-c full/path/to/.cfg "
-    << "-a full/path/to/IdFile for optional point Id flagging "
-    << "-t full/path/to/timefile.txt " 
-    << "-f full/path/to/input/file.par " << vtkstd::endl;
+  vtkstd::cout << "Usage : splotch2H5Part "  
+    << "-f /full/path/to/input/file.par " << vtkstd::endl;
   vtkSmartPointer<vtkTesting> test = vtkSmartPointer<vtkTesting>::New();
   for (int c=1; c<argc; c++ ) {
     test->AddArgument(argv[c]);
   }
 
-  std::string asciipath, asciiname, errormsg, asciifile, hdf5file, ascii2h5config, ascii2h5IdFile;
+  std::string parampath, paramname, paramfilename, hdf5file;
 
   // input file
   char *filename = vtkTestUtilities::GetArgOrEnvOrDefault("-f", argc, argv, "DUMMY_ENV_VAR", "");
-  asciipath = vtksys::SystemTools::GetFilenamePath(filename);
-  asciiname = vtksys::SystemTools::GetFilenameName(filename);
-  asciifile = asciipath + "/" + asciiname;
+  parampath     = vtksys::SystemTools::GetFilenamePath(filename);
+  paramname     = vtksys::SystemTools::GetFilenameName(filename);
+  paramfilename = parampath + "/" + paramname;
   delete []filename;
-  if (!vtksys::SystemTools::FileExists(asciifile.c_str()))
+  if (!vtksys::SystemTools::FileExists(paramfilename.c_str()))
   {
-    std::cout << "Can't find input file " << asciifile.c_str() << "\n";
+    std::cout << "Can't find input file " << paramfilename.c_str() << "\n";
     return 0;
   }
-  vtkstd::cout << "Input file found     : "  << asciifile.c_str() << "\n";;
-
-  // Point Id file
-  char *idf_name = vtkTestUtilities::GetArgOrEnvOrDefault("-a", argc, argv, "DUMMY_ENV_VAR", "");
-  vtkstd::map<long int, double> idMap;
-  if (vtksys::SystemTools::FileExists(idf_name)) {
-    ascii2h5IdFile = idf_name;
-    vtkstd::cout << "Using Id file        : "  << ascii2h5IdFile.c_str() << "\n";
-    vtkstd::ifstream idfile(idf_name);
-    long int low, high;
-    double flag;
-    while (idfile.good()) {
-      idfile >> low >> high >> flag;
-      idMap.insert( vtkstd::pair<long int,double>(high, flag));
-    }
-  }
-  delete []idf_name;
-
-  // time override 
-  bool   OverrideTime = false;
-  double OverrideTimeStep = 0.0;
-  char *time_steps = vtkTestUtilities::GetArgOrEnvOrDefault("-t", argc, argv, "DUMMY_ENV_VAR", "");
-  std::string timeoverride = time_steps;
-  if (timeoverride.size()>0) {
-    OverrideTime = true;
-    OverrideTimeStep = atof(timeoverride.c_str());
-    vtkstd::cout << "Time override set to : " << OverrideTimeStep << " per step \n";;
-  }
-  delete []time_steps;
+  vtkstd::cout << "Input file found     : "  << paramfilename.c_str() << "\n";;
 
   //
   // generate new h5part file name
   //
-  hdf5file  = vtksys::SystemTools::GetFilenameWithoutExtension(asciifile);
-  hdf5file  = asciipath + "/" + hdf5file + ".h5part";
+  hdf5file  = vtksys::SystemTools::GetFilenameWithoutExtension(paramfilename);
+  hdf5file  = parampath + "/" + hdf5file + ".h5part";
   vtkstd::cout << "Output HDF5 filename : "  << hdf5file.c_str() << "\n";;
 
 
@@ -107,7 +76,7 @@ int main(int argc, char **argv)
   double boxsize;
   int interpol_mode = 0;
 
-  paramfile params(asciifile,true);
+  paramfile params(paramfilename,true);
   params.find<bool>("AnalyzeSimulationOnly", false);
 /*
   params.find<int>("ptypes", 2);
