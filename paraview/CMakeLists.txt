@@ -156,6 +156,15 @@ IF(PARAVIEW_BUILD_QT_GUI)
 ENDIF(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
+# Splotch uses MIP for LOD
+#--------------------------------------------------
+IF (TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-astro)
+  SET(DEP_LIBS pv_astro)
+  ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
+ENDIF (TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+
+#--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
 SET(LIBRARY_TARGET_NAME pv_splotch)
@@ -181,7 +190,7 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(pv_splotch splotchcore splotchio)
+TARGET_LINK_LIBRARIES(pv_splotch splotchcore splotchio ${DEP_LIBS})
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects
@@ -219,4 +228,5 @@ IF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
   ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
   TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
 ENDIF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+
 

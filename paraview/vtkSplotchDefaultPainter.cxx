@@ -18,18 +18,28 @@
 #include "vtkSplotchPainter.h"
 #include "vtkObjectFactory.h"
 
+// If the MIP renderer is available
+#ifdef PV_SPLOTCH_WITH_MIP
+ #include "vtkMIPPainter.h"
+#endif
+
 vtkStandardNewMacro(vtkSplotchDefaultPainter);
 vtkCxxSetObjectMacro(vtkSplotchDefaultPainter, SplotchPainter, vtkSplotchPainter);
 //----------------------------------------------------------------------------
 vtkSplotchDefaultPainter::vtkSplotchDefaultPainter()
 {
   this->SplotchPainter = vtkSplotchPainter::New();
+  this->MIPPainter = NULL;
+#ifdef PV_SPLOTCH_WITH_MIP
+  this->MIPPainter = vtkMIPPainter::New();
+#endif
 }
 
 //----------------------------------------------------------------------------
 vtkSplotchDefaultPainter::~vtkSplotchDefaultPainter()
 {
   this->SetSplotchPainter(0);
+  if (this->MIPPainter) this->MIPPainter->Delete();
 }
 
 //----------------------------------------------------------------------------

@@ -31,6 +31,13 @@
 
 class vtkSplotchPainter;
 
+// If the MIP renderer is available
+#ifdef PV_SPLOTCH_WITH_MIP
+ class vtkMIPPainter;
+#else 
+ typedef vtkObject vtkMIPPainter;
+#endif
+
 class VTK_EXPORT vtkSplotchDefaultPainter : public vtkDefaultPainter
 {
 public:
@@ -38,7 +45,7 @@ public:
   vtkTypeMacro(vtkSplotchDefaultPainter, vtkDefaultPainter);
 
   // Description:
-  // Get/Set the Surface LIC painter.
+  // Get/Set the Splotch painter.
   void SetSplotchPainter(vtkSplotchPainter*);
   vtkGetObjectMacro(SplotchPainter, vtkSplotchPainter);
 
@@ -62,6 +69,8 @@ protected:
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
   vtkSplotchPainter *SplotchPainter;
+  vtkMIPPainter     *MIPPainter;
+
 private:
   vtkSplotchDefaultPainter(const vtkSplotchDefaultPainter&); // Not implemented.
   void operator=(const vtkSplotchDefaultPainter&); // Not implemented.
