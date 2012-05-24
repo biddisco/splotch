@@ -86,7 +86,8 @@ vtkSplotchPainter::vtkSplotchPainter()
   this->ActiveScalars    = NULL;
   this->NumberOfParticleTypes = 0;
   this->SetNumberOfParticleTypes(1); 
-  this->GrayAbsorption = 0.001;
+  this->GrayAbsorption   = 0.001;
+  this->RadiusMultiplier = 1.0;
   this->ScalarsToColorsPainter = NULL;
   this->Controller             = NULL;
   this->SetController(vtkMultiProcessController::GetGlobalController());
@@ -429,10 +430,10 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     double radiusdata[1];
     if (radiusarrays[ptype]) {
       radiusarrays[ptype]->GetTuple(i,radiusdata);
-      particle_data[activeParticles].r = radiusdata[0];
+      particle_data[activeParticles].r = radiusdata[0]*this->RadiusMultiplier;
     }
     else {
-      particle_data[activeParticles].r = radius;
+      particle_data[activeParticles].r = radius*this->RadiusMultiplier;
     }
     double intensitydata[1];
     if (intensityarrays[ptype]) {

@@ -222,6 +222,10 @@ void pqSplotchDisplayPanelDecorator::setRepresentation(pqPipelineRepresentation*
       reprProxy, reprProxy->GetProperty("BrightnessLOD"));
     
     this->Internals->Links.addPropertyLink(
+      this->Internals->RadiusMultiplier, "value", SIGNAL(valueChanged(int)),
+      reprProxy, reprProxy->GetProperty("RadiusMultiplier"));
+    
+    this->Internals->Links.addPropertyLink(
       this->Internals->LogIntensity, "checked", SIGNAL(toggled(bool)),
       reprProxy, reprProxy->GetProperty("LogIntensity"));
     

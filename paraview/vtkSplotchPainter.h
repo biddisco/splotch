@@ -82,6 +82,9 @@ public:
   vtkGetMacro(GrayAbsorption,double);
   vtkSetMacro(GrayAbsorption,double);
 
+  vtkGetMacro(RadiusMultiplier,double);
+  vtkSetMacro(RadiusMultiplier,double);
+
   // Description:
   // The MIP Renderer needs to manually convert scalars to colours
   // so we must have a copy of the painter used by the rest of the rendering pipeline
@@ -120,6 +123,7 @@ protected:
   char   *TypeScalars;
   char   *ActiveScalars;
   double  GrayAbsorption;
+  double  RadiusMultiplier;
   int     NumberOfParticleTypes;
   std::vector<std::string> IntensityScalars;
   std::vector<std::string> RadiusScalars;

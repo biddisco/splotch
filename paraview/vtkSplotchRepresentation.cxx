@@ -178,7 +178,18 @@ double vtkSplotchRepresentation::GetBrightnessLOD()
 {
   return this->LODSplotchPainter->GetBrightness(this->ActiveParticleType);
 }
-
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetRadiusMultiplier(double r)
+{
+  double value = pow(10,(r/50.0));
+  if (this->SplotchPainter) this->SplotchPainter->SetRadiusMultiplier(value);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetRadiusMultiplier(value);
+}
+//----------------------------------------------------------------------------
+double vtkSplotchRepresentation::GetRadiusMultiplier()
+{
+  return this->SplotchPainter->GetRadiusMultiplier();
+}
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetLODMIP(int l)
 {

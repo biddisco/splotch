@@ -62,6 +62,9 @@ public:
   void   SetBrightnessLOD(double b);
   double GetBrightnessLOD();
 
+  void   SetRadiusMultiplier(double r);
+  double GetRadiusMultiplier();
+
   void   SetLODMIP(int l);
   int    GetLODMIP();
 
