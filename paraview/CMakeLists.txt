@@ -48,6 +48,10 @@ IF (NOT TARGET splotchcore)
     IF (WIN32 AND MSVC) 
       SET(OpenMP_CXX_FLAGS "/openmp")
     ENDIF (WIN32 AND MSVC) 
+    if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+      MESSAGE("GCC OpenMP flags added")
+      SET(OpenMP_CXX_FLAGS "-fopenmp" )
+    endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
   ENDIF (SPLOTCH_USE_OPENMP)
 
   #-----------------------------------------------------------------------------

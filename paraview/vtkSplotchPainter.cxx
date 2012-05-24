@@ -63,6 +63,7 @@
 #undef min
 #undef max
 #include <algorithm>
+#include <limits>
 
 #include "vtkOpenGL.h"
 #include "vtkgl.h"

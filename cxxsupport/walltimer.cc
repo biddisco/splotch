@@ -37,6 +37,7 @@
  #include <ctime>
 #endif
 
+#include <cstdio>
 #include <iostream>
 #include <utility>
 #include <cmath>
