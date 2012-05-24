@@ -30,6 +30,7 @@ vtkSplotchDefaultPainter::vtkSplotchDefaultPainter()
 {
   this->SplotchPainter = vtkSplotchPainter::New();
   this->MIPPainter = NULL;
+  this->UseMIP = 0;
 #ifdef PV_SPLOTCH_WITH_MIP
   this->MIPPainter = vtkMIPPainter::New();
 #endif
@@ -40,6 +41,16 @@ vtkSplotchDefaultPainter::~vtkSplotchDefaultPainter()
 {
   this->SetSplotchPainter(0);
   if (this->MIPPainter) this->MIPPainter->Delete();
+}
+
+//----------------------------------------------------------------------------
+void vtkSplotchDefaultPainter::SetUseMIP(int m)
+{
+#ifdef PV_SPLOTCH_WITH_MIP
+  if (!this->MIPPainter) {
+    this->MIPPainter = vtkMIPPainter::New();
+  }
+#endif
 }
 
 //----------------------------------------------------------------------------

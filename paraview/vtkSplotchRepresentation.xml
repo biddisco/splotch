@@ -26,6 +26,8 @@
 
         <ExposedProperties>
           <Property name="Brightness"/>
+          <Property name="BrightnessLOD"/>
+          <Property name="LODMIP"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
           <Property name="TypeActive"/>
@@ -62,6 +64,8 @@
 
         <ExposedProperties>
           <Property name="Brightness"/>
+          <Property name="BrightnessLOD"/>
+          <Property name="LODMIP"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
           <Property name="TypeActive"/>
@@ -116,12 +120,29 @@
       <DoubleVectorProperty name="Brightness"
         command="SetBrightness"
         number_of_elements="1"
-        default_values="102">
+        default_values="-350">
         <DoubleRangeDomain name="range" min="-500" max="500"/>
         <Documentation>
-          The value passed to the mapper is 10^(Brighness/100)
+          The value passed to the mapper is 10^(Brightness/100)
         </Documentation>
       </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="BrightnessLOD"
+        command="SetBrightnessLOD"
+        number_of_elements="1"
+        default_values="0">
+        <DoubleRangeDomain name="range" min="-500" max="500"/>
+        <Documentation>
+          The value passed to the mapper is 10^(Brightness/100)
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="LODMIP"
+        command="SetLODMIP"
+        number_of_elements="1"
+        default_values="0">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
 
       <DoubleVectorProperty name="GrayAbsorption"
         command="SetGrayAbsorption"
@@ -136,7 +157,7 @@
       <IntVectorProperty name="LogIntensity"
         command="SetLogIntensity"
         number_of_elements="1"
-        default_values="1">
+        default_values="0">
         <BooleanDomain name="bool"/>
       </IntVectorProperty>
 

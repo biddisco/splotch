@@ -159,12 +159,36 @@ void vtkSplotchRepresentation::SetBrightness(double b)
 {
   double value = pow(10,(b/100.0));
   if (this->SplotchPainter) this->SplotchPainter->SetBrightness(this->ActiveParticleType, value);
-  if (this->LODSplotchPainter) this->LODSplotchPainter->SetBrightness(this->ActiveParticleType, value);
+//  if (this->LODSplotchPainter) this->LODSplotchPainter->SetBrightness(this->ActiveParticleType, value);
 }
 //----------------------------------------------------------------------------
 double vtkSplotchRepresentation::GetBrightness()
 {
   return this->SplotchPainter->GetBrightness(this->ActiveParticleType);
+}
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetBrightnessLOD(double b)
+{
+  double value = pow(10,(b/100.0));
+//  if (this->SplotchPainter) this->SplotchPainter->SetBrightnessLOD(this->ActiveParticleType, value);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetBrightness(this->ActiveParticleType, value);
+}
+//----------------------------------------------------------------------------
+double vtkSplotchRepresentation::GetBrightnessLOD()
+{
+  return this->LODSplotchPainter->GetBrightness(this->ActiveParticleType);
+}
+
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::SetLODMIP(int l)
+{
+  if (this->SplotchPainter) this->SplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+  if (this->LODSplotchPainter) this->LODSplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+}
+//----------------------------------------------------------------------------
+int vtkSplotchRepresentation::GetLODMIP()
+{
+  return this->SplotchPainter->GetLogIntensity(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetLogIntensity(int l)

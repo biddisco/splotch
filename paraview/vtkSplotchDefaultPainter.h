@@ -55,6 +55,11 @@ public:
   // are not covered by any geometry.
   void UpdateBounds(double bounds[6]);
 
+  // Description:
+  // Enable the use of MIP (if this is a LOD renderer)
+  void SetUseMIP(int m);
+  vtkGetMacro(UseMIP, int);
+  
 //BTX
 protected:
    vtkSplotchDefaultPainter();
@@ -70,7 +75,7 @@ protected:
 
   vtkSplotchPainter *SplotchPainter;
   vtkMIPPainter     *MIPPainter;
-
+  int                UseMIP; 
 private:
   vtkSplotchDefaultPainter(const vtkSplotchDefaultPainter&); // Not implemented.
   void operator=(const vtkSplotchDefaultPainter&); // Not implemented.

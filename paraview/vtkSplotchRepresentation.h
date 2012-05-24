@@ -59,6 +59,12 @@ public:
   void   SetBrightness(double b);
   double GetBrightness();
 
+  void   SetBrightnessLOD(double b);
+  double GetBrightnessLOD();
+
+  void   SetLODMIP(int l);
+  int    GetLODMIP();
+
   void   SetLogIntensity(int l);
   int    GetLogIntensity();
 
