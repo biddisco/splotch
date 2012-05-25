@@ -590,6 +590,9 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
 
 
   if (MPI_Manager::GetInstance()->master()) {
+    //
+    // copy to OpenGL image buffer
+    //
     int viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
     glMatrixMode(GL_PROJECTION);
@@ -597,18 +600,21 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     glLoadIdentity();
     glOrtho(viewport[0], viewport[2], viewport[1], viewport[3], -1, 1);
     glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
     glLoadIdentity();
 
+    // we draw our image just in front of the back clipping plane, 
+    // so all other geometry will appear in front of it. (z = -0.99)
     for (int i=0; i<X; i++) {
-      glRasterPos2i(X-1-i, 0);
+      glRasterPos3f(X-1-i, 0, -0.99);
       COLOUR *ptr = &pic[i][0];
       float *x0 = &ptr->r;
       glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
     }
 
-    glMatrixMode( GL_PROJECTION );
-    glPopMatrix();
     glMatrixMode( GL_MODELVIEW );   
+    glPopMatrix();
+    glMatrixMode( GL_PROJECTION );
     glPopMatrix();
   }
 }
