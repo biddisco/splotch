@@ -184,7 +184,7 @@
         animateable="0"
         default_values="Intensity"
         default_regex_delimiter=","
-        default_regex="^[Ii]ntensity"
+        default_regex="^[Ii]ntensity,SmoothedDensity"
         label="Intensity Array">
         <ArrayListDomain 
           name="array_list" 
@@ -204,7 +204,7 @@
         animateable="0"
         default_values="Radius"
         default_regex_delimiter=","
-        default_regex="^[Rr]adius"
+        default_regex="^[Rr]adius,SmoothedRadius"
         label="Radius Array">
         <ArrayListDomain 
           name="array_list" 
