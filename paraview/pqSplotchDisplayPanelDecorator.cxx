@@ -247,7 +247,7 @@ void pqSplotchDisplayPanelDecorator::setRepresentation(pqPipelineRepresentation*
 //-----------------------------------------------------------------------------
 void pqSplotchDisplayPanelDecorator::representationTypeChanged()
 {
-  if (this->Internals) {
+  if (this->Internals && this->Internals->RepresentationProxy) {
     const char* reprType = vtkSMPropertyHelper
         ( this->Internals->RepresentationProxy, "Representation" ).GetAsString();
     if ( strcmp(  reprType, "Splotch particles"  ) == 0 ) {
