@@ -122,7 +122,7 @@
       <DoubleVectorProperty name="Brightness"
         command="SetBrightness"
         number_of_elements="1"
-        default_values="-350">
+        default_values="-450">
         <DoubleRangeDomain name="range" min="-500" max="500"/>
         <Documentation>
           The value passed to the mapper is 10^(Brightness/100)
@@ -132,7 +132,7 @@
       <DoubleVectorProperty name="BrightnessLOD"
         command="SetBrightnessLOD"
         number_of_elements="1"
-        default_values="0">
+        default_values="-350">
         <DoubleRangeDomain name="range" min="-500" max="500"/>
         <Documentation>
           The value passed to the mapper is 10^(Brightness/100)
