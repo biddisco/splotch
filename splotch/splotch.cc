@@ -99,6 +99,7 @@ int main (int argc, const char **argv)
   int nDevNode = check_device(myID);     // number of GPUs available per node
 #ifdef CUDA
   int nDevProc = 1;   // number of GPU required per process
+  cout << "Configuration supported is 1 gpu for each mpi process" << endl;
 #else
   int nDevProc = params.find<int>("gpu_number",1);
 #endif
@@ -108,9 +109,11 @@ int main (int argc, const char **argv)
   if (nDevNode > 0 && nDevProc == 1)
   {
     mydevID = myID%nCoreNode; //ID within the node
-    planck_assert(mydevID<nDevNode,
-      string("There isn't a gpu available for process = ") +dataToString(myID)
-      +"\nConfiguration supported is 1 gpu for each mpi process");
+    if (mydevID>=nDevNode)
+    {
+      cout << "There isn't a gpu available for process = " << myID << " computation will be performed on the host" << endl;
+      mydevID = -1;
+    }
   }
 #ifdef OPENCL
   // b) or all processes use a number of GPUs > 1 and <= nDevNode
@@ -155,8 +158,8 @@ int main (int argc, const char **argv)
 #else
       if (mydevID >= 0)
       {
-        if (!a_eq_e) planck_fail("CUDA and OpenCL only supported for A==E so far");
 #ifdef CUDA
+        if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
         tstack_push("CUDA");
         if(boost) cuda_rendering(mydevID, pic, r_points, b_brightness);
         else cuda_rendering(mydevID, pic, particle_data, b_brightness);
@@ -164,7 +167,7 @@ int main (int argc, const char **argv)
 #endif
 #ifdef OPENCL
         tstack_push("OPENCL");
- 	opencl_rendering(mydevID, nDevProc, pic);
+ 	opencl_rendering(mydevID, particle_data, nDevProc, pic);
         tstack_pop("OPENCL");
 #endif
       }
