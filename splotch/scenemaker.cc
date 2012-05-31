@@ -676,12 +676,9 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     break;
 #ifdef HDF5
   case 12:
-    galaxy_reader(params,particle_data);
+    h5part_reader(params,particle_data);
     break;
 #endif
-    default:
-      planck_fail("No valid file type given ...");
-      break;
     }
 
   mpiMgr.barrier();

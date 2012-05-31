@@ -157,6 +157,44 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
     p[m].active = true;
     }
 }
+// this is to check the .r distribution:
+  float mymin=1e15;
+  float mymax=-1e15;
+  for (long m1=0; m1<npart; ++m1)
+    {
+	mymin = min(mymin,p[m1].x);
+        mymax = max(mymax,p[m1].x);
+    } 
+  cout << "MYMIN, MYMAX: " << mymin << " " << mymax << endl;
+  long countsmall=0;
+  long countinter1=0;
+  long countinter2=0;
+  long countinter3=0;
+  long countinter4=0;
+  long countlarge=0;
+  float r_th = params.find<float>("rth",0.0);
+  if(r_th != 0.0)
+    {	
+    for (long m=0; m<npart; ++m)
+      {
+	if(p[m].r < 1.0)countsmall++;
+        if(p[m].r >= 1.0 && p[m].r < r_th)countinter1++;
+        if(p[m].r >= 1.0 && p[m].r < 2*r_th)countinter2++;
+        if(p[m].r >= 1.0 && p[m].r < 4*r_th)countinter3++;
+        if(p[m].r >= 1.0 && p[m].r < 8*r_th)countinter4++;
+        if(p[m].r >= 8*r_th)countlarge++;
+      }
+    cout << "PARTICLES WITH r < 1 = " << countsmall << endl;
+    cout << "PARTICLES WITH 1 <= r < " << r_th << " = " << countinter1 << endl;
+    cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
+    cout << "PARTICLES WITH 1 <= r < " << 4*r_th << " = " << countinter3 << endl;
+    cout << "PARTICLES WITH 1 <= r < " << 8*r_th << " = " << countinter4 << endl;
+    cout << "PARTICLES WITH r >= " << r_th << " = " << countlarge << endl;
+
+    }
+
+
+
   }
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
