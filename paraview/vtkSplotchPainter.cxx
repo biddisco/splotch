@@ -279,8 +279,10 @@ void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
 typedef IceTUnsignedInt32       IceTEnum;
 typedef IceTInt32               IceTInt;
 typedef void *                  IceTContext;
-extern "C" ICET_EXPORT void icetGetIntegerv(IceTEnum pname, IceTInt *params);
-extern "C" ICET_EXPORT IceTContext icetGetContext(void);
+#ifdef USE_ICET
+ extern "C" ICET_EXPORT void icetGetIntegerv(IceTEnum pname, IceTInt *params);
+ extern "C" ICET_EXPORT IceTContext icetGetContext(void);
+#endif
 
 #define ICET_STATE_ENGINE_START (IceTEnum)0x00000000
 #define ICET_NUM_TILES          (ICET_STATE_ENGINE_START | (IceTEnum)0x0010)
@@ -347,6 +349,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
                               &vieworigin[0], &vieworigin[1] );
   // Query IceT for the actual size
   IceTInt ids, vp[32*4] = {0, 0, viewsize[0], viewsize[1],};
+#ifdef USE_ICET
   if (icetGetContext()!=NULL) {
     icetGetIntegerv(ICET_NUM_TILES,&ids);
     // when running on a single core, this returns nonsense
@@ -354,6 +357,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
       icetGetIntegerv(ICET_TILE_VIEWPORTS,vp);
     }
   }
+#endif 
   // Here we compute the actual viewport scaling factor with the correct adjusted sizes.
   double viewPortRatio[2];
   double *viewPort = ren->GetViewport();

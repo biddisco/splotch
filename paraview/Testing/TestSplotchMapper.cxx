@@ -53,7 +53,6 @@
 #include <vtksys/SystemTools.hxx>
 #include <sstream>
 //
-#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -257,12 +256,12 @@ void MyMain( vtkMultiProcessController *controller, void *arg )
 int main (int argc, char* argv[])
 {
   // Check if MPI is already initialized because MPI_Manager in splotch calls it
+#ifdef VTK_USE_MPI
   int initialized = false;
   if (MPI_Initialized(&initialized)==MPI_SUCCESS && !initialized) {
     MPI_Init(&argc, &argv);
   }
 
-#ifdef VTK_USE_MPI
   vtkMPIController* controller = vtkMPIController::New();
 #else
   vtkMultiProcessController* controller = vtkMultiProcessController::GetGlobalController();

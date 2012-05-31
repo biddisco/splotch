@@ -31,6 +31,9 @@ IF (VTK_USE_MPI)
   ADD_DEFINITIONS(-DUSE_MPI)
 ENDIF (VTK_USE_MPI)
 
+IF(PARAVIEW_USE_ICE_T)
+  ADD_DEFINITIONS(-DUSE_ICET)
+ENDIF(PARAVIEW_USE_ICE_T)
 #--------------------------------------------------
 # If not called from the splotch source directory
 # then build splotch
