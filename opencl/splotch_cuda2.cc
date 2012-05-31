@@ -16,9 +16,11 @@ vec3 campos, lookat, sky;
 vector<COLOURMAP> amap;
 wallTimerSet cuWallTimers;
 
-void opencl_rendering(int mydevID, int nDev, arr2<COLOUR> &pic)
+void opencl_rendering(int mydevID, vector<particle_sim> &particle, int nDev, arr2<COLOUR> &pic)
 //void opencl_rendering(int mydevID, int nDev, cu_color *pic, int xres, int yres) 
 {
+  particle_data = particle;
+  long int nP = particle_data.size();
   	int xres = pic.size1();
   	int yres = pic.size2();
 	pic.fill(COLOUR(0.0, 0.0, 0.0));
@@ -477,8 +479,7 @@ void GPUReport(wallTimerSet &cuTimers) {
 			<< endl;
 }
 
-void cuda_timeReport(paramfile &params) {
-	GPUReport(cuWallTimers);
+void cuda_timeReport() {
 	if (mpiMgr.master()) {
 		cout << endl << "--------------------------------------------" << endl;
 		cout << "Summary of timings" << endl;
@@ -486,27 +487,6 @@ void cuda_timeReport(paramfile &params) {
 		cout << endl << "Times of GPU:" << endl;
 		GPUReport(cuWallTimers);
 		cout << "--------------------------------------------" << endl;
-
-		if (params.find<bool>("use_host_as_thread", false)) {
-			cout << endl << "Times of CPU HOST as threads:" << endl;
-			hostTimeReport(wallTimers);
-			cout << "Host thread (secs)         : "
-					<< wallTimers.acc("host_thread") << endl;
-			cout << "--------------------------------------------" << endl;
-		}
-		cout << "Setup Data (secs)          : " << wallTimers.acc("setup")
-				<< endl;
-		cout << "Read Data (secs)           : " << wallTimers.acc("read")
-				<< endl;
-		cout << "Ranging Data (secs)        : " << wallTimers.acc("range")
-				<< endl;
-		cout << "Postprocessing (secs)      : " << wallTimers.acc("postproc")
-				<< endl;
-		cout << "Write Data (secs)          : " << wallTimers.acc("write")
-				<< endl;
-		cout << "Total (secs)               : " << wallTimers.acc("full")
-				<< endl;
-
 	}
 }
 

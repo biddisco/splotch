@@ -436,21 +436,39 @@ void cu_copy_particles_to_render(cu_particle_splotch *p, int n,
 void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv) 
 {
 	szGlobalWorkSize = nP;
-	ckKernel = clCreateKernel(cpProgram, "k_render1", &ciErr1);
+	if (a_eq_e) 
+        {
+	  ckKernel = clCreateKernel(cpProgram, "k_render1", &ciErr1);
 
 #ifdef DEBUG
-	printf("passed k_render - particles %d\n", nP);
-	printf("clCreateKernel (k_render1)...\n");
-	checkErr(ciErr1, "");
+	  printf("passed k_render - particles %d\n", nP);
+	  printf("clCreateKernel (k_render1)...\n");
+	  checkErr(ciErr1, "");
 
-	if (ciErr1 != CL_SUCCESS)
-	{
+	  if (ciErr1 != CL_SUCCESS)
+	  {
 		printf("Error in clCreateKernel, Line %u in file %s !!!\n\n", __LINE__,
 				__FILE__);
 		checkErr(ciErr1, "");
-	}
+	  }
 #endif
+        }
+	else 
+        {
+          ckKernel = clCreateKernel(cpProgram, "k_render2", &ciErr1);
+#ifdef DEBUG
+	  printf("passed k_render - particles %d\n", nP);
+	  printf("clCreateKernel (k_render2)...\n");
+	  checkErr(ciErr1, "");
 
+	  if (ciErr1 != CL_SUCCESS)
+	  {
+		printf("Error in clCreateKernel, Line %u in file %s !!!\n\n", __LINE__,
+				__FILE__);
+		checkErr(ciErr1, "");
+	  }
+#endif
+        }
 	ciErr1 = clSetKernelArg(ckKernel, 0, sizeof(cl_mem),
 			(void*) &pgv->d_ps_render);
 
@@ -468,7 +486,6 @@ void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
 	ciErr1 |= clSetKernelArg(ckKernel, 7, sizeof(cl_mem), (void*) &pgv->cu_col);
 	ciErr1 |= clSetKernelArg(ckKernel, 8, sizeof(cl_mem),
 			(void*) &pgv->ptype_points);
-	ciErr1 |= clSetKernelArg(ckKernel, 9, sizeof(cl_int), (void*) &a_eq_e);
 
 #ifdef DEBUG
 	printf("clSetKernelArg 0 - 3...\n\n");

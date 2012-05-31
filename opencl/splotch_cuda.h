@@ -125,12 +125,10 @@ void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_copy_particles_to_render(cu_particle_splotch *p, int n, cu_gpu_vars* pgv);
 void cu_render1(int nP, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
 void cu_get_fbuf(cu_fragment_AeqE *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
+void cu_get_fbuf2(cu_fragment_AneqE *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
 void transform(cu_particle_sim* p, unsigned int n, cu_gpu_vars* pgv,range_part* minmax);
 void cu_end (cu_gpu_vars* pgv);
 int cu_get_chunk_particle_count(paramfile &params, CuPolicy* policy, size_t psize, float pfactor);
 void getCuTransformParams(cu_param &para_trans, paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
-void cu_get_fbuf2(cu_fragment_AneqE *h_fbuf, bool a_eq_e, unsigned long n, cu_gpu_vars* pgv);
-void combine_chunk(int StartP, int EndP, cu_fragment_AeqE *fragBuf,  cu_color *pPic,int xres,int yres,range_part* minmax);
-void combine_chunk2(int StartP, int EndP, cu_fragment_AneqE *fragBuf,  cu_color *pPic,int xres,int yres,range_part* minmax);
 
 #endif

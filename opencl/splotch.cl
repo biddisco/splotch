@@ -75,7 +75,7 @@ cu_color get_color(int ptype, float val, int mapSize, int ptypes,__global cu_col
 __kernel void k_render1
 (__global cu_particle_splotch *p, int nP, __global
 		cu_fragment_AeqE *buf, float grayabsorb, int mapSize, int types,__global cu_param *dparams1,
-		__global cu_color_map_entry *dmap_in,__global int *ptype_points_in, int a_eq_e)
+		__global cu_color_map_entry *dmap_in,__global int *ptype_points_in)
 {
 
 	int m;
@@ -134,9 +134,6 @@ __kernel void k_render1
 		int maxy=(posy+rfacr+1);
 		maxy = min(dparams1->yres, maxy);
 
-              if(a_eq_e)
-              {	
-	//	fbuf =(cu_fragment_AeqE*) buf;
 		for (int x=minx; x<maxx; ++x)
 		{
 			float dxsq=(x-posx)*(x-posx);
@@ -160,53 +157,111 @@ __kernel void k_render1
 				fpos++;
 			}
 		}
-             }
-             else
-	     {
-		
-	//	fbuf1 =(cu_fragment_AneqE*) buf;
-	//	cu_color q;
-	//	q.r = e.r/(e.r+grayabsorb);
-	//	q.g = e.g/(e.g+grayabsorb);
-	//	q.b = e.b/(e.b+grayabsorb);
-
-	//	for (int x=minx; x<maxx; ++x)
-	//	{
-	//		float dxsq=(x-posx)*(x-posx);
-	//		for (int y=miny; y<maxy; ++y)
-	//		{
-	//			float dsq = (y-posy)*(y-posy) + dxsq;
-	//			if (dsq<radsq)
-	//			{
-	//				float att =pow((float)2.71828,(stp*dsq));
-	//				float expm1 = pow((float)2.71828,(att*e.r))-1.0;
-///
-//					fbuf1[fpos].aR = expm1;
-//					fbuf1[fpos].qR = q.r;
-//					expm1= pow((float)2.71828,(att*e.g))-1.0;
-//					fbuf1[fpos].aG = expm1;
-//					fbuf1[fpos].qG = q.g;
-//					expm1= pow((float)2.71828,(att*e.b))-1.0;
-//					fbuf1[fpos].aB = expm1;
-//					fbuf1[fpos].qB = q.b;
-//				}
-//				else
-//				{
-//					fbuf1[fpos].aR =0.0;
-//					fbuf1[fpos].aG =0.0;
-//					fbuf1[fpos].aB =0.0;
-//					fbuf1[fpos].qR =1.0;
-//					fbuf1[fpos].qG =1.0;
-//					fbuf1[fpos].qB =1.0;
-//				}
-//
-//				fpos++;
-//			} //y
-//		} //x
-          }
 	}
 }
 
  
+__kernel void k_render2
+(__global cu_particle_splotch *p, int nP,__global
+cu_fragment_AneqE *buf, float grayabsorb, int mapSize, int types,__global cu_param *dparams1,__global cu_color_map_entry *dmap_in,__global int *ptype_points_in)
+{
 
+	int m;
+	m = get_global_id(0);
+	if (m<nP) 
+	{
+		int ptype = p[m].type;
+		float col1=p[m].e.r,col2=p[m].e.g,col3=p[m].e.b;
+		clamp (0.0000001,0.9999999,col1);
+		if (dparams1->col_vector[ptype])
+		{
+			col2 = clamp (0.0000001,0.9999999,col2);
+			col3 = clamp (0.0000001,0.9999999,col3);
+		}
+		float intensity=p[m].I;
+		intensity = clamp (0.0000001,0.9999999,intensity);
+		intensity *= dparams1->brightness[ptype];
+
+		cu_color e;
+		if (dparams1->col_vector[ptype])
+		{
+			e.r=col1*intensity;
+			e.g=col2*intensity;
+			e.b=col3*intensity;
+		}
+		else
+		{
+			if (ptype<types)
+			{
+				e = get_color(ptype, col1, mapSize, types,dmap_in,ptype_points_in);
+				e.r *= intensity;
+				e.g *= intensity;
+				e.b *= intensity;
+			}
+			else
+			{	e.r =e.g =e.b =0.0f;}
+		}
+
+		const float powtmp = pow(3.14159265358979323846264338327950288,1./3.);
+		const float sigma0 = powtmp/sqrt(2*3.14159265358979323846264338327950288);
+
+		 float r = p[m].r;
+		const float radsq = 2.25f*r*r;
+		const float stp = -0.5/(r*r*sigma0*sigma0);
+
+		cu_color q;
+
+		q.r = e.r/(e.r+grayabsorb);
+		q.g = e.g/(e.g+grayabsorb);
+		q.b = e.b/(e.b+grayabsorb);
+
+		const float intens = -0.5/(2*sqrt(3.14159265358979323846264338327950288)*powtmp);
+		e.r*=intens; e.g*=intens; e.b*=intens;
+
+		const float posx=p[m].x, posy=p[m].y;
+		unsigned int fpos =p[m].posInFragBuf;
+
+		int minx=p[m].minx;
+		int maxx=p[m].maxx;
+
+		const float rfacr=dparams1->rfac*r;		
+		int miny=(int)(posy-rfacr+1);
+		miny=max(miny,0);
+		int maxy=(int)(posy+rfacr+1);
+                maxy = min(dparams1->yres, maxy);
+
+		for (int x=minx; x<maxx; ++x)
+		{
+			float dxsq=(x-posx)*(x-posx);
+			for (int y=miny; y<maxy; ++y)
+			{
+				float dsq = (y-posy)*(y-posy) + dxsq;
+				if (dsq<radsq)
+				{
+					float att =pow((float)2.71828,(stp*dsq));
+					float expm1 = pow((float)2.71828,(att*e.r))-1.0;
+
+					buf[fpos].aR = expm1;
+					buf[fpos].qR = q.r;
+					expm1= pow((float)2.71828,(att*e.g))-1.0;
+					buf[fpos].aG = expm1;
+					buf[fpos].qG = q.g;
+					expm1= pow((float)2.71828,(att*e.b))-1.0;
+					buf[fpos].aB = expm1;
+					buf[fpos].qB = q.b;
+				}
+				else
+				{
+					buf[fpos].aR =0.0;
+					buf[fpos].aG =0.0;
+					buf[fpos].aB =0.0;
+					buf[fpos].qR =1.0;
+					buf[fpos].qG =1.0;
+					buf[fpos].qB =1.0;
+				}
+
+				fpos++;
+			} //y
+		} //x
+	}}
 	
