@@ -295,7 +295,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                    long index_aux = (ix-iix+1)+(iy-iiy+1)*nx;
                    IIImax = max(IIImax,III[index_aux]);
                }
-             if(IIImax == III[index] && IIImax > 0.85)
+             if(IIImax == III[index] && IIImax > 0.65)
                {
                    max_mask[index] = 1.0; 
                    //cout << ix<< " " << iy << " " << max_mask[index] << endl;
