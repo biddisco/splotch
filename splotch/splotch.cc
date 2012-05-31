@@ -88,13 +88,14 @@ int main (int argc, const char **argv)
   vector<particle_sim> particle_data; //raw data from file
   vector<particle_sim> r_points;
 
-#if (!defined(CUDA) && !defined(OPENCL))
+#if (!defined(OPENCL))
   vec3 campos, lookat, sky;
   vector<COLOURMAP> amap;
-#else //ifdef CUDA they will be global vars
+#else
   ptypes = params.find<int>("ptypes",1);
   g_params =&params;
-
+#endif
+#if (defined(CUDA) || defined(OPENCL))
   int myID = mpiMgr.rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
 #ifdef CUDA
@@ -161,8 +162,8 @@ int main (int argc, const char **argv)
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
         tstack_push("CUDA");
-        if(boost) cuda_rendering(mydevID, pic, r_points, b_brightness);
-        else cuda_rendering(mydevID, pic, particle_data, b_brightness);
+        if(boost) cuda_rendering(mydevID, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
+        else cuda_rendering(mydevID, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
         tstack_pop("CUDA");
 #endif
 #ifdef OPENCL
@@ -237,7 +238,7 @@ int main (int argc, const char **argv)
     tstack_pop("Output");
 
 #if (defined(OPENCL) || defined(CUDA))
-    cuda_timeReport(params);
+    cuda_timeReport();
 #endif
     timeReport();
 
