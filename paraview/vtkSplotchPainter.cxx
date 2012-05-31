@@ -537,7 +537,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
-    std::cout << "Image dimensions are " << X << "," << Y << std::endl;
+    // std::cout << "Image dimensions are " << X << "," << Y << std::endl;
     //
     float global_min=std::numeric_limits<double>::max();
     float global_max=std::numeric_limits<double>::min();
@@ -563,7 +563,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
       }
     }
 
-    std::cout << "global_min, global_max are {" << global_min << "," << global_max << "}" << std::endl;
+    // std::cout << "global_min, global_max are {" << global_min << "," << global_max << "}" << std::endl;
     exptable<float32> xexp(global_min);
     //
 #pragma omp parallel for
@@ -586,8 +586,6 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
       }
     }
   }
-
-
 
   if (MPI_Manager::GetInstance()->master()) {
     //
