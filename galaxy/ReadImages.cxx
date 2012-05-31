@@ -2,7 +2,7 @@
 # include "Galaxy.h"
 
 
-long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, float * RRR,
+long ReadImages (paramfile &params, string infile_rgb, string infile_mask, long numx, long numy, float * RRR,
                  float * GGG, float * BBB, float * III, float * xx, float * yy, long nwant)
 {
 
@@ -17,6 +17,9 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 	  float * y;
           float * xM;
 	  float * yM;
+
+          long nskip = params.find<long>("Nskip",1);
+          if(nskip < 1)exit(100);
 
 // Read Data from raw file
 
@@ -94,7 +97,7 @@ long ReadImages (string infile_rgb, string infile_mask, long numx, long numy, fl
 		GGG[i] = (float)GG[i]/255.0;
 		BBB[i] = (float)BB[i]/255.0;
 		III[i] = (float)II[i]/255.0;
-		//                if(i%2 == 0)III[i] = 0;
+		if(i%nskip == 0 && nskip != 1)III[i] = 0;
 
 		x[i] = (float)ix;
 		y[i] = (float)iy;

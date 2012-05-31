@@ -65,16 +65,16 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
       coordy_save[i] = coordy[i];
     }
 
-  float pixsizex = 2./nx;
-  float pixsizey = 2./ny;
-  pixsizex = 20*sigma_g;
-  pixsizey = 20*sigma_g;
+  float pixsizex = 4.0/(float)nx;
+  float pixsizey = 4.0/(float)ny;
   float coordz_aux;
   for (long i=0; i<number_of_points; i+=1)
     {
       float x0=coordx_save[i];
       float y0=coordy_save[i];
-      coordz_aux = box_muller(0.0, sigma_z);
+      float distance = sqrt(x0*x0+y0*y0);
+      float sigma_z_eff = sigma_z*(1.0-distance)*(1.0-distance);
+      coordz_aux = box_muller(0.0, sigma_z_eff);
       
       ///count++;
       if(count >= ntot)
@@ -84,13 +84,24 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 	}
 
       ///for(long k=1; k<n_per_pixel; k++)
-      for(long k=0; k<n_per_pixel; k++)
+      for(long k=0; k<3*n_per_pixel; k++)
 	{
-	  //coordx[count] = box_uniform(x0, pixsizex);
-	  //coordy[count] = box_uniform(y0, pixsizey);
-	  coordx[count] = box_muller(x0, pixsizex);
-	  coordy[count] = box_muller(y0, pixsizey);
-	  coordz[count] = box_muller(coordz_aux, sigma_g);
+	  coordx[count] = box_uniform(x0, pixsizex);
+	  coordy[count] = box_uniform(y0, pixsizey);
+	  //coordx[count] = box_muller(x0, pixsizex);
+	  //coordy[count] = box_muller(y0, pixsizey);
+	  //coordx[count] = box_muller(x0, sigma_g);
+	  //coordy[count] = box_muller(y0, sigma_g);
+	  coordz[count] = 0.0;
+          if(k<n_per_pixel)
+	     coordz[count] = box_muller(coordz_aux, sigma_g);
+/*
+          if(coordz[count]-coordz_aux > sigma_g)
+            {
+              k--;
+              continue;
+            }
+*/
 	  count++;
 	  if(count >= ntot)
 	    {
@@ -220,7 +231,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 	  do {zaux = box_muller(coordz[ii], sigma_fixed*gsigmaz);}
 	  //////////do {zaux = box_muller(coordz[ii], sigma_fixed);}
 	  //while (zaux*zaux > 0.25*ref_size*ref_size);
-	  while (zaux*zaux > 0.65*ref_size*ref_size);
+	  while (zaux*zaux > 0.25*ref_size*ref_size);
           coordz[abscounter] = zaux;
 	  abscounter++;
 	}
@@ -237,6 +248,7 @@ MAIN PARAMETERS:
 npergroup = number of points around each seed (group points)
 ndiffuse_factor = number of diffused point per (group point)
 sigma_fixed = dispersion of point clouds around the corresponding seed point
+sigma_g = sigma_r*sigma_fixed is the dispersion of diffused points
 */
 
 long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_points, long ntot, 
@@ -250,6 +262,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
   float ndiffuse_factor = params.find<float>("NdiffuseFactor"+ComponentName,0);
   float sigma_fixed = params.find<float>("Sigmazfixed"+ComponentName,0.1);
+  float sigma_g = params.find<float>("Sigmag"+ComponentName,1);
 
 
 // set the center of the galaxy (at the moment in term of pixels (default center of image)
@@ -282,7 +295,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                    long index_aux = (ix-iix+1)+(iy-iiy+1)*nx;
                    IIImax = max(IIImax,III[index_aux]);
                }
-             if(IIImax == III[index] && IIImax > 0.75)
+             if(IIImax == III[index] && IIImax > 0.85)
                {
                    max_mask[index] = 1.0; 
                    //cout << ix<< " " << iy << " " << max_mask[index] << endl;
@@ -301,6 +314,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                ref_size = min(fabs(xm),fabs(ym));    
            }
 
+	cout << "Number of MAXIMA = " << maxcount << endl;
 // clean the maxima distribution
        
         int stencil = 3;
@@ -334,7 +348,6 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
         zz = new float [nfinal]; 
         float r_dist;
         long pcounter = 0;
-        cout << "SIZE " << ref_size << endl;
         for (int iy=0; iy<ny; iy++)
         for (int ix=0; ix<nx; ix++)
            {
@@ -377,11 +390,17 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                  nrandom = long(ndiffuse_factor*npergroup);
                  for (int ii=0;ii<nrandom;ii++)
                  {
-                   xx[pcounter]=box_muller(xcenter,20.0*r_dist);
-                   yy[pcounter]=box_muller(ycenter,20.0*r_dist);
-                   zz[pcounter]=box_muller(zcenter,5.0*r_dist);
+                   xx[pcounter]=box_muller(xcenter,sigma_g*r_dist);
+                   yy[pcounter]=box_muller(ycenter,sigma_g*r_dist);
+                   zz[pcounter]=box_muller(zcenter,sigma_g*r_dist);
                    pcounter++;
                  }
+                 if(pcounter >= ntot)
+                 {
+                  printf("Generating more particles than allowed (%ld>=%ld)\n",pcounter,ntot);
+                  exit(3);
+                 }
+
                }
            }
 
@@ -407,7 +426,7 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
          return pcounter;
 }
 
-//This is used for the gas for any galaxy: OPTION 5
+//This is used for the gas for any tilted galaxy: OPTION 6
 /* 
 MAIN PARAMETERS:
 TirificModel      = file containg parameters of the TiRiFiC model

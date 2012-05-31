@@ -108,7 +108,7 @@ int main (int argc, const char **argv)
 		      } 
 		    else 
 		      {
-			numberofparticles = ReadImages(imagefile_rgb, imagefile_mask, nx, ny, Red, Green, Blue, III, F_starx, F_stary, nwant);
+			numberofparticles = ReadImages(params,imagefile_rgb, imagefile_mask, nx, ny, Red, Green, Blue, III, F_starx, F_stary, nwant);
 		      }
 
 		    for(long ii=0;ii<numberofparticles;ii++)
