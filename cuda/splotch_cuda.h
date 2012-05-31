@@ -87,30 +87,31 @@ struct cu_gpu_vars //variables used by each gpu
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;             //device_particle_data
   unsigned long	      *d_posInFragBuf;
-  char		      *d_active; // 0=non-active particle, 1=active particle, 2=active big particle
+  int		      *d_active; // 0=non-active particle, 1=active particle, 2=active big particle
   void                *d_fbuf;
   int                 *d_pixel;
   cu_color            *d_pic;
   int                 colormap_size;
   int                 colormap_ptypes;
-  int 		      maxsize;	//max size of particles to be processed on the device
   };
 
 //functions
 
-int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float b_brightness);
+int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness);
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-int cu_transform (int n, cu_gpu_vars* pgv);
+int cu_transform (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width);
 int cu_allocateFragmentBuffer(long n,cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 //void cu_colorize(int n, cu_gpu_vars* pgv);
-void cu_render1 (int grid, int block, int nP, int End_cu_ps, 
-   unsigned long FragRendered, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv);
+void cu_render1
+  (int grid, int block, int nP, int End_cu_ps, unsigned long FragRendered,
+   bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, 
+   int tile_sidey, int width);
 void cu_endChunk (cu_gpu_vars* pgv);
 void cu_endThread (cu_gpu_vars* pgv);
 long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, float pfactor);
 void getCuTransformParams(cu_param &para_trans,
-      paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky);
+      paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);
 //void cu_clear(int n, cu_gpu_vars* pgv);
 void cu_update_image(int n, bool a_eq_e,cu_gpu_vars* pgv);
 

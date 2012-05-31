@@ -7,8 +7,7 @@
 
 using namespace std;
 
-//void cu_draw_chunk(void *pinfo, COLOUR *Pic, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb);
-void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness);
+void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness, vector<COLOURMAP> &amap, paramfile &g_params);
 
 void host_particle_colorize(paramfile &params, cu_particle_sim *p, int npart,
   vector<COLOURMAP> &amap, float b_brightness);

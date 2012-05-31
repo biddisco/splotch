@@ -7,29 +7,22 @@
 
 using namespace std;
 
-paramfile *g_params;
-int ptypes = 0;
-vec3 campos, lookat, sky;
-vector<COLOURMAP> amap;
-vector<particle_sim> *particle_data;
 wallTimerSet cuWallTimers;
 
-void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &particle, float b_brightness)
+void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
   {
-  wallTimerSet times;
-  particle_data = &particle;
-  long int nP = particle_data->size();
-  //do some cleaning for final thread_info
+  long int nP = particle.size();
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
   int yres = pic.size2();
   arr2<COLOUR> Pic_host(xres,yres);
+  int ptypes = g_params.find<int>("ptypes",1);
 
   // Initialize policy class
-  CuPolicy *policy = new CuPolicy(*g_params); 
+  CuPolicy *policy = new CuPolicy(g_params); 
 
   // num particles to manage at once
-  float factor = g_params->find<float>("particle_mem_factor", 4);
+  float factor = g_params.find<float>("particle_mem_factor", 4);
   long int len = cu_get_chunk_particle_count(policy, sizeof(cu_particle_sim), factor);
 
   if (len <= 0)
@@ -39,50 +32,50 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
     }
 
   //CUDA Init
-  cu_gpu_vars gv; //for each gpu a variable pack is needed
+  cu_gpu_vars gv; 
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
   // enable device and allocate arrays
   int error;
-  error = cu_init(mydevID, len, &gv, *g_params, campos, lookat, sky, b_brightness);
+  error = cu_init(mydevID, len, &gv, g_params, campos, lookat, sky, b_brightness);
   if (!error)
   {
     //a new linear pic object that will carry the result
     COLOUR Pic_chunk[xres*yres];
-    setup_colormap(ptypes, &gv);
+    setup_colormap(ptypes, amap, &gv);
 
-    float64 grayabsorb = g_params->find<float>("gray_absorption",0.2);
-    bool a_eq_e = g_params->find<bool>("a_eq_e",true);
-
+    float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
+    bool a_eq_e = g_params.find<bool>("a_eq_e",true);
+ 
     int endP = 0;
     int startP = 0;
     while(endP < nP)
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP; 
-     cu_draw_chunk(&times, mydevID, startP, endP, Pic_chunk, Pic_host, &gv, a_eq_e, grayabsorb, b_brightness);
+     cu_draw_chunk(&cuWallTimers, mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_chunk, Pic_host, &gv, a_eq_e, grayabsorb, b_brightness, amap, g_params);
      // combine results of chunks
-     times.start("gcombine");
+     cuWallTimers.start("gcombine");
      for (int x=0; x<xres; x++)
       for (int y=0; y<yres; y++)
         pic[x][y] += Pic_chunk[x*yres+y]+Pic_host[x][y];
-     times.stop("gcombine");
+     cuWallTimers.stop("gcombine");
      startP = endP;
     }
     cu_endThread(&gv);
   }
 
-  if (g_params->getVerbosity())
+  if (g_params.getVerbosity())
   { 
       cout<< endl <<"Rank " << mpiMgr.rank() << ": Times of GPU" << mydevID << ":" <<endl;
-      GPUReport(times);
+      GPUReport(cuWallTimers);
       cout<<endl;
    }
-  if (mpiMgr.master()) cuWallTimers = times;
+  //if (mpiMgr.master()) cuWallTimers = cu Timers;
  }
 
 
-void setup_colormap(int ptypes, cu_gpu_vars* gv)
+void setup_colormap(int ptypes, vector<COLOURMAP> &amap, cu_gpu_vars* gv)
 {
 //init C style colormap
   cu_color_map_entry *amapD;//amap for Device
@@ -134,11 +127,11 @@ void GPUReport(wallTimerSet &cuTimers)
     cout << "Sorting Fragments (secs)   : " << cuTimers.acc("gsort") << endl;
     cout << "Reduce Fragments (secs)    : " << cuTimers.acc("greduce") << endl;
     cout << "Combine images (secs)      : " << cuTimers.acc("gcombine") << endl;
-    cout << "Cuda thread (secs)         : " << cuTimers.acc("gpu_thread") << endl << endl;
-    cout << "Host rendering (secs)      : " << cuTimers.acc("host_rendering") << endl;
+    cout << "Cuda draw   (secs)         : " << cuTimers.acc("gpu_draw") << endl << endl;
+    cout << "Host rendering (secs)      : " << cuTimers.acc("host_color+rendering") << endl;
   }
 
-void cuda_timeReport(paramfile &params)
+void cuda_timeReport()
   {
   if (mpiMgr.master())
     {
@@ -146,7 +139,7 @@ void cuda_timeReport(paramfile &params)
     cout << "Summary of timings" << endl;
     cout << "--------------------------------------------" << endl;
     cout<< endl <<"Times of GPU:" <<endl;
-    GPUReport (cuWallTimers);
+    GPUReport(cuWallTimers);
     cout <<  "--------------------------------------------" << endl;
     }
   }

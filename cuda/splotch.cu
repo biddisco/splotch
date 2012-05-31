@@ -28,7 +28,7 @@ template<typename T> T findParamWithoutChange
 
 
 void getCuTransformParams(cu_param &para_trans,
-paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
+paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   {
   int xres = params.find<int>("xres",800),
       yres = params.find<int>("yres",xres);
@@ -85,7 +85,7 @@ paramfile &params, vec3 &campos, vec3 &lookat, vec3 &sky)
   }
 
 
-int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &campos, vec3 &lookat, vec3 &sky, float b_brightness)
+int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness)
   {
   cudaError_t error;
   cudaSetDevice (devID); // initialize cuda runtime
@@ -108,7 +108,7 @@ int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, vec3 &
      return 1;
    }
   // particle active flag vector
-  size = nP * sizeof(char);
+  size = nP * sizeof(int);
   error = cudaMalloc((void**) &pgv->d_active, size);
   if (error != cudaSuccess)
    {
@@ -188,7 +188,7 @@ int cu_allocateFragmentBuffer(long n, cu_gpu_vars* pgv)
 }
 
 
-int cu_transform (int n, cu_gpu_vars* pgv)
+int cu_transform (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width)
   {
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
@@ -196,7 +196,8 @@ int cu_transform (int n, cu_gpu_vars* pgv)
   int maxPartSize = pgv->policy->GetMaxPartSize();
 
   //call device transformation
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, maxPartSize);
+  //cudaFuncSetCacheConfig(k_transform, cudaFuncCachePreferL1);
+  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, maxPartSize, tile_sidex, tile_sidey, width);
   cudaThreadSynchronize();
  
   return 0;
@@ -250,14 +251,15 @@ void cu_update_image(int n, bool a_eq_e, cu_gpu_vars* pgv)
 
 void cu_render1
   (int grid, int block, int nP, int End_cu_ps, unsigned long FragRendered,
-   bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv)
+   bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width)
   {
   //get dims from pgv->policy object first
   dim3 dimGrid = dim3(grid); 
   dim3 dimBlock = dim3(block);
- // size_t sizeSharedMem = block*sizeof(cu_particle_sim) ;
+ // size_t SharedMem = (tile_sidex+2*width)*(tile_sidey+2*width)*sizeof(cu_color); //+5*sizeof(int)+10*sizeof(float);
 
-  k_render1<<<dimGrid, dimBlock>>>(pgv->d_posInFragBuf+End_cu_ps, nP, FragRendered, pgv->d_pd+End_cu_ps, pgv->d_fbuf, pgv->d_pixel, a_eq_e, grayabsorb);
+  //cudaFuncSetCacheConfig(k_transform, cudaFuncCachePreferShared);
+  k_render1<<<dimGrid, dimBlock>>>(pgv->d_posInFragBuf+End_cu_ps, nP, FragRendered, pgv->d_pd+End_cu_ps, pgv->d_fbuf, pgv->d_pixel, grayabsorb, tile_sidex, tile_sidey, width);
   }
 
 void cu_endChunk(cu_gpu_vars* pgv)

@@ -14,18 +14,20 @@
 #include "cuda/CuRender.h"
 #include "cuda/CuPolicy.h"
 
+#define TILE_SIDEX 16	// x side dimension of the image tile, in terms of pixels
+#define TILE_SIDEY 16	// y side dimension of the image tile, in terms of pixels
+#define WIDTH_BOUND 8   // width of the boundary around the image tile 
+
 using namespace std;
 
-void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness)
+void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness, vector<COLOURMAP> &amap, paramfile &g_params)
 {
   cudaError_t error;
 
-  times->start("gpu_thread");
-  int nParticle = endP - startP;
+  times->start("gpu_draw");
 
   //copy data particle to device memory
   times->start("gcopy");
-  cu_particle_sim *d_particle_data = (cu_particle_sim *) &((*particle_data)[startP]);
   cu_copy_particles_to_device(d_particle_data, nParticle, gv);
   times->stop("gcopy");
 
@@ -34,12 +36,12 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
 
   //CUDA Transformation
   times->start("gtransform");
-  cu_transform(nParticle, gv);
+  cu_transform(nParticle, gv, TILE_SIDEX, TILE_SIDEY, WIDTH_BOUND);
   times->stop("gtransform");
 
   times->start("gfilter"); 
   thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
-  thrust::device_ptr<char> dev_ptr_flag((char *) gv->d_active);
+  thrust::device_ptr<int> dev_ptr_flag((int *) gv->d_active);
 
   //Copy big particles to be processed by the host
   thrust::device_vector<cu_particle_sim> d_host_part(nParticle);
@@ -64,12 +66,17 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
   int newParticle = new_end.get() - dev_ptr_pd.get();
   if( newParticle != nParticle )
   {
-     cout << "Eliminating inactive particles..." << endl;
+     cout << endl << "Eliminating inactive particles..." << endl;
      cout << newParticle+nHostPart << " particles left" << endl; 
      cout << nHostPart << " of them are processed by the host" << endl; 
   }
   thrust::device_ptr<unsigned long> dev_ptr_reg((unsigned long *) gv->d_posInFragBuf);
   thrust::remove_if(dev_ptr_reg, dev_ptr_reg+nParticle, dev_ptr_flag, particle_notValid());
+
+  //sort particles according to their tile id
+  times->start("gsort");
+  //thrust::sort_by_key(dev_ptr_flag, dev_ptr_flag + nParticle, dev_ptr_pd);
+  times->stop("gsort");
   
   // max size in pixels of the particles
   thrust::device_ptr<unsigned long> max_size = thrust::max_element(dev_ptr_reg, dev_ptr_reg + newParticle);
@@ -104,6 +111,7 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
   //CUDA Coloring
   dim3 Grid, Block;
   gv->policy->GetDimsBlockGrid(newParticle, &Grid, &Block);
+  //cudaFuncSetCacheConfig(k_colorize, cudaFuncCachePreferL1);
   k_colorize<<<Grid,Block,0,stream0>>>(gv->d_pd, gv->colormap_size, gv->colormap_ptypes, newParticle);
 //  cu_colorize(newParticle, gv);
   cudaStreamSynchronize(stream0);
@@ -118,6 +126,7 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
   //clear the device image
   size_t size_Im = res.first * res.second * sizeof(cu_color);
   error = cudaMemset(gv->d_pic,0,size_Im);
+  //int ntiles = (res.first/TILE_SIDEX) * (res.second/TILE_SIDEY);
 
   // allocate fragment and index buffers
   int fbsize = gv->policy->GetFBufSize();
@@ -158,7 +167,7 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
    times->start("grender");
    // device rendering
    cu_render1(dimGrid, block_size, chunk_length, End_cu_ps, nFragments2RenderOld, a_eq_e,
-             (float) grayabsorb, gv);
+             (float) grayabsorb, gv, TILE_SIDEX, TILE_SIDEY, WIDTH_BOUND);
    cudaThreadSynchronize();
    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
    End_cu_ps += chunk_length;
@@ -198,20 +207,20 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, int startP, int endP, COLOU
   times->start("gcopy");
   error = cudaMemcpy(Pic, gv->d_pic, size_Im, cudaMemcpyDeviceToHost);
   if (error != cudaSuccess) cout << "Device Memcpy error!" << endl; 
-  times->start("gcopy");
+  times->stop("gcopy");
 
-  times->stop("gpu_thread");
+  times->stop("gpu_draw");
 
   // host rendering 
-  times->start("host_rendering");
+  times->start("host_color+rendering");
   Pic_host.fill(COLOUR(0,0,0));
   if (nHostPart > 0)
   {
      cout << "Rank " << mpiMgr.rank() << ": host Coloring+Rendering " << nHostPart << " particles" << endl;
-     host_particle_colorize(*g_params, host_part, nHostPart, amap, b_brightness);
+     host_particle_colorize(g_params, host_part, nHostPart, amap, b_brightness);
      host_render_new (host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
   }
-  times->stop("host_rendering");
+  times->stop("host_color+rendering");
 
   cu_endChunk(gv);
   if (host_part) cudaFreeHost(host_part);

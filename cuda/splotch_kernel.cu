@@ -36,7 +36,7 @@ __device__ __forceinline__ void clamp (float minv, float maxv, float &val)
 
 //Transform by kernel
 __global__ void k_transform
-  (cu_particle_sim *p, unsigned long *p_region, char *p_active, int n, int MaxSize)
+  (cu_particle_sim *p, unsigned long *p_region, int *p_active, int n, int MaxSize, int tile_sidex, int tile_sidey, int width)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -112,10 +112,13 @@ __global__ void k_transform
   if (miny>=maxy) return;
  
   p[m].active = true;
-  p_active[m] = 1;	// active particle
+  int nx_tiles = dparams.xres/tile_sidex;
+  // active particle = tile_id to which it belongs to
+  p_active[m] = int(y)/tile_sidey * nx_tiles + int(x)/tile_sidex; 
+  // CHECK if (p_active[m] < 0) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   p_region[m] = (maxx-minx)*(maxy-miny);
-  if (p_region[m] > MaxSize) p_active[m] = 2; // particle to be removed and copied back to the host
-
+  if (int(rfacr+1.f)>width) 
+      p_active[m] = -2; // particle to be removed and copied back to the host 
   }
 
 //fetch a color from color table on device
@@ -177,31 +180,23 @@ __global__ void k_colorize
 //device render function k_render1
 __global__ void k_render1
   (unsigned long *pos, int nP, unsigned long FragRendered, cu_particle_sim *part,
-   void *buf, int *index, bool a_eq_e, float grayabsorb)
+   void *buf, int *index, float grayabsorb, int tile_sidex, int tile_sidey, int width)
 {
- // global index of the particle to load on the shared memory
-  int m = blockIdx.x *blockDim.x; // + threadIdx.x;
+  int m = blockIdx.x *blockDim.x;
  // if (m >=nP) return;
 
-  __shared__ int minx,maxx,miny,maxy,reg;
-  __shared__ float rfacr,radsq,stp, posx,posy;
-  __shared__ cu_color e,q;
+   __shared__ int minx,maxx,miny,maxy,reg;
+   __shared__ float rfacr,radsq,stp, posx,posy;
+   __shared__ cu_color e;
+//  extern __shared__ cu_color Btile[];  // 3072 tile+boundary
 
   int local_chunk_length = blockDim.x;
   if (blockIdx.x == gridDim.x -1) local_chunk_length = nP - blockIdx.x*blockDim.x;
   const int np = threadIdx.x; // local index of the particle to load on the shared memory
 			      // and pixel number to process for each particle
 
-  // load chunk of particles on the shared memory: each thread loads a particle (NOT CONVENIENT)
-/*  if(m < nP)
-  {
-     ppos[np] = pos[m];     //particle m absolute end position
-     p[np] = part[m];
-  }
-   __syncthreads();
-*/
-
  //now do the rendering: each thread processes a pixel of particle i
+ //blockIdx.x corrsponds to the tile id to compose
   int x,y;
   for (int i=0; i<local_chunk_length; i++)
   {
@@ -235,8 +230,9 @@ __global__ void k_render1
       x = np/(maxy-miny) + minx;
       y = np%(maxy-miny) + miny;
 
-      if (a_eq_e)
-      {
+// a_eq_e = false is not supported
+//    if (a_eq_e)
+//    {
         cu_fragment_AeqE        *fbuf;
         fbuf =(cu_fragment_AeqE*) buf;
 
@@ -256,8 +252,8 @@ __global__ void k_render1
           fbuf[fpos].aB = 0.0f;
         }
         index[fpos] = y+dparams.yres*x;  // pixel index in the image
-     }
-     else
+ //  }
+  /*   else   
      {
        cu_fragment_AneqE       *fbuf1;
        fbuf1 =(cu_fragment_AneqE*)buf;
@@ -292,6 +288,7 @@ __global__ void k_render1
         }
         index[fpos] = x*dparams.yres+y;
      }
+*/
     }
   }
 }
@@ -351,9 +348,9 @@ struct sum_op
 struct particle_notValid
   {
     __host__ __device__
-    bool operator()(const char flag)
+    bool operator()(const int flag)
     {
-      return ((flag==-1)||(flag==2));
+      return (flag < 0);
     }
   };
 
@@ -361,9 +358,9 @@ struct particle_notValid
 struct reg_notValid
   {
     __host__ __device__
-    bool operator()(const char flag)
+    bool operator()(const int flag)
     {
-      return (flag==2);
+      return (flag==-2);
     }
   };
 
