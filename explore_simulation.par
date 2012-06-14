@@ -8,7 +8,7 @@
 infile=snap_092
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
-# 6: mesh reader, 7: hdf7
+# 6: mesh reader, 7: hdf5
 simtype=2
 
 # Additional flags for Gadget
