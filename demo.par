@@ -9,7 +9,7 @@ infile=snap_
 fidx=92
 
 # 0,1: plain binary file, 2: Gadget2, 3: Enzo, 4: millenium, 5: mpiio,
-# 6: mesh reader, 7: hdf7
+# 6: mesh reader, 7: hdf5
 simtype=2
 snapshot_spacing=1
 #snapdir=FALSE
@@ -97,5 +97,3 @@ fov=30
 #EyeSeparation = 0.8
 
 # CUDA
-#use_host_as_thread =t
-#host_load=30
