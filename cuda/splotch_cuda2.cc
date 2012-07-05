@@ -120,15 +120,14 @@ void setup_colormap(int ptypes, vector<COLOURMAP> &amap, cu_gpu_vars* gv)
 void GPUReport(wallTimerSet &cuTimers)
   {
     cout << "Copy  (secs)               : " << cuTimers.acc("gcopy") << endl;
-    cout << "Transforming Data (secs)   : " << cuTimers.acc("gtransform") << endl;
+    cout << "Project+coloring Data(secs): " << cuTimers.acc("gprocess") << endl;
     cout << "Filter Sub-Data (secs)     : " << cuTimers.acc("gfilter") << endl;
-    cout << "Colorize Sub-Data (secs)   : " << cuTimers.acc("gcolor") << endl;
     cout << "Rendering Sub-Data (secs)  : " << cuTimers.acc("grender") << endl;
     cout << "Sorting Fragments (secs)   : " << cuTimers.acc("gsort") << endl;
     cout << "Reduce Fragments (secs)    : " << cuTimers.acc("greduce") << endl;
     cout << "Combine images (secs)      : " << cuTimers.acc("gcombine") << endl;
     cout << "Cuda draw   (secs)         : " << cuTimers.acc("gpu_draw") << endl << endl;
-    cout << "Host rendering (secs)      : " << cuTimers.acc("host_color+rendering") << endl;
+    cout << "Host rendering (secs)      : " << cuTimers.acc("host_rendering") << endl;
   }
 
 void cuda_timeReport()

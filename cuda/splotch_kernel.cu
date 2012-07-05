@@ -34,13 +34,46 @@ __device__ __forceinline__ void clamp (float minv, float maxv, float &val)
   val = min(maxv, max(minv, val));
   }
 
-//Transform by kernel
-__global__ void k_transform
-  (cu_particle_sim *p, unsigned long *p_region, int *p_active, int n, int MaxSize, int tile_sidex, int tile_sidey, int width)
+//fetch a color from color table on device
+__device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size, int map_ptypes)
+  {
+  //first find the right entry for this ptype
+  int     start, end;
+  start = ptype_points[ptype];
+  if ( ptype == map_ptypes-1)//the last type
+    end = map_size-1;
+  else
+    end = ptype_points[ptype+1]-1;
+
+  //search the section of this type to find the val
+  int i=start;
+  while ((val>dmap[i+1].val) && (i<end)) ++i;
+
+  const float fract = (val-dmap[i].val)/(dmap[i+1].val-dmap[i].val);
+  cu_color clr1=dmap[i].color, clr2=dmap[i+1].color;
+  cu_color        clr;
+  clr.r =clr1.r + fract*(clr2.r-clr1.r);
+  clr.g =clr1.g + fract*(clr2.g-clr1.g);
+  clr.b =clr1.b + fract*(clr2.b-clr1.b);
+
+  return clr;
+  }
+
+//Transform+coloring by kernel
+__global__ void k_process
+  (cu_particle_sim *p, unsigned long *p_region, int *p_active, int n, int mapSize, int types, int MaxSize)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
+
+  float r = p[m].r;
+  float I = p[m].I;
+  int ptype = p[m].type;
+  cu_color e;
+  e.r=p[m].e.r;
+  e.g=p[m].e.g;
+  e.b=p[m].e.b;
 
   //now do x,y,z
   float x,y,z;
@@ -64,8 +97,6 @@ __global__ void k_transform
     y = res2 * (y+dparams.fovfct*z)*xfac2 + ycorr;
     }
 
-  float r = p[m].r;
-  float I = p[m].I;
 #ifdef SPLOTCH_CLASSIC
   I *= 0.5f*dparams.bfak/r;
   r*= sqrt(2.f)*dparams.sigma0/dparams.h2sigma;  
@@ -82,11 +113,21 @@ __global__ void k_transform
 #else
   I /= rcorr*rcorr;
 #endif
+  I *= dparams.brightness[ptype];
 
   p[m].x = x;
   p[m].y = y;
   p[m].r = r;
   p[m].I = I;
+
+//coloring
+// get color, associated from physical quantity contained in e.r, from lookup table
+  if (!dparams.col_vector[ptype])
+     e = get_color(ptype, e.r, mapSize, types);
+
+  p[m].e.r = e.r*I;
+  p[m].e.g = e.g*I;
+  p[m].e.b = e.b*I;
 
   p[m].active = false;
   p_active[m] = -1;	// non active particle
@@ -112,47 +153,15 @@ __global__ void k_transform
   if (miny>=maxy) return;
  
   p[m].active = true;
-  int nx_tiles = dparams.xres/tile_sidex;
-  // active particle = tile_id to which it belongs to
-  p_active[m] = int(y)/tile_sidey * nx_tiles + int(x)/tile_sidex; 
-  // CHECK if (p_active[m] < 0) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   p_region[m] = (maxx-minx)*(maxy-miny);
-  if (int(rfacr+1.f)>width) 
+  p_active[m] = 1;
+  if (p_region[m] > MaxSize) 
       p_active[m] = -2; // particle to be removed and copied back to the host 
-  }
+ }
 
-//fetch a color from color table on device
-__device__ __forceinline__ cu_color get_color(int ptype, float val, int mapSize, int ptypes)
-  {
-  __shared__ int map_size;
-  __shared__ int map_ptypes;
-
-  map_size = mapSize;
-  map_ptypes = ptypes;
-  //first find the right entry for this ptype
-  int     start, end;
-  start =ptype_points[ptype];
-  if ( ptype == map_ptypes-1)//the last type
-    end = map_size-1;
-  else
-    end = ptype_points[ptype+1]-1;
-
-  //search the section of this type to find the val
-  int i=start;
-  while ((val>dmap[i+1].val) && (i<end)) ++i;
-
-  const float fract = (val-dmap[i].val)/(dmap[i+1].val-dmap[i].val);
-  cu_color clr1=dmap[i].color, clr2=dmap[i+1].color;
-  cu_color        clr;
-  clr.r =clr1.r + fract*(clr2.r-clr1.r);
-  clr.g =clr1.g + fract*(clr2.g-clr1.g);
-  clr.b =clr1.b + fract*(clr2.b-clr1.b);
-
-  return clr;
-  }
 
 //colorize by kernel
-__global__ void k_colorize
+/*__global__ void k_colorize
   (cu_particle_sim *p2, int mapSize, int types, int n)
   {
   //first get the index m of this thread
@@ -176,6 +185,7 @@ __global__ void k_colorize
   p2[m].e.g = e.g*intensity;;
   p2[m].e.b = e.b*intensity;;
  }
+*/
 
 //device render function k_render1
 __global__ void k_render1

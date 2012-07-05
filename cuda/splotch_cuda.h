@@ -99,10 +99,9 @@ struct cu_gpu_vars //variables used by each gpu
 
 int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness);
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-int cu_transform (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width);
+int cu_process (int n, cu_gpu_vars* pgv);
 int cu_allocateFragmentBuffer(long n,cu_gpu_vars* pgv);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
-//void cu_colorize(int n, cu_gpu_vars* pgv);
 void cu_render1
   (int grid, int block, int nP, int End_cu_ps, unsigned long FragRendered,
    bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, 

@@ -11,6 +11,7 @@
 #include <thrust/scan.h>
 
 #include "splotch/splotchutils.h"
+#include "splotch/splotch_host.h"
 #include "cuda/CuRender.h"
 #include "cuda/CuPolicy.h"
 
@@ -35,9 +36,10 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
   pair<int, int> res = gv->policy->GetResolution();
 
   //CUDA Transformation
-  times->start("gtransform");
-  cu_transform(nParticle, gv, TILE_SIDEX, TILE_SIDEY, WIDTH_BOUND);
-  times->stop("gtransform");
+  times->start("gprocess");
+  cu_process(nParticle, gv);
+  cudaThreadSynchronize();
+  times->stop("gprocess");
 
   times->start("gfilter"); 
   thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
@@ -47,19 +49,6 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
   thrust::device_vector<cu_particle_sim> d_host_part(nParticle);
   thrust::device_vector<cu_particle_sim>::iterator end = thrust::copy_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, d_host_part.begin(), reg_notValid()); 
   int nHostPart = end - d_host_part.begin();
-
-// DEBUG ---------------------------------------------------------------------------
-/*  unsigned long *region = new unsigned long[nParticle];
-  cudaMemcpy(region, gv->d_posInFragBuf, nParticle*sizeof(unsigned long), cudaMemcpyDeviceToHost);
-  int cont = 0;
-  for (int i=0; i < nParticle; i++) if (region[i] > 1024) cont++;
-  cout << cont << " big particles" << endl;
-  delete[] region; 
-  int cont=0;
-  for (int i=0; i < nHostPart; i++) if (host_part[i].active) cont++;
-  cout << cont << " big active particles" << endl;
-*/
-//------------------------------------------------------------------------------------
 
   //Remove non-active and big particles
   thrust::device_ptr<cu_particle_sim> new_end = thrust::remove_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, particle_notValid());
@@ -90,13 +79,9 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
   thrust::inclusive_scan(dev_ptr_reg, dev_ptr_reg + newParticle, dev_ptr_reg);
   times->stop("gfilter");
 
-// Overlap big particles copy and coloring kernel
-  cudaStream_t stream0, stream1;
-  cudaStreamCreate(&stream0);
-  cudaStreamCreate(&stream1);
-
-  times->start("gcolor");
-  cu_particle_sim *host_part = 0;
+// Copy back big particles
+  times->start("gcopy");
+  particle_sim *host_part = 0;
   if (nHostPart > 0)
   {
     cu_particle_sim *d_host_part_ptr = thrust::raw_pointer_cast(&d_host_part[0]);
@@ -104,20 +89,12 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
     if (error != cudaSuccess) cout << "cudaHostAlloc error!" << endl;
     else
     {
-      error = cudaMemcpyAsync(host_part, d_host_part_ptr, nHostPart*sizeof(cu_particle_sim), cudaMemcpyDeviceToHost,stream1);
+      error = cudaMemcpyAsync(host_part, d_host_part_ptr, nHostPart*sizeof(cu_particle_sim), cudaMemcpyDeviceToHost);
       if (error != cudaSuccess) cout << "Big particles Memcpy error!" << endl;
     }
   }
-  //CUDA Coloring
-  dim3 Grid, Block;
-  gv->policy->GetDimsBlockGrid(newParticle, &Grid, &Block);
+  times->stop("gcopy");
   //cudaFuncSetCacheConfig(k_colorize, cudaFuncCachePreferL1);
-  k_colorize<<<Grid,Block,0,stream0>>>(gv->d_pd, gv->colormap_size, gv->colormap_ptypes, newParticle);
-//  cu_colorize(newParticle, gv);
-  cudaStreamSynchronize(stream0);
-  cout << "Rank " << mpiMgr.rank() << " - GPU " << mydevID << " :  Coloring " << newParticle << "/"<< newParticle << " particles" << endl;
-  cudaStreamSynchronize(stream1);
-  times->stop("gcolor");
 
 // ----------------------------------
 // ----------- Rendering ------------
@@ -173,10 +150,10 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
    End_cu_ps += chunk_length;
    times->stop("grender");
  
-  times->start("gcopy");
-  error = cudaMemcpy(&nFragments2RenderNew, gv->d_posInFragBuf + End_cu_ps-1, sizeof(unsigned long), cudaMemcpyDeviceToHost);
-  times->stop("gcopy");
-  if (error != cudaSuccess) cout << "nFragments Memcpy error!" << endl; 
+   times->start("gcopy");
+   error = cudaMemcpy(&nFragments2RenderNew, gv->d_posInFragBuf + End_cu_ps-1, sizeof(unsigned long), cudaMemcpyDeviceToHost);
+   times->stop("gcopy");
+   if (error != cudaSuccess) cout << "nFragments Memcpy error!" << endl; 
 
    times->start("gsort");
    thrust::sort_by_key(dev_ptr_Index, dev_ptr_Index + nFragments2RenderNew - nFragments2RenderOld, dev_ptr_FragBuf);
@@ -212,248 +189,15 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
   times->stop("gpu_draw");
 
   // host rendering 
-  times->start("host_color+rendering");
-  Pic_host.fill(COLOUR(0,0,0));
+  times->start("host_rendering");
+  //Pic_host.fill(COLOUR(0,0,0));
   if (nHostPart > 0)
   {
-     cout << "Rank " << mpiMgr.rank() << ": host Coloring+Rendering " << nHostPart << " particles" << endl;
-     host_particle_colorize(g_params, host_part, nHostPart, amap, b_brightness);
-     host_render_new (host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
+     cout << "Rank " << mpiMgr.rank() << ": host Rendering " << nHostPart << " particles" << endl;
+     host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
   }
-  times->stop("host_color+rendering");
+  times->stop("host_rendering");
 
   cu_endChunk(gv);
   if (host_part) cudaFreeHost(host_part);
-  cudaStreamDestroy(stream0);
-  cudaStreamDestroy(stream1);
 }
-
-
-
-#define SPLOTCH_CLASSIC
-
-const float32 h2sigma = 0.5*pow(pi,-1./6.);
-
-#ifdef SPLOTCH_CLASSIC
-const float32 powtmp = pow(pi,1./3.);
-const float32 sigma0 = powtmp/sqrt(2*pi);
-const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
-#else
-const float32 rfac=1.;
-#endif
- 
-void host_particle_colorize(paramfile &params, cu_particle_sim *p, int npart,
-  vector<COLOURMAP> &amap, float b_brightness)
-  {
-  int nt = params.find<int>("ptypes",1);
-  arr<bool> col_vector(nt);
-  arr<float32> brightness(nt);
-
-  for(int t=0;t<nt;t++)
-    {
-    brightness[t] = params.find<float32>("brightness"+dataToString(t),1.f);
-    brightness[t] *= b_brightness;
-    col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
-    }
-
-#pragma omp parallel
-{
-  int m;
-  COLOUR e;
-#pragma omp for schedule(guided,1000)
-  for (m=0; m<npart; ++m)
-    {
-      if (!col_vector[p[m].type])
-      {
-        e= amap[p[m].type].getVal_const(p[m].e.r);
-        p[m].e.r = e.r;
- 	p[m].e.g = e.g;
- 	p[m].e.b = e.b;
-      }
-      p[m].e.r *= p[m].I * brightness[p[m].type];
-      p[m].e.g *= p[m].I * brightness[p[m].type];
-      p[m].e.b *= p[m].I * brightness[p[m].type];
-    }
-}
-  }
-
-const int chunkdim=100;
-
-void host_render_new (cu_particle_sim *p, int npart, arr2<COLOUR> &pic, bool a_eq_e, float32 grayabsorb)
-  {
-  int xres=pic.size1(), yres=pic.size2();
-  int ncx=(xres+chunkdim-1)/chunkdim, ncy=(yres+chunkdim-1)/chunkdim;
-
-  arr2<vector<uint32> > idx(ncx,ncy);
-  float32 rcell=sqrt(2.f)*(chunkdim*0.5f-0.5f);
-  float32 cmid0=0.5f*(chunkdim-1);
-
-  exptable<float32> xexp(-20.);
-#ifdef PLANCK_HAVE_SSE
-  const float32 taylorlimit=xexp.taylorLimit();
-#endif
-
-//  pic.fill(COLOUR(0,0,0));
-
-//  tstack_push("Chunk preparation");
-
-  for (int i=0; i<npart; ++i)
-  {
-    cu_particle_sim pp = p[i];
-    float32 rfacr = rfac*pp.r;
-
-    int minx=max(0,int(pp.x-rfacr+1)/chunkdim);
-    int maxx=min(ncx-1,int(pp.x+rfacr)/chunkdim);
-    int miny=max(0,int(pp.y-rfacr+1)/chunkdim);
-    int maxy=min(ncy-1,int(pp.y+rfacr)/chunkdim);
-    float32 sumsq=(rcell+rfacr)*(rcell+rfacr);
-    for (int ix=minx; ix<=maxx; ++ix)
-    {
-        float32 cx=cmid0+ix*chunkdim;
-        for (int iy=miny; iy<=maxy; ++iy)
-          {
-          float32 cy=cmid0+iy*chunkdim;
-          float32 rtot2 = (pp.x-cx)*(pp.x-cx) + (pp.y-cy)*(pp.y-cy);
-          if (rtot2<sumsq)
-            idx[ix][iy].push_back(i);
-          }
-     }
-
-   }
-
-//  tstack_replace("Chunk preparation","Rendering proper");
-
-  work_distributor wd (xres,yres,chunkdim,chunkdim);
-#pragma omp parallel
-{
-  arr<float32> pre1(chunkdim);
-#ifdef PLANCK_HAVE_SSE
-  arr2_align<V4sf,16> lpic(chunkdim,chunkdim);
-#else
-  arr2<COLOUR> lpic(chunkdim,chunkdim);
-#endif
-  int chunk;
-#pragma omp for schedule(dynamic,1)
-  for (chunk=0; chunk<wd.nchunks(); ++chunk)
-    {
-    int x0, x1, y0, y1;
-    wd.chunk_info(chunk,x0,x1,y0,y1);
-    int x0s=x0, y0s=y0;
-    x1-=x0; x0=0; y1-=y0; y0=0;
-    lpic.fast_alloc(x1-x0,y1-y0);
-#ifdef PLANCK_HAVE_SSE
-    lpic.fill(V4sf(0.));
-#else
-    lpic.fill(COLOUR(0,0,0));
-#endif
-    int cx, cy;
-    wd.chunk_info_idx(chunk,cx,cy);
-    const vector<uint32> &v(idx[cx][cy]);
-
-    for (tsize m=0; m<v.size(); ++m)
-      {
-      const cu_particle_sim pp=p[v[m]];
-      float32 rfacr=pp.r*rfac;
-      float32 posx=pp.x, posy=pp.y;
-      posx-=x0s; posy-=y0s;
-      int minx=int(posx-rfacr+1);
-      minx=max(minx,x0);
-      int maxx=int(posx+rfacr+1);
-      maxx=min(maxx,x1);
-      int miny=int(posy-rfacr+1);
-      miny=max(miny,y0);
-      int maxy=int(posy+rfacr+1);
-      maxy=min(maxy,y1);
-
-      float32 radsq = rfacr*rfacr;
-      float32 sigma = h2sigma*pp.r;
-      float32 stp = -1.f/(sigma*sigma);
-
-      COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
-#ifdef PLANCK_HAVE_SSE
-      V4sf va(a.r,a.g,a.b,0.f);
-#endif
-
-      for (int y=miny; y<maxy; ++y)
-        pre1[y]=xexp(stp*(y-posy)*(y-posy));
-
-      if (a_eq_e)
-        {
-        for (int x=minx; x<maxx; ++x)
-          {
-          float32 dxsq=(x-posx)*(x-posx);
-          float32 dy=sqrt(radsq-dxsq);
-          int miny2=max(miny,int(posy-dy+1)),
-              maxy2=min(maxy,int(posy+dy+1));
-          float32 pre2 = xexp(stp*dxsq);
-          for (int y=miny2; y<maxy2; ++y)
-            {
-            float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE
-            lpic[x][y]+=va*att;
-#else
-            lpic[x][y].r += att*a.r;
-            lpic[x][y].g += att*a.g;
-            lpic[x][y].b += att*a.b;
-#endif
-            }
-          }
-        }
-      else
-        {
-        COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
-                 pp.e.g/(pp.e.g+grayabsorb),
-                 pp.e.b/(pp.e.b+grayabsorb));
-#ifdef PLANCK_HAVE_SSE
-        float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
-        V4sf vq(q.r,q.g,q.b,0.f);
-#endif
-
-        for (int x=minx; x<maxx; ++x)
-          {
-          float32 dxsq=(x-posx)*(x-posx);
-          float32 dy=sqrt(radsq-dxsq);
-          int miny2=max(miny,int(posy-dy+1)),
-              maxy2=min(maxy,int(posy+dy+1));
-          float32 pre2 = xexp(stp*dxsq);
-          for (int y=miny2; y<maxy2; ++y)
-            {
-            float32 att = pre1[y]*pre2;
-#ifdef PLANCK_HAVE_SSE
-            if ((maxa*att)<taylorlimit)
-              lpic[x][y]+=(lpic[x][y]-vq)*va*att;
-            else
-              {
-              V4sf::Tu tmp;
-              tmp.v=lpic[x][y].v;
-              tmp.d[0] += xexp.expm1(att*a.r)*(tmp.d[0]-q.r);
-              tmp.d[1] += xexp.expm1(att*a.g)*(tmp.d[1]-q.g);
-              tmp.d[2] += xexp.expm1(att*a.b)*(tmp.d[2]-q.b);
-              lpic[x][y]=tmp.v;
-              }
-#else
-            lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
-            lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
-            lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
-#endif
-            }
-          }
-        }
-      } // for particle
-
-    for (int ix=0;ix<x1;ix++)
-      for (int iy=0;iy<y1;iy++)
-#ifdef PLANCK_HAVE_SSE
-        {
-        COLOUR &c(pic[ix+x0s][iy+y0s]); float32 dum;
-        lpic[ix][iy].writeTo(c.r,c.g,c.b,dum);
-        }
-#else
-        pic[ix+x0s][iy+y0s]=lpic[ix][iy];
-#endif
-    } // for this chunk
-} // #pragma omp parallel
-
-//  tstack_pop("Rendering proper");
-  }
-

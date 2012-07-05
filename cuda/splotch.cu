@@ -188,7 +188,7 @@ int cu_allocateFragmentBuffer(long n, cu_gpu_vars* pgv)
 }
 
 
-int cu_transform (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width)
+int cu_process (int n, cu_gpu_vars* pgv)
   {
   //Get block dim and grid dim from pgv->policy object
   dim3 dimGrid, dimBlock;
@@ -196,9 +196,7 @@ int cu_transform (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int w
   int maxPartSize = pgv->policy->GetMaxPartSize();
 
   //call device transformation
-  //cudaFuncSetCacheConfig(k_transform, cudaFuncCachePreferL1);
-  k_transform<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, maxPartSize, tile_sidex, tile_sidey, width);
-  cudaThreadSynchronize();
+  k_process<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_posInFragBuf, pgv->d_active, n, pgv->colormap_size, pgv->colormap_ptypes, maxPartSize);
  
   return 0;
   }
