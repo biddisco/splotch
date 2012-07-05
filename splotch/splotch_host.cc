@@ -36,7 +36,7 @@
 
 using namespace std;
 
-namespace {
+namespace host_funct {
 
 const float32 h2sigma = 0.5*pow(pi,-1./6.);
 const float32 sqrtpi = sqrt(pi);
@@ -52,6 +52,7 @@ const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
 #else
 const float32 rfac=1.;
 #endif
+
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
@@ -268,7 +269,8 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
 
 const int chunkdim=100;
 
-void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
+//common interface for CPU and GPU version
+void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
   bool a_eq_e, float32 grayabsorb)
   {
   planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
@@ -296,7 +298,7 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
       nthreads=openmp_num_threads();
 
   int64 lo, hi;
-  calcShareGeneral (0, p.size(), nthreads, mythread, lo, hi);
+  calcShareGeneral (0, npart, nthreads, mythread, lo, hi);
   for (int64 i=lo; i<hi; ++i)
     {
     particle_sim &pp(p[i]);
@@ -471,7 +473,9 @@ void render_new (vector<particle_sim> &p, arr2<COLOUR> &pic,
   tstack_pop("Rendering proper");
   }
 
-} // unnamed namespace
+}
+
+using namespace host_funct;
 
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
@@ -548,6 +552,6 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   float32 grayabsorb = params.find<float32>("gray_absorption",0.2);
 
   tstack_push("Rendering");
-  render_new (particles,pic,a_eq_e,grayabsorb);
+  render_new (&(particles[0]),particles.size(),pic,a_eq_e,grayabsorb);
   tstack_pop("Rendering");
   }
