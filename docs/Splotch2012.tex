@@ -750,6 +750,32 @@ This solution still produces an overhead due to sorting and reduction operations
 
 \section{Tests and Results}
 
+In order to check and analyze the performances of the GPU implementation,
+we compare the GPU code to the CPU version on a number of testcases, selected in 
+order to stress the different features of the algorthm and of the computing 
+architectures. We have also used various models of graphic cards, in order to analyse
+the behaviour of the code on different accelerated architectures.
+
+Table XXX summarize the main characteristics of the datasets adopted in the 
+tests. The 100M dataset is made of 100 million particles, distributed in 
+a cubic box. Each particle is characterized by the 3D cartesian coordinates,
+the density of the distribution at the particle position, that serves as the color,
+and a smoothing length, specific to each particle. This test is particularly 
+demanding from the memory point of view. The dataset, by itself, requires 2 GB 
+of memory, so it is at the upper limit of many GPU, but also CPU, memories.
+The 100M test can be run only on GPU cards with memory of 4 or 6 GBs.
+The 10M dataset is a random 
+selection of $10\%$ of the 100M particles, created for performing tests 
+on any available graphic card and CPU The memory requirements, in fact, 
+are not so challenging as for the 100M case (ten times smaller).
+In the 100M and 10M datasets the particles are distributed 
+statistically homogeneously (see figure XXX), hence approximately the same 
+number of particles ``falls" in any sub-set of the image (unless
+the point of view is not too far away from the data box, leading to a black, empty 
+frame around the box). 
+
+The GALAXY dataset is characterized 
+
 \section{Conclusions and Next Steps}
 
 \end{document}
