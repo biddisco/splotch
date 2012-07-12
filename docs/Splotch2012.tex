@@ -756,25 +756,76 @@ order to stress the different features of the algorthm and of the computing
 architectures. We have also used various models of graphic cards, in order to analyse
 the behaviour of the code on different accelerated architectures.
 
-Table XXX summarize the main characteristics of the datasets adopted in the 
-tests. The 100M dataset is made of 100 million particles, distributed in 
+Table \ref{table:tests} summarizes the main characteristics of the datasets adopted in the 
+tests. The 100M dataset is composed by 100 million particles, distributed in 
 a cubic box. Each particle is characterized by the 3D cartesian coordinates,
 the density of the distribution at the particle position, that serves as the color,
 and a smoothing length, specific to each particle. This test is particularly 
-demanding from the memory point of view. The dataset, by itself, requires 2 GB 
-of memory, so it is at the upper limit of many GPU, but also CPU, memories.
-The 100M test can be run only on GPU cards with memory of 4 or 6 GBs.
-The 10M dataset is a random 
-selection of $10\%$ of the 100M particles, created for performing tests 
-on any available graphic card and CPU The memory requirements, in fact, 
-are not so challenging as for the 100M case (ten times smaller).
+memory demanding (the dataset, by itself, requires 2 GB 
+of resident memory). The data size is not an issue for the GPU, since data are splitted 
+in smaller chunks and loaded iteratively on the accelerator, but it can be a limiting factor
+for the CPU, since only CPUs with memories of 4 GBs or larger can run the test. 
+In order to have a test suitable to any memory size, a smaller version of this dataset, 10M, was generated 
+randomly selecting the 10% of the 100M particles. 
 In the 100M and 10M datasets the particles are distributed 
 statistically homogeneously (see figure XXX), hence approximately the same 
 number of particles ``falls" in any sub-set of the image (unless
 the point of view is not too far away from the data box, leading to a black, empty 
-frame around the box). 
+frame around the box). The main goal of these tests are to measure the performances
+when no balancing problems arises, so evaluating the GPU when computing 
+power and memory accesses are exploited in the best possible way. 
 
-The GALAXY dataset is characterized 
+The GALAXY dataset is characterized by an heterogeneous particle distribution 
+at all scales. For this dataset, each particle is characterized by its 
+cartesian coordinates, a smoothing length and the three RGB components of the color. 
+In this case, particles are not colored providing a look-up table,
+but have an intrinsic color. The dataset is not very large, XXX million 
+particles, but the disomogeneous distribution verify the balance 
+of the workload on the GPU.
+
+\begin{table}
+\caption{Datasets adopted for the tests}
+\centering 
+\begin{tabular}{l c c c} 
+\hline\hline 
+ID & N. particles & N. fields & Memory (GB) \\ [0.5ex] 
+%heading
+\hline % inserts single horizontal line
+100M   & 100000000 & 5 & 1.863 \\ 
+10M    & 10000000  & 5 & 0.186 \\
+GALAXY & XXX & 7 & XXX \\
+\hline 
+\end{tabular}
+\label{table:tests}
+\end{table}
+
+The main tests' parameters are the data size (number of particles),
+the image size (number of pixels) and the camera position. As we will show below
+this is a crucial parameter, affecting the effective smoothing lenght of the particles,
+defined as the number of pixels which a particle is distributed on, that 
+depends both on the intrinsic smoothing length, read by the data file, and 
+from the distance of the particle from the point of view. Other important parameters
+are related to the GPU architecture, as..............
+
+Our tests have been performed on a number of different GPU architectures, 
+whose characteristics are summarized in table \ref{table:gpus}. 
+
+\begin{table}
+\caption{NVIDIA GPU architectures used for the tests}
+\centering
+\begin{tabular}{l c c c}
+\hline\hline
+Model & Freq. (Ghz) & Mem. size (GB) & Mem. type \\ [0.5ex]
+%heading
+\hline % inserts single horizontal line
+GTX 285   & 1.48 & 2.0 & GDDR3 \\
+GTX 480   & 1.40 & 1.5 & GDDR5 \\
+\hline
+\end{tabular}
+\label{table:gpus}
+\end{table}
+ 
+
 
 \section{Conclusions and Next Steps}
 
