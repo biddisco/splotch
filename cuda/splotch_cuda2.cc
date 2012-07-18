@@ -15,6 +15,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
   int yres = pic.size2();
+  cout << "resolution = " << xres << " x " << yres << endl;
   arr2<COLOUR> Pic_host(xres,yres);
   int ptypes = g_params.find<int>("ptypes",1);
 
@@ -49,19 +50,23 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
  
     int endP = 0;
     int startP = 0;
+    int nPR = 0;
+    cuWallTimers.start("gpu_draw");
     while(endP < nP)
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP; 
-     cu_draw_chunk(&cuWallTimers, mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_chunk, Pic_host, &gv, a_eq_e, grayabsorb, b_brightness, amap, g_params);
+     nPR += cu_draw_chunk(&cuWallTimers, mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_chunk, Pic_host, &gv, a_eq_e, grayabsorb, b_brightness, amap, g_params);
      // combine results of chunks
      cuWallTimers.start("gcombine");
      for (int x=0; x<xres; x++)
       for (int y=0; y<yres; y++)
         pic[x][y] += Pic_chunk[x*yres+y]+Pic_host[x][y];
      cuWallTimers.stop("gcombine");
+     cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl;
      startP = endP;
     }
+    cuWallTimers.stop("gpu_draw");
     cu_endThread(&gv);
   }
 

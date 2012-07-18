@@ -21,11 +21,9 @@
 
 using namespace std;
 
-void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness, vector<COLOURMAP> &amap, paramfile &g_params)
+int cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness, vector<COLOURMAP> &amap, paramfile &g_params)
 {
   cudaError_t error;
-
-  times->start("gpu_draw");
 
   //copy data particle to device memory
   times->start("gcopy");
@@ -146,7 +144,6 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
    cu_render1(dimGrid, block_size, chunk_length, End_cu_ps, nFragments2RenderOld, a_eq_e,
              (float) grayabsorb, gv, TILE_SIDEX, TILE_SIDEY, WIDTH_BOUND);
    cudaThreadSynchronize();
-   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
    End_cu_ps += chunk_length;
    times->stop("grender");
  
@@ -178,7 +175,7 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
    times->stop("gcombine");
   }
-  cout << "Rank " << mpiMgr.rank() << " - GPU " << mydevID << " : Rendered " << newParticle << "/"<< newParticle << " particles" << endl;
+  cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
 
   // copy back the image
   times->start("gcopy");
@@ -186,18 +183,16 @@ void cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle
   if (error != cudaSuccess) cout << "Device Memcpy error!" << endl; 
   times->stop("gcopy");
 
-  times->stop("gpu_draw");
-
   // host rendering 
   times->start("host_rendering");
-  //Pic_host.fill(COLOUR(0,0,0));
-  if (nHostPart > 0)
+  if(nHostPart > 0)
   {
-     cout << "Rank " << mpiMgr.rank() << ": host Rendering " << nHostPart << " particles" << endl;
+     cout << "Rank " << mpiMgr.rank() << " : Host rendering on " << nHostPart << " particles" << endl;
      host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
   }
   times->stop("host_rendering");
 
   cu_endChunk(gv);
   if (host_part) cudaFreeHost(host_part);
+  return nHostPart+newParticle;
 }
