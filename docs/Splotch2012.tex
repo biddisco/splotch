@@ -514,7 +514,8 @@ The pseudo-code below summarizes the overall workflow of this CUDA parallelizati
 
 \small
 \begin{verbatim}
-Algorithm A:
+Algorithm A
+begin
   setup colormap
   nP = number of particles of each chunk
   allocate device particle array d_part[nP]
@@ -552,13 +553,14 @@ Algorithm A:
      copy d_image from the device to the host
      Image = Image + d_image
   endfor
-
+end
 \end{verbatim}
 \normalsize
 The CUDA kernel algorithm is the following, where a chunk (of the same size of the CUDA block) of particles is processed serially by reading a particle a time and storing its data in the shared memory. Each thread compute a pixel of the current particle. 
 \small
 \begin{verbatim}
-k_render:
+k_renderA
+begin
   m  = chunk starting position = blockIdx.x *blockDim.x
   np = pixel number to process for each particle = threadIdx.x
   local_chunk_length = blockDim.x;
@@ -590,6 +592,7 @@ k_render:
        d_index[fpos] = pixel index = y+yres*x
     endif
   endfor
+end
 \end{verbatim}
 \normalsize
 The drawbacks of this solution are the following: fragment and index buffers require a lot of memory, thus reducing the space available for the input particles; sorting and reduction operations are time consuming and executed on a very large number of elements. 
@@ -622,13 +625,14 @@ or a corner and the inner part of another Btile, the horizontal boundary side of
 A possible solution is to consider 3 steps (see Figure ...):  
 first add a and b sides (no race conditions between boundary sides of tiles nearby),
 then add b and c sides (no race conditions between boundary sides of tiles nearby),
-finally add corners (no race conditions between corners). Notice that the number of pixels of the 4 boundary corners of a tile are equal to the size of a particle, i.e. the size of a block. 
+finally add corners (no race conditions between corners). Notice that the number of pixels of the 4 boundary corners of a tile are equal to the size of a particle, i.e. the size of a block. Since CUDA blocks are order independent, we need to add these contributions to 3 different copies of the image to avoid race conditions. Then, at the end of the execution of the render kernel it is possibile to add these copies to the final image.
 
 The pseudo-code below summarizes the overall workflow of this CUDA parallelization approach.
 
 \small
 \begin{verbatim}
-Algorithm B:
+Algorithm B
+begin
   setup colormap
   nP = number of particles of each chunk
   tile_sidex = tile sidex size 
@@ -640,8 +644,11 @@ Algorithm B:
   allocate device index tile array d_active[nP]
   allocate tiles array d_tiles[nxtiles*nytiles]   
   allocate device image d_image[resx*resy]
+  allocate device image d_imageBrow[resx*resy]
+  allocate device image d_imageBcol[resx*resy]
+  allocate device image d_imageBcor[resx*resy]
+  
   Image = 0
- 
   for each chunk: 
      d_image = 0
      copy chunk of particles from host to device  
@@ -664,23 +671,23 @@ Algorithm B:
                            thrust::make_constant_iterator(1), d_active, d_tiles)
       thrust::inclusive_scan(d_tiles, d_tiles + new_ntiles, d_tiles)
 
-     num_blocks = new_ntiles
-     block_size = (2width)*(2width) 
-     k_render<<<num_blocks,block_size>>>(d_part,d_tiles, newnP, 
-                                         tile_sidex, tile_sidey, width)
-     host_rendering(host_part,nHostPart)  
+     k_render<<<new_ntiles,4*width*width>>>(newnP, d_part, d_tiles, d_image, ...)
+     host_rendering(host_part,nHostPart, Image) 
 
      cudaThreadSynchronize()
+     k_add_images<<<num_blocks,block_size>>>(res, d_image, d_imageBrow, 
+                                               d_imageBcol, d_imageBcor);
      copy d_image from the device to the host
      Image = Image + d_image
   endfor
-
+end
 \end{verbatim}
 \normalsize
 The CUDA kernel algorithm is the following. 
 \small
 \begin{verbatim}
-k_render:
+k_renderB
+begin
    size = (2width+tile_sidex)*(2width+tile_sidey)
    allocate on the shared memory tile+boundary Btile[size]
    tile = d_active[blockIdx.x] 
@@ -722,58 +729,14 @@ k_render:
      __syncthreads()
    endfor
 
-  add inner part of Btile to the global image:
-   offset = width*(tile_sidey+2*width) + width
-   for i=threadIdx.x, ..., tile_sidex*tile_sidey-1; step = blockDim.x:
-     j = offset + i + (i/tile_sidey)*2*width
-     d_pic[pixelLocalToGlobal(j,xo,yo,tile_sidey)] = Btile[j]
-   endfor 
+  add inner part of Btile to d_image 
   __syncthreads()
-
-  add Btile boundary columns (a and b):
-   if (threadIdx.x < blockDim.x/2) then
-     i0 = 0
-     offset = width*(tile_sidey+2*width)
-   else
-     i0 = blockDim.x/2
-     offset = width*(tile_sidey+2*width) + width + tile_sidey
-   endif
-   for i= threadIdx.x - i0, ..., tile_sidex*width-1; step = blockDim.x/2:
-     j = offset + i + (i/width)*(tile_sidey+width)
-     d_pic[pixelLocalToGlobal(j,xo,yo,tile_sidey)] = Btile[j]
-   endfor 
+  add Btile boundary columns (a and b) to d_imageBcol
   __syncthreads()
-
-  add Btile boundary rows (c and d):
-   if (threadIdx.x < blockDim.x/2) then
-     i0 = 0
-     offset = width
-   else
-     i0 = blockDim.x/2
-     offset = width + (width+tile_sidex)*(tile_sidey+2*width)
-   endif
-   for i=threadIdx.x - i0, ..., tile_sidey*width-1; step = blockDim.x/2:
-     j = offset + i + (i/tile_sidey)*2*width
-     d_pic[pixelLocalToGlobal(j,xo,yo,tile_sidey)] = Btile[j]
-   endfor 
+  add Btile boundary rows (c and d) to d_imageBrow
   __syncthreads()
-
-  add Btile boundary corners:
-   if (threadIdx.x < blockDim.x/4) then
-    offset = 0
-   endif
-   if (threadIdx.x >= blockDim.x/4 and threadIdx.x < blockDim.x/2) then
-    offset = width + tile_sidey
-   endif
-   if (threadIdx.x >= blockDim.x/2 and threadIdx.x < 3*blockDim.x/4) then
-    offset = (width + tile_sidex)*(2*width+tile_sidey)
-   endif
-   if (threadIdx.x >= 3*blockDim.x/4) then
-    offset = (width + tile_sidex)*(2*width+tile_sidey) + width + tile_sidey
-   endif
-   j = offset + threadIdx.x + (threadIdx.x/width)*(tile_sidey+width)
-   d_pic[pixelLocalToGlobal(j,xo,yo,tile_sidey)] = Btile[j]
-
+  add Btile boundary corners to d_imageBcor
+end
 \end{verbatim}
 \normalsize
 This solution still produces an overhead due to sorting and reduction operations but it is less time-consuming because these operations are performed on particles instead of fragments which are a lower number of elements.   
