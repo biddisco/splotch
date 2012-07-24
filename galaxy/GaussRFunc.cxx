@@ -245,9 +245,10 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
 //this is used for stars distribution in irregular galaxies: OPTION 5
 /* 
 MAIN PARAMETERS:
+sigma_z - third dimension thickness
 npergroup = number of points around each seed (group points)
 ndiffuse_factor = number of diffused point per (group point)
-sigma_fixed = dispersion of point clouds around the corresponding seed point
+sigma_fixed = dispersion of point clouds around the corresponding seed point: NOTE - IN PIXELS!!!!!!!
 sigma_g = sigma_r*sigma_fixed is the dispersion of diffused points
 */
 
@@ -259,17 +260,14 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
   float * yy;
   float * zz;
 
+  float sigma_z = params.find<float>("Sigmaz"+ComponentName,0.8);
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
   float ndiffuse_factor = params.find<float>("NdiffuseFactor"+ComponentName,0);
   float sigma_fixed = params.find<float>("Sigmazfixed"+ComponentName,0.1);
   float sigma_g = params.find<float>("Sigmag"+ComponentName,1);
 
 
-// set the center of the galaxy (at the moment in term of pixels (default center of image)
   float norm = 0.5*(float)nx;
-  float xc = (float)nx/2/norm;
-  float yc = (float)ny/2/norm;
-
   FILE * pFile;
 
 // find local maxima in the pixels distribution and the charachteristic size of the galaxy
@@ -370,15 +368,15 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
              if (max_mask[index] == 1.0) 
                {
                  IIIth = long((npergroup/5)*III[index]*III[index]*III[index]+10); 
-                 r_0 = ref_size*0.8;
+                 r_0 = ref_size*sigma_z;
+                 //r_0 = ref_size*0.8;
                  x_ref = 0.0;
                  r_dist=sigma_fixed;
                  x_x = radius_min / r_0;
                  if(x_x < x_ref) x_x = x_ref; 
                  sigma_L = x_x * exp(-x_x) * r_0;
 
-                 float radius = box_muller(0,sigma_L);
-                 float zcenter = radius;
+                 float zcenter = box_muller(0,sigma_L);
                  long nrandom = IIIth;   
                  for (int ii=0;ii<nrandom;ii++)
                  {
@@ -413,12 +411,14 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
 
 
 // write data
+/*
          pFile = fopen("test.dat", "w");
 	 for (long ii=0; ii<pcounter; ii++)
              fprintf(pFile,"%f %f %f\n",xx[ii],
                                         yy[ii],
                                         zz[ii]);
          fclose(pFile);
+*/
 
          delete [] xx;
          delete [] yy;
@@ -432,6 +432,8 @@ MAIN PARAMETERS:
 TirificModel      = file containg parameters of the TiRiFiC model
 PixelToTirific    = Conversion factor between pixel size and TiRiFiC (radial) units
 TirificPartReduce = Reduction factor between region covered by TiRiFiC model and image size 
+NperPixel         = fraction of particles with height > 0 (1 =all, N =1 every N)
+Sigmaz            = disk thickness if not read from the model file (in pixels)
 */
 
 long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_pixels, long ntot, 
@@ -444,6 +446,8 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
   float npartfix = params.find<float>("TirificPartReduce"+ComponentName,0.75);
   float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
   float rmax = params.find<float>("RmaxMask"+ComponentName,nx/2.);
+  long n_per_pixel = params.find<float>("NperPixel"+ComponentName,1);
+  float sigma = params.find<float>("Sigmaz"+ComponentName,0);
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
@@ -463,12 +467,25 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
 
   long ntrial = ntot * nx * ny / number_of_pixels * npartfix;
   float particlesize = nx * ny / (float)ntrial;
+  cout << "ntot, nx, ny, number_of_pixels, npartfix, ntrial, particlesize = " <<
+          ntot << " " <<
+          nx << " " <<
+          ny << " " <<
+          number_of_pixels << " " <<
+          npartfix << " " <<
+          ntrial << " " <<
+          particlesize << " " << endl ;
+
+  cout << "M_PI = " << M_PI << endl;
 
   long icount = 0;
   float r0 = 0.0;
 
+  cout << "NTRIAL " << ntrial << endl;
   for (long i=0; i<ntrial; i++)    // loop over all possible particles
     {
+      //if(!(i%1000))cout << "R0 = " << r0 << endl;
+      float Rnorm = r0/rmax;
       float r1m = sqrt( particlesize / 2 / M_PI + r0 * r0);     // radius associated to the particle 
       float phi = box_uniform(1.0, 2.0) * M_PI;                 // random phase of particle
   
@@ -478,7 +495,7 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
       float pa = (ring.b + 180) / 180 * M_PI;
       float inc = ring.g / 180 * M_PI;
 
-      //      cout << i << " " << r1m << " " << thick << " " << pa << " " << inc << " " << phi << endl;
+            //cout << i << " " << r1m << " " << thick << " " << pa << " " << inc << " " << phi << endl;
 
 
       // Calculate the normalized normal vector of the ring from the tirific model
@@ -503,7 +520,23 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
       vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
 
       // Use the thickness of the disk to displace the particle randomly withi the disk
-      float height = box_muller(0, thick / pixeltotirific * extenddisk);
+      float height = 0.0;
+      float height_aux = thick / pixeltotirific * extenddisk;
+      if(sigma != 0.0)
+      {
+        height_aux=sigma;
+        float sigma_cut = 1.5*sigma;
+        float sigma_z_eff = height_aux*(1.0-Rnorm)*(1.0-Rnorm);
+        if(!(icount%n_per_pixel)) 
+        {
+           do {
+             height = box_muller(0, sigma_z_eff);
+           } while (height > 1.5*sigma_z_eff);
+        }
+
+      } else {
+        height = box_muller(0, height_aux);
+      } 
       vec3 xxx = xx + n * height;
 
       // Convert coordinates into ranges [-1,1] ...
@@ -549,8 +582,10 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
 
       // Update covered radii
       r0 = sqrt( particlesize / M_PI + r0 * r0);
-      if(r0 > rmax) 
+      if(r0 > rmax){
+        cout << "FINAL RADIUS" << r0 << endl; 
 	break;
+      }
     }
   return icount;
 
