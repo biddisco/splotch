@@ -104,26 +104,9 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   }
   catch(std::bad_alloc &e)
   {
-<<<<<<< .mine
     std::cerr << "Couldn't allocate vector" << std::endl;
     exit(-1);
   }
-=======
-   // Render particles
-   // 1 block ----> 1 particle , 1 thread ----> 1 pixel
-   times->start("grender");
-   // device rendering
-   cu_render1(dimGrid, block_size, chunk_length, End_cu_ps, nFragments2RenderOld, a_eq_e,
-             (float) grayabsorb, gv, TILE_SIDEX, TILE_SIDEY, WIDTH_BOUND);
-   cudaThreadSynchronize();
-   End_cu_ps += chunk_length;
-   times->stop("grender");
- 
-   times->start("gcopy");
-   error = cudaMemcpy(&nFragments2RenderNew, gv->d_posInFragBuf + End_cu_ps-1, sizeof(unsigned long), cudaMemcpyDeviceToHost);
-   times->stop("gcopy");
-   if (error != cudaSuccess) cout << "nFragments Memcpy error!" << endl; 
->>>>>>> .r19658
 
   // ----------------------------
   //   particle proper rendering 
@@ -136,33 +119,14 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   cudaMemset(gv->d_pic2,0,size_Im);
   cudaMemset(gv->d_pic3,0,size_Im);
 
-<<<<<<< .mine
   // number of threads in each block = max number of pixels to be rendered for a particle
   int block_size = 4*width*width;
   int dimGrid = new_ntiles;    // number of blocks = number of tiles
-=======
-   times->start("gcombine");
-   cu_update_image(npixels, a_eq_e, gv);
-   
-   nFragments2RenderOld = nFragments2RenderNew;
-   if (newParticle - End_cu_ps < chunk_length) 
-   {
-      chunk_length  = newParticle - End_cu_ps;
-      dimGrid = chunk_length/block_size;
-      if(chunk_length%block_size) dimGrid++;
-   }
-   cudaThreadSynchronize();
-   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
-   times->stop("gcombine");
-  }
-  cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
->>>>>>> .r19658
 
   // Device rendering
   // 1 block ----> loop on chunk of particles, 1 thread ----> 1 pixel of the particle
   tstack_push("CUDA Rendering");
 
-<<<<<<< .mine
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
   cudaEventCreate(&stop);
@@ -171,16 +135,8 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
   cudaEventRecord(stop,0);
 
-=======
->>>>>>> .r19658
-<<<<<<< .mine
   // Host rendering 
   if (nHostPart > 0)
-=======
-  // host rendering 
-  times->start("host_rendering");
-  if(nHostPart > 0)
->>>>>>> .r19658
   {
      cout << "Rank " << mpiMgr.rank() << " : Host rendering on " << nHostPart << " particles" << endl;
      host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
