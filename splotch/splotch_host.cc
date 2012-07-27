@@ -290,7 +290,7 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
 
   pic.fill(COLOUR(0,0,0));
 
-  tstack_push("Chunk preparation");
+  tstack_push("Host Chunk preparation");
 #pragma omp parallel
 {
   arr2<vector<uint32> > lidx(ncx,ncy);
@@ -335,7 +335,7 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
   }
 } // end of parallel region
 
-  tstack_replace("Chunk preparation","Rendering proper");
+  tstack_replace("Host Chunk preparation","Host Rendering proper");
 
   work_distributor wd (xres,yres,chunkdim,chunkdim);
 #pragma omp parallel
@@ -470,7 +470,7 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
     } // for this chunk
 } // #pragma omp parallel
 
-  tstack_pop("Rendering proper");
+  tstack_pop("Host Rendering proper");
   }
 
 }

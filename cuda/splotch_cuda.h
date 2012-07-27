@@ -5,12 +5,6 @@ Copyright things go here.
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
 
-#ifdef VS
-#define THREADFUNC DWORD WINAPI
-#else
-#define THREADFUNC static void*
-#endif
-
 #define SPLOTCH_CLASSIC
 
 #include <cstring>
@@ -69,49 +63,31 @@ struct cu_colormap_info
   int ptypes;
   };
 
-
-struct cu_fragment_AeqE
-  {
-  float aR, aG, aB;
-  };
-
-struct cu_fragment_AneqE
-  {
-  float aR, aG, aB;
-  float qR, qG, qB;
-  };
-
-
 struct cu_gpu_vars //variables used by each gpu
   {
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;             //device_particle_data
-  unsigned long	      *d_posInFragBuf;
-  int		      *d_active; // 0=non-active particle, 1=active particle, 2=active big particle
-  void                *d_fbuf;
-  int                 *d_pixel;
+  int		      *d_active; // 0=non-active particle, -2=active big particle, n=number of tile
   cu_color            *d_pic;
+  cu_color            *d_pic1;
+  cu_color            *d_pic2;
+  cu_color            *d_pic3;
+  int	      	      *d_tiles;
   int                 colormap_size;
   int                 colormap_ptypes;
   };
 
 //functions
-
-int cu_init(int devID, long int nP, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness);
+int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness);
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
-int cu_process (int n, cu_gpu_vars* pgv);
-int cu_allocateFragmentBuffer(long n,cu_gpu_vars* pgv);
+int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_render1
-  (int grid, int block, int nP, int End_cu_ps, unsigned long FragRendered,
-   bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, 
-   int tile_sidey, int width);
-void cu_endChunk (cu_gpu_vars* pgv);
-void cu_endThread (cu_gpu_vars* pgv);
-long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, float pfactor);
+  (int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
+void cu_combine(int res, cu_gpu_vars* pgv);
+void cu_end(cu_gpu_vars* pgv);
+long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles, float pfactor);
 void getCuTransformParams(cu_param &para_trans,
       paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);
-//void cu_clear(int n, cu_gpu_vars* pgv);
-void cu_update_image(int n, bool a_eq_e,cu_gpu_vars* pgv);
 
 #endif

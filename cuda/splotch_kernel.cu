@@ -10,15 +10,6 @@
 
 //MACROs
 #define Pi 3.14159265358979323846264338327950288
-#define get_xy_from_sn(sn, xmin, ymin, ymax, x, y)\
-        {int x1 =sn/(ymax-ymin); int y1 =sn-x1*(ymax-ymin);\
-         x  =x1 +xmin; y  =y1 +ymin;}
-#define get_sn_from_xy(x,y,maxy,miny, sn)\
-    {sn =x*(maxy-miny) +y;}
-
-#define get_minmax(minv, maxv, val) \
-         minv=min(minv,val); \
-         maxv=max(maxv,val);
 #define MAXSIZE 1000
 
 /////////constant memory declaration /////////////////////
@@ -61,7 +52,7 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size
 
 //Transform+coloring by kernel
 __global__ void k_process
-  (cu_particle_sim *p, unsigned long *p_region, int *p_active, int n, int mapSize, int types, int MaxSize)
+  (cu_particle_sim *p, int *p_active, int n, int mapSize, int types, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
   {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -99,14 +90,14 @@ __global__ void k_process
 
 #ifdef SPLOTCH_CLASSIC
   I *= 0.5f*dparams.bfak/r;
-  r*= sqrt(2.f)*dparams.sigma0/dparams.h2sigma;  
+  r*= sqrtf(2.f)*dparams.sigma0/dparams.h2sigma;  
 #else
   I *= 8.f/(Pi*r*r*r);  //SPH kernel normalization
-  I *= dparams.h2sigma*sqrt(Pi)*r;  //integral through the center
+  I *= dparams.h2sigma*sqrtf(Pi)*r;  //integral through the center
 #endif
 
   r *= res2*xfac2;
-  const float rcorr= sqrt(r*r + dparams.minrad_pix*dparams.minrad_pix)/r;
+  const float rcorr= sqrtf(r*r + dparams.minrad_pix*dparams.minrad_pix)/r;
   r *= rcorr;
 #ifdef SPLOTCH_CLASSIC
   I /= rcorr;
@@ -153,12 +144,15 @@ __global__ void k_process
   if (miny>=maxy) return;
  
   p[m].active = true;
-  p_region[m] = (maxx-minx)*(maxy-miny);
-  p_active[m] = 1;
-  if (p_region[m] > MaxSize) 
+  // active particle = tile_id to which it belongs to
+  p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
+  //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
+  if (int(rfacr+0.5f)>width) 
+  {
       p_active[m] = -2; // particle to be removed and copied back to the host 
- }
-
+     // printf("x=%f, y=%f, rfacr=%d\n",x,y,int(rfacr));
+  }
+}
 
 //colorize by kernel
 /*__global__ void k_colorize
@@ -187,40 +181,61 @@ __global__ void k_process
  }
 */
 
-//device render function k_render1
-__global__ void k_render1
-  (unsigned long *pos, int nP, unsigned long FragRendered, cu_particle_sim *part,
-   void *buf, int *index, float grayabsorb, int tile_sidex, int tile_sidey, int width)
+
+// change of linear coordinate: from tile to global image
+// lpix -> (x,y) -> (X,Y) -> gpix 
+__device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_sidey)
 {
-  int m = blockIdx.x *blockDim.x;
- // if (m >=nP) return;
+  // global 2D coordinates
+  int x = xo + lpix/(tile_sidey+2*width);
+  int y = yo + lpix%(tile_sidey+2*width);
 
-   __shared__ int minx,maxx,miny,maxy,reg;
-   __shared__ float rfacr,radsq,stp, posx,posy;
+  return x*dparams.yres+y;
+}
+
+//device render function k_render1
+// a_eq_e = false is not supported
+__global__ void k_render1
+  (cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
+{
+   __shared__ int minx,maxx,miny,maxy,local_chunk_length;
+   __shared__ float radsq,stp, posx, posy;
    __shared__ cu_color e;
-//  extern __shared__ cu_color Btile[];  // 3072 tile+boundary
+   extern __shared__ cu_color Btile[];  // tile+boundary
 
-  int local_chunk_length = blockDim.x;
-  if (blockIdx.x == gridDim.x -1) local_chunk_length = nP - blockIdx.x*blockDim.x;
-  const int np = threadIdx.x; // local index of the particle to load on the shared memory
-			      // and pixel number to process for each particle
+   int tile = tileId[blockIdx.x];	// tile number 
 
- //now do the rendering: each thread processes a pixel of particle i
- //blockIdx.x corrsponds to the tile id to compose
+   int end;
+   if (threadIdx.x == 0)
+   {
+      end = tilepart[blockIdx.x];
+      if (blockIdx.x == 0) local_chunk_length = end;
+      else local_chunk_length = end - tilepart[blockIdx.x-1];
+   }
+   int xo = (tile/nytiles)*tile_sidex - width;  // Btile origin x
+   int yo = (tile%nytiles)*tile_sidey - width;  // Btile origin y
+
+  //inizialise Btile
+  int tileBsize = (tile_sidex+2*width)*(tile_sidey+2*width);
+  for (int i=threadIdx.x; i<tileBsize; i=i+blockDim.x) 
+  {
+     Btile[i].r = 0.0f;  Btile[i].g = 0.0f;   Btile[i].b = 0.0f;
+  }
+
+  //now do the rendering: each thread processes a pixel of particle i
   int x,y;
-  for (int i=0; i<local_chunk_length; i++)
+  for (int i=1; i<=local_chunk_length; i++)
   {
     if (threadIdx.x == 0)
     {
-      cu_particle_sim p = part[m+i];
+      cu_particle_sim p = part[end-i];
       e.r = -p.e.r;   e.g = -p.e.g;  e.b = -p.e.b;
       posx = p.x; posy = p.y;
-      rfacr = dparams.rfac*p.r;
+      float rfacr = dparams.rfac*p.r;
       radsq = rfacr*rfacr;
-      float sigma = dparams.h2sigma*p.r;
-      stp = -1.f/(sigma*sigma);
+      stp = -1.f/(dparams.h2sigma*dparams.h2sigma*p.r*p.r);
 
-      minx = int(posx-rfacr+1.f);
+      minx=int(posx-rfacr+1.f);
       minx=max(minx,0);
       maxx=int(posx+rfacr+1.f);
       maxx=min(maxx,dparams.xres);
@@ -228,131 +243,139 @@ __global__ void k_render1
       miny=max(miny,0);
       maxy=int(posy+rfacr+1.f);
       maxy=min(maxy,dparams.yres);
-      reg = (maxx-minx)*(maxy-miny);
     }
     __syncthreads();
+    int reg = (maxx-minx)*(maxy-miny);
 
-    // render pixel np of particle i
-    if (np < reg)
+    // render pixel threadIdx.x of particle i
+    if (threadIdx.x < reg)
     {
-      // relative starting position:
-      unsigned long fpos = pos[m+i] - FragRendered - (unsigned long) (reg - np); 
-      x = np/(maxy-miny) + minx;
-      y = np%(maxy-miny) + miny;
-
-// a_eq_e = false is not supported
-//    if (a_eq_e)
-//    {
-        cu_fragment_AeqE        *fbuf;
-        fbuf =(cu_fragment_AeqE*) buf;
-
-        float dxsq = (x-posx)*(x-posx);
-        float dsq = (y-posy)*(y-posy) + dxsq;
-        if (dsq<radsq)
-        {
-          float att = __expf(stp*dsq);
-          fbuf[fpos].aR = att*e.r;
-          fbuf[fpos].aG = att*e.g;
-          fbuf[fpos].aB = att*e.b;
-        }
-        else
-        {
-          fbuf[fpos].aR = 0.0f;
-          fbuf[fpos].aG = 0.0f;
-          fbuf[fpos].aB = 0.0f;
-        }
-        index[fpos] = y+dparams.yres*x;  // pixel index in the image
- //  }
-  /*   else   
-     {
-       cu_fragment_AneqE       *fbuf1;
-       fbuf1 =(cu_fragment_AneqE*)buf;
-       q.r = e.r/(e.r+grayabsorb);
-       q.g = e.g/(e.g+grayabsorb);
-       q.b = e.b/(e.b+grayabsorb);
+      // global pixel coordinates
+      x = threadIdx.x/(maxy-miny) + minx;
+      y = threadIdx.x%(maxy-miny) + miny;
+      // global pixel index = x*dparams.yres+y
+      // localx = x-xo,   localy = y-yo 
+      int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
  
-       float dxsq=(x-posx)*(x-posx);
-       float dsq = (y-posy)*(y-posy) + dxsq;
-       if (dsq<radsq)
-       {
+      float dsq = (y-posy)*(y-posy) + (x-posx)*(x-posx);
+      if (dsq<radsq)
+      {
           float att = __expf(stp*dsq);
-          float expm1;
-          expm1 =__expf(att*e.r)-1.0f;
-          fbuf1[fpos].aR = expm1;
-          fbuf1[fpos].qR = q.r;
-          expm1 =__expf(att*e.g)-1.0f;
-          fbuf1[fpos].aG = expm1;
-          fbuf1[fpos].qG = q.g;
-          expm1 =__expf(att*e.b)-1.0f;
-          fbuf1[fpos].aB = expm1;
-          fbuf1[fpos].qB = q.b;
-        }
-        else
-        {
-          fbuf1[fpos].aR = 0.0f;
-          fbuf1[fpos].aG = 0.0f;
-          fbuf1[fpos].aB = 0.0f;
-          fbuf1[fpos].qR = 1.0f;
-          fbuf1[fpos].qG = 1.0f;
-          fbuf1[fpos].qB = 1.0f;
-        }
-        index[fpos] = x*dparams.yres+y;
-     }
-*/
+          Btile[lp].r += att*e.r;
+          Btile[lp].g += att*e.g;
+          Btile[lp].b += att*e.b;
+      }
+      else
+      {
+          Btile[lp].r += 0.0f;
+          Btile[lp].g += 0.0f;
+          Btile[lp].b += 0.0f;
+      }
+    }
+   }
+   __syncthreads();
+
+  int j;
+  //update inner tile in the global image
+  int k0 = width*(tile_sidey+2*width) + width; // starting point
+  for (int i=threadIdx.x; i<tile_sidex*tile_sidey; i=i+blockDim.x) 
+  {
+     j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
+     pic[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+  }
+  __syncthreads();
+
+// update boundary in 3 steps: 
+// 1. columns
+
+  int ymax = yo + tile_sidey+2*width;
+  int xmax = xo + tile_sidex+2*width;
+  int step = blockDim.x/2;
+
+  if ((threadIdx.x < step)  && (yo > 0))
+  {
+    k0 = width*(tile_sidey+2*width);
+    for (int i = threadIdx.x; i<tile_sidex*width; i=i+step) 
+    {
+      j = k0 + i + (i/width)*(tile_sidey+width); //add correction due to the boundary
+      pic1[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
     }
   }
+  else if ((threadIdx.x >= step)  && (ymax < dparams.yres))
+  {
+    k0 = width*(tile_sidey+2*width) + width + tile_sidey; 
+    for (int i = threadIdx.x - step; i<tile_sidex*width; i=i+step) 
+    {
+      j = k0 + i + (i/width)*(tile_sidey+width); //add correction due to the boundary
+      pic1[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+    }
+  }
+  __syncthreads();
+
+// 2. rows
+  if ((threadIdx.x < step) && (xo > 0))
+  {
+    k0 = width; 
+    for (int i=threadIdx.x; i<tile_sidey*width; i=i+step) 
+    {
+      j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
+      pic2[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+    }
+  }
+  else if ((threadIdx.x >= step)  && (xmax < dparams.xres))
+  {
+    k0 = width + (width+tile_sidex)*(tile_sidey+2*width); // starting point
+    for (int i=threadIdx.x - step; i<tile_sidey*width; i=i+step) 
+    {
+      j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
+      pic2[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+    }
+  }
+  __syncthreads();
+
+// 3. corners
+// dimension corners = 1/4 dimension blocks
+  int i;
+  if ((threadIdx.x < blockDim.x/4) && (xo > 0) && (yo > 0))
+  {
+     j = threadIdx.x + (threadIdx.x/width)*(tile_sidey+width);
+     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+  }
+  else if ((threadIdx.x >= blockDim.x/4 && threadIdx.x < blockDim.x/2) && (xo > 0) && (ymax < dparams.yres))
+  {
+     k0 = width + tile_sidey; 
+     i = threadIdx.x - blockDim.x/4; 
+     j = k0 + i + (i/width)*(tile_sidey+width);
+     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+  }
+  else if ((threadIdx.x >= blockDim.x/2 && threadIdx.x < 3*blockDim.x/4) && (xmax < dparams.xres) && (yo > 0))
+  {
+     k0 = (width + tile_sidex)*(tile_sidey+2*width);
+     i = threadIdx.x - blockDim.x/2; 
+     j = k0 + i + (i/width)*(tile_sidey+width);
+     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+  }
+  else if ((threadIdx.x >= 3*blockDim.x/4) && (xmax < dparams.xres) && (ymax < dparams.yres))
+  {
+     k0 = (width + tile_sidex)*(tile_sidey+2*width) + width + tile_sidey;
+     i = threadIdx.x - 3*blockDim.x/4; 
+     j = k0 + i + (i/width)*(tile_sidey+width);
+     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+  }
 }
 
 
-__global__ void k_clear(int n, cu_color *pic)
+__global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3)
 {
    //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >n) m =n;
+  if (m >n) return;
 
-   pic[m].r = 0.0f;
-   pic[m].g = 0.0f;
-   pic[m].b = 0.0f;
+   pic[m].r += pic1[m].r + pic2[m].r + pic3[m].r;
+   pic[m].g += pic1[m].g + pic2[m].g + pic3[m].g;
+   pic[m].b += pic1[m].b + pic2[m].b + pic3[m].b;
 }
 
-__global__ void k_combine(int n, bool a_eq_e, cu_color *pic, int *index, void *fragBuf)
-{
-   //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >=n) return;
-  
-  if (a_eq_e)
-  {
-    cu_fragment_AeqE *fragBufAeqE = (cu_fragment_AeqE *)fragBuf;
-    pic[index[m]].r += fragBufAeqE[m].aR;
-    pic[index[m]].g += fragBufAeqE[m].aG;
-    pic[index[m]].b += fragBufAeqE[m].aB;
-  }
-  else
-  {
-    cu_fragment_AneqE *fragBufAneqE = (cu_fragment_AneqE *)fragBuf;
-    pic[index[m]].r += fragBufAneqE[m].aR *
-				   (pic[index[m]].r - fragBufAneqE[m].qR);
-    pic[index[m]].g += fragBufAneqE[m].aG *
-				   (pic[index[m]].g - fragBufAneqE[m].qG); 
-    pic[index[m]].b += fragBufAneqE[m].aB *
-                                   (pic[index[m]].b - fragBufAneqE[m].qB);
-  }
-}
-
-
-struct sum_op
-{
-  __host__ __device__
-  cu_fragment_AeqE operator()(cu_fragment_AeqE& p1, cu_fragment_AeqE& p2) const{
-
-    cu_fragment_AeqE sum;
-    sum.aR = p1.aR + p2.aR;
-    sum.aG = p1.aG + p2.aG;
-    sum.aB = p1.aB + p2.aB;
-    return sum; 
-   } 
-};
 
 // check for non-active and big particles to remove from the device
 struct particle_notValid

@@ -161,10 +161,8 @@ int main (int argc, const char **argv)
       {
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
-        tstack_push("CUDA");
         if(boost) cuda_rendering(mydevID, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
         else cuda_rendering(mydevID, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
-        tstack_pop("CUDA");
 #endif
 #ifdef OPENCL
         tstack_push("OPENCL");
@@ -236,10 +234,7 @@ int main (int argc, const char **argv)
       }
 
     tstack_pop("Output");
-
-#if (defined(OPENCL) || defined(CUDA))
-    cuda_timeReport();
-#endif
+    tstack_pop("Splotch");
     timeReport();
 
     mpiMgr.barrier();

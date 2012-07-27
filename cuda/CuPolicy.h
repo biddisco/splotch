@@ -22,22 +22,19 @@ using namespace std;
 class CuPolicy
   {
   private:
-    int m_gridSize, pix_blockSize, p_blockSize;
-    int max_part_size;
-    size_t fbsize;
-    pair <int,int> res;
+    int m_gridSize, p_blockSize;
+    pair <int,int> res, tile_size;
+    int boundary_width, x_num_tiles, y_num_tiles;
     size_t gmsize;
   public:
-    CuPolicy(paramfile &Param);
+    CuPolicy(int xres, int yres);
 
-    pair <int,int> GetResolution();
-    int GetMaxPartSize();
-    size_t GetFBufSize();
-    size_t GetIndexSize();
+    void GetTileInfo(int *tile_sidex, int *tiley, int *width, int *nxtiles, int *nytiles);
+    int GetNumTiles();
     size_t GetGMemSize();
     size_t GetImageSize();
+    int GetBlockSize();
     int GetMaxGridSize();
-    int GetMaxBlockSize();
     void GetDimsBlockGrid(int n, dim3 *dimGrid, dim3 *dimBlock);
   };
 
