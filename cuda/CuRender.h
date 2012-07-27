@@ -7,6 +7,6 @@
 
 using namespace std;
 
-int cu_draw_chunk(wallTimerSet *times, int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, float b_brightness, vector<COLOURMAP> &amap, paramfile &g_params);
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres);
 
 #endif
