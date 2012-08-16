@@ -147,6 +147,7 @@ __global__ void k_process
   // active particle = tile_id to which it belongs to
   p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
+  if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // C3 particles 
   if (int(rfacr+0.5f)>width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
@@ -365,6 +366,25 @@ __global__ void k_render1
 }
 
 
+//device render function k_renderC3
+// each thread render a particle
+__global__ void k_renderC3
+  (int n, cu_particle_sim *part, int *index)
+{
+   //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >= n) return;
+ 
+  cu_particle_sim p = part[m];
+  float rfacr = dparams.rfac*p.r;
+  int x = int(p.x-rfacr+1.f);
+  x = max(x,0);
+  int y = int(p.y-rfacr+1.f);
+  y = max(y,0);
+  index[m] = x*dparams.yres+y; 
+  //pixel = -p.e
+}
+
 __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3)
 {
    //first get the index m of this thread
@@ -376,6 +396,17 @@ __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic
    pic[m].b += pic1[m].b + pic2[m].b + pic3[m].b;
 }
 
+__global__ void k_addC3(int nC3, int *index, cu_particle_sim *part, cu_color *pic)
+{
+   //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >= nC3) return;
+
+  pic[index[m]].r += - part[m].e.r;
+  pic[index[m]].g += - part[m].e.g;
+  pic[index[m]].b += - part[m].e.b;
+  
+}
 
 // check for non-active and big particles to remove from the device
 struct particle_notValid
@@ -396,6 +427,21 @@ struct reg_notValid
       return (flag==-2);
     }
   };
+
+struct sum_op
+{
+  __host__ __device__
+  cu_particle_sim operator()(cu_particle_sim& p1, cu_particle_sim& p2) const{
+
+    cu_particle_sim sum;
+    sum = p1;
+    sum.e.r = p1.e.r + p2.e.r;
+    sum.e.g = p1.e.g + p2.e.g;
+    sum.e.b = p1.e.b + p2.e.b;
+
+    return sum; 
+   } 
+};
 
 #endif
 

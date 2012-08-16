@@ -67,7 +67,8 @@ struct cu_gpu_vars //variables used by each gpu
   {
   CuPolicy            *policy;
   cu_particle_sim     *d_pd;             //device_particle_data
-  int		      *d_active; // 0=non-active particle, -2=active big particle, n=number of tile
+  int		      *d_active; //  -1=non-active particle, -2=active big particle, n=number of tile, n+1=C3 particles 
+  int                 *d_index;
   cu_color            *d_pic;
   cu_color            *d_pic1;
   cu_color            *d_pic2;
@@ -84,7 +85,8 @@ int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int wid
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_render1
   (int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
-void cu_combine(int res, cu_gpu_vars* pgv);
+void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv);
+void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv);
 void cu_end(cu_gpu_vars* pgv);
 long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles, float pfactor);
 void getCuTransformParams(cu_param &para_trans,

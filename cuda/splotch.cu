@@ -107,6 +107,15 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
      return 1;
    }
 
+  // index buffer for C3 particles
+  size = nP * sizeof(int);
+  error = cudaMalloc((void**) &pgv->d_index, size);
+  if (error != cudaSuccess) 
+  {
+   cout << "Device Memory: index buffer allocation error!" << endl;
+   return 1;
+  }
+
   // image + 3 copies
   size = pgv->policy->GetImageSize();
   error = cudaMalloc((void**) &pgv->d_pic, size); 
@@ -135,7 +144,7 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
    }
 
   // tiles
-  size = ntiles*sizeof(int);
+  size = (ntiles+1)*sizeof(int);
   error = cudaMalloc((void**) &pgv->d_tiles, size); 
   if (error != cudaSuccess) 
   {
@@ -209,7 +218,7 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   }
 
 
-void cu_combine(int res, cu_gpu_vars* pgv)
+void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv)
 {
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
@@ -217,6 +226,13 @@ void cu_combine(int res, cu_gpu_vars* pgv)
 
   cudaFuncSetCacheConfig(k_add_images, cudaFuncCachePreferL1);
   k_add_images<<<dimGrid,dimBlock>>>(res, pgv->d_pic, pgv->d_pic1, pgv->d_pic2, pgv->d_pic3);
+
+  if (nC3 > 0)
+  {
+    cudaThreadSynchronize();
+    pgv->policy->GetDimsBlockGrid(nC3, &dimGrid, &dimBlock);
+    k_addC3<<<dimGrid,dimBlock>>>(nC3, pgv->d_index, pgv->d_pd+nP-nC3, pgv->d_pic);
+  }
 }
 
 
@@ -233,11 +249,20 @@ void cu_render1
   pgv->d_pic1, pgv->d_pic2, pgv->d_pic3, tile_sidex, tile_sidey, width, nytiles);
   }
 
+void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv)
+  {
+  dim3 dimGrid, dimBlock;
+  pgv->policy->GetDimsBlockGrid(nC3, &dimGrid, &dimBlock);
+ 
+  k_renderC3<<<dimGrid, dimBlock>>>(nC3, pgv->d_pd+nP-nC3, pgv->d_index);
+  }
+
 
 void cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
   CLEAR_MEM((pgv->d_active));
+  CLEAR_MEM((pgv->d_index));
   CLEAR_MEM((pgv->d_pic));
   CLEAR_MEM((pgv->d_pic1));
   CLEAR_MEM((pgv->d_pic2));
@@ -256,7 +281,7 @@ long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles,
 
    size_t spareMem = 20*(1<<20);
    long int arrayParticleSize = gMemSize - 4*ImSize - tiles - spareMem;
-   long int len = (long int) (arrayParticleSize/((psize+sizeof(int))*pfactor)); 
+   long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
    long int maxlen = policy->GetMaxGridSize() * policy->GetBlockSize();
    if (len > maxlen) len = maxlen;
    return len;

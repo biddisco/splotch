@@ -43,12 +43,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   tstack_pop("Particle projection & coloring");
 
   int new_ntiles, newParticle, nHostPart;
+  int nC3 = 0;
   particle_sim *host_part = 0;
+  thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
   try
   { 
    tstack_push("Particle Filtering");
 
-   thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
    thrust::device_ptr<int> dev_ptr_flag((int *) gv->d_active);
 
    // Select big particles to be processed by the host
@@ -87,13 +88,15 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    thrust::sort_by_key(dev_ptr_flag, dev_ptr_flag + newParticle, dev_ptr_pd);
 
    //compute number of particles for each tile and their starting position
-   cudaMemset(gv->d_tiles,0,nxtiles*nytiles);
+   cudaMemset(gv->d_tiles,0,nxtiles*nytiles+1);
    thrust::device_ptr<int> dev_ptr_nT((int *) gv->d_tiles);
    thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<int> > end_tiles = thrust::reduce_by_key(dev_ptr_flag, dev_ptr_flag + newParticle, thrust::make_constant_iterator(1), dev_ptr_flag, dev_ptr_nT);
    new_ntiles = end_tiles.second.get() - dev_ptr_nT.get();
-   cout << "number of tiles = " << new_ntiles << endl;
-   thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
 
+   if (dev_ptr_flag[new_ntiles-1] == nxtiles*nytiles) nC3 = dev_ptr_nT[new_ntiles-1];
+   cout << nC3 << " are point-like particles" << endl;
+
+   thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
    tstack_pop("Particle Distribution");
   }
   catch(thrust::system_error &e)
@@ -119,13 +122,18 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   cudaMemset(gv->d_pic2,0,size_Im);
   cudaMemset(gv->d_pic3,0,size_Im);
 
-  // number of threads in each block = max number of pixels to be rendered for a particle
-  int block_size = 4*width*width;
-  int dimGrid = new_ntiles;    // number of blocks = number of tiles
-
   // Device rendering
   // 1 block ----> loop on chunk of particles, 1 thread ----> 1 pixel of the particle
   tstack_push("CUDA Rendering");
+  if (nC3)
+  {
+    cu_indexC3(newParticle, nC3, gv);
+    new_ntiles--;
+  }
+  // number of threads in each block = max number of pixels to be rendered for a particle
+  int block_size = 4*width*width;
+  int dimGrid = new_ntiles;    // number of blocks = number of tiles
+  cout << "number of tiles = " << new_ntiles << endl;
 
   cudaEvent_t start, stop;
   cudaEventCreate(&start);
@@ -150,8 +158,22 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   cudaEventDestroy(stop);
 
   cudaThreadSynchronize();
+
+  // C3 particles are the last ones
+  if (nC3 > 0)
+  {
+    tstack_push("C3 sort+reduce");
+    thrust::device_ptr<int> dev_ptr_Index(gv->d_index);
+    thrust::equal_to<int> binary_pred;
+    thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<cu_particle_sim> >  new_end_C3;
+    thrust::sort_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3);
+    new_end_C3 = thrust::reduce_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3, dev_ptr_Index, dev_ptr_pd + newParticle - nC3,  binary_pred, sum_op());
+    nC3 = new_end_C3.first.get() - dev_ptr_Index.get(); 
+    tstack_pop("C3 sort+reduce");
+  }
+
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
-  cu_combine(xres * yres, gv);
+  cu_combine(newParticle, nC3, xres * yres, gv);
   cudaThreadSynchronize();
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   tstack_pop("CUDA Rendering");
