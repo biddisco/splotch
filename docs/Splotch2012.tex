@@ -103,9 +103,8 @@ many other scientific application fields (REF).
 
 The main peculiarities of the Splotch software are represented by the 
 high quality of the generated images, obtained adopting a specific ray-casting 
-approach, its high performance, due to a strong optimization on High Performance Computing
-(hereafter HPC) architectures and the exploitation of multi-core, multi-node 
-systems by means of an effective mix of the OpenMP and MPI parallel programming paradighms, and
+approach, its high performance, due to a strong optimization on HPC architectures and the exploitation of multi-core, multi-node 
+systems by means of an effective mix of the OpenMP and MPI parallel programming paradigms, and
 the support of large data volumes, through an optimal usage of the memory, with
 no data replica or unnecassary allocations, a full 64 bits support and the exploitation
 of both shared and distributed memory systems. Furthermore, Splotch's design is kept 
@@ -116,10 +115,10 @@ specific input data file formats). The code is fully C++ and its compilation
 usually straightforward, as soon as a suitable makefile script is provided.
 No configure procedure is currently supported.
 
-The Splotch algorithm operational scenario consists of a number of stages 
+The Splotch algorithm operational scenario consists of a number of stages. 
 \begin{itemize}
 \item
-data load: data is read from one or more data files. A number of different file
+Data load: data is read from one or more data files. A number of different file
 formats are supported, from raw binaries, to HDF5 to more specific Gadget (REF) or Tipsy (REF)
 files. The $x$, $y$ and $z$ coordinates are the only compulsory quantities to provide.
 These can be cartesian geometric coordinates, but also any other tern 
@@ -138,7 +137,7 @@ Ray-casting: particle contribution to image pixels are calculated.
 \item
 Image save: final images are saved using the TGA high quality format.
 \end{itemize}
-The workflow is shown in figure , where the parts of the algorithm parallelized
+The workflow is shown in Figure , where the parts of the algorithm parallelized
 either with MPI or with OpenMP are emphasized. For a detailed description of
 the hybrid parallel implementation of Splotch and its performances, we refer to REF.
 
@@ -149,7 +148,7 @@ the hybrid parallel implementation of Splotch and its performances, we refer to 
 %\label{fig:workflow}
 %\end{figure}
 
-The most pecular part of the Splotch software is represented by its ray-casting algorithm.
+The most peculiar part of the Splotch software is represented by its ray-casting algorithm.
 This is also its most computationally demanding component.
 In order to effectively and efficiently handle point-like distributions, the following 
 steps are carried out: 
@@ -181,7 +180,7 @@ components of the radiation, respectively, are used. These are treated independe
 
 \item
 The radiation intensity $\bf{I}$ (treated
-as a vector with r,g and b components) along a ray through the simulation
+as a vector with r, g and b components) along a ray through the simulation
 volume is modeled by the well known radiative transfer equation
 \begin{equation}\label{rad}
 \frac{d\bf{I}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I}(x))\rho_p(x),
@@ -237,7 +236,7 @@ driven the implementation of the GPU enabled Splotch kernels.
 The design of GPUs is optimized for the execution of large number of threads dedicated to floating-points calculations: 
 many-cores with a minimized control logic unit and large memory bandwidth in order to manage leightweight threads, maximize execution throughput and overcome long-latency memory accesses. 
 
-For example, the Fermi architecture (see Figure...) is made of 512 cores grouped in 16 multiprocessors of 32 cores each. Memories are organized according a hierarchy reflecting the organization of the computing elements. The board contains a global memory (4GB) with a 1.5x bandwidth (GDDR5) and long access latencies (hundreds of clock cycles), a read-only constant memory (64kB), a read-only texture memory. To reduce long access latencies to the global memory, a unified L2 cache (768kB) has been introduced. They can be accessed by the CPU to transfer data via the PCIe bus. On the chips there are some registers for each hardware core and a shared memory (64kB) for each multiprocessor (16kB of it are used as L1 cache private to thread). They can be accessed at very high speed in a highly parallel manner and are the most dangerous occupancy limiting factor.
+For example, the Fermi architecture (see Figure...) is made of 512 cores grouped in 16 multiprocessors of 32 cores each. Memories are organized according a hierarchy reflecting the organization of the computing elements. The board contains a global memory (4GB) with a 1.5x bandwidth (GDDR5) and long access latencies (hundreds of clock cycles), a read-only constant memory (64kB) and a read-only texture memory. To reduce long access latencies to the global memory, a unified L2 cache (768kB) has been introduced. On the chips there are some registers for each hardware core and a shared memory (64kB) for each multiprocessor (16kB of it are used as L1 cache private to thread). They can be accessed at very high speed in a highly parallel manner and are the most dangerous occupancy limiting factor.
  
 
 \subsection{The Performance Model}
@@ -247,11 +246,11 @@ as follows.
 
 The core computational kernels are the {\it Normalization}, re-calculation
 of the different quantities in proper units, {\it Geometry}, roto-translation 
-of the reference frame, {\it Coloring}, calculation of the RGB colors associated to each 
+of the reference frame, {\it Coloring}, assigning of the RGB colors associated to each 
 particle (?), {\it Sorting}, reordering of the particles according to their depth in 
 the scene (distance from the point of view) or other parameters, {\it Rendering},
 rasterization and solution of the transport equation \eqref{rad}, 
-and {\it Image Creation}, which allows to compose
+and {\it Image Creation}, which compose
 and save the final image. The initial data load phase, though demanding, is not considered
 since it does not affect the GPU implementation.
 
@@ -291,10 +290,10 @@ will be neglected from now on not affecting the GPU implementation,
 $T_{cpu}$ is the time spent on the CPU, $T_{gpu}$ is the time
 spent on the GPU for computation, $T_{pci}$ is the time needed to move data from
 the CPU to GPU and back through the PCI Express bus and $T_{Mgpu}$ is the time 
-spent in moving data through the main and the local memory on the GPU.
+spent in moving data through the global and the ''local'' memory on the GPU.
 
 Data transfers between CPU and GPU, $T_{pci}$, is typically one of the main 
-bottlenecks in GPU usage. Thererfore the amount of data transferred from host
+bottlenecks in GPU usage. Therefore the amount of data transferred from host
 to device and back has to be minimized. If we think to move all the Splotch
 algorithm (but the data load) on the GPU, this can be estimated
 as the data associated to particles plus the final image. Particles' data
@@ -318,18 +317,18 @@ T_{gpu} = N_{op}/\nu_{GPU},
 \end{equation}
 where $\nu_{GPU}$ is the GPU flops/sec rate and
 \begin{equation}
-N_{op} = N_{part}(\alpha + \beta {\rm log}(N_{part}) + \gamma N_{pix}^2 + f(N_{part},N_{pix}),
+N_{op} = N_{part}(\alpha + \beta {\rm log}(N_{part}) + \gamma N_{pix}^2) + f(N_{part},N_{pix}),
 \end{equation}
 with $\alpha$, $\beta$, $\gamma$ estimating the number of operation of 
 the combined Normalization, Geometry and Coloring kernels, of the 
 Sorting kernel and of the Rendering kernel respectively. The function 
 $f(N_{part},N_{pix})$ takes into account any GPU specific part of the algorithm. 
 
-The data transfer between main and local memory has to be designed in 
-order to optimize peformances, so minimize accesses. This obviously depends on how
+Global memory accesses has to be minimized in 
+order to optimize peformances. This obviously depends on how
 the algorithm is parallelized between GPU's cores. We can estimate
 the performance considering the number of loads of each particle in 
-the shared memory ($N_{load,p}$), the number of stores in the global memory 
+the core registers ($N_{load,p}$), the number of stores in the global memory 
 ($N_{store,p}$) and the number
 of stores of each image pixel in the global memory ($N_{store,pix}$):
 \begin{equation}
@@ -341,7 +340,7 @@ T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part}
 + N_{store,pix} N_{pix}^2 S_{pix} \over \mu_{gpu}}
 + N_{Mgpu} \nu_{mem},
 \end{equation}
-where $\nu_{mem}$ is the memory frequency and $\mu_{gpu}$ is the global-shared memories bandwidth.
+where $\nu_{mem}$ is the memory frequency and $\mu_{gpu}$ is the global memory bandwidth.
 
 The final contribution is for $T_{cpu}$. In principle this should be negligible, 
 the large part of the work being performed by the GPU. Actually, the CPU
@@ -357,11 +356,11 @@ effective GPU algorithm.
 
 The host-device data transfer time, $T_{pci}$, adopting the current implementation 
 $S_{part} = 35$ bytes and $S_{pix} = 3$ bytes values and typical figures of 
-$T_{pci} \sim 10^3$ nsec and $\mu_{pci} \sim 6$ GB/sec, can be written as:
+$tau_{pci} \sim 10^3$ nsec and $\mu_{pci} \sim 6$ GB/sec, can be written as:
 \begin{equation}
 T_{pci} \sim 10^3(N_{chunks} + 1) + 6 N_{part}\ {\rm nsec},
 \end{equation}
-assuming that $N_{part} > N_{pix}^2$. This can be in general not true, but, 
+assuming that $N_{part} >> N_{pix}^2$. This can be in general not true, but, 
 for our applications, we are always dealing with large datasets
 ($N_{part} >> 10^6$) and ``reasonable'' image sizes, i.e. images that can be 
 displayed on a screen ($N_{pix} \sim 1000$). If $N_{chunks} = 1$ the transfer 
@@ -371,13 +370,13 @@ chunk contains less than $O(1000)$ particles.
 The GPU memory access time, $T_{Mgpu}$, can be evaluated with the 
 following assumptions. The number of particles data load/store $N_{load,p} = 
 N_{store,p}+1 = 3$, this reasonable assuming that we need one load/store
-for geoemtric/coloring operations, one for sorting and only one load
+for geometric/coloring operations, one for sorting and only one load
 for rendering. Furthermore, we 
 set $\mu_{gpu} \sim 130$ GB/sec and $\nu_{mem} \sim 0.25$ GHz, which are somewhat
 fiducial values obtained in our tests (see below the details of the 
 hardware configuration). We obtain:
 \begin{equation}
-T_{Mgpu} \sim {175 N_{part} + N_{pix}^2\over 130} + 0.25 (3 N_{part} + N{pix}^2)\ {\rm nsec}.
+T_{Mgpu} \sim {175 N_{part} + 3 N_{pix}^2\over 130} + 0.25 (3 N_{part} + N_{pix}^2)\ {\rm nsec}.
 \end{equation}
 Again, if we assume $N_{part} > N_{pix}^2$ and make some arithmetic approximations,
 we can obtain a very simple expression:
@@ -394,7 +393,7 @@ of data stored contiguously in memory, with a single load/store operation.
 
 Comparing the $T_{pci}$ and $T_{Mgpu}$, one can see that the GPU-CPU data transfer
 part is the most demanding, independently to the number of particles, thus
-it has to be storngly optimzed. In our model, however, it is not possible to 
+it has to be strongly optimzed. In our model, however, it is not possible to 
 reduce the amount of transferred data, being already the minimum, hence the only possibility is to
 overlap data copy to computation, as it is possible with asynchronous
 data transfer operations. The idea could be that of dividing the particle 
@@ -413,8 +412,8 @@ The quantity $T_{gpu}$ is more challenging to estimate, since it is made by diff
 complex parts. The first term, scaling linearly with the number of particles and depending 
 from the parameter $\alpha$ can be considered negligible. The corresponding 
 algorithms have a minor computational impact already on the CPU. Being perfectly 
-data parallel, their computational weight is expected to be even lower on the GPU.
-The function $f$ acocunts for several processing steps that could be needed only
+data parallel, their computational weight is expected to be much lower on the GPU.
+The function $f$ accounts for several processing steps that could be needed only
 by the GPU implementation. This has to be carefully kept under control in 
 the algorithm design. The rasterization and rendering part scales as $N_{part}
 N_{pix}^2$ since in principle every particle affects every pixel of the image.
@@ -426,8 +425,7 @@ neglecting particles that are too large, i.e. particles with a large smoothing r
 contribution to the image. The sort function can be slightly improved reducing 
 the size of the data to be sorted, so reducing the chunks size (i.e. increasing 
 $N_{chunks}$). 
-Assuming the fiducial value $\nu_{gpu} = 250$ Gflops, we can finally :
-icompare the computational time with the memory access time as:
+Assuming the fiducial value $\nu_{gpu} = 250$ Gflops, we can finally compare the computational time with the memory access time as:
 \begin{equation}
 {T_{gpu}\over T_{Mgpu}} \sim 
 {\beta {\rm log}(N_{part}/N_{chunks})\over 500} +
@@ -445,12 +443,11 @@ and GPU optimized sorting function.
 
 \section{The CUDA Splotch algorithm}
 
-The GPU architecture and the CUDA programming model introduce several limitations in the porting of an application, therefore it is often necessary to redesign the algorithm with respect to its CPU version. Splotch algorithm is in principle easily portable by the simple parallelization 1 particle - 1 thread. However, the unbalancing contribution of each particle to the final image (data may have smoothing lengths of any size) and their distribution (they can be strongly clustered in specific regions) make 
-the particle rasterization and rendering operations challenging. 
-We faced two main problems:
+The GPU architecture and the CUDA programming model introduce several limitations in the porting of an application, therefore it is often necessary to redesign the algorithm with respect to its CPU version. Splotch algorithm is in principle easily portable by the simple parallelization particle - thread. However, the unbalancing contribution of each particle to the final image (data may have smoothing lengths of any size) and their distribution (they can be strongly clustered in specific regions) make the particle rasterization and rendering operations challenging. 
+In fact, we faced two main problems:
 \begin{itemize}
 \item 
-balance the workload bet/order between the the various processing elements;
+balance the workload bet/order between the various processing elements;
 \item
 avoid race conditions writing the final image. 
 \end{itemize}
@@ -458,10 +455,11 @@ Moreover, we need to match the following requirements set both by the general de
 results of the performance analysis:
 \begin{itemize}
 \item
-the memory usage must be minimum. Data replica and unnecessary 
+the memory access must be minimum. Data replica and unnecessary 
 memory allocations must be avoided, in order to leave to particle
 data as much memory as possible. 
 \item
+% PIPELINE IS NOT IMPLEMENTED...
 Particle data input and the final image are the only data that has to 
 be moved to/from the GPU. The data copy has to be asyncronous in order
 to be overlapped to and hidden by the GPU computation.
@@ -478,18 +476,15 @@ both for computing time and for memory requirements.
 \end{itemize}
 For the implementation of the GPU code we have chosen the CUDA programming
 model. This is currently the standard ``de facto'' for GPU programming.
-CUDA provides a large variety of functionalities and
+Moreover, CUDA provides a large variety of functionalities and
 development tools, it fully supports C++ and it is extremely reliable. Its main drawback is
 represented by the limited portability, being an NVIDIA product. However, 
 this ensures that the CUDA programming model closely maps and supports the underlying 
 hardware (NVIDIA cards), leading to an optimal tuning of the performance.  
 
-%Of course, this had a cost that we tried to keep as low as possible by using the Thrust library (REF), a C++ template library for CUDA which mimics the Standard Template Library (STL) and provides optimized functions to manage very large arrays of data.  
-% THRUST LIBRARY HAS TO BE INTRODUCED SOMEWHERE ELSE OR IN A DIFFERENT WAY
-
 \subsection{The CUDA programming model}
 
-The Compute Unified Device Architecture (CUDA) introduced by NVIDIA offers access to highly parallellized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host) and the parallel ones, that exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other. CUDA kernels launch is asynchronous, so that the host can perform the following instructions of the code while the device is computing. If one of them requires the completion of the kernel execution, then it is necessary to call the \textit{cudaThreadSyncrhonize}() function before executing it. 
+The Compute Unified Device Architecture (CUDA) introduced by NVIDIA offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host) and the parallel ones, that exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCIe bus. CUDA kernels launch is asynchronous, so that the host can perform the following instructions of the code while the device is computing. If one of them requires the completion of the kernel execution, then it is necessary to call the \textit{cudaThreadSyncrhonize}() function before executing it. 
 
 A kernel is written for a single thread and instantiated as a grid of many lightweight parallel threads, organized into blocks of the same size. 
 A thread is an indipendent element of work and maps to a hardware core. A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and "fast" shared memory. This is possible because threads belonging to the same block are executed on the same multiprocessor (SM). On the other hand synchronization is not possible between blocks of a grid. In fact, the limited amount of memory limits the number of blocks that can simultaneously reside in the same SM. Moreover when one block stalls the runtime system switch to another so there is no guaranteed order of execution.
@@ -501,39 +496,64 @@ all threads in a same warp execute the same instruction (Single-Instruction, Mul
 
 % SOME LINK TO THE PERFORMANCE MODEL NEEDED HERE
 
-Particles are first classified in 3 classes according to their size ($r$ is the smoothing length which depends on the physics and on the camera position):
+As soon as data is loaded in the global memory of the GPU, each particle is processed by a single CUDA thread. The processing involves transformation into screen coordinates (geometry) and assigning of colours (coloring).  
+Since the granularity during rendering can vary considerably depending upon the number of screen pixels influenced by individual particles, the workload of this kernel had instead to be designed more carefully.
+In fact, as a worst case scenario, consider two particles influencing all screen pixels and a single screen pixel
+respectively. Assuming they are handled by two threads of the same warp, they are scheduled to execute simultaneously compromising significantly overall execution times.
+
+To alleviate this situation, particles are first classified in 3 classes according to their size:
 \begin{itemize}
 \item 
 C1: $r > r_0$
 \item
 C2: $r < r_0$
+\item
+C3: $r = 1$
 \end{itemize}
-% THIRD CLASS MISSING
-This can be done directly in the process kernel. Then render the image by making CPU and GPU work in parallel on C1 and C2 particles respectively. With C1 particles "eliminated" from the device, remaining particles can influence only a small region and they can be calculated on the GPU using a tiling scheme of the image with tiles very well defined. Finally, partial images generated by C1 and C2 are added on the CPU.
+where $r$ is the particle smoothing length, which depends on the physics and on the camera position, and $r_0$ is a fixed threshold. Then each class of particles has been rendered in the most convenient and efficient way by making CPU and GPU work in parallel. Because of the limited device resources and the possible large variation of the workload among big particles, we choosed to assign C1 particles to the host. Remaining particles can influence only a small region, thus they are suitable to be rendered by the device: C2 particles can be calculated on the GPU using a tiling scheme of the image with tiles very well defined, while C3 particles, which affect only one pixel, can be computed in a more simplified way. Finally, partial images generated by C1, C2 and C3 particles will be added to get the final one. 
 
-The image tiles on the device are managed by assigning each of them to a block of CUDA threads. The tile size is defined in order to be able to store it in the shared memory with a boundary of $r_0$ pixels around. We will refer to it as a \textit{Btile}. In the process kernel, each particle is labelled with the number of the tile containing its centre point (this ensure us that the entire particle is contained in the Btile), so that we can group particles belonging to the same tile by sorting them by key (tile number) and distribute them to the corresponding block of threads for rendering. The size of blocks is equal to $(2r_0)^2$, i.e. the maximum size of C2 particles. Threads of the same block process particles as in solution A: one thread for each pixel of the particle (the pixel may change as the particle varies, but it remains in the Btile).
+The particle classification is performed in the process kernel, where each particle is labelled with an integer number $n$ according to the following rule:
+\begin{itemize}
+\item 
+$n = -2$, if it is not active, i.e. out of the view;
+\item
+$n = -1$, if it belongs to C1 class; 
+\item
+$0 < n < ntiles$, if it belongs to C2 class and its centre falls in the $n$-th tile of the image;  
+\item
+$n = ntiles$, if it belongs to C3 class, i.e. is point-like.
+\end{itemize}
+By sorting the array of particles by key $n$, we are able to group them according to their type in order to copy back to the host C1-particles, remove from the device inactive and C1 ones, count and distribute C3 and C2 particles belonging to the same tile for rendering. 
 
-% REPHRASE PARAGRAPH ABOVE: NOT CLEAR
-   
-Finally, instead of writing a fragment buffer, each thread adds its contribution to the corresponding pixel of the Btile (there are no race conditions to access the shared memory because each thread accesses different pixels). 
-When all particles of the block are processed, each thread updates the final image in the global memory 
-by adding the contribution of $k = tile\_size/block\_size$ different pixels of the tile (there are no race conditions to access the global memory: each block accesses different tiles and each thread accesses different pixels of the tile). The boundary of the tiles must be added in a separate step. Concurrences among the boundary of a tile and the adjacent ones can occur only between:
+Sorting operation has an important role in the CUDA version of Splotch because it allows to manage particles on the device and it is necessary for executing in an efficient way further operations like reduction and prefix sum by key. In fact, memory accesses to the elements involved in a CUDA operation are optimized when all of them are consecutives. Since the sort is intrinsically an expensive operation, we had to find a very good CUDA implementation of it in order to reduce its overhead. 
+The Thrust library (REF) provides one, this is a C++ template library for CUDA which mimics the Standard Template Library (STL) and provides optimized functions to manage very large arrays of data. In particular Thrust functions implement a highly-optimized Radix Sort algorithm (REF) for sorting primitive types (e.g., char, int, float, and double) with the standard less comparison operator and apply dynamic optimizations to further improve its performance.
+
+The \textit{tiling scheme} for rendering C2 particles on the device consist in assigning particles related to the same image tile to a block of CUDA threads and exploit the shared memory and thread synchronization within the block to store and compose the image tile. The tile size is defined in order to be able to store it with a boundary of $r_0$ pixels around (this ensure that each particle will be entirely contained in the tile+boundary). We will refer to it as a \textit{Btile}). Particles are accessed one a time by thread 0 of each block and stored in the shared memory so that all threads of the same block can see their data, then each pixel of the current particle is rendered by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). Since all blocks must have the same size, we set it as the maximum C2 particle size, i.e. $(2r_0)^2$. 
+This solution avoids race conditions to compose the image tile because each thread of the same block accesses different pixels and the workload of each thread (except thread 0) is the same even if particles may have different size.
+
+When all particles of the block are rendered, the contribution of the Btile is added to the image in the global memory. First, each thread adds the value of $k = tile\_size/block\_size$ different pixels of the inner part of the Btile (there are no race conditions to access the global memory: each block accesses different tiles and each thread accesses different pixels of the tile). The boundary must be added in a separate step. Concurrences among the boundary of a tile and the adjacent ones can occur only between:
 \begin{itemize}
 \item
 either a boundary side and the inner part of another Btile (2 concurrences), 
 \item
 or a corner and the inner part of another Btile, the horizontal boundary side of another Btile, the vertical boundary side of another Btile (4 concurrences). 
 \end{itemize}
-A possible solution is to consider 3 steps (see Figure ...):  
+As a solution we implemented the following 3 steps (see Figure ...):  
 first add a and b sides (no race conditions between boundary sides of tiles nearby),
 then add b and c sides (no race conditions between boundary sides of tiles nearby),
-finally add corners (no race conditions between corners). Notice that the number of pixels of the 4 boundary corners of a tile are equal to the size of a particle, i.e. the size of a block. Since CUDA blocks are order independent, we need to add these contributions to 3 different copies of the image to avoid race conditions. Then, at the end of the execution of the render kernel it is possibile to add these copies to the final image.
+finally add corners (no race conditions between corners). Notice that the number of pixels of the 4 boundary corners of a tile are equal to the size of a particle, i.e. the size of a block. Since CUDA blocks are order independent, we need to add these contributions to 3 different copies of the image to avoid race conditions. Then, at the end of the execution of the render kernel it is possibile to add these image copies to the final one.
+
+Another way to compose the image would have been to store all pixel contributions in a fragment buffer and reduce it by key (pixel index). But this solution is worst than ours because it requires the sorting of fragments, instead of particles, which are a much higher number of elements and therefore more time-consuming.
+
+Rendering of C3 particles is much more simple because they are made of one single pixel and therefore their intensity is already defined (we do not need to distribute it among several pixels as for the other types of particles). Thus the only computation required is the position of the pixel in the global image. This can be efficiently done by a CUDA thread for each particle. Since different threads can affect the same pixel, they cannot directly add their contribution (fragments) to the image. For this reason, it is obtained in a second step by adding all fragments contributing to the same pixel. In order to perform this operation on the device and transfer to the host only the final image, we had to allocate in the device memory one buffer to keep trace of the corresponding linear index of the pixel affected by the fragment. Then, the image is produced by reducing by key (pixel index) the fragments. As mentioned before, this computation on the GPU requires a sort of the fragments by key first. Both these operations are provided by the Thrust library.
+
+Because of the size of the GPU global memory, particles data couldn't be stored in a single step. Therefore this algoritm could be performed serveral times, each one producing a partial image that will be composed with the others in order to get the final one.
 
 The pseudo-code below summarizes the overall workflow of this CUDA parallelization approach.
 
 \small
 \begin{verbatim}
-Algorithm B
+Algorithm
 begin
   setup colormap
   nP = number of particles of each chunk
@@ -542,53 +562,62 @@ begin
   nxtiles = resx/tile_sidex
   nytiles = resy/tile_sidey
   width = width of the tile boundary
+  nC3 = number of point-like particles
   allocate device particle array d_part[nP]
   allocate device index tile array d_active[nP]
+  allocate device index pixel array for C3 Particles d_index[nP]
   allocate tiles array d_tiles[nxtiles*nytiles]   
-  allocate device image d_image[resx*resy]
-  allocate device image d_imageBrow[resx*resy]
-  allocate device image d_imageBcol[resx*resy]
-  allocate device image d_imageBcor[resx*resy]
+  allocate device images of resolution (resx,resy)
   
-  Image = 0
-  for each chunk: 
-     d_image = 0
-     copy chunk of particles from host to device  
-     block_size = deviceProp.maxThreadsPerBlock
+  initialize Image to 0
+  for each chunk of particles: 
+     initialize d_image to 0
+     copy chunk from host to device  
      num_blocks = (nP + block_size - 1)/block_size
-     k_process<<<num_blocks,block_size>>>(d_part, d_active, nP, 
-                                          tile_sidex, tile_sidey, width)
-
-     select big particles to be processed by the host -> d_host_part, nHostPart
+     k_process<<<num_blocks,block_size>>>(...)
+     classify particles -> d_host_part, nHostPart, nC3 
      if (nHostPart > 0) then
         copy d_host_part from the device to the host 
      endif
  
-     remove inactive particles from d_part (nP-> newnP) 
+     remove host and inactive particles from d_part (nP-> newnP) 
 
      count and assign particles to the corresponding tiles:
       thrust::sort_by_key(d_active, d_active + newnP, d_part)
-      d_tiles = 0
+      initialize d_tiles to 0
       new_end = thrust::reduce_by_key(d_active, d_active + newnP, 
                            thrust::make_constant_iterator(1), d_active, d_tiles)
+      nC3 = 0
+      if (d_active[new_ntiles-1] == nxtiles*nytiles) then
+         nC3 = d_tiles[new_ntiles-1]
+      endif
+
       thrust::inclusive_scan(d_tiles, d_tiles + new_ntiles, d_tiles)
 
-     k_render<<<new_ntiles,4*width*width>>>(newnP, d_part, d_tiles, d_image, ...)
-     host_rendering(host_part,nHostPart, Image) 
+     if (nC3 > 0) then
+         num_blocks = (nC3 + block_size - 1)/block_size
+         k_renderC3<<<num_blocks,block_size>>>(nC3, d_part+nP-nC3, d_index)
+         thrust::sort_by_key(d_index, d_index+nC3, d_part+newnP-nC3)
+         new_nC3 = thrust::reduce_by_key(d_index, d_index+nC3, d_part+newnP-nC3, 
+                   d_index, d_part+newnP-nC3, thrust::equal_to<int>, sum_op()) 
+         new_ntiles = new_ntiles - 1 
+     endif
 
+     k_renderC2<<<new_ntiles,4*width*width>>>(newnP, d_part, d_tiles, ...)
+     host_rendering(host_part,nHostPart, Image) 
+ 
      cudaThreadSynchronize()
-     k_add_images<<<num_blocks,block_size>>>(res, d_image, d_imageBrow, 
-                                               d_imageBcol, d_imageBcor);
-     copy d_image from the device to the host
-     Image = Image + d_image
+     k_add_images<<<num_blocks,block_size>>>(...);
+     copy device_image from the device to the host
+     Image = Image + device_image
   endfor
 end
 \end{verbatim}
 \normalsize
-The CUDA kernel algorithm is the following. 
+The CUDA kernel algorithm for C2-particles rendering is the following. 
 \small
 \begin{verbatim}
-k_renderB
+k_renderC2
 begin
    size = (2width+tile_sidex)*(2width+tile_sidey)
    allocate on the shared memory tile+boundary Btile[size]
@@ -597,15 +626,18 @@ begin
 
    if (threadIdx.x == 0) then
       end = d_tiles[blockIdx.x]
-      if (blockIdx.x == 0) local_chunk_length = end
-      else local_chunk_length = end - d_tiles[blockIdx.x-1]
-   endif
+      if (blockIdx.x == 0) then 
+         local_chunk_length = end
+      else 
+         local_chunk_length = end - d_tiles[blockIdx.x-1]
+      endif
+  endif
 
-   xo = (tile/nytiles)*tile_sidex - width
-   yo = (tile%nytiles)*tile_sidey - width
-   Btile = 0
+  xo = (tile/nytiles)*tile_sidex - width
+  yo = (tile%nytiles)*tile_sidey - width
+  initialize Btile to 0
 
-   for i=0, ..., local_chunk_length:
+  for i=0, ..., local_chunk_length:
      if (threadIdx.x == 0) then
        p = particle to process = d_part[m+i]
        posx = centre x-coordinate of p
@@ -628,8 +660,8 @@ begin
          Btile[lp] = 0
        endif
      endif
-     __syncthreads()
-   endfor
+  endfor
+  __syncthreads()
 
   add inner part of Btile to d_image 
   __syncthreads()
@@ -640,9 +672,9 @@ begin
   add Btile boundary corners to d_imageBcor
 end
 \end{verbatim}
-\normalsize
-%This solution still produces an overhead due to sorting and reduction operations but it is less time-consuming because these operations are performed on particles instead of fragments which are a lower number of elements.   
+\normalsize   
 
+The main drawbacks of this implementation is the overhead due to sorting and reduction operations, even if its cost has been kept as low as possible, and the size of the shared memory which limits the number of resident blocks per multiprocessor during the execution of the kernel, thus reducing the theoretical occupancy. Another issue that impacts on the performance is due to the unbalanced work load of each block, in fact the number of particles falling in each tile can vary in a significant way from one tile to another.  
 % THIS (ABOVE) HAS TO BE REFORMULATED REFERRING TO MEMORY USAGE, PERFORMANCES AND THE PERF MODEL...
 
 \section{Tests and Results}
@@ -666,7 +698,7 @@ for the CPU, since only CPUs with memories of 4 GBs or larger can run the test.
 In order to have a test suitable to any memory size, a smaller version of this dataset, 10M, was generated 
 randomly selecting the 10\% of the 100M particles. 
 In the 100M and 10M datasets the particles are distributed 
-statistically homogeneously (see figure XXX), hence approximately the same 
+statistically homogeneously (see Figure XXX), hence approximately the same 
 number of particles ``falls" in any sub-set of the image (unless
 the point of view is not too far away from the data box, leading to a black, empty 
 frame around the box). The main goal of these tests is to measure the performances
@@ -691,7 +723,7 @@ ID & N. particles & N. fields & Memory (GB) \\ [0.5ex]
 \hline % inserts single horizontal line
 100M   & 100000000 & 5 & 1.863 \\ 
 10M    & 10000000  & 5 & 0.186 \\
-GALAXY & XXX & 7 & XXX \\
+M83    & XXX & 7 & XXX \\
 \hline 
 \end{tabular}
 \label{table:tests}
@@ -700,31 +732,34 @@ GALAXY & XXX & 7 & XXX \\
 The main tests' parameters are the data size (number of particles),
 the image size (number of pixels) and the distribution of the number of pixels 
 per particle, which is influenced by the position of the point of view.
-this is a crucial parameter, affecting the effective smoothing lenght of the particles,
+This is a crucial parameter, affecting the effective smoothing lenght of the particles,
 defined as the number of pixels which a particle is distributed on, that 
 depends both on the intrinsic smoothing length, set at initialization, and 
 on the distance of the particle from the point of view. Other important parameters
-are related to the GPU architecture, as..............
+are related to the GPU architecture, as the number of cores, the memory size and bandwidth, and the algorithm, as the threshold particle size $r_0$ (uqual to the boundary width of the tile) and the tile size.
 
 Our tests have been performed on a number of different architectures, 
-whose characteristics are summarized in table \ref{table:gpus}. 
+whose characteristics are summarized in Table \ref{table:gpus}. 
 
 \begin{table}
 \caption{NVIDIA GPU architectures used for the tests}
 \centering
-\begin{tabular}{l c c c}
+\begin{tabular}{l c c c c c}
 \hline\hline
-Model & Freq. (Ghz) & Mem. size (GB) & Mem. type \\ [0.5ex]
+Model   & capability & n. cores & Mem. size & Mem. bandwidth & Mem. type  \\ [0.5ex]
+        &      &    & (GB)      & (GB/s)  & \\
 %heading
 \hline % inserts single horizontal line
-GTX 285   & 1.48 & 2.0 & GDDR3 \\
-GTX 480   & 1.40 & 1.5 & GDDR5 \\
+GTX 285 &  & 240   & 2.0 & 159   & GDDR3 \\
+GTX 480 &  & 480   & 1.5 & 177.4 & GDDR5 \\
+M2070   & 2.0 & 448   & 6.0 & 150   & GDDR5 \\
+GK104   & 3.0 & 1536  & 4.0 & 160   & GDDR5 \\
 \hline
 \end{tabular}
 \label{table:gpus}
 \end{table}
  
-
+\subsection{Parameters tuning}
 
 \section{Conclusions and Next Steps}
 
