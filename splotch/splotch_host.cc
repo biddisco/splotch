@@ -190,7 +190,7 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
     cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
     cout << "PARTICLES WITH 1 <= r < " << 4*r_th << " = " << countinter3 << endl;
     cout << "PARTICLES WITH 1 <= r < " << 8*r_th << " = " << countinter4 << endl;
-    cout << "PARTICLES WITH r >= " << r_th << " = " << countlarge << endl;
+    cout << "PARTICLES WITH r >= " << 8*r_th << " = " << countlarge << endl;
 
     }
 
