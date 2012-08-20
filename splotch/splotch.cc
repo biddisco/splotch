@@ -234,7 +234,6 @@ int main (int argc, const char **argv)
       }
 
     tstack_pop("Output");
-    tstack_pop("Splotch");
     timeReport();
 
     mpiMgr.barrier();
@@ -247,7 +246,6 @@ int main (int argc, const char **argv)
     }
 
     }
-
 #ifdef VS
   //Just to hold the screen to read the messages when debugging
   cout << endl << "Press any key to end..." ;
