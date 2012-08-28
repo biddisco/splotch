@@ -105,6 +105,7 @@ pqSplotchDisplayPanelDecorator::pqSplotchDisplayPanelDecorator(
   //
   this->setupGUIConnections();
   //
+  if (!this->Internals->RepresentationProxy) return;
   this->UpdateParticleTypes();
 }
 //-----------------------------------------------------------------------------
