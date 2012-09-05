@@ -21,6 +21,7 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <unistd.h>
 
 #ifdef SPLVISIVO
 #include "optionssetter.h"
