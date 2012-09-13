@@ -84,7 +84,7 @@ of many typical scientifc problems.
 
 In order to exploit this additional computing resources, we have implemented 
 a GPU version of Splotch. A full refactoring of the code has been necessary 
-to get the good performances out of the GPU's implementation. 
+to get the good performance out of the GPU's implementation. 
 All the details are presented in the rest of the paper. In Section 2, we give a short 
 overview of the Splotch main algorithms. In Section 3, we recap the main features
 of the GPU architecture and we present the performance model that drove the 
@@ -241,42 +241,48 @@ For example, the Fermi architecture (see Figure...) is made of 512 cores grouped
 
 \subsection{The Performance Model}
 
-In order to implement the GPU version Splotch, its performances have been modeled
+In order to drive the designe of the GPU version Splotch, its performances have been modeled
 as follows.
 
+% probabilmente questa e' una ripetizione
 The core computational kernels are the {\it Normalization}, re-calculation
 of the different quantities in proper units, {\it Geometry}, roto-translation 
-of the reference frame, {\it Coloring}, assigning of the RGB colors associated to each 
-particle (?), {\it Sorting}, reordering of the particles according to their depth in 
-the scene (distance from the point of view) or other parameters, {\it Rendering},
-rasterization and solution of the transport equation \eqref{rad}, 
-and {\it Image Creation}, which compose
-and save the final image. The initial data load phase, though demanding, is not considered
+of the reference frame, {\it Coloring}, assignment of the RGB colors associated to each 
+particle,  {\it Rendering},
+rasterization and ray casting \eqref{rad}, 
+and {\it Image Creation}, to compose and save 
+the final image. The initial data load phase, though often demanding, will not be considered
 since it does not affect the GPU implementation.
 
-For all the kernels the basic model parameters are $N_{part}$, the number of particles
-to be processed, and $N_{pix,x}$ and $N_{pix,y}$, the number of pixels of the final image
-(in general we can consider square images with $N_{pix}=N_{pix,x}=N_{pix,y}$, since this
-does not change any of the following considerations). 
+The main parameters of the model are $N_{part}$, the number of particles
+to be processed, and $N_{pix}$, the number of pixels of the final image
+(in general we can consider square images with $N_{pix}=N_{pix,x}^2$). For 
+the Splotch's rendering kernel a third parameter must be introduced and
+taken into account, that is the average smoothing length of the particles,
+$R_s$. Its value depends both on the intrinsic "size" of the particle
+and on the position of the point of view (particle size increase when it approaches 
+the point of view).
 
-The kernels scale with the basic parameters as follows:
+The kernels scale with these parameters as:
 \begin{align}\label{scaling}
 & N_{Norm} \propto N_{part},\\
 & N_{Geom} \propto N_{part},\\
 & N_{Color} \propto N_{part},\\
-& N_{Sort} \propto N_{part}{\rm log}(N_{part}),\\
-& N_{Render} \propto N_{part}N_{pix}^2,\\
-& N_{Image} \propto TBD,
+%& N_{Sort} \propto N_{part}{\rm log}(N_{part}),\\
+& N_{Render} \propto N_{part}N_{pix,x}^2 R_s^2,\\
+& N_{Image} \propto N_{pix,x}^2,
 \end{align}
 where $N_{kernel}$ is the number of operations for a given kernel.
-Looking at the various kernels, Normalization, Geometry and Coloring are perfectly 
-data parallel, thus they are perfectly suitable for the GPU processing. 
-The Sort kernel on the GPU requires some care (see below). From standard CPU profiling
-and equation \eqref{scaling}, for large number of particles and high resolution images,
-the Rendering kernel is the most computationally demanding. For each particle $p$,
-$n_{pix}(p)$ pixels must be updated, this number depending on the smoothing length 
-of $p$. As stressed above, anyway, this has to be implemented with specific attention,
-since it is not immediately suitable to the standard GPU programming model.
+
+Looking at the various kernels, Normalization, Geometry and Coloring are  
+perfectly data parallel, each particle being processed independently from the others.
+Thus they are expected to fit the GPU programming model. 
+The Rendering kernel is, in general, the most computationally demanding. 
+The computational time depends in a predictable way with the number of particles and the number 
+of pixels. The most challenging dependecy, however, is from the smoothing length. 
+This dependency leads to strong changes in the computational effort and makes
+the work-load hard to balance, when this is distributed among many-processors
+systems.
 
 In order to model the Splotch algorthm's performances, we split the different timings
 required to perform the main computational steps. 
@@ -290,26 +296,33 @@ will be neglected from now on not affecting the GPU implementation,
 $T_{cpu}$ is the time spent on the CPU, $T_{gpu}$ is the time
 spent on the GPU for computation, $T_{pci}$ is the time needed to move data from
 the CPU to GPU and back through the PCI Express bus and $T_{Mgpu}$ is the time 
-spent in moving data through the global and the ''local'' memory on the GPU.
+spent in moving data among the global and the shared memory on the GPU.
 
-Data transfers between CPU and GPU, $T_{pci}$, is typically one of the main 
-bottlenecks in GPU usage. Therefore the amount of data transferred from host
-to device and back has to be minimized. If we think to move all the Splotch
-algorithm (but the data load) on the GPU, this can be estimated
-as the data associated to particles plus the final image. Particles' data
-offload can be accomplished either in a single or in a few operations, 
+Time spent in transferring data
+between CPU and GPU, $T_{pci}$, is typically the main 
+bottleneck in GPU usage. Therefore the amount of data transferred from host
+to device and back has to be minimized. 
+Particle data are necessarly offloaded to the GPU. If $S_{part}$ is the
+size of a single particle (in the current implementation $S_{part}=35$ bytes)),
+$N_{part} S_{part}$ is the total amount of particle data moved on the device.
+The final processed image (the result) is the only data that has to be copied back to
+the CPU. Thus, in principle, only $3 N_{pix,x}^2$ bytes (R, G, B values) have to be transferred at
+the end of the rendering phase. However, further data transfers may be necessary
+during the computation. If possible, such data movements should be hidden
+by their overlap with calculation, exploiting asyncronous communication.
+
+Particles' data offload can be accomplished either in a single or in a few operations, 
 depending on the data size (if it fits the available GPU memory) and/or
-specific features of the algorithm (in some cases it can be convenient to
+specific features of the algorithm (in some cases it may be convenient to
 split data into chunks, copying on the GPU one chunck after the other).
 In general we can estimate the data transfer time as:
 \begin{equation}
-T_{pci} =  (N_{chunks}+1) \tau_{pci} + {N_{part} S_{part} + N_{pix}^2 S_{pix} \over 
+T_{pci} =  (N_{chunks}+1) \tau_{pci} + {N_{part} S_{part} + 3 N_{pix,x}^2 \over 
 \mu_{pci}},
 \end{equation}
 where $\tau_{pci}$ is the transfer time latency (in seconds) and $\mu_{pci}$ is the
 bus bandwidth (in bytes per second), $N_{chunks}$ is the number 
-of copy stages, $S_{part}$ is the size of a single particle in bytes and 
-$S_{pix}$ is the size of a single pixels in bytes. 
+of copy stages. 
 
 The time spent in processing the particles on the GPU can be estimated as:
 \begin{equation}
@@ -317,19 +330,24 @@ T_{gpu} = N_{op}/\nu_{GPU},
 \end{equation}
 where $\nu_{GPU}$ is the GPU flops/sec rate and
 \begin{equation}
-N_{op} = N_{part}(\alpha + \beta {\rm log}(N_{part}) + \gamma N_{pix}^2) + f(N_{part},N_{pix}),
+N_{op} = N_{part}(\alpha + \gamma N_{pix}^2 R_s^2) + f(N_{part},N_{pix}),
 \end{equation}
-with $\alpha$, $\beta$, $\gamma$ estimating the number of operation of 
-the combined Normalization, Geometry and Coloring kernels, of the 
-Sorting kernel and of the Rendering kernel respectively. The function 
+with $\alpha$ and $\gamma$ estimating the number of operation of 
+the combined Normalization, Geometry and Coloring kernels,  
+and of the Rendering kernel respectively. The function 
 $f(N_{part},N_{pix})$ takes into account any GPU specific part of the algorithm. 
+This is an overhead compared to the sequential code and therefore it has to 
+be minimized.
 
-Global memory accesses has to be minimized in 
-order to optimize peformances. This obviously depends on how
-the algorithm is parallelized between GPU's cores. We can estimate
-the performance considering the number of loads of each particle in 
-the core registers ($N_{load,p}$), the number of stores in the global memory 
-($N_{store,p}$) and the number
+Global memory accesses can be estimated 
+as the number of loads from the global to the shared memories of the varius 
+streaming multiprocessors
+($N_{load}$), plus the number of stores from the shared to the global memory 
+($N_{store}$)........................SON QUA
+
+ 
+
+and the number
 of stores of each image pixel in the global memory ($N_{store,pix}$):
 \begin{equation}
 N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
@@ -443,8 +461,8 @@ and GPU optimized sorting function.
 
 \section{The CUDA Splotch algorithm}
 
-The GPU architecture and the CUDA programming model introduce several limitations in the porting of an application, therefore it is often necessary to redesign the algorithm with respect to its CPU version. Splotch algorithm is in principle easily portable by the simple parallelization particle - thread. However, the unbalancing contribution of each particle to the final image (data may have smoothing lengths of any size) and their distribution (they can be strongly clustered in specific regions) make the particle rasterization and rendering operations challenging. 
-In fact, we faced two main problems:
+The GPU architecture and the CUDA programming model introduce several limitations in the porting of an application, therefore it is often necessary to redesign the algorithm with respect to its CPU version. Splotch algorithm is in principle easily portable by the simple parallelization particle - thread. However, the unbalanced contribution of each particle to the final image (data may have smoothing lengths of any size) and their distribution (they can be strongly clustered in specific regions) make the particle rasterization and rendering operations challenging. 
+Two main problems arise:
 \begin{itemize}
 \item 
 balance the workload bet/order between the various processing elements;
@@ -490,29 +508,31 @@ A kernel is written for a single thread and instantiated as a grid of many light
 A thread is an indipendent element of work and maps to a hardware core. A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and "fast" shared memory. This is possible because threads belonging to the same block are executed on the same multiprocessor (SM). On the other hand synchronization is not possible between blocks of a grid. In fact, the limited amount of memory limits the number of blocks that can simultaneously reside in the same SM. Moreover when one block stalls the runtime system switch to another so there is no guaranteed order of execution.
 
 Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. They are scheduling units in SM:
-all threads in a same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). Further details on CUDA can be found on (REF).
+all threads in a same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). Further details on CUDA can be found in (REF).
 
 \subsection{Algorithm design}
 
 % SOME LINK TO THE PERFORMANCE MODEL NEEDED HERE
 
-As soon as data is loaded in the global memory of the GPU, each particle is processed by a single CUDA thread. The processing involves transformation into screen coordinates (geometry) and assigning of colours (coloring).  
-Since the granularity during rendering can vary considerably depending upon the number of screen pixels influenced by individual particles, the workload of this kernel had instead to be designed more carefully.
+As soon as data is loaded in the global memory of the GPU, each particle is processed by a single CUDA thread. The processing involves transformation into screen coordinates (geometry) and colours assignment (coloring).
+Rendering requires instead a much more carefully implementation, mainly due to 
+the granularity during rendering can vary considerably depending upon the number of screen pixels influenced by individual particles, the workload of this kernel had instead to be designed more carefully.
 In fact, as a worst case scenario, consider two particles influencing all screen pixels and a single screen pixel
 respectively. Assuming they are handled by two threads of the same warp, they are scheduled to execute simultaneously compromising significantly overall execution times.
 
-To alleviate this situation, particles are first classified in 3 classes according to their size:
+%SAY BETTER SENTENCES ABOVE
+Particles are first classified in 3 classes according to their size:
 \begin{itemize}
 \item 
 C1: $r > r_0$
 \item
-C2: $r < r_0$
+C2: $1 < r < r_0$
 \item
-C3: $r = 1$
+C3: $r < 1$
 \end{itemize}
-where $r$ is the particle smoothing length, which depends on the physics and on the camera position, and $r_0$ is a fixed threshold. Then each class of particles has been rendered in the most convenient and efficient way by making CPU and GPU work in parallel. Because of the limited device resources and the possible large variation of the workload among big particles, we choosed to assign C1 particles to the host. Remaining particles can influence only a small region, thus they are suitable to be rendered by the device: C2 particles can be calculated on the GPU using a tiling scheme of the image with tiles very well defined, while C3 particles, which affect only one pixel, can be computed in a more simplified way. Finally, partial images generated by C1, C2 and C3 particles will be added to get the final one. 
+where $r$ is the particle smoothing length in pixels, which depends both on theintrinsic properties of the particle (the ``physics'' of the problem) and on the camera position, and $r_0$ is a fixed threshold. Each class of particles is rendered in the most convenient and efficient way by making CPU and GPU work in parallel. Because of the limited device resources and the possible large variation of the workload among big particles, we choosed to assign C1 particles to the host. Remaining particles can influence only a small region, thus they are suitable to be rendered by the device: C2 particles can be calculated on the GPU using the tiling scheme described below, while C3 particles, which affect only one pixel, can be computed in a simplified way. Finally, partial images generated by C1, C2 and C3 particles are added to get the final result. 
 
-The particle classification is performed in the process kernel, where each particle is labelled with an integer number $n$ according to the following rule:
+The particle is classified on the GPU in the in the process kernel, where each particle is labelled with an integer number $n$ as follows:
 \begin{itemize}
 \item 
 $n = -2$, if it is not active, i.e. out of the view;
@@ -525,7 +545,7 @@ $n = ntiles$, if it belongs to C3 class, i.e. is point-like.
 \end{itemize}
 By sorting the array of particles by key $n$, we are able to group them according to their type in order to copy back to the host C1-particles, remove from the device inactive and C1 ones, count and distribute C3 and C2 particles belonging to the same tile for rendering. 
 
-Sorting operation has an important role in the CUDA version of Splotch because it allows to manage particles on the device and it is necessary for executing in an efficient way further operations like reduction and prefix sum by key. In fact, memory accesses to the elements involved in a CUDA operation are optimized when all of them are consecutives. Since the sort is intrinsically an expensive operation, we had to find a very good CUDA implementation of it in order to reduce its overhead. 
+Sorting operation has a crucial role in the CUDA version of Splotch because it allows to manage particles on the device and it is necessary for executing in an efficient way further operations like reduction and prefix sum by key. In fact, memory accesses to the elements involved in a CUDA operation are optimized when all of them are consecutives. Since the sort is intrinsically an expensive operation, we had to find a very good CUDA implementation of it in order to reduce its overhead. 
 The Thrust library (REF) provides one, this is a C++ template library for CUDA which mimics the Standard Template Library (STL) and provides optimized functions to manage very large arrays of data. In particular Thrust functions implement a highly-optimized Radix Sort algorithm (REF) for sorting primitive types (e.g., char, int, float, and double) with the standard less comparison operator and apply dynamic optimizations to further improve its performance.
 
 The \textit{tiling scheme} for rendering C2 particles on the device consist in assigning particles related to the same image tile to a block of CUDA threads and exploit the shared memory and thread synchronization within the block to store and compose the image tile. The tile size is defined in order to be able to store it with a boundary of $r_0$ pixels around (this ensure that each particle will be entirely contained in the tile+boundary). We will refer to it as a \textit{Btile}). Particles are accessed one a time by thread 0 of each block and stored in the shared memory so that all threads of the same block can see their data, then each pixel of the current particle is rendered by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). Since all blocks must have the same size, we set it as the maximum C2 particle size, i.e. $(2r_0)^2$. 
@@ -679,11 +699,11 @@ The main drawbacks of this implementation is the overhead due to sorting and red
 
 \section{Tests and Results}
 
-In order to check and analyze the performances of Splotch's GPU implementation,
-we compare the GPU code to the CPU version on a number of test cases, selected in 
-order to stress the different features of the algorthm and of the computing 
-architectures. We have also used various models of processors and graphic cards, in order to analyse
-the behaviour of the code on different accelerated architectures.
+We have analyzed the performances of Splotch's GPU implementation on a number of cases, designed in 
+order to stress the different features of the algorithm, comparing the results 
+obtained using the GPU to those achievable with the original code on the CPU. 
+The tests have been repeated using various models of processors and graphic cards, 
+in order to verify the behaviour of the code on different accelerated architectures.
 
 Table \ref{table:tests} summarizes the main characteristics of the datasets adopted in the 
 tests. The 100M dataset (result of a cosmological N-body simulation) 
@@ -691,11 +711,12 @@ is composed by 100 million particles, distributed in
 a cubic box. Each particle is characterized by 3D cartesian coordinates,
 mass density at the particle position (that will serve as the color),
 and smoothing length, specific to each particle. This test is particularly 
-memory demanding (the dataset, by itself, requires 2 GB 
+memory demanding (the dataset, alone, requires 2 GB 
 of resident memory). The data size is not an issue for the GPU, since data are splitted 
 in smaller chunks and loaded iteratively on the accelerator, but it can be a limiting factor
 for the CPU, since only CPUs with memories of 4 GBs or larger can run the test. 
-In order to have a test suitable to any memory size, a smaller version of this dataset, 10M, was generated 
+In order to have a test suitable to any memory size, 
+a smaller version of this dataset, 10M, was generated 
 randomly selecting the 10\% of the 100M particles. 
 In the 100M and 10M datasets the particles are distributed 
 statistically homogeneously (see Figure XXX), hence approximately the same 
@@ -759,7 +780,7 @@ GK104   & 3.0 & 1536  & 4.0 & 160   & GDDR5 \\
 \label{table:gpus}
 \end{table}
  
-\subsection{Parameters tuning}
+
 
 \section{Conclusions and Next Steps}
 
