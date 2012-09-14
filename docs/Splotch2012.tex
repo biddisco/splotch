@@ -329,8 +329,8 @@ The time spent in processing the particles on the GPU can be estimated as:
 T_{gpu} = N_{op}/\nu_{GPU},
 \end{equation}
 where $\nu_{GPU}$ is the GPU flops/sec rate and
-\begin{equation}
-N_{op} = N_{part}(\alpha + \gamma N_{pix}^2 R_s^2) + f(N_{part},N_{pix}),
+\begin{equation}\label{ops}
+N_{op} = N_{part}(\alpha + \gamma N_{pix,x}^2 R_s^2) + f_{GPU}(N_{part},N_{pix}),
 \end{equation}
 with $\alpha$ and $\gamma$ estimating the number of operation of 
 the combined Normalization, Geometry and Coloring kernels,  
@@ -340,27 +340,25 @@ This is an overhead compared to the sequential code and therefore it has to
 be minimized.
 
 Global memory accesses can be estimated 
-as the number of loads from the global to the shared memories of the varius 
-streaming multiprocessors
-($N_{load}$), plus the number of stores from the shared to the global memory 
-($N_{store}$)........................SON QUA
-
- 
-
-and the number
-of stores of each image pixel in the global memory ($N_{store,pix}$):
+as the number of loads from the global to the shared memories of the available 
+streaming multiprocessors plus the number of stores from the shared to the global memory: 
 \begin{equation}
-N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
+N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix,x}^2,
 \end{equation}
-and hence:
+where $N_{load,p}$ and $N_{store,p}$ are the number of load and store of the 
+particles, while $N_{store,pix}$ is the number of stores of the image (no loads 
+are expected, since the image is created on the GPU). 
+We indicate with $g_{GPU}$ the time spent on memory accesses by the GPU specific 
+functions (corresponding to the $f_{GPU}$ term in equation \eqref{ops}). 
+The time for memory access is:
 \begin{equation}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part} 
-+ N_{store,pix} N_{pix}^2 S_{pix} \over \mu_{gpu}}
-+ N_{Mgpu} \nu_{mem},
++ 3 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
++ N_{Mgpu} \nu_{mem} + g_{GPU},
 \end{equation}
 where $\nu_{mem}$ is the memory frequency and $\mu_{gpu}$ is the global memory bandwidth.
 
-The final contribution is for $T_{cpu}$. In principle this should be negligible, 
+The final contribution to equation \eqref{Ts} is $T_{cpu}$. In principle this should be negligible, 
 the large part of the work being performed by the GPU. Actually, the CPU
 could contribute in processing a suitable fraction of the particles. Using
 asyncronous operations, however, this work can be completely overlapped 
@@ -368,22 +366,20 @@ to the GPU work. Therefore, with a proper tuning, $T_{cpu}$ can be neglected.
 
 \subsection{Performance Model analysis}
 
-According to the proposed performance model, we can try to identify the most 
-potentially demanding parts of the code, in order to design an 
-effective GPU algorithm.
-
-The host-device data transfer time, $T_{pci}$, adopting the current implementation 
-$S_{part} = 35$ bytes and $S_{pix} = 3$ bytes values and typical figures of 
-$tau_{pci} \sim 10^3$ nsec and $\mu_{pci} \sim 6$ GB/sec, can be written as:
+The host-device data transfer time, $T_{pci}$, setting, as in the current implementation, 
+$S_{part} = 35$ bytes and assuming typical values of 
+$\tau_{pci} \sim 10^3$ nsec and $\mu_{pci} \sim 6$ GB/sec, can be written as:
 \begin{equation}
 T_{pci} \sim 10^3(N_{chunks} + 1) + 6 N_{part}\ {\rm nsec},
 \end{equation}
-assuming that $N_{part} >> N_{pix}^2$. This can be in general not true, but, 
-for our applications, we are always dealing with large datasets
-($N_{part} >> 10^6$) and ``reasonable'' image sizes, i.e. images that can be 
-displayed on a screen ($N_{pix} \sim 1000$). If $N_{chunks} = 1$ the transfer 
-time always dominates. However, the latency becomes relevant if each
-chunk contains less than $O(1000)$ particles. 
+that is valid for $N_{part} >> N_{pix}^2$. This can be in general not true, but, 
+for the cases of interest, the datasets are large, with
+$N_{part} >> 10^6$, and image sizes are $O(10^6)$ pixels.
+If $N_{chunks}$ is $O(1)$ the transfer 
+time dominates. For $N_{part}\sim 10^8$, the transfer time is of the order of
+one second.
+
+SON QUA
 
 The GPU memory access time, $T_{Mgpu}$, can be evaluated with the 
 following assumptions. The number of particles data load/store $N_{load,p} = 
