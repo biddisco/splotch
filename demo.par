@@ -96,4 +96,17 @@ fov=30
 
 #EyeSeparation = 0.8
 
-# CUDA
+############################
+# CUDA SETUP
+############################
+#number of GPUs to use
+gpu_number =1
+#number of cores per node (it is required if gpu_number > 1)
+cores_number =12
+
+# ALGORITHM PARAMETERS
+#width of the boundary around the image tile = max particle radius <= 16
+tile_boundary_width = 8
+# x and y side dimension of the image tile, in terms of pixels (default=2*tile_boundary_width <= 16)
+tile_x-side=16 
+tile_y-side=16
