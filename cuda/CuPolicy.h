@@ -27,7 +27,7 @@ class CuPolicy
     int boundary_width, x_num_tiles, y_num_tiles;
     size_t gmsize;
   public:
-    CuPolicy(int xres, int yres);
+    CuPolicy(int xres, int yres, paramfile &params);
 
     void GetTileInfo(int *tile_sidex, int *tiley, int *width, int *nxtiles, int *nytiles);
     int GetNumTiles();

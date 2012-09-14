@@ -20,7 +20,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   int ptypes = g_params.find<int>("ptypes",1);
 
   // Initialize policy class
-  CuPolicy *policy = new CuPolicy(xres, yres); 
+  CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
   int ntiles = policy->GetNumTiles();
 
   // num particles to manage at once
@@ -40,13 +40,11 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   // enable device and allocate arrays
   int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness);
   tstack_pop("Device setup");
-  
   if (!error)
   {
     //a new linear pic object that will carry the result
-    COLOUR Pic_chunk[xres*yres];
-    setup_colormap(ptypes, amap, &gv);
-
+    COLOUR *Pic_chunk = new COLOUR [xres*yres];
+    setup_colormap(ptypes, amap, &gv); 
     float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
     bool a_eq_e = g_params.find<bool>("a_eq_e",true);
  
@@ -57,18 +55,18 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
     while(endP < nP)
     {
      endP = startP + len;   //set range
-     if (endP > nP) endP = nP; 
+     if (endP > nP) endP = nP;
      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_chunk, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres);
      // combine results of chunks
      for (int x=0; x<xres; x++)
       for (int y=0; y<yres; y++)
         pic[x][y] += Pic_chunk[x*yres+y]+Pic_host[x][y];
-     cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl;
-     cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl;
+     cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
      startP = endP;
     }
     tstack_pop("CUDA");
     cu_end(&gv);
+    delete [] Pic_chunk;
   }
 
  }

@@ -84,7 +84,7 @@ int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_va
 int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles);
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_render1
-  (int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
+  (int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
 void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv);
 void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv);
 void cu_end(cu_gpu_vars* pgv);

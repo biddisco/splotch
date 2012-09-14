@@ -91,21 +91,15 @@ fov=30
 ############################
 # CUDA SETUP
 ############################
-#the maximun pixels in a rendering task
-max_region =1024
-
-#the size of fragment buffer in Megabyte
-fragment_buffer_size =640
-
-#the size of a CUDA block
-#block_size =512
-
 #number of GPUs to use
 gpu_number =1
+#number of cores per node (it is required if gpu_number > 1)
+cores_number =12
 
-#the following is for testing now
-test_load_balancing=false
-gpu_load0=30
-gpu_load1=40
-use_host_as_thread =false
-host_load =30
+# ALGORITHM PARAMETERS
+#width of the boundary around the image tile = max particle radius <= 16
+tile_boundary_width = 8
+# x and y side dimension of the image tile, in terms of pixels (default=2*tile_boundary_width <= 16)
+tile_x-side=16 
+tile_y-side=16
+

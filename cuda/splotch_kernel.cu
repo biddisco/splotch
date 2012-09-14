@@ -147,7 +147,7 @@ __global__ void k_process
   // active particle = tile_id to which it belongs to
   p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
-  if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // C3 particles 
+  if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // point-like particles 
   if (int(rfacr+0.5f)>width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
@@ -194,89 +194,105 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
   return x*dparams.yres+y;
 }
 
+#define NPSIZE 256
+
 //device render function k_render1
 // a_eq_e = false is not supported
 __global__ void k_render1
-  (cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
+  (int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
 {
-   __shared__ int minx,maxx,miny,maxy,local_chunk_length;
-   __shared__ float radsq,stp, posx, posy;
-   __shared__ cu_color e;
-   extern __shared__ cu_color Btile[];  // tile+boundary
-
+   extern __shared__ cu_color Btile[];
+   __shared__ int local_chunk_length, end;
+   __shared__ cu_color e[NPSIZE];
+   __shared__ float radsq[NPSIZE], stp[NPSIZE];
+   __shared__ float posx[NPSIZE], posy[NPSIZE];
+   __shared__ int minx[NPSIZE], maxx[NPSIZE], miny[NPSIZE], maxy[NPSIZE];
+   
+   int tileBsize = (tile_sidex+2*width)*(tile_sidey+2*width);
    int tile = tileId[blockIdx.x];	// tile number 
 
-   int end;
    if (threadIdx.x == 0)
    {
       end = tilepart[blockIdx.x];
       if (blockIdx.x == 0) local_chunk_length = end;
       else local_chunk_length = end - tilepart[blockIdx.x-1];
+      end--;
+      // if(local_chunk_length > 50000) {printf("\n tile %d: chunk %d reduced to 50000\n", tile, local_chunk_length); local_chunk_length = 50000;}
    }
+   __syncthreads();
+
    int xo = (tile/nytiles)*tile_sidex - width;  // Btile origin x
    int yo = (tile%nytiles)*tile_sidey - width;  // Btile origin y
 
   //inizialise Btile
-  int tileBsize = (tile_sidex+2*width)*(tile_sidey+2*width);
   for (int i=threadIdx.x; i<tileBsize; i=i+blockDim.x) 
   {
      Btile[i].r = 0.0f;  Btile[i].g = 0.0f;   Btile[i].b = 0.0f;
   }
-
-  //now do the rendering: each thread processes a pixel of particle i
-  int x,y;
-  for (int i=1; i<=local_chunk_length; i++)
-  {
-    if (threadIdx.x == 0)
-    {
-      cu_particle_sim p = part[end-i];
-      e.r = -p.e.r;   e.g = -p.e.g;  e.b = -p.e.b;
-      posx = p.x; posy = p.y;
-      float rfacr = dparams.rfac*p.r;
-      radsq = rfacr*rfacr;
-      stp = -1.f/(dparams.h2sigma*dparams.h2sigma*p.r*p.r);
-
-      minx=int(posx-rfacr+1.f);
-      minx=max(minx,0);
-      maxx=int(posx+rfacr+1.f);
-      maxx=min(maxx,dparams.xres);
-      miny=int(posy-rfacr+1.f);
-      miny=max(miny,0);
-      maxy=int(posy+rfacr+1.f);
-      maxy=min(maxy,dparams.yres);
-    }
-    __syncthreads();
-    int reg = (maxx-minx)*(maxy-miny);
-
-    // render pixel threadIdx.x of particle i
-    if (threadIdx.x < reg)
-    {
-      // global pixel coordinates
-      x = threadIdx.x/(maxy-miny) + minx;
-      y = threadIdx.x%(maxy-miny) + miny;
-      // global pixel index = x*dparams.yres+y
-      // localx = x-xo,   localy = y-yo 
-      int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
- 
-      float dsq = (y-posy)*(y-posy) + (x-posx)*(x-posx);
-      if (dsq<radsq)
-      {
-          float att = __expf(stp*dsq);
-          Btile[lp].r += att*e.r;
-          Btile[lp].g += att*e.g;
-          Btile[lp].b += att*e.b;
-      }
-      else
-      {
-          Btile[lp].r += 0.0f;
-          Btile[lp].g += 0.0f;
-          Btile[lp].b += 0.0f;
-      }
-    }
-   }
    __syncthreads();
 
-  int j;
+  int x,y,k;
+  int j = 0;
+  int last = blockDim.x;
+  //now do the rendering: each thread processes a pixel of particle i
+
+  while (j < local_chunk_length) 
+  {
+      k = threadIdx.x; 
+      if(j+k < local_chunk_length && k < blockDim.x)
+      {
+        cu_particle_sim p = part[end-k-j];
+        e[k] = p.e;
+        posx[k] = p.x; posy[k] = p.y;
+        float rfacr = dparams.rfac*p.r;
+        radsq[k] = rfacr*rfacr;
+        stp[k] = -1.f/(dparams.h2sigma*dparams.h2sigma*p.r*p.r);
+
+        minx[k]=int(p.x-rfacr+1.f);
+        minx[k]=max(minx[k],0);
+        maxx[k]=int(p.x+rfacr+1.f);
+        maxx[k]=min(maxx[k],dparams.xres); 
+        miny[k]=int(p.y-rfacr+1.f);
+        miny[k]=max(miny[k],0);
+        maxy[k]=int(p.y+rfacr+1.f);
+        maxy[k]=min(maxy[k],dparams.yres);
+      }
+      __syncthreads(); 
+
+      j += blockDim.x;
+      if (j > local_chunk_length) last = local_chunk_length%blockDim.x;
+      for (int i=0; i<last; i++)
+      {
+         int reg = (maxx[i]-minx[i])*(maxy[i]-miny[i]);
+         // render pixel threadIdx.x of particle i
+         if (threadIdx.x < reg)
+         {
+           // global pixel coordinates
+           x = threadIdx.x/(maxy[i]-miny[i]) + minx[i];
+           y = threadIdx.x%(maxy[i]-miny[i]) + miny[i];
+           // global pixel index = x*dparams.yres+y
+           // localx = x-xo,   localy = y-yo 
+           int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
+           float dsq = (y-posy[i])*(y-posy[i]) + (x-posx[i])*(x-posx[i]);
+           if (dsq<radsq[i])
+           {
+             float att = __expf(stp[i]*dsq);
+             Btile[lp].r += -att*e[i].r;
+             Btile[lp].g += -att*e[i].g;
+             Btile[lp].b += -att*e[i].b;
+           }
+           else
+           {
+             Btile[lp].r += 0.0f;
+             Btile[lp].g += 0.0f;
+             Btile[lp].b += 0.0f;
+           }
+          }
+      }
+      __syncthreads();  
+  }
+
+
   //update inner tile in the global image
   int k0 = width*(tile_sidey+2*width) + width; // starting point
   for (int i=threadIdx.x; i<tile_sidex*tile_sidey; i=i+blockDim.x) 
@@ -363,6 +379,7 @@ __global__ void k_render1
      j = k0 + i + (i/width)*(tile_sidey+width);
      pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
   }
+
 }
 
 

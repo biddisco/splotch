@@ -237,7 +237,7 @@ void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv)
 
 
 void cu_render1
-  (int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nytiles)
+  (int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nytiles)
   {
   //get dims from pgv->policy object first
   dim3 dimGrid = dim3(grid); 
@@ -245,7 +245,7 @@ void cu_render1
   size_t SharedMem = (tile_sidex+2*width)*(tile_sidey+2*width)*sizeof(cu_color);
 
   cudaFuncSetCacheConfig(k_render1, cudaFuncCachePreferShared);
-  k_render1<<<dimGrid, dimBlock, SharedMem>>>(pgv->d_pd, pgv->d_active, pgv->d_tiles, pgv->d_pic,
+  k_render1<<<dimGrid, dimBlock, SharedMem>>>(nP, pgv->d_pd, pgv->d_active, pgv->d_tiles, pgv->d_pic,
   pgv->d_pic1, pgv->d_pic2, pgv->d_pic3, tile_sidex, tile_sidey, width, nytiles);
   }
 
