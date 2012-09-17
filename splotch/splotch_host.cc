@@ -173,18 +173,24 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
   long countinter3=0;
   long countinter4=0;
   long countlarge=0;
+  long countactive=0;
   float r_th = params.find<float>("rth",0.0);
   if(r_th != 0.0)
     {	
     for (long m=0; m<npart; ++m)
       {
-	if(p[m].r < 1.0)countsmall++;
-        if(p[m].r >= 1.0 && p[m].r < r_th)countinter1++;
-        if(p[m].r >= 1.0 && p[m].r < 2*r_th)countinter2++;
-        if(p[m].r >= 1.0 && p[m].r < 4*r_th)countinter3++;
-        if(p[m].r >= 1.0 && p[m].r < 8*r_th)countinter4++;
-        if(p[m].r >= 8*r_th)countlarge++;
+        if(p[m].active == true)
+        {
+	  if(p[m].r < 1.0)countsmall++;
+          if(p[m].r >= 1.0 && p[m].r < r_th)countinter1++;
+          if(p[m].r >= 1.0 && p[m].r < 2*r_th)countinter2++;
+          if(p[m].r >= 1.0 && p[m].r < 4*r_th)countinter3++;
+          if(p[m].r >= 1.0 && p[m].r < 8*r_th)countinter4++;
+          if(p[m].r >= 8*r_th)countlarge++;
+          countactive++;
+        }
       }
+    cout << "NUMBER OF ACTIVE PARTICLES = " << countactive << endl;
     cout << "PARTICLES WITH r < 1 = " << countsmall << endl;
     cout << "PARTICLES WITH 1 <= r < " << r_th << " = " << countinter1 << endl;
     cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
