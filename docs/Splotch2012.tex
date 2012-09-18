@@ -269,7 +269,7 @@ The kernels scale with these parameters as:
 & N_{Geom} \propto N_{part},\\
 & N_{Color} \propto N_{part},\\
 %& N_{Sort} \propto N_{part}{\rm log}(N_{part}),\\
-& N_{Render} \propto N_{part}N_{pix,x}^2 R_s^2,\\
+& N_{Render} \propto N_{part} R_s^2,\\
 & N_{Image} \propto N_{pix,x}^2,
 \end{align}
 where $N_{kernel}$ is the number of operations for a given kernel.
@@ -374,7 +374,7 @@ In that case,
 equations \eqref{pci} and \eqref{tmgpu} show that the dependency of $T_{pci}$ and $T_{Mgpu}$ 
 from the number of pixels is negligible. 
 
-In figure XXX, we show the comparison between $T_{pci}$, $T_{Mgpu}$ and $T_{gpu}, 
+In figure XXX, we show the comparison between $T_{pci}$, $T_{Mgpu}$ and $T_{gpu}$, 
 as functions of the number of particles. In these estimates we 
 neglect $f_{GPU}$ and $g_{GPU}$, that will be treated separately, and we assume fiducial values 
 for the GPU parameters, $\mu_{gpu} = 130$ GB/sec, $\tau_{pci} \sim 10^3$ nsec, 
@@ -383,7 +383,7 @@ $\mu_{pci} \sim 6$ GB/sec and $\nu_{mem} \sim 0.25$ GHz.
 
 
 We set also $S_{part} = 35$ (as it is in the current implementation of the code), 
-$N_{chunks} = 10$, $N_{load,p} = 2$, $N_{store,p} = 1$ and $
+$N_{chunks} = 10$, $N_{load,p} = 2$, $N_{store,p} = 1$ and 
 
 
 
