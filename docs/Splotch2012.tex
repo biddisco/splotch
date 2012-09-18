@@ -367,12 +367,33 @@ to the GPU work. Therefore, with a proper tuning, $T_{cpu}$ can be neglected.
 
 \subsection{Performance Model analysis}
 
-In this work, we always deal with datasets much larger than the typical image size,
-that is $N_{part} >> N_{pix,x}^2$. In fact, usually we have that $N_{part} >> 10^6$
-while $N_{pix,x}^2 \sim 10^6$. 
+The developed performance model has pointed out the main parameters which the Splotch 
+algorithm's performances depend from. The first three parameters,
+the number of particles $N_{part}$,
+the image size $N_{pix,x}^2$ and the characteristic particle size $R_s$, 
+are "model" parameters, related to the specific dataset or to the image quality.
+A second class of parameters is related to the algorithm and the way 
+it has to be designed in order to exploit the architectural characteristics
+of the GPU. The identified parameters are $N_{chunks}$, $N_{load,p}$, 
+$N_{store,p}$,  $N_{store,pix}$ and $N_{Ngpu}$. Furthermore, $f_{GPU}$ and 
+$g_{GPU}$ have to be properly specified. The final class of parameters 
+is specific to the GPU architecture. In our analysis we have set them to fiducial
+values related to the NVidia Fermi (REF) GPU, that was used for our
+tests and benchmarks. More specifically: 
+$\mu_{gpu} = 130$ GB/sec, $\tau_{pci} \sim 10^3$ nsec,
+$\mu_{pci} \sim 6$ GB/sec and $\nu_{mem} \sim 0.25$ GHz.
+
+As a first consideration, we note that working with large datasets we have that
+$N_{part} >> N_{pix,x}^2$. For instance, the tests that will be presented 
+in section XXX adopt $N_{part} \sim 10^8$
+and $N_{pix,x}^2 \sim 10^6$. 
 In that case,
-equations \eqref{pci} and \eqref{tmgpu} show that the dependency of $T_{pci}$ and $T_{Mgpu}$ 
-from the number of pixels is negligible. 
+equations \eqref{pci} and \eqref{tmgpu} show that the contribution of the terms
+related to the image size to $T_{pci}$ and $T_{Mgpu}$ is negligible. 
+
+
+SON QUA
+
 
 In figure XXX, we show the comparison between $T_{pci}$, $T_{Mgpu}$ and $T_{gpu}$, 
 as functions of the number of particles. In these estimates we 
@@ -380,10 +401,6 @@ neglect $f_{GPU}$ and $g_{GPU}$, that will be treated separately, and we assume 
 for the GPU parameters, $\mu_{gpu} = 130$ GB/sec, $\tau_{pci} \sim 10^3$ nsec, 
 $\mu_{pci} \sim 6$ GB/sec and $\nu_{mem} \sim 0.25$ GHz. 
 
-
-
-We set also $S_{part} = 35$ (as it is in the current implementation of the code), 
-$N_{chunks} = 10$, $N_{load,p} = 2$, $N_{store,p} = 1$ and 
 
 
 
