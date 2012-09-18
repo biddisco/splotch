@@ -148,7 +148,7 @@ __global__ void k_process
   p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // point-like particles 
-  if (int(rfacr+0.5f)>width) 
+  if (int(rfacr+1.f)>width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
      // printf("x=%f, y=%f, rfacr=%d\n",x,y,int(rfacr));
@@ -217,7 +217,6 @@ __global__ void k_render1
       if (blockIdx.x == 0) local_chunk_length = end;
       else local_chunk_length = end - tilepart[blockIdx.x-1];
       end--;
-      // if(local_chunk_length > 50000) {printf("\n tile %d: chunk %d reduced to 50000\n", tile, local_chunk_length); local_chunk_length = 50000;}
    }
    __syncthreads();
 
@@ -239,7 +238,7 @@ __global__ void k_render1
   while (j < local_chunk_length) 
   {
       k = threadIdx.x; 
-      if(j+k < local_chunk_length && k < blockDim.x)
+      if(j+k < local_chunk_length)
       {
         cu_particle_sim p = part[end-k-j];
         e[k] = p.e;
@@ -273,6 +272,7 @@ __global__ void k_render1
            // global pixel index = x*dparams.yres+y
            // localx = x-xo,   localy = y-yo 
            int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
+       //    if (lp >= tileBsize) printf("lp = %d, tile=%d, x=%d, y=%d xr =%f \n",lp,tile,x,y,posx[i]);
            float dsq = (y-posy[i])*(y-posy[i]) + (x-posx[i])*(x-posx[i]);
            if (dsq<radsq[i])
            {
@@ -291,7 +291,6 @@ __global__ void k_render1
       }
       __syncthreads();  
   }
-
 
   //update inner tile in the global image
   int k0 = width*(tile_sidey+2*width) + width; // starting point
