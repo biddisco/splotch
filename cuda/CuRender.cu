@@ -128,6 +128,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   {
     tstack_push("point-like particles rendering");
     cu_indexC3(newParticle, nC3, gv); 
+    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
     thrust::device_ptr<int> dev_ptr_Index(gv->d_index);
     thrust::equal_to<int> binary_pred;
     thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<cu_particle_sim> >  new_end_C3;
@@ -153,7 +154,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cudaEventRecord(start,0);
     cu_render1(newParticle, dimGrid, block_size, a_eq_e, (float) grayabsorb, gv, tile_sidex, tile_sidey, width, nytiles);
     cudaEventRecord(stop,0);
-    //cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
+    cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
 
   // C2 particles rendering on the host 
