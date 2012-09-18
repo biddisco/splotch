@@ -316,7 +316,7 @@ depending on the data size (if it fits the available GPU memory) and/or
 specific features of the algorithm (in some cases it may be convenient to
 split data into chunks, copying on the GPU one chunck after the other).
 In general we can estimate the data transfer time as:
-\begin{equation}
+\begin{equation}\label{pci}
 T_{pci} =  (N_{chunks}+1) \tau_{pci} + {N_{part} S_{part} + 3 N_{pix,x}^2 \over 
 \mu_{pci}},
 \end{equation}
@@ -330,7 +330,7 @@ T_{gpu} = N_{op}/\nu_{GPU},
 \end{equation}
 where $\nu_{GPU}$ is the GPU flops/sec rate and
 \begin{equation}\label{ops}
-N_{op} = N_{part}(\alpha + \gamma N_{pix,x}^2 R_s^2) + f_{GPU}(N_{part},N_{pix}),
+N_{op} = N_{part}(\alpha + \gamma R_s^2) + f_{GPU}(N_{part},N_{pix}),
 \end{equation}
 with $\alpha$ and $\gamma$ estimating the number of operation of 
 the combined Normalization, Geometry and Coloring kernels,  
@@ -351,20 +351,42 @@ are expected, since the image is created on the GPU).
 We indicate with $g_{GPU}$ the time spent on memory accesses by the GPU specific 
 functions (corresponding to the $f_{GPU}$ term in equation \eqref{ops}). 
 The time for memory access is:
-\begin{equation}
+\begin{equation}\label{tmgpu}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part} 
 + 3 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
-+ N_{Mgpu} \nu_{mem} + g_{GPU},
++ N_{Ngpu} \nu_{mem} + g_{GPU},
 \end{equation}
-where $\nu_{mem}$ is the memory frequency and $\mu_{gpu}$ is the global memory bandwidth.
+where $N_{Ngpu}$ is the total amount of memory accesses, $\nu_{mem}$ 
+is the memory frequency and $\mu_{gpu}$ is the global memory bandwidth.
 
 The final contribution to equation \eqref{Ts} is $T_{cpu}$. In principle this should be negligible, 
 the large part of the work being performed by the GPU. Actually, the CPU
-could contribute in processing a suitable fraction of the particles. Using
+could contribute in processing a proper fraction of the particles. Using
 asyncronous operations, however, this work can be completely overlapped 
 to the GPU work. Therefore, with a proper tuning, $T_{cpu}$ can be neglected.
 
 \subsection{Performance Model analysis}
+
+In this work, we always deal with datasets much larger than the typical image size,
+that is $N_{part} >> N_{pix,x}^2$. In fact, usually we have that $N_{part} >> 10^6$
+while $N_{pix,x}^2 \sim 10^6$. 
+In that case,
+equations \eqref{pci} and \eqref{tmgpu} show that the dependency of $T_{pci}$ and $T_{Mgpu}$ 
+from the number of pixels is negligible. 
+
+In figure XXX, we show the comparison between $T_{pci}$, $T_{Mgpu}$ and $T_{gpu}, 
+as functions of the number of particles. In these estimates we 
+neglect $f_{GPU}$ and $g_{GPU}$, that will be treated separately, and we assume fiducial values 
+for the GPU parameters, $\mu_{gpu} = 130$ GB/sec, $\tau_{pci} \sim 10^3$ nsec, 
+$\mu_{pci} \sim 6$ GB/sec and $\nu_{mem} \sim 0.25$ GHz. 
+
+
+
+We set also $S_{part} = 35$ (as it is in the current implementation of the code), 
+$N_{chunks} = 10$, $N_{load,p} = 2$, $N_{store,p} = 1$ and $
+
+
+
 
 The host-device data transfer time, $T_{pci}$, setting, as in the current implementation, 
 $S_{part} = 35$ bytes and assuming typical values of 
@@ -379,10 +401,21 @@ If $N_{chunks}$ is $O(1)$ the transfer
 time dominates. For $N_{part}\sim 10^8$, the transfer time is of the order of
 one second.
 
-SON QUA
+According to equation \eqref{tmgpu}, the GPU memory access time, $T_{Mgpu}$,  
+is the sum of four terms. The first term, which accounts for the access to 
+the particles' data, can be written, as:
+\begin{equation}
+T_{Mgpu,1} = 0.27 (N_{load,p} + N_{store,p})  N_{part} / 10^9,
+\end{equation}
+assuming for $\mu_{gpu}$ a characteristic value of 130 GB/sec. 
 
-The GPU memory access time, $T_{Mgpu}$, can be evaluated with the 
-following assumptions. The number of particles data load/store $N_{load,p} = 
+The second term in the sum of equation \eqref{tmgpu} 
+depends on the image size. We expect to have  
+$N_{store,pix} = 1$, since only the final image has to be stored
+on the global memory. Hence this term is once more negligible
+for large particle datasets and typical image sizes.
+
+The number of particles data load/store $N_{load,p} = 
 N_{store,p}+1 = 3$, this reasonable assuming that we need one load/store
 for geometric/coloring operations, one for sorting and only one load
 for rendering. Furthermore, we 
