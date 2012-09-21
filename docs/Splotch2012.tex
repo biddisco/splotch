@@ -257,16 +257,13 @@ all threads in a same warp execute the same instruction (Single-Instruction, Mul
 
 \subsection{The Performance Model}
 
-In order to drive the designe of the GPU version Splotch, its performances have been modeled
-as follows.
-
 % probabilmente questa e' una ripetizione
-The core computational kernels are the {\it Normalization}, re-calculation
+Splotch's main computational kernels are the {\it Normalization}, re-calculation
 of the different quantities in proper units, {\it Geometry}, roto-translation 
 of the reference frame, {\it Coloring}, assignment of the RGB colors associated to each 
 particle,  {\it Rendering},
 rasterization and ray casting \eqref{rad}, 
-and {\it Image Creation}, to compose and save 
+and {\it Image Creation}, composition and save of 
 the final image. The initial data load phase, though often demanding, will not be considered
 since it does not affect the GPU implementation.
 
@@ -274,9 +271,9 @@ The main parameters of the model are $N_{part}$, the number of particles
 to be processed, and $N_{pix}$, the number of pixels of the final image
 (in general we can consider square images with $N_{pix}=N_{pix,x}^2$). For 
 the Splotch's rendering kernel a third parameter must be introduced and
-taken into account, that is the average smoothing length of the particles,
+considered, that is the average smoothing length of the particles,
 $R_s$. Its value depends both on the intrinsic "size" of the particle
-and on the position of the point of view (particle size increase when it approaches 
+and on the position of the point of view (particle size increases getting closer to 
 the point of view).
 
 %The kernels scale with these parameters as:
@@ -290,15 +287,15 @@ the point of view).
 %\end{align}
 %where $N_{kernel}$ is the number of operations for a given kernel.
 
-Looking at the various kernels, Normalization, Geometry and Coloring are  
-perfectly data parallel, each particle being processed independently from the others.
-Thus they are expected to fit the GPU programming model. 
-The Rendering kernel is, in general, the most computationally demanding. 
-The computational time depends in a predictable way with the number of particles and the number 
-of pixels. The most challenging dependecy, however, is from the smoothing length. 
-This dependency leads to strong changes in the computational effort and makes
-the work-load hard to balance, when this is distributed among many-processors
-systems.
+%The Normalization, Geometry and Coloring kernels are  
+%perfectly data parallel, each particle being processed independently from the others.
+%Thus they are expected to fit the GPU programming model. 
+%The Rendering kernel is, in general, the most computationally demanding. 
+%The computational time depends in a predictable way with the number of particles and the number 
+%of pixels. The most challenging dependecy, however, is from the smoothing length. 
+%This dependency leads to strong changes in the computational effort and makes
+%the work-load hard to balance, when this is distributed among many-processors
+%systems.
 
 In order to model the Splotch algorthm's performances, we split the different timings
 required to perform the main computational steps. 
@@ -318,13 +315,13 @@ Time spent in transferring data
 between CPU and GPU, $T_{pci}$, is typically the main 
 bottleneck in GPU usage. Therefore the amount of data transferred from host
 to device and back has to be minimized. 
-Particle data are necessarly offloaded to the GPU. If $S_{part}$ is the
+All particle data is necessarly offloaded to the GPU. If $S_{part}$ is the
 size of a single particle (in the current implementation $S_{part}=35$ bytes),
 $N_{part} S_{part}$ is the total amount of particle data moved on the device.
 The final processed image (the result) is the only data that has to be copied back to
 the CPU. Thus, in principle, only $3 N_{pix,x}^2$ bytes (R, G, B values) have to be transferred at
 the end of the rendering phase. However, further data transfers may be necessary
-during the computation. If possible, such data movements should be hidden
+during the computation. Such data movements should be hidden
 by their overlap with calculation, exploiting asyncronous communication.
 
 Particles' data offload can be accomplished either in a single or in a few operations, 
@@ -352,7 +349,7 @@ with $\alpha$ and $\gamma$ estimating the number of operation of
 the combined Normalization, Geometry and Coloring kernels,  
 and of the Rendering kernel respectively. The function 
 $f_{GPU}$ takes into account any GPU specific part of the algorithm. 
-This is an overhead compared to the sequential code and therefore it has to 
+This overhead is not present in the sequential code and therefore has to 
 be minimized.
 
 Global memory accesses can be estimated 
@@ -372,18 +369,21 @@ T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part}
 + 3 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
 + g_{GPU},
 \end{equation}
-where $\mu_{gpu}$ is the global memory bandwidth.
+where $\mu_{gpu}$ is the global memory bandwidth and $g_{GPU}$ the time 
+spent on memory accesses by the GPU specific
+functions, corresponding to the $f_{GPU}$ term in equation \eqref{ops}.
+The terms $f_{GPU}$ and $g_{GPU}$ will be discussed in details in section XXX.
 
 The final contribution to equation \eqref{Ts} is $T_{cpu}$. In principle this should be negligible, 
 the large part of the work being performed by the GPU. Actually, the CPU
 could contribute in processing a proper fraction of the particles. Using
-asyncronous operations, however, this work can be completely overlapped 
+asyncronous operations, however, this work can be overlapped 
 to the GPU work. Therefore, with a proper tuning, $T_{cpu}$ can be neglected.
 
 \subsection{Performance Model analysis}
 
-The developed performance model has pointed out three classes of parameters which the Splotch 
-algorithm's performances depend from. In the first class, we have three parameters:
+From the performance model three classes of critical parameters have emerged 
+Three parameters belong to the first class:
 the number of particles $N_{part}$,
 the image size $N_{pix,x}^2$ and the characteristic particle size $R_s$. These 
 are "model" parameters, related to the specific dataset or to the image quality.
@@ -392,12 +392,15 @@ it has to be designed in order to exploit the architectural characteristics
 of the GPU. The identified parameters are $N_{chunks}$, $N_{load,p}$, 
 $N_{store,p}$,  and $N_{store,pix}$. Furthermore, $f_{GPU}$ and 
 $g_{GPU}$ have to be properly described and their impact on the performances
-estimated. The final class of parameters 
+estimated (see section XXX). The final class of parameters 
 is specific to the GPU architecture. In our analysis we have set them to fiducial
 values related to the NVidia M2090 Fermi (REF) GPU, that was used for our
 tests and benchmarks. More specifically: 
 $\mu_{gpu} = 130$ GB/sec, $\tau_{pci} \sim 10^3$ nsec and
 $\mu_{pci} \sim 6$ GB/sec.
+A further set of parameters, is related to the CUDA progeamming model. The optimization
+of parameters like the number of blocks, the number of threads per block etc., will 
+be described in details in section XXX.
 
 As a first consideration, we note that working with large datasets we have that
 $N_{part} >> N_{pix,x}^2$. For instance, the test case adopted 
@@ -411,10 +414,9 @@ be designed such that the number of copies of the image's pixels to the
 global memory is $O(1)$. At that point, all the dependencies on the images size can
 be neglected.
 
-Data offload to the GPU is one of the crucial steps in the algorithm. This is an
-overhead that is not present on the CPU version of the code, therefore it has to
-be minimized. Equation \eqref{pci} shows that we have a minimum amount of data 
-to be moved to the GPU, that consists in the particles information. This leads to an 
+Data offload to the GPU is one of the crucial steps in the algorithm. 
+Equation \eqref{pci} shows that we have a minimum amount of data 
+to be moved to the GPU: the particles information (coordinates, fields, smoothing length). This leads to an 
 unavoidable overhead, that, however, can be masked by overlap with computation using
 CUDA asynchronous data transfer. In order to implement this solution data have to be
 splitted in chunks and passed to the GPU one after the other, in a loop. Whilst chuncks 
@@ -444,7 +446,7 @@ This is very likely to happen when thousands of threads works at the same time,
 leading to loss of information and corrupted images. This problem has to be treated 
 in a specific way, designing a proper algorithmic solution. This will be 
 described in details in section XXX. However, part 
-of the algorithm is data parallel and can adopt the "one thread per particle" solution.
+of the algorithm is data parallel and can adopt the \``one thread per particle" solution.
 This part corresponds to the Coloring and Geometry kernels, in which each particle 
 is processed independently from the others. Merging this two components in a single
 kernel, we have $N_{load,p} = 1$ and, since processed particles
@@ -459,14 +461,17 @@ algorithm on the GPU requires a specific re-design and refactoring.
 Two main issues must be faced:
 \begin{itemize}
 \item 
-race conditions writing different contributions to the same pixel, and
+race conditions writing different contributions to the same pixel,
 \item
 workload unbalace between different processing units. 
 \end{itemize}
+The rendering kernels have to be designed according to the prescriptions of 
+the performance model and in order to circumvent the two issues above.
 
 \subsection{Algorithm design}
 
 % SOME LINK TO THE PERFORMANCE MODEL NEEDED HERE
+
 
 As soon as data is loaded in the global memory of the GPU, each particle is processed by a single CUDA thread. The processing involves transformation into screen coordinates (geometry) and colours assignment (coloring).
 Rendering requires instead a much more carefully implementation, mainly due to 
