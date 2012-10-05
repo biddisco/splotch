@@ -2,6 +2,7 @@
 #define __KERNEL__
 
 #include "cuda/splotch_cuda.h"
+#include <cstdio>
 
 //#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
 //#define printf(f, ...) ((void)(f, __VA_ARGS__),0)
@@ -67,11 +68,15 @@ __global__ void k_process
   e.b=p[m].e.b;
 
   //now do x,y,z
+  float zminval = 0.0;
+  float zmaxval = 1e23;
   float x,y,z;
   x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
   y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
 
+  if(z <= zminval){p[m].active = false; p_active[m]=-1;return;};
+  if(z >= zmaxval){p[m].active = false; p_active[m]=-1;return;};
   //do r
   float xfac2 = dparams.xfac;
   const float   res2 = 0.5f*dparams.xres;
@@ -92,8 +97,9 @@ __global__ void k_process
   I *= 0.5f*dparams.bfak/r;
   r*= sqrtf(2.f)*dparams.sigma0/dparams.h2sigma;  
 #else
-  I *= 8.f/(Pi*r*r*r);  //SPH kernel normalization
-  I *= dparams.h2sigma*sqrtf(Pi)*r;  //integral through the center
+  //I *= 8.f/(Pi*r*r*r);  //SPH kernel normalization
+  //I *= dparams.h2sigma*sqrtf(Pi)*r;  //integral through the center
+  I *= 8.f*dparams.h2sigma/(sqrtf(Pi)*r*r);
 #endif
 
   r *= res2*xfac2;
@@ -124,6 +130,7 @@ __global__ void k_process
   p_active[m] = -1;	// non active particle
 
   // compute region occupied by the partile
+  float raux=dparams.rfac;
   const float rfacr=dparams.rfac*r;
   int minx=int(x-rfacr+1.f);
   if (minx>=dparams.xres) return;
@@ -144,14 +151,18 @@ __global__ void k_process
   if (miny>=maxy) return;
  
   p[m].active = true;
+  // manage particles outside the image but that influence it
+  if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
+  if(y < 0.0 || y >= (float)dparams.yres){p_active[m] = -2; return;};
   // active particle = tile_id to which it belongs to
-  p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
+  /////////////CLAAAAA p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
+  p_active[m] = int(y/float(tile_sidey)) + int(x/float(tile_sidex))*nytiles; 
   //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // point-like particles 
   if (int(rfacr+1.f)>width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
-     // printf("x=%f, y=%f, rfacr=%d\n",x,y,int(rfacr));
+      //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);
   }
 }
 
