@@ -650,25 +650,24 @@ obtained using the GPU to those obtained with the original code on the CPU.
 
 The dataset adopted in all the tests is the result of a medium sized cosmological 
 N-body simulation performed using the Gadget code (REF). It consists in about 
-400 million particles, with about 200 million of dark matter, the same amount 
+400 million particles, with about 200 million of dark matter particles, the same amount 
 of baryonic matter (herafter ``gas'') and about 10 million star particles. 
-Particles of all species are characterized by their spatial coordinates, velocities
+All particles are characterized by their spatial coordinates, velocities
 and smoothing length. 
 Both the gas and the stars have a number of other quantities associated, that can be used 
 as color and intensity. Mass density and temperature for the former, spectral type and YYYYYY
-for the latter. Dark matter will not be used in our tests.
+for the latter. Dark matter will not be used in our tests. Figure XXX shows 
+the entire data cube visualized by Splotch.
 
 The large size of the dataset, $\approx 7.5$ GB can be handled only by a large memory computing node. 
 This is not an issue for the GPU, since data are splitted 
 in smaller chunks and loaded iteratively on the accelerator. 
 
-Our tests have all been performed on a IBM dx360 M3 node, based on the dual-socket 
-six-cores Intel Xeon 5650 processor architecture running at 2.6 GHz, 
-offering 24 GB of main system memory per node. The node is equipped with 2 NVIDIA 
-Tesla FERMI GPUs per node of type M2090 (REF), with 6 GB of global memory, 177 GB/sec 
-main memory bandwidth, 665 GFlops/sec of peak performance. GCC 4.4.5 and CUDA 4.2 
-where used for compiling the code.
-%CLA: AGGIUNGI I DATI CHE RITIENI UTILI
+Our tests have all been performed on a 16-core AMD Opteron 6272 2.1 GHz Interlagos processor,
+with 32 GBytes of memory, equipped with a one NVIDIA Tesla X2090 GPU with 6 GB of GDDR5 memory
+(REF), 177 GB/sec 
+main memory bandwidth, 665 GFlops/sec of peak performance. GCC 4.3.4 and CUDA 5.0.20 
+were used for compiling the code.
 
 \subsection{GPU performance tuning}
 
@@ -682,8 +681,65 @@ per particle ($N(r_s)$), which is influenced by the position of the point of vie
 This last parameter is related to $R_s$ such that $R_s = <r_s>$ this last term 
 being the expectation value of the smoothing radii, $r_s$, of the particles.
 
-............
+\noindent$\bullet$ {\bf Scalability with particles and image size}
 
+A first series of tests are dedicated to analyze the scalability of the code
+with the size of the processed dataset. In these tests, both the image size
+and the camera position are kept fixed and set so that all the particles are processed 
+by the GPU.
+
+Figure XXX shows different timings, progressively increasing the number of particles
+from about $10^7$ up to the total size of about $2.2\times 10^8$. 
+The overall computing time scales linearly, as expected from the theoretical analysis.
+The Geometry and Coloring times (``Processing time'' in the figure) always represent 
+a minor contribution to the overall time, resulting approximately the 10\% of the rendering 
+time. For the original serial implementation, this ratio varies between the 35 and the 60\%.
+The GPU implementation of this kernels is therfore extremely effective. The ``Rendering'' time 
+is due to the proper rendering kernel. It shows a perfect linear scalability
+with $N_{part}$ and it represents one of the two main contributions
+to the computing time, the other being the sum of the overheads related to all those 
+parts specific to GPU code refactoring. These parts are represented by 
+the host-device copy time, the particle classification, the host and reduce procedure 
+and the image recompose kernel (see isection XXXX). 
+In the current implementation, this overhead is
+the main contribution to the computing time and 
+it is strongly affected by the PCI Express copy time. Figure XXX shows the ratio 
+of the data transfer time to the dataset size. In some cases, the copy time can be 
+up to the 60% of the estimated overhead. An asynchronous implementation of 
+the algorithm can therefore pull down such overhead, as shown in figure XXX by
+the ``Async'' curve, further improving the achieved GPU performance.  
+ 
+The dependency of the code from the image size is presented in figure XXX..... 
+
+TO BE COMPLETED 
+
+\noindent$\bullet$ {\bf Scalability with radii and comparison with the CPU}
+
+The smoothing radius depends both on the intrinsic properties of the particle
+and from the camera position. The same particle can have a negligible size
+from one point of view, it can affect the whole image from a different one. 
+On the other hand, particles close to each other can have different radii depending
+on their characteristics. As discussed in section XXX, this has dramatic consequencies 
+on the implementation of the GPU rendering kernel. It has also a large impact
+on the performances. In order to investigate the dependency of the performances from
+the smoothing radii, we have permorformed seven tests progressively 
+getting closer to the dataset center. The particles radii distribution for each
+camera position is presented in figure XXX. Approaching the center of the 
+data cube, the radii distribution moves to larger values. This is quantified 
+by the average R_s radius, whose values, for the different cases, are presented in 
+table XXX.
+ 
+The same tests have been run also with the original Splotch code, in order 
+to compare the performances of the two different implementations. The original 
+code run on 1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP (REF) parallel
+capability, so that the GPU performances can be directly compared to 
+those achievable on a multicore multithreads configuration.  
+
+In figure XXX, we show the scalability of both the GPU and the sequential 
+implementations with $R_s$. Since the number of particles processed depends on
+the camera position (particles outside the field of view are not rendered), 
+the processing time per particle is presented. The GPU curve shows a 
+bi-modal behaviour. For small $R_s$  
 
 \section{Conclusions and Next Steps}
 
