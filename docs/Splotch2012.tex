@@ -204,31 +204,44 @@ Further details on the Splotch rendering algorithm can be found in REF.
 
 \section{The GPU Code}
 
-GPUs can represent an effective tool for Splotch to dramatically 
-reduce the time-to-solution and to step toward real-time interaction.
-However, the real effectiveness of GPUs on Splotch rastering algorithm has to
-be carefully analysed and estimated. Splotch, in fact, poses serious challenges 
-to the GPU's programming model, that privileges highly data parallel algorithms 
-where the hundreds of cores of the GPU can work independently from each other.
-Any kind of dependency is strongly penalized, reflecting on the final performance.
-Splotch, however, violates this basic requirement in the following aspect:
-each particle can affect a different number of pixels, depending both on its intrinsic
-smoothing radius and on the camera position (the same particle 
-can affect none or all the pixels of an image, depending on the point of view). 
-Hence, an optimal load balancing can be hard to achieve 
-and, even worse, it can lead to frequent concurrent accesses to memory, since
-different threads acting on different particles may affect the same pixel,
-leading to wrong results.
+GPUs represent an efficient tool to improve the performances of a numerical code.
+However, algorithms have to be reimplemented in order to run on the accelerator. 
+Often, a complete redesign is necessary to achieve good performace and in many
+cases such performance is much lower than the nominal one. Nevertheless, even in 
+the case of moderate performance improvements, a GPU enabled code allows the 
+user to exploit the full power of the majority of the HPC systems currently 
+available, which combine usual multicore procesors with multiple graphic accelerators.
 
-The potential dependency of any pixel of the image from any data point,
-makes the distribution of work between GPU's cores challenging to implement
-and even harder to tune in terms both of performances and of memory requirements.
-In section XXX, we propose a simple performance model that has
-driven the implementation of the GPU enabled Splotch kernels.
+Splotch has undergone such refactoring process, adopting the CUDA paradigm 
+for an effective usage of the GPU. The basic steps accomplished in
+the realization of the GPU code, are presented in the next sections. 
+
+%GPUs can represent an effective tool for Splotch to dramatically 
+%reduce the time-to-solution and to step toward real-time interaction.
+%However, the real effectiveness of GPUs on Splotch rastering algorithm has to
+%be carefully analysed and estimated. Splotch, in fact, poses serious challenges 
+%to the GPU's programming model, that privileges highly data parallel algorithms 
+%where the hundreds of cores of the GPU can work independently from each other.
+%Any kind of dependency is strongly penalized, reflecting on the final performance.
+%Splotch, however, violates this basic requirement in the following aspect:
+%each particle can affect a different number of pixels, depending both on its intrinsic
+%smoothing radius and on the camera position (the same particle 
+%can affect none or all the pixels of an image, depending on the point of view). 
+%Hence, an optimal load balancing can be hard to achieve 
+%and, even worse, it can lead to frequent concurrent accesses to memory, since
+%different threads acting on different particles may affect the same pixel,
+%leading to wrong results.
+%
+%The potential dependency of any pixel of the image from any data point,
+%makes the distribution of work between GPU's cores challenging to implement
+%and even harder to tune in terms both of performances and of memory requirements.
+%In section XXX, we propose a simple performance model that has
+%driven the implementation of the GPU enabled Splotch kernels.
 
 \subsection{The CUDA programming model} 
 
-For the implementation of the GPU code we have adopted the CUDA programming model (REF). This is currently the standard ``de facto'' for GPU programming.
+For the implementation of the GPU code we have adopted the CUDA programming model (REF). 
+This is currently the standard ``de facto'' for GPU programming.
 Its main drawback is represented by the limited portability, being an NVIDIA product. However,
 this ensures that the CUDA programming model closely maps and supports the underlying
 hardware (NVIDIA cards), leading to an optimal tuning of the performance.
@@ -244,7 +257,7 @@ a different one, hence there is no guaranteed order of execution.
 Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. They are scheduling units in SM:
 all threads in a same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). Further details on CUDA can be found in (REF).
 
-\subsection{The Performance Model}
+\subsection{Performance model}
 
 % probabilmente questa e' una ripetizione
 Splotch's main computational kernels are the {\it Normalization}, re-calculation
@@ -253,18 +266,18 @@ of the reference frame, {\it Coloring}, assignment of the RGB colors associated 
 particle,  {\it Rendering},
 rasterization and ray casting, 
 and {\it Image Creation}, composition and save of 
-the final image. The initial data load phase, though often demanding, will not be considered
-since it is not subject of the GPU implementation.
+the final image. The initial data load phase, though often demanding, will not be treated
+since it is not subject to the GPU implementation.
 
-The main parameters of the model are $N_{part}$, the number of particles
-to be processed, and $N_{pix}$, the number of pixels of the final image
-(in general we can consider square images with $N_{pix}=N_{pix,x}^2$). For 
-the Splotch's rendering kernel a third parameter must be introduced, 
-that is the average smoothing length of the particles,
-$R_s$. Its value depends both on the intrinsic "size" of the particle
-and on the position of the point of view (particle size increases getting closer to 
-the point of view).
-
+%The main parameters of the model are $N_{part}$, the number of particles
+%to be processed, and $N_{pix}$, the number of pixels of the final image
+%(in general we can consider square images with $N_{pix}=N_{pix,x}^2$). For 
+%the Splotch's rendering kernel a third parameter must be introduced, 
+%that is the average smoothing length of the particles,
+%$R_s$. Its value depends both on the intrinsic "size" of the particle
+%and on the position of the point of view (particle size increases getting closer to 
+%the point of view).
+%
 %The kernels scale with these parameters as:
 %\begin{align}\label{scaling}
 %& N_{Norm} \propto N_{part},\\
@@ -304,13 +317,17 @@ between CPU and GPU, $T_{pci}$, is typically the main
 bottleneck in GPU usage. Therefore the amount of data transferred from host
 to device and back has to be minimized. 
 All particle data has to be offloaded to the GPU. If $S_{part}$ is the
-size of a single particle (in the current implementation $S_{part}=35$ bytes),
-$N_{part} S_{part}$ is the total amount of particle data moved to the device.
+size of a single particle (in the current implementation $S_{part}=35$ bytes) and 
+$N_{part}$ is the number of particles to be processed,
+$N_{part} S_{part}$ is the total amount of particle data that has to be moved to the device.
 The final processed image (the result) is the only data that has to be copied back to
-the CPU. Thus, in principle, only $3 N_{pix,x}^2$ bytes (R, G, B values) have to be transferred at
-the end of the rendering phase. However, further data transfers may be necessary
-during the computation. Such data movements should be hidden
-by overlapping them with calculation, exploiting CUDA asyncronous operations.
+the CPU. Thus, in principle, only $3 N_{pix}^2$ bytes (R, G, B values) have to be transferred at
+the end of the rendering phase. Here, $N_{pix}$ is the linear resolution in pixel of the 
+image (we consider square images, since the generalization to rectangular images is
+straightforward). However, further data transfers may be necessary
+during the computation. 
+%Such data movements should be hidden
+%by overlapping them with calculation, exploiting CUDA asyncronous operations.
 
 Particles' data offload can be accomplished either in a single or in a few operations, 
 depending on the data size (if it fits the available GPU memory) and/or
@@ -334,9 +351,12 @@ where $\nu_{GPU}$ is the GPU flops/sec rate and
 N_{op} = N_{part}(\alpha + \gamma R_s^2) + f_{GPU},
 \end{equation}
 with $\alpha$ and $\gamma$ estimating the number of operation of 
-the combined Normalization, Geometry and Coloring kernels,  
+the combined Geometry and Coloring kernels,  
 and of the Rendering kernel respectively. The function 
 $f_{GPU}$ takes into account any GPU specific part of the algorithm. 
+
+CLA
+The parameter $R_s$................
 
 Global memory accesses can be estimated 
 as the number of loads from the global to the shared memories of the available 
@@ -350,7 +370,7 @@ are expected, since the image is created on the GPU).
 The time for memory access is:
 \begin{equation}\label{tmgpu}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part} 
-+ 3 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
++ 3 N_{store,pix} N_{pix}^2\over \mu_{gpu}}.........................
 + g_{GPU},
 \end{equation}
 where $\mu_{gpu}$ is the global memory bandwidth and $g_{GPU}$ the time 
@@ -367,10 +387,10 @@ to the GPU work, as described in section XXX.
 \subsection{Performance Model analysis}
 
 Three classes of parameters characterize the performance model.
-the number of particles $N_{part}$,
+The number of particles $N_{part}$,
 the image size $N_{pix,x}^2$ and the characteristic particle size $R_s$ belong to
 the first class. They 
-are ``model" parameters, related to the specific dataset or to the image quality.
+are ``model" parameters, related to the specific dataset or to the image properties.
 A second class of parameters is related to the algorithm and the way 
 it has to be designed in order to exploit the architectural characteristics
 of the GPU. The identified parameters are $N_{chunks}$, $N_{load,p}$, 
@@ -383,7 +403,7 @@ tests and benchmarks. More specifically:
 $\mu_{gpu} = 177$ GB/sec, $\tau_{pci} \sim 10^3$ nsec, $\nu_{gpu} = 665$ GFlops/sec and
 $\mu_{pci} \sim 6$ GB/sec.
 A further set of parameters, like the number of blocks, the number of threads per block etc., 
-is related to the CUDA progeamming model. 
+is related to the CUDA progeamming model and will be discussed separately, in sction XXX.
 
 Equations $\eqref{pci}$ and $\eqref{tmgpu}$ show that performances
 depends linearly from both the number of particles and the number of pixels. 
@@ -407,9 +427,11 @@ particles do not contribute to the calculation and the two terms of equation
 Equation \eqref{ops} shows that $N_{op}$ has a critical dependency from 
 $N_{part} R_s^2$. The dependency from the product of these two parameters, makes 
 this contribution the most important from a computational point of view and the most
-tricky to model and to tune. This is due especially to the unpredictability of
-both terms, that depend on the position of the point of view. In particular, 
-the $R_s$ parameter can lead to a strong increase of the computing time, since 
+challenging to model and to tune. This is due especially to the unpredictability of
+both terms, both depending on the point of view. The rendering kernel, in fact,
+processes only the particles tha falls in the field of view (that can be a subset
+of the whole $N_part$).  
+The $R_s$ parameter ...................can lead to a strong increase of the computing time, since 
 it can be large, involving many pixels and huge unbalances in the processing 
 time of each single particle. This
 represents a big issue in the case of parallel processing, as in a multi-core or
@@ -426,8 +448,9 @@ adopting atomic updates, supported by CUDA, but too slow to be used for continuo
 updates of the pixels values).
 
 Data offload to the GPU is one of the crucial steps in the algorithm. 
-Equation \eqref{pci} shows that we have a minimum amount of data 
-to be moved to the GPU: the particles information (coordinates, fields, smoothing length). This leads to an 
+Equation \eqref{pci} shows that the minimum amount of data 
+to be moved to the GPU is represented by the particles information 
+(coordinates, fields, smoothing length). This leads to an 
 unavoidable overhead, that, however, can be masked by overlap with computation using
 CUDA asynchronous data transfer. In order to implement this solution data have to be
 splitted in chunks and passed to the GPU one after the other, in a loop. Whilst chuncks 
@@ -457,6 +480,30 @@ This corresponds to the Coloring and Geometry kernels, in which each particle
 is processed independently from the others. Merging this two components in a single
 kernel, we have $N_{load,p} = 1$ and, since processed particles
 have to be copied back to the global memory to be rendered, $N_{store,p} = 1$. 
+
+The accomplished analysis leads to the following main conclusions, that drives 
+the implementation of the CUDA kernels:
+\begin{itemize}
+\item
+The linear dependency from both the number of particles and the number of pixels 
+should be preserved;
+\item
+data copies from host to device and vice-versa have to be minimized;
+\item
+data treansfers between global and share memory have to be minimized; 
+data accesses on the global memory must be kept low.............
+\item
+the dependency from the smoothing lengths violates 
+the the basic requirement of the GPU's programming model, that privileges highly data parallel algorithms
+with the hundreds of cores of the GPU working independently from each other:
+each particle can affect a different number of pixels, depending both on its intrinsic
+%smoothing radius and on the camera position (the same particle
+%can affect none or all the pixels of an image, depending on the point of view).
+
+\end{itemize}
+
+
+
 
 \section{The CUDA implementation}
 
