@@ -31,8 +31,8 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   {
   int xres = params.find<int>("xres",800),
       yres = params.find<int>("yres",xres);
-  double fov = params.find<double>("fov",45); //in degrees
-  double fovfct = tan(fov*0.5*degr2rad);
+  float fov = params.find<double>("fov",45); //in degrees
+  float fovfct = tan(fov*0.5f*degr2rad);
 
   sky.Normalize();
   vec3 zaxis = (lookat-campos).Norm();
@@ -52,9 +52,9 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   bool projection = params.find<bool>("projection",true);
 
   float dist= (campos-lookat).Length();
-  float xfac=1./(fovfct*dist);
+  float xfac=1.f/(fovfct*dist);
   if (!projection)
-    cout << " Field of fiew: " << 1./xfac*2. << endl;
+    cout << " Field of fiew: " << 1.f/xfac*2.f << endl;
 
   float minrad_pix = params.find<float>("minrad_pix",1.);
 
@@ -73,12 +73,12 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   para_trans.h2sigma=h2sigma;
 #ifdef SPLOTCH_CLASSIC
   float powtmp = pow(Pi,1./3.);
-  float sigma0 = powtmp/sqrt(2*Pi);
+  float sigma0 = powtmp/sqrt(2.*Pi);
   para_trans.sigma0=sigma0;
   para_trans.bfak=1./(2.*sqrt(Pi)*powtmp);
-  float rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
+  float rfac=1.5f*h2sigma/(sqrtf(2.f)*sigma0);
 #else
-  float rfac=1.;
+  float rfac=1.f;
 #endif
   para_trans.rfac=rfac;
   }

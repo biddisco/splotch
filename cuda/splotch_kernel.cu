@@ -10,7 +10,7 @@
 
 
 //MACROs
-#define Pi 3.14159265358979323846264338327950288
+#define Pi 3.141592653589793238462643383279502884197
 #define MAXSIZE 1000
 
 /////////constant memory declaration /////////////////////
@@ -88,7 +88,7 @@ __global__ void k_process
     }
   else
     {
-    xfac2=1.0f/(dparams.fovfct*z);
+    xfac2=1.f/(dparams.fovfct*z);
     x = res2 * (x+dparams.fovfct*z)*xfac2;
     y = res2 * (y+dparams.fovfct*z)*xfac2 + ycorr;
     }
@@ -159,7 +159,7 @@ __global__ void k_process
   p_active[m] = int(y/float(tile_sidey)) + int(x/float(tile_sidex))*nytiles; 
   //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // point-like particles 
-  if (int(rfacr+1.f)>width) 
+  if (int(rfacr)>=width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
       //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);

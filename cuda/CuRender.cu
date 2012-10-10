@@ -39,6 +39,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   tstack_push("Particle projection & coloring");
   cu_process(nParticle, gv, tile_sidex, tile_sidey, width, nxtiles, nytiles);
   cudaThreadSynchronize();
+  //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   tstack_pop("Particle projection & coloring");
 
   int new_ntiles, newParticle, nHostPart;
@@ -64,7 +65,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     if (error != cudaSuccess) cout << "cudaHostAlloc error!" << endl;
     else
     {
-      error = cudaMemcpy(host_part, d_host_part_ptr, nHostPart*sizeof(cu_particle_sim), cudaMemcpyDeviceToHost);
+      error = cudaMemcpyAsync(host_part, d_host_part_ptr, nHostPart*sizeof(cu_particle_sim), cudaMemcpyDeviceToHost, 0);
       if (error != cudaSuccess) cout << "Big particles Memcpy error!" << endl;
     }
    }
@@ -75,7 +76,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    if( newParticle != nParticle )
    {
      cout << endl << "Eliminating inactive particles..." << endl;
-     cout << newParticle+nHostPart << " particles left" << endl; 
+     cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
      thrust::remove_if(dev_ptr_flag, dev_ptr_flag+nParticle, particle_notValid());
    }
    tstack_pop("Particle Filtering");
@@ -153,6 +154,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cudaEventCreate(&stop);
     cudaEventRecord(start,0);
     cu_render1(newParticle, dimGrid, block_size, a_eq_e, (float) grayabsorb, gv, tile_sidex, tile_sidey, width, nytiles);
+    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
     cudaEventRecord(stop,0);
     cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
@@ -175,6 +177,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cudaEventDestroy(stop);
 
     cudaThreadSynchronize();
+    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   }
 
   tstack_push("images combine");
