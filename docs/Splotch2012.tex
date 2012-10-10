@@ -94,10 +94,10 @@ we describe the implemented algorithm. Section 5 shows
 the results of the performed tests and benchmarks. Finally, in Section 6, we draw 
 the conclusions. 
 
-\section{Splotch Overview}
+\section{Splotch overview}
 
 The main peculiarities of the Splotch software are represented by the 
-high quality of the generated images, obtained adopting a specific ray-casting 
+high quality of the generated images, obtained adopting a specialized ray-casting 
 approach, its high performance, due to a strong optimization on HPC architectures and the exploitation of multi-core, multi-node 
 systems by means of an effective mix of the OpenMP and MPI parallel programming paradigms, and
 the support of large data volumes, through an optimal usage of the memory, with
@@ -108,35 +108,37 @@ Finally, the software package is completely self-contained, with no dependencies
 libraries (apart from those needed for parallelism and HDF5 - REF - for
 specific input data file formats). The code is fully C++ and its compilation
 usually straightforward, as soon as a suitable makefile script is provided.
-No configure procedure is currently supported.
+No configure procedure is currently supported. The software is fully open source and 
+can be obtained in its most recent version contacting the authors.
 
 The Splotch algorithm operational scenario consists of a number of stages. 
 \begin{itemize}
 \item
-Data load: data is read from one or more data files. A number of different file
+{\it Data load}: data is read from one or more data files. A number of different file
 formats are supported, from raw binaries, to HDF5 to more specific Gadget (REF) or Tipsy (REF)
 files. The $x$, $y$ and $z$ coordinates are the only compulsory quantities to provide.
 These can be cartesian geometric coordinates, but also any other tern 
 of variables, adopted to explore a generic three dimensional parameter space.
 \item
-Geometry set-up: particle coordinates and other geometric quantities 
+{\it Rasterization and Processing}: particle coordinates and other geometric quantities 
 (like smoothing lengths, see below) are roto-translated and projected according to the 
 camera configuration (camera position, look-at direction and orientation). 
 Active particles (that actually contributes to the image according to the point of view)
-are identified. All the following operations are performed only on active particles.
-\item
-Data processing: data is normalized, necessary 
+are identified. Active data is normalized, necessary 
 transformation (e.g. calculations of logarithms of processed quantities) are performed
 and RGB colors (according to read data or to a given
-external color table) are associated to each data point. 
+external color table) are associated to each data point. For simplicity, in the rest 
+of the paper we will refer to this part of the code as {\it Rasterization} algorithm.
 \item
-Ray-casting: particle contribution to image pixels are calculated.
+{\it Rendering}: particles contribution to image pixels are calculated.
 \item
-Image save: final images are saved using the TGA high quality format.
+Image save: final images are saved using the TGA format.
 \end{itemize}
 The workflow is shown in Figure , where the parts of the algorithm parallelized
 either with MPI or with OpenMP are emphasized. For a detailed description of
 the hybrid parallel implementation of Splotch and its performances, we refer to REF.
+In the same figure, also the parts subject to the GPU implementation are shown, 
+anticipating the discussion of the following sections.
 
 %\begin{figure}
 %\centering
@@ -147,7 +149,7 @@ the hybrid parallel implementation of Splotch and its performances, we refer to 
 
 The most peculiar part of the Splotch software is represented by its ray-casting algorithm.
 This is also its most computationally demanding component.
-In order to effectively and efficiently handle point-like distributions, the following 
+In order to effectively handle point-like distributions, the following 
 steps are carried out: 
 
 \begin{itemize}
@@ -200,7 +202,7 @@ to the color, the optical depth of each particle can be also modulated proportio
 scalar property (e.g.\ density, etc.).
 \end{itemize}
 
-Further details on the Splotch rendering algorithm can be found in REF.
+For further details on the Splotch algorithms we refer to REF.
 
 \section{The GPU Code}
 
@@ -245,10 +247,11 @@ This is currently the standard ``de facto'' for GPU programming.
 Its main drawback is represented by the limited portability, being an NVIDIA product. However,
 this ensures that the CUDA programming model closely maps and supports the underlying
 hardware (NVIDIA cards), leading to an optimal tuning of the performance.
-The CUDA standard offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host), while those which exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCIe bus. CUDA kernels launch is asynchronous, so that the host can
+The CUDA standard offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host), while those which exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCI Express bus (REF - hereafter PCI-E). 
+CUDA kernels launch is asynchronous, so that the host can
  perform the following instructions of the code while the device is computing. If one of them requires the completion 
 of the kernel execution, then it is necessary to call the \textit{cudaThreadSyncrhonize}() function before executing it.
-A kernel is written for a single thread and instantiated as a grid of many lightweight parallel threads, organized into blocks of the same size. A thread is an indipendent element of work and maps to a hardware core. A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and "fast" shared memory. 
+A kernel is written for a single thread and instantiated as a grid of many lightweight parallel threads, organized into blocks of the same size. A thread is an indipendent element of work and maps to a hardware core. A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and ``fast'' shared memory. 
 This is possible because threads belonging to the same block are executed on the same multiprocessor (SM). On the other hand
  synchronization is not possible between blocks of a grid. In fact, the limited amount of memory limits the number of 
 blocks that can simultaneously reside in the same SM. Moreover when one block stalls the runtime system switch to 
@@ -257,17 +260,12 @@ a different one, hence there is no guaranteed order of execution.
 Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. They are scheduling units in SM:
 all threads in a same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). Further details on CUDA can be found in (REF).
 
-\subsection{Performance model}
+\subsection{Performance model and analysis}
 
-% probabilmente questa e' una ripetizione
-Splotch's main computational kernels are the {\it Normalization}, re-calculation
-of the different quantities in proper units, {\it Geometry}, roto-translation 
-of the reference frame, {\it Coloring}, assignment of the RGB colors associated to each 
-particle,  {\it Rendering},
-rasterization and ray casting, 
-and {\it Image Creation}, composition and save of 
+Splotch's main computational kernels are the {\it Rasterization}, 
+{\it Rendering}, {\it Image Creation}, composition and save of 
 the final image. The initial data load phase, though often demanding, will not be treated
-since it is not subject to the GPU implementation.
+here since it is not subject to the GPU implementation.
 
 %The main parameters of the model are $N_{part}$, the number of particles
 %to be processed, and $N_{pix}$, the number of pixels of the final image
@@ -304,19 +302,20 @@ required to perform the main computational steps.
 The Splotch's performances can be quantified as time spent on the CPU, time spent on the GPU
 and time spent to move data among different memories:
 \begin{equation}\label{Ts}
-T_{TOT} = T_{cpu} + T_{gpu} + T_{pci} + T_{Mgpu},
+T_{TOT} = T_{cpu} + T_{pci} + T_{gpu} + T_{Mgpu},
 \end{equation}
 where $T_{TOT}$ is the total time, 
 $T_{cpu}$ is the time spent on the CPU, $T_{gpu}$ is the time
 spent on the GPU for computation, $T_{pci}$ is the time needed to move data from
-the CPU to GPU and back through the PCI Express bus and $T_{Mgpu}$ is the time 
+the CPU to GPU and back through the PCI-E bus and $T_{Mgpu}$ is the time 
 spent in moving data among the global and the shared memory on the GPU.
 
-Time spent in transferring data
-between CPU and GPU, $T_{pci}$, is typically the main 
-bottleneck in GPU usage. Therefore the amount of data transferred from host
-to device and back has to be minimized. 
-All particle data has to be offloaded to the GPU. If $S_{part}$ is the
+\noindent$\bullet$ {\bf Data transfers}
+
+Data offload to the GPU is one of the crucial steps in the algorithm. 
+The minimum amount of data 
+to be moved to the GPU is represented by the particles information 
+(coordinates, fields, smoothing length). If $S_{part}$ is the
 size of a single particle (in the current implementation $S_{part}=35$ bytes) and 
 $N_{part}$ is the number of particles to be processed,
 $N_{part} S_{part}$ is the total amount of particle data that has to be moved to the device.
@@ -324,23 +323,45 @@ The final processed image (the result) is the only data that has to be copied ba
 the CPU. Thus, in principle, only $3 N_{pix}^2$ bytes (R, G, B values) have to be transferred at
 the end of the rendering phase. Here, $N_{pix}$ is the linear resolution in pixel of the 
 image (we consider square images, since the generalization to rectangular images is
-straightforward). However, further data transfers may be necessary
-during the computation. 
-%Such data movements should be hidden
-%by overlapping them with calculation, exploiting CUDA asyncronous operations.
+straightforward). 
 
 Particles' data offload can be accomplished either in a single or in a few operations, 
 depending on the data size (if it fits the available GPU memory) and/or
-specific features of the algorithm (in some cases it may be convenient to
-split data into chunks, copying on the GPU one chunck after the other).
-In general we can estimate the data transfer time as:
+in order to exploit CUDA streams, which allows to overlap communication 
+and computation, hiding the data transfer overhead.  
+In order to implement this solution data have to be
+splitted in chunks and passed to the GPU one after the other, in a loop. Whilst chuncks 
+are transferred, computation on previous chuncks, already stored on the GPU
+memory, can be carried out. 
+The data transfer time can be estimated as:
 \begin{equation}\label{pci}
-T_{pci} =  N_{chunks} \tau_{pci} + {N_{part} S_{part} + 3 N_{pix,x}^2 \over 
+T_{pci} =  N_{chunks} \tau_{pci} + {N_{part} S_{part} + 3 N_{pix}^2 \over 
 \mu_{pci}},
 \end{equation}
 where $\tau_{pci}$ is the transfer time latency (in seconds) and $\mu_{pci}$ is the
 bus bandwidth (in bytes per second), $N_{chunks}$ is the number 
 of copy stages. 
+Equations $\eqref{pci}$ show that performances
+depends linearly from both the number of particles and the number of pixels.
+In the case of large datasets we have that
+$N_{part} >> N_{pix,x}^2$. For instance, the test case adopted
+in section XXX consists in $N_{part} \sim 10^8$
+and $N_{pix,x}^2 \sim 10^6$. In such cases, the contribution of $N_{pix,x}^2$
+to $T_{pci}$ is negligible.
+
+Splitting data in sub-chunks does not
+cause any meaningful overhead if the copy latency is kept small, that is:
+\begin{equation}
+N_{chunks} < {N_{part} S_{part}\over \tau_{pci}\mu_{pci}}.
+\end{equation}
+For instance, if $N_{part}$ is $O(10^8)$, $N_{chunks}$ can be up to $10^5$ before
+contributing to the overhead.
+
+Equations $\eqref{pci}$ considers only the unavoidable data tranfers characterizing
+the splotch algorithm. However, further data tranfers may be necessary.
+This aspect will be treated in section XXX.
+
+\noindent$\bullet$ {\bf GPU computation}
 
 The time spent in processing the particles on the GPU can be estimated as:
 \begin{equation}
@@ -351,12 +372,31 @@ where $\nu_{GPU}$ is the GPU flops/sec rate and
 N_{op} = N_{part}(\alpha + \gamma R_s^2) + f_{GPU},
 \end{equation}
 with $\alpha$ and $\gamma$ estimating the number of operation of 
-the combined Geometry and Coloring kernels,  
+the Rasterization kernel  
 and of the Rendering kernel respectively. The function 
-$f_{GPU}$ takes into account any GPU specific part of the algorithm. 
+$f_{GPU}$ takes into account any GPU specific kernel (i.e. a kernel
+which is not present in the original code, necessary to the GPU implementation). 
 
-CLA
-The parameter $R_s$................
+The parameter $R_s$ is the most peculiar dependency of the Splotch's rendering
+algorithm. It is defined as the expectation value of the particles radii:
+$R_s = <r_s(p)>$, where
+\begin{equation}
+r_s(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
+\end{equation} 
+$A(p)$ being the geometry function to tranform to image coordinates,
+$\chi$ a proper factor defining the compact support size (see  
+equation \eqref{smooth}) and $S_{box}$ being the computational box size.
+The particle radius depends both on the intrinsic properties of the particle
+and from the camera position. The same particle can have a negligible size
+from one point of view, it can affect the whole image from a different one.
+On the other hand, particles close to each other can have different radii depending
+on their intrinsic characteristics. The dependency from $r_s(p)$ poses........ 
+
+It is interesting to stress that $T_{gpu}$ depends linearly from the number of particles. 
+This feature should be preserved by the GPU implementation, so the term 
+$f_{GPU}$ does not have to introduce any higher order dependency from $N_{part}$. 
+
+\noindent$\bullet$ {\bf Memory accesses}
 
 Global memory accesses can be estimated 
 as the number of loads from the global to the shared memories of the available 
@@ -386,24 +426,6 @@ to the GPU work, as described in section XXX.
 
 \subsection{Performance Model analysis}
 
-Three classes of parameters characterize the performance model.
-The number of particles $N_{part}$,
-the image size $N_{pix,x}^2$ and the characteristic particle size $R_s$ belong to
-the first class. They 
-are ``model" parameters, related to the specific dataset or to the image properties.
-A second class of parameters is related to the algorithm and the way 
-it has to be designed in order to exploit the architectural characteristics
-of the GPU. The identified parameters are $N_{chunks}$, $N_{load,p}$, 
-$N_{store,p}$,  and $N_{store,pix}$. Furthermore, $f_{GPU}$ and 
-$g_{GPU}$ have to be properly described and their impact on the performances
-estimated (see sections XXX and YYY). The final class of parameters 
-is specific to the GPU architecture. In our analysis we have set them to fiducial
-values related to the NVidia M2090 Fermi (REF) GPU, that was used for our
-tests and benchmarks. More specifically: 
-$\mu_{gpu} = 177$ GB/sec, $\tau_{pci} \sim 10^3$ nsec, $\nu_{gpu} = 665$ GFlops/sec and
-$\mu_{pci} \sim 6$ GB/sec.
-A further set of parameters, like the number of blocks, the number of threads per block etc., 
-is related to the CUDA progeamming model and will be discussed separately, in sction XXX.
 
 Equations $\eqref{pci}$ and $\eqref{tmgpu}$ show that performances
 depends linearly from both the number of particles and the number of pixels. 
@@ -446,24 +468,6 @@ Specific solution must be designed in order to circumvent this problem
 without paying big penalties in terms of performance (as would happen, for instance,
 adopting atomic updates, supported by CUDA, but too slow to be used for continuous 
 updates of the pixels values).
-
-Data offload to the GPU is one of the crucial steps in the algorithm. 
-Equation \eqref{pci} shows that the minimum amount of data 
-to be moved to the GPU is represented by the particles information 
-(coordinates, fields, smoothing length). This leads to an 
-unavoidable overhead, that, however, can be masked by overlap with computation using
-CUDA asynchronous data transfer. In order to implement this solution data have to be
-splitted in chunks and passed to the GPU one after the other, in a loop. Whilst chuncks 
-are transferred, computation on previous chuncks, already stored on the GPU
-memory, can be carried out. Splitting data in sub-chunks can also be necessary
-in order to fit data in the GPU global memory, since the whole dataset could exceed
-that available on the device. According to equation \eqref{pci}, this does not 
-cause any meaningful overhead if the copy latency is kept small, that is:
-\begin{equation}
-N_{chunks} < {N_{part} S_{part}\over \tau_{pci}\mu_{pci}}.
-\end{equation}
-For instance, if $N_{part}$ is $O(10^8)$, $N_{chunks}$ can be up to $10^5$ before
-contributing to the overhead.
 
 Equation \eqref{tmgpu} show that the performance related to global memory access
 depends on the two parameters $N_{load,p}$ and $N_{store,p}$, that quantify the 
@@ -773,7 +777,7 @@ the smoothing radii, we have permorformed seven tests progressively
 getting closer to the dataset center. The particles radii distribution for each
 camera position is presented in figure XXX. Approaching the center of the 
 data cube, the radii distribution moves to larger values. This is quantified 
-by the average R_s radius, whose values, for the different cases, are presented in 
+by the average $R_s$ radius, whose values, for the different cases, are presented in 
 table XXX.
  
 The same tests have been run also with the original Splotch code, in order 
