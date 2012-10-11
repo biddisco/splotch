@@ -739,9 +739,38 @@ positioning the camera closer to the dataset center. The particles radii distrib
 camera position is presented in figure XXX. Approaching the center of the 
 data cube, the radii distribution moves to larger values. This is quantified 
 by the average $R_s$ radius, whose values, for the different cases, are presented in 
-table XXX, togheter with the corresponding number of active particles 
+table~\ref{tab:radius}, togheter with the corresponding number of active particles 
 (i.e. particles lying in the field of view) and computing time. 
 Figure~\ref{fig:panorama} show the images created by splotch at the different radii.
+The image size is kept constant in all the tests, with $N_{pix}$=1000.
+
+\begin{table}
+\caption{Average particle radius (left column), number of active particle (center)
+and computing time (right column) for the seven tests performed.}
+\begin{center}
+\begin{tabular}{|l|l|l|}
+\hline
+$R_s$ (pixel) & Active Particles & Time (sec) \\
+\hline
+0.30   & 226894837  & 21.12 \\
+\hline
+0.62   & 225972201  & 22.50 \\
+\hline
+0.72   & 212746328  & 21.79 \\
+\hline
+1.40   & 153647633  & 18.88 \\
+\hline
+3.90   & 64756141   & 25.22 \\
+\hline
+8.99   & 13686588   & 28.06 \\
+\hline
+13.66  & 4222214    & 22.15 \\
+\hline
+\end{tabular}
+\end{center}
+\label{tab:radius}
+\end{table}
+
 
 \begin{figure}
 \centering
@@ -752,6 +781,14 @@ Figure~\ref{fig:panorama} show the images created by splotch at the different ra
 
 The same tests have been carried out also with the original Splotch code, in order 
 to compare the performances of the two different implementations. 
+
+In the tests the computing time changes according
+to the number of active particle, that decreases approaching the center of the particle 
+distribution, and the radius $R_s$, that progressively increases. At values of 
+$R_s$ larger than unity, a relevant fraction of the particles has radii comparable to the image size
+contributing to a large number of pixels, so increasing the computing time 
+with the square of their radius. A two dependencies tends to compensate, keeping 
+the computing time between 19 and 28 seconds.
 
 \begin{figure}
 \centering
