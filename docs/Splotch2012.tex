@@ -739,7 +739,9 @@ positioning the camera closer to the dataset center. The particles radii distrib
 camera position is presented in figure XXX. Approaching the center of the 
 data cube, the radii distribution moves to larger values. This is quantified 
 by the average $R_s$ radius, whose values, for the different cases, are presented in 
-table XXX. Figure~\ref{fig:panorama} show the images created by splotch at the different radii.
+table XXX, togheter with the corresponding number of active particles 
+(i.e. particles lying in the field of view) and computing time. 
+Figure~\ref{fig:panorama} show the images created by splotch at the different radii.
 
 \begin{figure}
 \centering
@@ -748,12 +750,8 @@ table XXX. Figure~\ref{fig:panorama} show the images created by splotch at the d
 \label{fig:panorama}
 \end{figure}
 
- 
 The same tests have been carried out also with the original Splotch code, in order 
-to compare the performances of the two different implementations. The original 
-code run on 1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP (REF) parallel
-capability, so that the GPU performances can be directly compared to 
-those achievable on a multicore multithreads configuration.  
+to compare the performances of the two different implementations. 
 
 \begin{figure}
 \centering
@@ -779,26 +777,26 @@ rises quickly.
 \label{fig:gpucpu}
 \end{figure}
 
-Figure~\ref{fig:gpucpu} shows the comparison between the GPU and the CPU performance 
-in the seven cases under investigation. Two different CPU results are used.
-The OMP1 curve shows the ratio of the GPU and the CPU computing time
-when a single core is used as a fuction of $R_s$. The OMP8 curve shows 
-the same ratio, but for a CPU computing time obtained using 8 cores 
-and the OpenMP parallel implementation of Splotch. 
+Figure~\ref{fig:gpucpu} presents the comparison between the GPU and the CPU computing time
+in the seven cases under investigation, using 
+1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP (REF) parallel
+capability, so that the GPU performances can be directly compared to
+those achievable on a multicore, multithreads configuration.
+This test allows to get an indication of the actual hardware configuration
+needed, in the different cases, to get performances similar to those
+obtained with the GPU. The simple comparison with a single core would provide 
+just an approximate hint, since parallel codes never scale linearly with
+the number of processors. 
 
-Comparing GPU to single core performance, we see that as long as $R_s$ is 
-of the order of unity or smaller, GPU is from 4 to 5 times faster than
-the single core. The comparison to to the OMP8 results is even better, since
-the GPU performance is comparable to that obtained from 8 cores working
-in parallel. This is due to the overhead of the parallel implementation 
-of the Splotch, which prevents the code to scale linearly with the number 
-of processors. 
-
-The GPU performance gain drops at larger radii, since a progressively
-larger number of particles is assigned to the CPU. However, even in 
-the worst case, there is a small advantage in using the GPU, since 
-part of the particles are still small enough to be processed on the 
-accelerator.
+The figure shows how the GPU's performance is 
+comparable to that obtained by 8 cores, for radii smaller
+than unity. For the same tests, the GPU is from 4 to 5 times faster than the single 
+core. As $R_s$ grows, more and more particles are renderized by the CPU, hence 
+the performance deteriorates, becoming progressively comparable to that
+of 4 and 2 cores. However, even in
+the worst case, there is some advantage in using the GPU, since
+due to the Rasterization stage and since part of the particles 
+remains small enough to be rendered by the accelerator.
 
 \section{Conclusions and Next Steps}
 
