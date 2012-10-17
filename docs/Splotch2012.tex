@@ -309,6 +309,7 @@ $T_{cpu}$ is the time spent on the CPU, $T_{gpu}$ is the time
 spent on the GPU for computation, $T_{pci}$ is the time needed to move data from
 the CPU to GPU and back through the PCIe bus and $T_{Mgpu}$ is the time 
 spent in moving data among the global and the shared memory on the GPU.
+
 \medskip
 \noindent
 {\bf Data transfers}
@@ -544,9 +545,9 @@ $n_c = N_t$, if it belongs to C3 class, i.e. is point-like.
 \end{itemize}
 The parameter $N_t$ is the number of tiles the image is divided in. It is defined as
 \begin{equation}
-N_t = {N_{pix}^2\over (ts^2},   
+N_t = {N_{pix}^2\over t_s^2},   
 \end{equation}
-where $ts$ is the tile side in pixels. In the code, this parameter is set to $2r_0$ by default but it can be tuned according to the specific use case to increase performances. 
+where $t_s$ is the tile side in pixels. In the code, this parameter is set to $2r_0$ by default but it can be tuned according to the specific use case to increase performances. 
 
 After this operation, inactive and host particles are removed. Then a new kernel has to be implemented in order to sort the remaining particles by the $n_c$ key and compute the number of the ones with the same index, for each $n_c$. 
 At the end of this operation, all particles with the same tile index are contiguous in memory, providing an optimal memory access pattern. Furthermore, they can be easily 
@@ -573,7 +574,7 @@ The \textit{tiling scheme} for rendering C2 particles on the device consist in
 assigning particles related to the same image tile to a block of CUDA threads 
 and exploit the shared memory and thread synchronization within the block to store 
 and compose the image tile. The local size of the tile is defined in order to let any particle belonging to it to be entirely contained in the tile. This is achieved by 
-adding to the $body$ of the tile of $ts^2$ pixels a $boundary$ of $r_0$ pixels around it (see figure XXX). We will refer to this extended tile as a \textit{Btile}.
+adding to the $body$ of the tile of $t_s^2$ pixels a $boundary$ of $r_0$ pixels around it (see figure XXX). We will refer to this extended tile as a \textit{Btile}.
 Particles are accessed in chunks of 256 elements. Each chunk is accessed and stored 
 in the shared memory by a single parallel read operation, performed simultaneously by all (or almost all) the threads of the block. Then the particles of the chunk are rendered sequentially, each one with a single parallel operation: each pixel of the particle is processed by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). 
 This solution avoids race conditions when composing the image tile, since each 
@@ -632,8 +633,8 @@ megabytes of data. The same holdes for the reduction of the two partial images.
 \section{Tests and results}
 
 We have analyzed the performances of Splotch's GPU implementation in a number of cases, designed in 
-order to stress the different features of the algorithm, presented in the previous 
-sections, comparing the results 
+order to stress the different features of the algorithm, 
+comparing the results 
 obtained using the GPU to those obtained with the original code on the CPU. 
 
 The dataset adopted in all the tests is the result of a medium sized cosmological 
@@ -678,8 +679,8 @@ by the GPU.
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{Images/scalability.jpg}
-\caption{Scalability of Splotch on the GPU with the dataset size}
+\includegraphics[scale=0.5]{images/scalan.eps}
+\caption{Scalability of different Splotch's kernels on the GPU with the dataset size}
 \label{fig:scalability}
 \end{figure}
 
@@ -691,9 +692,8 @@ number of particles.
 The Rasterization time always represent 
 a minor contribution to the overall time, resulting approximately the 10\% of the rendering 
 time. For the original serial implementation, this ratio varies between the 35 and the 60\%.
-This proves that the {\it one thread per particle} adopted for this kernel
-is extremely effecctive, making this part of the algorithm almost negligible
-for the performance.
+This proves that the {\it one thread per particle} approachadopted for this kernel
+is extremely effective, making its impact on computing time almost negligible.
 The ``Rendering'' time 
 is due to the proper rendering kernel. It shows a perfect linear scalability
 with $N_{part}$ and it represents one of the two main contributions
@@ -702,18 +702,8 @@ parts specific to GPU code refactoring. These parts are represented by
 the host-device copy time, the particle classification, the host and reduce procedure 
 and the image recompose kernel (see section XXXX). 
 In the current implementation, this overhead is
-the main contribution to the computing time and 
-it is strongly affected by the PCI Express copy time. 
-%CLA: IL PROSSIMO CAPOVERSO NON SO SE METTERLO
-Figure XXX shows the ratio 
-of the data transfer time to the dataset size. In some cases, the copy time can be 
-up to the 60% of the estimated overhead. An asynchronous implementation of 
-the algorithm can therefore pull down such overhead, as shown in figure XXX by
-the ``Async'' curve, further improving the achieved GPU performance.  
- 
-The dependency of the code from the image size is presented in figure XXX..... 
-
-TO BE COMPLETED 
+the main contribution to the computing time. It will be discussed in more 
+details later in this section.
 
 \medskip
 \noindent
@@ -725,13 +715,15 @@ As discussed in section XXX, this has a big impact
 on the implementation of the GPU rendering kernel and
 on the performances. In order to investigate the dependency of the performances from
 the smoothing radii, we have permorformed a number of tests progressively 
-positioning the camera closer to the dataset center. The particles radii distribution for each
-camera position is presented in figure XXX. Approaching the center of the 
+positioning the camera closer to the dataset center. 
+%The particles radii distribution for each
+%camera position is presented in figure XXX. 
+Approaching the center of the 
 data cube, the radii distribution moves to larger values. This is quantified 
 by the average $R_s$ radius, whose values, for the different cases, are presented in 
 table~\ref{tab:radius}, togheter with the corresponding number of active particles 
 (i.e. particles lying in the field of view) and computing time. 
-Figure~\ref{fig:panorama} show the images created by splotch at the different radii.
+Figure~\ref{fig:panorama} shows the images created by splotch at the different radii.
 The image size is kept constant in all the tests, with $N_{pix}$=1000.
 
 \begin{table}
@@ -740,7 +732,7 @@ and computing time (right column) for the seven tests performed.}
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
-$R_s$ (pixel) & Active Particles & Time (sec) \\
+$R_s$ (pixels) & Active Particles & Time (sec.) \\
 \hline
 0.30   & 226894837  & 21.12 \\
 \hline
@@ -764,7 +756,7 @@ $R_s$ (pixel) & Active Particles & Time (sec) \\
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.2]{Images/panorama.jpg}
+\includegraphics[scale=0.2]{Images/panorama.eps}
 \caption{The particle distribution rendered by Splotch at different radii}
 \label{fig:panorama}
 \end{figure}
@@ -777,20 +769,20 @@ to the number of active particle, that decreases approaching the center of the p
 distribution, and the radius $R_s$, that progressively increases. At values of 
 $R_s$ larger than unity, a relevant fraction of the particles has radii comparable to the image size
 contributing to a large number of pixels, so increasing the computing time 
-with the square of their radius. A two dependencies tends to compensate, keeping 
+with the square of their radius. The two opposite trends tend to compensate, keeping  
 the computing time between 19 and 28 seconds.
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{Images/Rs.jpg}
-\caption{Scalability of different components with the radius}
+\includegraphics[scale=0.5]{Images/scala-with-R.eps}
+\caption{Scalability of Splotch with the average radius $R_s$}
 \label{fig:Rs}
 \end{figure}
 
 In figure~\ref{fig:Rs}, we present the scalability of the GPU code 
-with $R_s$. Since the number of particles processed depends on
-the camera position (particles outside the field of view are not rendered), 
-the processing time per particle is used as a meaningful performance
+with $R_s$. Since the number of processed particles depends on
+the camera position, we adopt the  
+computing time per particle as a meaningful performance
 indicator. The curve shows a bi-modal behaviour. For small $R_s$,
 the computing time is almost constant, since the performance is dominated
 by $N_{part}$ term, which is substantially constant. For values of $R_s$ larger 
@@ -799,7 +791,7 @@ rises quickly.
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{Images/gpucpu.jpg}
+\includegraphics[scale=0.5]{Images/scalaomp.eps}
 \caption{Comparison of GPU and CPU performances at different radii}
 \label{fig:gpucpu}
 \end{figure}
@@ -807,24 +799,127 @@ rises quickly.
 Figure~\ref{fig:gpucpu} presents the comparison between the GPU and the CPU computing time
 in the seven cases under investigation, using 
 1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP (REF) parallel
-capability, so that the GPU performances can be directly compared to
-those achievable on a multicore, multithreads configuration.
+capability, so that the GPU performance can be directly compared to
+that achievable on a multicore, multithreads configuration.
 This test allows to get an indication of the actual hardware configuration
 needed, in the different cases, to get performances similar to those
 obtained with the GPU. The simple comparison with a single core would provide 
 just an approximate hint, since parallel codes never scale linearly with
 the number of processors. 
 
-The figure shows how the GPU's performance is 
-comparable to that obtained by 8 cores, for radii smaller
-than unity. For the same tests, the GPU is from 4 to 5 times faster than the single 
+The figure shows how, at radii comparable 
+or smaller than unity, the GPU's performance is 
+comparable to that obtained by 8 cores.
+At the same radii, the GPU is from 4 to 5 times faster than the single 
 core. As $R_s$ grows, more and more particles are renderized by the CPU, hence 
 the performance deteriorates, becoming progressively comparable to that
-of 4 and 2 cores. However, even in
-the worst case, there is some advantage in using the GPU, since
-due to the Rasterization stage and since part of the particles 
-remains small enough to be rendered by the accelerator.
+of 4 and, finally, 2 cores. However, even in
+the case with the largest $R_s$, there is some advantage in using the GPU, 
+due to the Rasterization stage and since a fraction of the particles 
+remain small enough to be rendered by the accelerator.
+
+{\bf GPU overhead}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{Images/over.eps}
+\caption{Overhead of the various components implemented for the Splotch's
+GPU refactoring. Absloute time is shown on the left image. On the right
+the ratio between the time spent in each component and the total GPU 
+overhead is shown.}
+\label{fig:over}
+\end{figure}
+
+The same tests presented above, run at different $R_s$, are used also to
+analyze the {\it GPU overhead}, that is the time spent on functions necessary
+only on the GPU, that were not present in the original code. Such functions can 
+be identified as those to offload data to the GPU (Offload),
+to setup the GPU environment (Setup),
+to sort and reduce data for tiles preparation and memory displacement optimization (Sort),
+to remove non active particles and to pack and copy back particles that have to 
+be rendered by the CPU (Select) and, finally,
+to combine the Btiles in the final image (Image combine).   
+
+Figure~\ref{fig:over} presents the contribution of the different functions
+as absolute (left image) and relative (right image) times. This last 
+quantity is defined as the time spent by the specific function devided by
+the overall GPU overhead. In the right image, also the fraction of the GPU
+overhead to the total computing time is shown (xxx line). It is interesting to 
+note that this is almost the 50\% of the computing time for small radii,
+while it decreases to less than 30\% at large radii, where the
+computing time is dominated by the CPU. 
+
+The Image combine time is negligible, accounting for approximately 0.1\% of 
+the GPU overhead. This is due mainly to the efficient design of the 
+algorithm, which takes full advantage of the multi-thread architecture 
+of the accelerator. The Setup and the Selecton stages contributes 
+almost constant to the overhead. Selection, in particular, 
+always accounts for almost the 30\% of the time. NON MI TORNA... COSA FA
+IN REALTA' "FILTERING"? PERCHE' E' COSI' LUNGO?
+Selection, for particle radii larger than unity, becomes the second 
+larger contribution to the overhead. For small radii, in fact, the Sort
+stage acocnuts for more than 30\% ov the overhead. This is essentially due to 
+the large number of particles to be sorted according to their tile index. 
+The Sort time drops at larger radii, where more and more particles are
+inactive. VERIFICARE BENE... LE INACTIVE VENGONO SORTATE?
+ 
+The most relevant contribution to the GPU overhead is represented by the 
+Offload. This is constant, since in all tests all particles are copied 
+to the device memory. Hence, It becomes relatively more and more relevant at larger
+radii, since the overall GPU overhead decreases. In principle, this Offload overhead could
+be strongly reduced adopting CUDA streams and overlapping data copy to 
+computation. However, this is currently prevented from the adoption of
+Thrust libraries, that do not support asynchronous operations. Furthermore,
+in some situations, when the CPU workload is larger than that of
+te GPU (e.g. at large radii), such solution would be ineffective.  
 
 \section{Conclusions and Next Steps}
+
+The CUDA implementation of Splotch allows to exploit GPUs 
+for the visualization of huge data volumes, such those produce both 
+from experiments/observations and from computer simulations. Current trends
+in HPC envisage the adoption of accelerators to substantially 
+increase the performance of the computing systems, maintaining the power
+consumption reasonably low. However, accelerators, and in particular 
+GPUs, requires a certain effort to be efficiently exploited, 
+supporting only peculiar programming models, that requires codes, or part
+of them, to be redesigned and reimplemented before being sutable to such devices. 
+
+Splotch proved to be a challenging application to enable to GPUs. 
+In fact, the main computational kernel, the Rendering kernel, poses serious difficulties
+to the GPU's programming model, that privileges highly data parallel algorithms
+where the hundreds of cores of the GPU can work independently from each other.
+Any kind of dependency is strongly penalized, reflecting on the final performance.
+Splotch, however, violates this basic requirement in the following aspect:
+each particle can affect a different number of pixels, depending on its radius.
+This leads to frequent concurrent accesses to memory, since
+different threads acting on different particles may affect the same pixel,
+leading to wrong results. Furthermore, memory management is particularly 
+tricky, since it can lead to an overwhealming number of random accesses 
+with dramatic consequences on the performance.
+
+In order to overcome these difficulties, Splotch's rendering algorithm has been
+redesigned with the introduction of specific kernels. These kernels 
+introduce an overhead that can be up to the 50\% the overall computing
+time. Nevertheless, the final code overperforms the original CPU
+version of up to a factor of 4-5, which rises to a factor of 8 when the OpenMP,
+multithread parallel version is considered. Further optimization can
+be obtained by the adoption of CUDA streams, overlapping computation 
+and data movements. However this is currently prevented by the usage of the 
+Thrust libraries, that do not support such kind of operational mode. 
+The Splotch GPU code retains also two important features of the original
+code: the linear scalability with the number of particles and with the 
+image size. 
+
+Although not extraordinary, the attained GPU performance is sufficient 
+to run efficiently the hybrid computing nodes that are more and 
+more common in the HPC framework. In order to fully exploit such architectures, 
+a further step is necessary, supporting the concurrent usage of 
+multiple GPUs, multiple cores and multiple nodes, exploiting respectively the OpenMP and
+MPI capabilities of Splotch. This step is expected to pose important 
+challenges especially to find the optimal balance in the workload of each of the different 
+system components.
+
+
 
 \end{document}
