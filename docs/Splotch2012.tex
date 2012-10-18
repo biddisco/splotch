@@ -41,14 +41,15 @@ storage capacity and performance and network speed. Currently, not many such too
 
 BIBLIOGRAPHY: visit and paraview, Australian stuff, Tipsy, visivo, stuff from MPI, 3D slicer, Splash
 
-In this paper we focus on {\it Splotch} REF, our previously developed ray-casting
+In this paper we focus on {\it Splotch}, our previously developed ray-casting
 algorithm. Splotch was born for an effective high performance visualization of large-scale 
 astrophysical data sets coming from particle-based computer simulations. The software is 
 specialized in the high-quality, high-performance rendering of point like data as those 
 produced in cosmology by N-Body numerical experiments, which 
-represent prime examples of particle-based simulations. We can mention 
-the Millennium ``trilogy'', the Horizon run or the DEUS simulation (REF) ETC., which
-represent the most advanced and largest simulations in the field. 
+represent prime examples of particle-based simulations. Examples are 
+the Millennium ``trilogy'' \cite{millennium}, the Horizon and the
+MareNostrum runs \cite{horizon} or the DEUS simulation \cite{deus}, which
+are among the most advanced and largest simulations in the field. 
 This models reproduce the evolution of a meaningful fraction
 of the universe by means of hundreds billion fluid elements, represented as particles,
 interacting with each other through gravitational
@@ -62,7 +63,7 @@ like the visualization of real galaxy systems, whose 3D shape is carefully model
 according to observational data. Here, more than the data size, the driver is
 the quality and the level of details of the final images,
 that have to reproduce the full details of the
-spectacular data coming from astronomical observations (REF in preparation). Furthermore,
+spectacular data coming from astronomical observations. Furthermore,
 it has been adopted also for the visualization of meshed based astrophysical simulations, 
 although the same high quality cannot be achieved unless extremely high resolution
 meshes are provided. 
@@ -70,7 +71,7 @@ meshes are provided.
 In the development of Splotch, specific care has been taken of all the performance 
 issues. The software is optimized in order to require the minimum possible
 memory usage and in order to exploit vector architectures, multi-core processors 
-and multi-nodes supercomputers (REF). 
+and multi-nodes supercomputers \cite{jin:high-performance}. 
 
 In the last years, 
 GPUs, and their computational counterpart, GPGPUs, have 
@@ -107,7 +108,7 @@ no data replica or unnecassary allocations, a full 64 bits support and the explo
 of both shared and distributed memory systems. Furthermore, Splotch's design is kept 
 intentionally simple, making its extension to new components and functionalities easy. 
 Finally, the software package is completely self-contained, with no dependencies from external 
-libraries (apart from those needed for parallelism and HDF5 - REF - for
+libraries (apart from those needed for parallelism and HDF5 \cite{hdf5}  for
 specific input data file formats). The code is fully C++ and its compilation
 usually straightforward, as soon as a suitable makefile script is provided.
 No configure procedure is currently supported. The software is fully open source and 
@@ -117,7 +118,8 @@ The Splotch algorithm operational scenario consists of a number of stages.
 \begin{itemize}
 \item
 {\it Data load}: data is read from one or more data files. A number of different file
-formats are supported, from raw binaries, to HDF5 to more specific Gadget (REF) or Tipsy (REF)
+formats are supported, from raw binaries, to HDF5 to more specific 
+Gadget \cite{gadgeturl} or Tipsy \cite{tipsyurl}
 files. The $x$, $y$ and $z$ coordinates are the only compulsory quantities to provide.
 These can be cartesian geometric coordinates, but also any other tern 
 of variables, adopted to explore a generic three dimensional parameter space.
@@ -138,7 +140,8 @@ Image save: final images are saved using the TGA format.
 \end{itemize}
 The workflow is shown in figure~\ref{fig:workflow}, where the parts of the algorithm parallelized
 either with MPI or with OpenMP are emphasized. For a detailed description of
-the hybrid parallel implementation of Splotch and its performances, we refer to REF.
+the hybrid parallel implementation of Splotch and its performances, 
+we refer to \ref{jin:high-performance}.
 In the same figure, also the parts subject to the GPU implementation are shown, 
 anticipating the discussion of the following sections.
 
@@ -185,7 +188,7 @@ volume is modeled by the well known radiative transfer equation
 \begin{equation}\label{rad}
 \frac{d\bf{I}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I}(x))\rho_p(x),
 \end{equation}
-which can be found in standard textbooks REF.
+which can be found in standard textbooks \cite{1991par..book.....S}.
 Here, $\bf{E}_p$ and $\bf{A}_p$ describe the strength of radiation emission and absorption
 for a given particle for the three rgb-colour components. 
 %In general it is recommended to
@@ -203,7 +206,7 @@ to the color, the optical depth of each particle can be also modulated proportio
 scalar property (e.g.\ density, etc.).
 \end{itemize}
 
-For further details on the Splotch algorithms we refer to REF.
+For further details on the Splotch algorithms we refer to \cite{2008NJPh...10l5006D}.
 
 \section{The GPU Code}
 \label{sec:gpu-code}
@@ -229,13 +232,15 @@ the realization of the GPU code, are presented in the next sections.
 \subsection{The CUDA programming model} 
 \label{sec:cuda}
 
-For the implementation of the GPU code we have adopted the CUDA programming model (REF),
+For the implementation of the GPU code we have adopted the CUDA 
+programming model \cite{cudaurl},
 that is currently the standard ``de facto'' for GPU programming.
 CUDA is developed by NVIDIA, closely mapping the underlying
 hardware (NVIDIA cards), leading to an optimal tuning of the performance.
 The limited portability represents its main drawback, somewhat mitigated
 by the diffusion of NVIDIA GPUs.
-The CUDA standard offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host), while those which exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCI Express bus (REF - hereafter PCI-E). 
+The CUDA standard offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host), while those which exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCI Express 
+bus (hereafter PCI-E). 
 CUDA kernels launch is asynchronous, so that the host can
  perform the following instructions of the code while the device is computing. If one of them requires the completion 
 of the kernel execution, then it is necessary to call the \textit{cudaThreadSyncrhonize}() function before executing it.
@@ -246,7 +251,7 @@ blocks that can simultaneously reside in the same SM. Moreover when one block st
 a different one, hence there is no guaranteed order of execution.
 
 Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. They are scheduling units in SM:
-all threads in the same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). Further details on CUDA can be found in (REF).
+all threads in the same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (i.e. high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). 
 
 \subsection{Performance model and analysis}
 \label{sec:model}
@@ -551,10 +556,10 @@ reduction and prefix sum by key. In fact, memory accesses to the elements involv
 in a CUDA operation are coalesced when all of them are consecutives. However, sorting 
 is intrinsically an expensive operation. Hence, an efficient CUDA implementation of
 the sorting function has to be adopted in order to reduce its overhead. 
-The Thrust library (REF) provides such function. Thrust is a C++ template library 
+The Thrust library \cite{thrusturl} provides such function. Thrust is a C++ template library 
 for CUDA which mimics the Standard Template Library (STL) and provides 
 optimized functions to manage very large arrays of data. In particular, Thrust 
-implements a highly-optimized Radix Sort algorithm (REF) for sorting primitive types
+implements a highly-optimized Radix Sort algorithm for sorting primitive types
 (e.g., char, int, float, and double) with the standard less comparison operator and 
 apply dynamic optimizations to further improve its performance.
 Thrust functions provide also effective functions for reduction by key and prefix sum, which are 
@@ -632,15 +637,23 @@ order to stress the different features of the algorithm,
 comparing the results 
 obtained using the GPU to those obtained with the original code on the CPU. 
 
+\begin{figure}
+\centering
+\includegraphics[scale=0.6]{images/box.eps}
+\caption{The simulated box. White dots represent stars and galaxies, while the 
+diffused blue component is the gas}
+\label{fig:box}
+\end{figure}
+
 The dataset adopted in all the tests is the result of a medium sized cosmological 
-N-body simulation performed using the Gadget code (REF). It consists in about 
+N-body simulation performed using the Gadget code \cite{gadgeturl}. It consists in about 
 400 million particles, with about 200 million of dark matter particles, the same amount 
 of baryonic matter (herafter ``gas'') and about 10 million star particles. 
 All particles are characterized by their spatial coordinates, velocities
 and smoothing length. 
 Both the gas and the stars have a number of other quantities associated, that can be used 
-as color and intensity. Mass density and temperature for the former, spectral type and YYYYYY
-for the latter. Dark matter is not used in our tests. Figure XXX shows 
+as color and intensity. Mass density and temperature for the former, spectral type and age
+for the latter. Dark matter is not used in our tests. Figure~\ref{fig:box} shows 
 the entire data cube visualized by Splotch.
 
 The large size of the dataset, $\approx 7.5$ GB can be handled only by a large memory computing node. 
@@ -766,14 +779,14 @@ contributing to a large number of pixels, so increasing the computing time
 with the square of their radius. The two opposite trends tend to compensate, keeping  
 the computing time between 19 and 28 seconds.
 
-\begin{figure}
-\centering
-\includegraphics[scale=0.5]{Images/scala-with-R.eps}
-\caption{Scalability of Splotch with the average radius $R_s$}
-\label{fig:Rs}
-\end{figure}
+%\begin{figure}
+%\centering
+%\includegraphics[scale=0.5]{Images/scala-with-R.eps}
+%\caption{Scalability of Splotch with the average radius $R_s$}
+%\label{fig:Rs}
+%\end{figure}
 
-In figure~\ref{fig:Rs}, we present the scalability of the GPU code 
+In figure~\ref{fig:gpucpu}, we present the scalability of the GPU code 
 with $R_s$. Since the number of processed particles depends on
 the camera position, we adopt the  
 computing time per particle as a meaningful performance
@@ -787,13 +800,15 @@ rises quickly.
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{Images/scalaomp.eps}
-\caption{Comparison of GPU and CPU performances at different radii}
+\caption{GPU and CPU performances at different radii. Black line represents the GPU 
+computing time. Blue lines the CPU times from 16 cores (light blue) to 1 core
+(dark blue)}
 \label{fig:gpucpu}
 \end{figure}
 
 Figure~\ref{fig:gpucpu} presents the comparison between the GPU and the CPU computing time
 in the seven cases under investigation, using 
-1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP (REF) parallel
+1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP \cite{openmpurl} parallel
 capability, so that the GPU performance can be directly compared to
 that achievable on a multicore, multithreads configuration.
 This test allows to get an indication of the actual hardware configuration
@@ -916,5 +931,8 @@ multiple GPUs, multiple cores and multiple nodes, exploiting respectively the Op
 MPI capabilities of Splotch. This step is expected to pose important 
 challenges especially to find the optimal balance in the workload of each of the different 
 system components.
+
+\bibliographystyle{plain}
+\bibliography{master.bib}	
 
 \end{document}
