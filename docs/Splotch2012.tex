@@ -147,8 +147,8 @@ anticipating the discussion of the following sections.
 
 \begin{figure}
 \centering
-%\includegraphics[scale=0.5]{Images/workflow.jpg}
-\caption{...}
+\includegraphics[scale=0.18]{Images/flowsplotch.eps}
+\caption{Splotch workflow}
 \label{fig:workflow}
 \end{figure}
 
@@ -391,7 +391,7 @@ On the other hand, particles close to each other can have different radii depend
 on their intrinsic characteristics. The dependency from $r_s(p)$ poses 
 two major problems to the GPU implementation of the rendering 
 algorithm. First, two threads acting on different particles could try 
-to update the same pixel.
+to update the same pixel (see figure~\ref{fig:particles}).
 This can cause frequent concurrent accesses to memory
 which lead to wrong results, with the correcteness and quality of the resulting image 
 degraded if not completely compromised.
@@ -406,6 +406,14 @@ updates of the pixels values).
 Finally, it is interesting to stress that $T_{gpu}$ depends linearly on the number of particles. 
 This feature should be preserved by the GPU implementation, so the term 
 $f_{GPU}$ does not have to introduce any higher order dependency from $N_{part}$. 
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.2]{images/particles.eps}
+\caption{Two particles with different radii influencing the same pixels}
+\label{fig:particles}
+\end{figure}
+
 
 \medskip
 \noindent
@@ -504,6 +512,24 @@ cannot be adopted (see section~\ref{sec:model}). Furthermore, memory usage must 
 
 \subsection{Rendering algorithm design}
 \label{sec:design}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.15]{images/fov.eps}
+\caption{The scene with five particles from two different points of view. Different tiles are 
+represented with different colors. In the first camera position
+(left) all particles contributes to the image (lie in the FOV), particles 2 and 3
+being classified as C2, particle 4 being C1 and particle 5 being C2. Particle 1, is classified
+as C2, since it is completely contained in a {\it Btile} (tile plus edges). In the right
+image the camera moved toward particle 1. All the radii change due to the new point
+of view. Classification of particles 4 and 5 does not change, while particle 3 
+becomes inactive (completely falling outside the FOV). Particle 2, though 
+having coordinates outside the FOV, affects some pixels, hence it is still active.
+Particle 1 becomes C1, since its radius exceeeds the edge size, so it exits the Btile. 
+}
+\label{fig:fov}
+\end{figure}
+
 
 On the GPU, the rendering algorithm has been designed according to the following procedure.
 
