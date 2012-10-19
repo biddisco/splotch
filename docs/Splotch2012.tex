@@ -38,7 +38,21 @@ In order to visualize huge datasets, suitable tools must be available, able to
 exploit High Performance Computing (hereafter HPC) devices, like multicore, multinode
 supercomputers, providing suitable resources in terms of computing power, memory size, 
 storage capacity and performance and network speed. Currently, not many such tools are avilable.
-
+The most popular general purpose open source tools are Visit (REF) and Paraview (REF). Both are based
+on the VTK (REF) library and support a broad variety of visualization solutions, data types
+and file formats. They can be used as stand alone tools, running on the user's workstation, 
+or in a client server mode, exploiting remote supercomputing services and transporting
+to the user only the processed images. Both tools support also in-situ visualization, 
+that allows to embed the visualization functions in the simulation code, generating images
+during the run (no data files are needed). A recent application of ParaView 
+to large scale cosmological simulations can be found in REF. A similar software, but more focused on 
+astrophysical data, is Visivo (REF). This tool is based on VTK as well, and supports
+the client-server approach, exploiting resources available on a computational grid.
+Visivo is also usable via web interface. Tipsy (REF) and Splash (REF) represent
+further examples of visualization software specifically designe for astrophyisics 
+particle based datases. However they are stand-alone tools, with no support to
+HPC resources........
+ 
 BIBLIOGRAPHY: visit and paraview, Australian stuff, Tipsy, visivo, stuff from MPI, 3D slicer, Splash
 
 In this paper we focus on {\it Splotch}, our previously developed ray-casting
@@ -467,7 +481,7 @@ The $T_{Mgpu}$ term depends linearly on the image size. Once more,
 for large datasets, this term appears to be negligible. However, since
 particles falling outside the field of view are not processed (``inactive'' particles),
 depending on the camera position, it can give a meaningful contribution to
-the computing time.
+the computing time. Figure~\ref{fig:fov} provide an example of active and inactive particles.
 
 A critical term of equation \eqref{tmgpu} is represented by the memory access
 latency $N_{Ngpu} \nu_{mem}$. The access to memory is slow in comparison to
@@ -572,6 +586,7 @@ N_t = {N_{pix}^2\over t_s^2},
 \end{equation}
 where $t_s$ is the tile side in pixels. In the code, this parameter is set to $2r_0$ 
 by default but it can be tuned according to the specific use case to tune the performance. 
+Figure~\ref{fig:fov} show an example of the particles classification. 
 
 After this operation, inactive and host particles are removed. Then a new kernel has to be implemented in order to sort the remaining particles by the $n_c$ key and compute the number of those with the same index. 
 At the end of this operation, all particles with the same tile index are contiguous in memory, providing an optimal memory access pattern, and can be easily isolated for tiles assignment and processing.
