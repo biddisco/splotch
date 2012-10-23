@@ -38,25 +38,51 @@ In order to visualize huge datasets, suitable tools must be available, able to
 exploit High Performance Computing (hereafter HPC) devices, like multicore, multinode
 supercomputers, providing suitable resources in terms of computing power, memory size, 
 storage capacity and performance and network speed. Currently, not many such tools are avilable.
-The most popular general purpose open source tools are Visit (REF) and Paraview (REF). Both are based
-on the VTK (REF) library and support a broad variety of visualization solutions, data types
+In the astrophysics framework, a recent example is given by \cite{2012ASPC..461...45H}............, 
+that specifically focus on extremely 
+large data, with specific attention to large observational surveys, like 
+SKA, ..., which are going to produce enormous data cubes. Data is visualized 
+through a mesh based volume rendering approach, boosted by the efficient usage 
+of GPUs. A further example, is given by Fraedrich et al. \cite{Fraedrich:2009:TMV},
+investigated the scalability in the visualization of large-scale particle-based cosmological 
+simulations and in particular the Millennium run \cite{millennium}, and presented methods to reduce the 
+associated limitations on PC architectures based on level-of-detail particle 
+representation based on a hierarchical scheme for particle coordinates.
+Finally, a software specifically designed for N-body simulations,
+has been recently published by Kaheler et al. \cite{2012arXiv1208.3206K}. 
+The algorithm is based on a tetrahedral tessellation of the computational domain, 
+with mesh vertices defined by the simulation's dark matter particle positions
+for the implementation of several GPU-assisted rendering solutions. The paper, proposes
+also an excellent review 
+of methods for the effective visualization of particle based data, that we refer to for
+further cases.
+Such review can be extended by a number of other software packages available
+open source. The most popular are Visit \cite{visit} and Paraview \cite{paraview}. 
+Both are general purpose software, based
+on the VTK \cite{vtk} graphic library. They support a broad variety of visualization solutions, data types
 and file formats. They can be used as stand alone tools, running on the user's workstation, 
 or in a client server mode, exploiting remote supercomputing services and transporting
 to the user only the processed images. Both tools support also in-situ visualization, 
 that allows to embed the visualization functions in the simulation code, generating images
-during the run (no data files are needed). A recent application of ParaView 
-to large scale cosmological simulations can be found in REF. A similar software, but more focused on 
-astrophysical data, is Visivo (REF). This tool is based on VTK as well, and supports
+during the run (no data files are needed), enabling computational sterring. 
+A recent application of ParaView 
+to large scale cosmological simulations can be found in \cite{2011ApJS..195...11W}. 
+Both tools suffer the lack
+of specialisation on astrophysical data so, e.g., particle visualization 
+capabilities are limited. Furthermore, in some cases either the performance or 
+the memory usage are not optimal, preventing the usage of the packages for particularly 
+large datasets. A software similar to ParaView and VisIT, but more focused on 
+astrophysical data, is VisIVO (REF). This tool, based on VTK as well, supports
 the client-server approach, exploiting resources available on a computational grid.
-Visivo is also usable via web interface. Tipsy (REF) and Splash (REF) represent
+Visivo is also usable via web interface. The main limitation of the VisIVO family
+of products is the lack of interactivity when remote HPC resources are used.
+Tipsy \cite{tipsy} and Splash \cite{splash} represent
 further examples of visualization software specifically designe for astrophyisics 
 particle based datases. However they are stand-alone tools, with no support to
-HPC resources........
- 
-BIBLIOGRAPHY: visit and paraview, Australian stuff, Tipsy, visivo, stuff from MPI, 3D slicer, Splash
+HPC resources.
 
-In this paper we focus on {\it Splotch}, our previously developed ray-casting
-algorithm. Splotch was born for an effective high performance visualization of large-scale 
+In this paper we focus on {\it Splotch}, a ray-casting
+algorithm, born for an effective high performance visualization of large-scale 
 astrophysical data sets coming from particle-based computer simulations. The software is 
 specialized in the high-quality, high-performance rendering of point like data as those 
 produced in cosmology by N-Body numerical experiments, which 
@@ -681,7 +707,7 @@ obtained using the GPU to those obtained with the original code on the CPU.
 \begin{figure}
 \centering
 \includegraphics[scale=0.6]{images/box.eps}
-\caption{The simulated box. White dots represent stars and galaxies, while the 
+\caption{The simulated box, visualized by Splotch. White dots represent stars and galaxies, while the 
 diffused blue component is the gas}
 \label{fig:box}
 \end{figure}
