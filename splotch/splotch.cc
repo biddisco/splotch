@@ -22,7 +22,7 @@
 #include <cmath>
 #include <algorithm>
 #include <unistd.h>
-
+ 
 #ifdef SPLVISIVO
 #include "optionssetter.h"
 #endif
@@ -41,6 +41,13 @@
 #include "opencl/splotch_cuda2.h"
 #endif
 
+#ifdef PREVIEWER
+#include "previewer/simple_gui/SimpleGUI.h"
+#include "previewer/libs/core/FileLib.h"
+#include <string>
+#include <iostream>
+#endif
+
 using namespace std;
 #ifdef SPLVISIVO
 int splotchMain (VisIVOServerOptions opt)
@@ -48,6 +55,41 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
+
+#ifdef PREVIEWER
+  bool pvMode = false;
+  int paramFileArg = -1;
+  for(int i = 0; i < argc; i++)
+  {
+    // Look for command line switch (-pv launches previewer)
+    if(std::string(argv[i]) == std::string("-pv"))
+    {
+      pvMode = true;
+    }
+    // Look for the parameter file
+    if(previewer::FileLib::FileExists(argv[i]))
+    {
+      paramFileArg = i;
+    }
+  }
+  // Preview mode is enabled
+  if(pvMode)
+  {
+    // If param file exists launch app
+    if(paramFileArg > 0)
+    {
+      // Launch app with simple GUI
+      previewer::simple_gui::SimpleGUI program;
+      program.Load(std::string(argv[paramFileArg]));
+    }
+    else
+    {
+      // Output a message as input param file does not exist
+      std::cout << "Invalid input parameter file." << std::endl;
+      return 0;
+    } 
+  }
+#endif
 
   tstack_push("Splotch");
   tstack_push("Setup");
@@ -162,8 +204,10 @@ int main (int argc, const char **argv)
       {
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
+        tstack_push("CUDA");
         if(boost) cuda_rendering(mydevID, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
         else cuda_rendering(mydevID, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
+        tstack_pop("CUDA");
 #endif
 #ifdef OPENCL
         tstack_push("OPENCL");
@@ -235,6 +279,11 @@ int main (int argc, const char **argv)
       }
 
     tstack_pop("Output");
+
+// TIM: FIX THIS cuda_timeReport is not defined anywhere
+//#if (defined(OPENCL) || defined(CUDA))
+//    cuda_timeReport();
+//#endif
     timeReport();
 
     mpiMgr.barrier();
@@ -247,6 +296,7 @@ int main (int argc, const char **argv)
     }
 
     }
+
 #ifdef VS
   //Just to hold the screen to read the messages when debugging
   cout << endl << "Press any key to end..." ;
