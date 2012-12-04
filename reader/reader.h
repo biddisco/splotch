@@ -25,4 +25,5 @@ void hdf5_reader(paramfile &params, std::vector<particle_sim> &points);
 void tipsy_reader(paramfile &params, std::vector<particle_sim> &points);
 void galaxy_reader(paramfile &params, std::vector<particle_sim> &points);
 void h5part_reader(paramfile &params, std::vector<particle_sim> &points);
+void ramses_reader(paramfile &params, std::vector<particle_sim> &points);
 #endif
