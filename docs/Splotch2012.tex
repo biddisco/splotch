@@ -31,16 +31,19 @@ to save resources in an on-going experiment (e.g. stop a simulation that is prod
 unreliable outputs). Finally, visualization is also an effective means to present
 scientific results both to experts and to general public.
 
-In order to visualize effectively huge datasets, suitable tools must be available, able to 
+The astronomical community has a long and consolidated tradition in the exploitation and development
+of graphical and visualization tools. Images, surveys, data cubes, N-body simulations and all the other kinds of
+astronomical data, rely on effective processing and rendering tools, able to             
+tackle their enormous size. Hence, astronomy represent an ideal framework for the 
+development of instruments that, on one side, produce reliable scientific 
+results and, at the same time, can  
 exploit High Performance Computing (hereafter HPC) devices, like multicore, multinode
 supercomputers, that provide the necessary resources in terms of computing power, memory size, 
-storage capacity and performance and network speed. Currently, not many such tools are available.
-%CLA introdurre meglio l'astronomia
-In the astrophysics framework, a recent example is given by Hassan et al. 
-(see \cite{2012ASPC..461...45H} and
+storage capacity and performance and network speed to cope with huge data volumes.
+A recent example is given by Hassan et al. (see \cite{2012ASPC..461...45H} and
 related works - see references therein), 
 who pose specific attention to the coming generations of observational radio surveys, like 
-XXX, ASKAP and SKA (REF), which are expected to produce enormous amounts of data. 
+ASKAP and SKA (REF), which are expected to produce enormous amounts of data. 
 In this case, visualization has a crutial role in exploring data cubes, 
 through a mesh based volume rendering approach, boosted by the efficient usage 
 of GPUs. A further example, is given by Fraedrich et al. \cite{Fraedrich:2009:TMV}, who
@@ -98,9 +101,10 @@ forces. The typical size of a output (``snapshot'') of these simulations spans f
 of Gigabytes up to tens of Terabytes, and typically stores the
 ID, position and velocity together with additional properties, e.g.
 local smoothing length, density and velocity dispersion, of each particle.
+We stress that, although developed for numerical simulations, Splotch is being successfully used 
+also in other application fields, like the visualization of real galaxy systems.
 
-%Splotch however, has been successfully adopted also in other application fields,
-%like the visualization of real galaxy systems, whose 3D shape is carefully modeled
+%, whose 3D shape is carefully modeled
 %according to observational data. Here, more than the data size, the driver is
 %the quality and the level of details of the final images,
 %that have to reproduce the full details and the
@@ -118,19 +122,17 @@ and multi-nodes supercomputers \cite{jin:high-performance}. Different parallel
 programming paradighms (MPI and OpenMP) have been adopted to support all 
 these different systems.
 
-In the last years, the rise of GPUs not just as graphic accelerators but 
+In the last years, however, these ``traditional'' HPC systems
+had to face the rise of GPUs (Graphic Processing Unit) not just as graphic accelerators but 
 also as computational co-processors, able to provide outstanding 
-floating point performance, has catalysed the interest of the HPC 
-community. On suitable
+floating point performance with power consumption comparable to standard CPUs.
+On suitable
 classes of algorithms, GPUs ensure speed-up factors of about one order of magnitude with respect to 
-a standard multicore CPU, with a comparable power consumption.
+a standard multicore CPU.
 Therefore, on HPC systems, graphic accelerators are becoming more and more common. 
 Many supercomputers are equipped with hundreds of GPUs that can overlap 
 their computing power to that of the CPUs, strongly reducing the time-to-solution
 of many high-end scientific problems.
-
-
-%CLAAAAAAAAAAAAA 
 
 In order to exploit this additional computing resources, we have implemented 
 a GPU version of Splotch. A full refactoring of the code has been necessary 
@@ -762,7 +764,7 @@ Since $r_0$ is also critical for the particle classification, we cannot reduce i
 The tile side is also important in order to reduce the load balancing issue among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 Fixed $n_p=256$, after some tests, the maximum real occupancy obtained is only $33\%$ for a tile side ranging from 16 to 8. However the best performance is obtained when $t_s = 12$.
 
-%CLA TO DO: ripetere i test al variare di n_p e mettere tabella
+%CLA MARZIA: ripetere i test al variare di n_p e mettere tabella
 
 \subsection{Performance analysis}
 \label{sec:performance}
@@ -901,31 +903,30 @@ computing time, blue lines the CPU times from 16 cores (light blue) to 1 core
 
 Figure~\ref{fig:gpucpu} presents the comparison between the GPU and the CPU computing time
 in the seven cases under investigation, using 
-1, 2, 4, 8 and 16 cores, exploiting the Splotch's OpenMP \cite{openmpurl} parallel
-capability, so that the GPU performance can be directly compared to
-that achievable on a multicore, multithreads configuration.
-This test allows to get an indication of the actual hardware configuration
-needed, in the different cases, to get performance similar to those
-obtained with the GPU. The simple comparison with a single core would provide 
-just an approximate hint, since parallel codes never scale linearly with
-the number of processors. 
+1, 2, 4, 8 and 16 cores, exploiting 
+the OpenMP \cite{openmpurl} capability of the original Splotch. As a result all GPU timings can be compared directly to
+timings achieved on multi-core and multi-threaded systems, thus giving good indications of non-GPU 
+hardware required to achieve performance similar to GPUs. Simply comparing with a single core would not 
+be a good indication as parallelized codes do not scale linearly with numbers of processors.
 
-%CLA update with ADASS paper
-The figure shows how, at radii comparable 
-or smaller than unity, the GPU's performance is 
-close to that obtained by 8 cores.
-At the same radii, the GPU is from 4 to 5 times faster than the single 
-core. As $R_s$ grows, more and more particles are rendered by the CPU, hence 
-the performance deteriorates, becoming progressively comparable to that
-of 4 and, finally, 2 cores. However, even in
-the case with the largest $R_s$, there is some advantage in using the GPU, 
-due to the Rasterization stage and since 
-a fraction of the particles 
-remain small enough to be rendered by the accelerator.
+The figure capability of the original Splotch. As a result all GPU timings can be compared directly to
+timings achieved on multi-core and multi-threaded systems, thus giving good indications of non-GPU har
+dware required to achieve performance similar to GPUs. Simply comparing with a single core would not b
+e a good indication as parallelized codes do not scale linearly with numbers of processors. 
 
 \medskip
 \noindent
 {\bf GPU timing breakdown}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{images/speedup.pdf}
+\caption{
+Speed-up of the Rendering and Rasterization kernels, defined as the ratio
+between the time on the GPU and that on the CPU.
+}
+\label{fig:speedup}
+\end{figure}
 
 \begin{figure}
 \centering
@@ -953,7 +954,19 @@ to remove non active particles and to pack and copy back particles that have to
 be rendered by the CPU (Select) and, finally,
 to combine the Btiles in the final image (Image combine).   
 
-%CLA put new part here
+In figure~\ref{fig:speedup} we compare the time needed by the Rasterization and Rendering
+kernels on the GPU and the CPU. The speed-up is defined as the ratio between these two
+quantities. For the rendering kernel, a maximum speed-up around 13 is obtained for
+average radii around the unity. For smaller radii the speed-up tends to decrease due 
+to the lower occupancy which reduce the efficiency of the GPU.
+%CLA MARZIA check carefully the previous statement please!!!
+As the radius grows, the performance drops, due to the increasing number of particles
+processed by the CPU.    
+
+Due to the {\it one-thread-per-particle} approach, the Rasterization kernel is strongly
+accelerated by the GPU. The estimated speed-up, ranges between 35 and 25, decreasing 
+with larger values of the radius. On the CPU in fact,  
+%CLA MARZIA how can you explain this?
 
 Figure~\ref{fig:over} presents the contribution of the different functions
 as absolute (left image) and relative (right image) times. This last 
