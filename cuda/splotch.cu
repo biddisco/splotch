@@ -145,13 +145,20 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
 
   // tiles
   size = (ntiles+1)*sizeof(int);
-  error = cudaMalloc((void**) &pgv->d_tiles, size); 
+  error = cudaMalloc((void**) &pgv->d_tiles, size);   // containing number of particles per tile
   if (error != cudaSuccess) 
   {
      cout << "Device Malloc: array tiles allocation error!" << endl;
      return 1;
   }
 
+  error = cudaMalloc((void**) &pgv->d_tileID, size);  // containing tiles ID
+  if (error != cudaSuccess) 
+  {
+     cout << "Device Malloc: array tiles allocation error!" << endl;
+     return 1;
+  }
+  
   //retrieve parameters
   cu_param tparams;
   getCuTransformParams(tparams,fparams,campos,lookat,sky);
@@ -245,7 +252,7 @@ void cu_render1
   size_t SharedMem = (tile_sidex+2*width)*(tile_sidey+2*width)*sizeof(cu_color);
 
   cudaFuncSetCacheConfig(k_render1, cudaFuncCachePreferShared);
-  k_render1<<<dimGrid, dimBlock, SharedMem>>>(nP, pgv->d_pd, pgv->d_active, pgv->d_tiles, pgv->d_pic,
+  k_render1<<<dimGrid, dimBlock, SharedMem>>>(nP, pgv->d_pd, pgv->d_tileID, pgv->d_tiles, pgv->d_pic,
   pgv->d_pic1, pgv->d_pic2, pgv->d_pic3, tile_sidex, tile_sidey, width, nytiles);
   }
 
@@ -268,6 +275,7 @@ void cu_end(cu_gpu_vars* pgv)
   CLEAR_MEM((pgv->d_pic2));
   CLEAR_MEM((pgv->d_pic3));
   CLEAR_MEM((pgv->d_tiles));
+  CLEAR_MEM((pgv->d_tileID));
 
   delete pgv->policy;
   cudaThreadExit();
@@ -280,7 +288,7 @@ long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles,
    size_t tiles = ntiles*sizeof(int);
 
    size_t spareMem = 20*(1<<20);
-   long int arrayParticleSize = gMemSize - 4*ImSize - tiles - spareMem;
+   long int arrayParticleSize = gMemSize - 4*ImSize - 2*tiles - spareMem;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
    long int maxlen = policy->GetMaxGridSize() * policy->GetBlockSize();
    if (len > maxlen) len = maxlen;

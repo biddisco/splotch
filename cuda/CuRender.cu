@@ -89,10 +89,11 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    //compute number of particles for each tile and their starting position
    cudaMemset(gv->d_tiles,0,nxtiles*nytiles+1);
    thrust::device_ptr<int> dev_ptr_nT((int *) gv->d_tiles);
-   thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<int> > end_tiles = thrust::reduce_by_key(dev_ptr_flag, dev_ptr_flag + newParticle, thrust::make_constant_iterator(1), dev_ptr_flag, dev_ptr_nT);
+      thrust::device_ptr<int> dev_ptr_tileID((int *) gv->d_tileID);
+   thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<int> > end_tiles = thrust::reduce_by_key(dev_ptr_flag, dev_ptr_flag + newParticle, thrust::make_constant_iterator(1), dev_ptr_tileID, dev_ptr_nT);
    new_ntiles = end_tiles.second.get() - dev_ptr_nT.get();
 
-   if (dev_ptr_flag[new_ntiles-1] == nxtiles*nytiles) nC3 = dev_ptr_nT[new_ntiles-1];
+   if (dev_ptr_tileID[new_ntiles-1] == nxtiles*nytiles) nC3 = dev_ptr_nT[new_ntiles-1];
    cout << nC3 << " of them are point-like particles" << endl;
 
    thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);

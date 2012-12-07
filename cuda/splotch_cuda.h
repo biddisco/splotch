@@ -73,7 +73,8 @@ struct cu_gpu_vars //variables used by each gpu
   cu_color            *d_pic1;
   cu_color            *d_pic2;
   cu_color            *d_pic3;
-  int	      	      *d_tiles;
+  int	      	      *d_tiles;	 //number of particles per tile
+  int	      	      *d_tileID; // tile ID
   int                 colormap_size;
   int                 colormap_ptypes;
   };
