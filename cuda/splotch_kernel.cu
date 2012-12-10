@@ -112,20 +112,6 @@ __global__ void k_process
 #endif
   I *= dparams.brightness[ptype];
 
-  p[m].x = x;
-  p[m].y = y;
-  p[m].r = r;
-  p[m].I = I;
-
-//coloring
-// get color, associated from physical quantity contained in e.r, from lookup table
-  if (!dparams.col_vector[ptype])
-     e = get_color(ptype, e.r, mapSize, types);
-
-  p[m].e.r = e.r*I;
-  p[m].e.g = e.g*I;
-  p[m].e.b = e.b*I;
-
   p[m].active = false;
   p_active[m] = -1;	// non active particle
 
@@ -151,6 +137,21 @@ __global__ void k_process
   if (miny>=maxy) return;
  
   p[m].active = true;
+  
+  p[m].x = x;
+  p[m].y = y;
+  p[m].r = r;
+  p[m].I = I;
+
+//coloring
+// get color, associated from physical quantity contained in e.r, from lookup table
+  if (!dparams.col_vector[ptype])
+     e = get_color(ptype, e.r, mapSize, types);
+
+  p[m].e.r = e.r*I;
+  p[m].e.g = e.g*I;
+  p[m].e.b = e.b*I; 
+  
   // manage particles outside the image but that influence it
   if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
   if(y < 0.0 || y >= (float)dparams.yres){p_active[m] = -2; return;};
