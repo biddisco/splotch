@@ -119,7 +119,7 @@ in the development of Splotch, specific care has been taken of all the performan
 issues. The software is optimized in order to require the minimum possible
 memory usage and to exploit vector architectures, multi-core processors 
 and multi-nodes supercomputers \cite{jin:high-performance}. Different parallel
-programming paradighms (MPI and OpenMP) have been adopted to support all 
+programming paradigms (MPI and OpenMP) have been adopted to support all 
 these different systems.
 
 In the last years, however, these ``traditional'' HPC systems
@@ -174,13 +174,13 @@ files. The $x$, $y$ and $z$ coordinates are the only compulsory quantities to pr
 These can be cartesian geometric coordinates, but also any other tern 
 of variables, adopted to explore a generic three dimensional parameter space.
 \item
-{\it Rasterization and Processing}: particle coordinates and other geometric quantities 
+{\it Rasterization and Processing}: data is normalized, necessary 
+transformation (e.g. calculations of logarithms of processed quantities) are performed,
+particle coordinates and other geometric quantities 
 (like smoothing lengths, see below) are roto-translated and projected according to the 
 camera configuration (camera position, look-at direction and orientation). 
 Active particles (that actually contributes to the image according to the point of view)
-are identified. Active data is normalized, necessary 
-transformation (e.g. calculations of logarithms of processed quantities) are performed
-and RGB colors (according to read data or to a given
+are identified and RGB colors (according to read data or to a given
 external color table) are assigned to each data point. For simplicity, in the rest 
 of the paper we will refer to this part of the code as {\it Rasterization} algorithm.
 \item
@@ -290,7 +290,7 @@ The CUDA standard offers access to highly parallelized modern GPU architectures 
 bus (hereafter PCI-E). 
 CUDA kernels launch is asynchronous, so that the host can
  perform the following instructions of the code while the device is computing. If one of them requires the completion 
-of the kernel execution, then it is necessary to call the \textit{cudaThreadSyncrhonize}() function before executing it.
+of the kernel execution, then it is necessary to call the \textit{cudaDeviceSyncrhonize}() function before executing it.
 A kernel is written for a single thread and instantiated as a grid of many lightweight parallel threads, organized into blocks of the same size. A thread is an independent element of work and maps to a hardware core (Streaming Processor - SP). A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and ``fast'' shared memory. 
 This is possible because threads belonging to the same block are executed on the same multiprocessor (SM). On the other hand
  synchronization is not possible between blocks of a grid. The limited amount of memory limits the number of 
@@ -468,12 +468,12 @@ $f_{GPU}$ does not have to introduce any higher order dependency from $N_{part}$
 
 \noindent
 Global-shared memory data transfers can be estimated 
-as the number of loads from the global to the shared memories of the available 
+as the number of loads from the global to the shared memory of the available 
 streaming multiprocessors plus the number of stores from the shared to the global memory: 
 \begin{equation}
 N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
 \end{equation}
-where $N_{load,p}$ and $N_{store,p}$ are the number of load and store of the 
+where $N_{load,p}$ and $N_{store,p}$ are the number of loads and stores of the 
 particles, while $N_{store,pix}$ is the number of stores of the image (no loads 
 are expected, since the image is created on the GPU). 
 Furthermore, memory access overhead can be estimated as $N_{Ngpu} \nu_{mem}$,
@@ -523,7 +523,7 @@ A critical term of equation \eqref{tmgpu} is represented by the memory access
 latency $N_{Ngpu} \nu_{mem}$. The access to memory is slow in comparison to
 the available bandwidth, so a small number of accesses, $N_{Ngpu}$, is crucial
 to the performance. This can be achieved by standard caching strategies, that
-however are effective only if data contiguity is guaranteed. In other words,
+however are effective only if data coalesced access (in particular data contiguity) is guaranteed. In other words,
 if contiguous particle data moved to the GPU L2 cache can be reused efficiently
 by the various threads. This is possible only through a global reorganization 
 of the particle data. Such reorganization can however lead to an important
@@ -624,7 +624,7 @@ by default but it can be modified according to the specific use case to tune the
 Figure~\ref{fig:fov} show an example of the particles classification and
 how this can change with the point of view. 
 
-After this operation, inactive and C1 particles are removed. At this point, the remaining particles 
+After this operation, inactive and C1 particles are removed from the device memory. At this point, the remaining particles 
 have to be sorted by the $n_c$ key and the number of particles with the same index has to
 be calculated. 
 %At the end of this operation, all particles with the same tile index are contiguous in memory, 
@@ -665,12 +665,12 @@ thread is almost the same even if particles have different size.
 When all particles of the block are rendered, the contribution of the Btile 
 is added to the image stored in the global memory. 
 Specific care has been taken in avoiding losing contributions coming 
-from overlapping regions (boundaries). Since CUDA blocks are order independent, three more copies of the image in the global memory are necessary to store corners, rows and columns of the boundary respectively without race conditions. The final image is then obtained by adding these copies.
+from overlapping regions (boundaries). Since CUDA blocks are order independent, three more copies of the image in the global memory are necessary to store corners, rows and columns of the boundary respectively without race conditions. The final image is then obtained in a following kernel by adding these copies.
 
 Rendering of C3 particles is simpler, since they affect a single pixel. 
 Thus, only the position of the particle in the global image has to be calculated.
 This can be efficiently carried out by assigning a CUDA thread to each C3 particle. 
-However, since different threads can affect the same pixel, their contribution (fragment) cannot be directly added to the image. Hence, this is done in a second step by allocating in the device memory one buffer (index buffer) to store the corresponding ids of the particles. Finally, the image is produced by reducing by key (pixel id) the fragments, that in this case are equal to the colour associated to the particle in the Rasterization kernel. This consists in a sort of the C3 particles by pixel id, followed by the reduce of 
+However, since different threads can affect the same pixel, their contribution (fragment) cannot be directly added to the image. Hence, this is done in a second step by allocating in the device memory one buffer (index buffer) to store the corresponding pixel linear position of the particles. Finally, the image is produced by reducing by key (pixel id) the fragments, that in this case are equal to the colour associated to the particle in the Rasterization kernel. This consists in a sort of the C3 particles by pixel id, followed by the reduce of 
 contiguous elements falling in the same pixels, by using the corresponding 
 functions provided by the Thrust library.
 
@@ -681,7 +681,7 @@ Performance of the C2 particles rendering algorithm is also influenced
 by the size of the shared memory, which limits the number of resident blocks
 per multiprocessor during the execution of the kernel, thus reducing the theoretical
 %CLA: trattare da qualche parte il load balancing
-occupancy. 
+occupancy (see Section~\ref{sec:gpuperf})). 
 %A further issue is related to the
 %unbalanced work load of each block. In fact the number of particles falling
 %in each tile can vary in a significant way from one tile to another.
@@ -759,7 +759,7 @@ From an algorithmic point of view, it is strictly related to the number of regis
 Another important factor is the size of the number of threads per block. Therefore it is important to find a good trade-off among this factors in order to achieve a high occupancy. In our implementation, the Rendering kernel is the most critical in this sense. This kernel uses a significat part of the shared memory because each block stores here the Btile and a number $n_p$ of particles to be rendered. 
 
 Hence $n_p$, the tile side $t_s$ and its boundary width $r_0$ are parameters that must be carefully tuned:    
-the tile side defines the number of threads per block and, together with the boundary and $n_p$, the amount of shared memory used.
+the tile side defines the number of threads per block and, together with its boundary and $n_p$, the amount of shared memory used.
 Since $r_0$ is also critical for the particle classification, we cannot reduce it as much as we like. This limitation and the necessity to store a fixed number of particles in the shared memory for an efficient access to the global memory, do not allow us to reach a full occupancy of the board for the execution of this kernel. 
 The tile side is also important in order to reduce the load balancing issue among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 Fixed $n_p=256$, after some tests, the maximum real occupancy obtained is only $33\%$ for a tile side ranging from 16 to 8. However the best performance is obtained when $t_s = 12$.
@@ -797,7 +797,7 @@ confirming that the the GPU code preserves the linear dependency from the
 number of particles. 
 The Rasterization time always represent 
 a minor contribution to the overall time, resulting approximately the 10\% of the rendering 
-time. For the original serial implementation, this ratio varies between the 35 and the 60\%.
+time. For the original serial implementation, this ratio varies between the 35\% and the 60\%.
 This proves that the {\it one-thread-per-particle} approach adopted for this kernel
 is extremely effective, making its impact on computing time almost negligible.
 The ``Rendering'' time 
@@ -909,18 +909,13 @@ timings achieved on multi-core and multi-threaded systems, thus giving good indi
 hardware required to achieve performance similar to GPUs. Simply comparing with a single core would not 
 be a good indication as parallelized codes do not scale linearly with numbers of processors.
 
-The figure capability of the original Splotch. As a result all GPU timings can be compared directly to
-timings achieved on multi-core and multi-threaded systems, thus giving good indications of non-GPU har
-dware required to achieve performance similar to GPUs. Simply comparing with a single core would not b
-e a good indication as parallelized codes do not scale linearly with numbers of processors. 
-
 \medskip
 \noindent
 {\bf GPU timing breakdown}
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{images/speedup.pdf}
+%\includegraphics[scale=0.5]{images/speedup.pdf}
 \caption{
 Speed-up of the Rendering and Rasterization kernels, defined as the ratio
 between the time on the GPU and that on the CPU.
@@ -954,11 +949,11 @@ to remove non active particles and to pack and copy back particles that have to
 be rendered by the CPU (Select) and, finally,
 to combine the Btiles in the final image (Image combine).   
 
-In figure~\ref{fig:speedup} we compare the time needed by the Rasterization and Rendering
+In Figure~\ref{fig:speedup} we compare the time needed by the Rasterization and Rendering
 kernels on the GPU and the CPU. The speed-up is defined as the ratio between these two
 quantities. For the rendering kernel, a maximum speed-up around 13 is obtained for
 average radii around the unity. For smaller radii the speed-up tends to decrease due 
-to the lower occupancy which reduce the efficiency of the GPU.
+to the lower occupancy of the C2 particles rendering kernel which reduce the efficiency of the GPU.
 %CLA MARZIA check carefully the previous statement please!!!
 As the radius grows, the performance drops, due to the increasing number of particles
 processed by the CPU.    
