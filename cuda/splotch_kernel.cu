@@ -206,7 +206,7 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
   return x*dparams.yres+y;
 }
 
-#define NPSIZE 256
+#define NPSIZE 128
 
 //device render function k_render1
 // a_eq_e = false is not supported
@@ -244,13 +244,13 @@ __global__ void k_render1
 
   int x,y,k;
   int j = 0;
-  int last = blockDim.x;
+  int last = min(NPSIZE, blockDim.x);
   //now do the rendering: each thread processes a pixel of particle i
 
   while (j < local_chunk_length) 
   {
       k = threadIdx.x; 
-      if(j+k < local_chunk_length)
+      if(k < last)
       {
         cu_particle_sim p = part[end-k-j];
         e[k] = p.e;
@@ -270,8 +270,8 @@ __global__ void k_render1
       }
       __syncthreads(); 
 
-      j += blockDim.x;
-      if (j > local_chunk_length) last = local_chunk_length%blockDim.x;
+      j += last; //blockDim.x;
+      if (j > local_chunk_length) last = local_chunk_length%last; //blockDim.x;
       for (int i=0; i<last; i++)
       {
          int reg = (maxx[i]-minx[i])*(maxy[i]-miny[i]);
