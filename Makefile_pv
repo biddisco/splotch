@@ -64,6 +64,15 @@ OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wst
 ifeq ($(SYSTYPE),"generic")
 # OPTIMIZE += -O2 -g -D TWOGALAXIES
  OPTIMIZE += -O2 -g
+
+# Generic 64bit cuda setup
+ifeq (CUDA,$(findstring CUDA,$(OPT)))
+NVCC       =  nvcc -g
+CUDA_HOME  =  /opt/cuda
+LIB_OPT  += -L$(CUDA_HOME)/lib64 -lcudart
+SUP_INCL += -I$(CUDA_HOME)/include
+endif
+
 endif
 
 # OpenMP compiler switch
@@ -227,7 +236,7 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	      splotch/splotchutils.o splotch/splotch.o \
 	      splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
 	      booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o \
-	      booster/p_randomizer.o reader/ramses_reader.o
+	      reader/ramses_reader.o
 
 OBJS1 = galaxy/Galaxy.o galaxy/GaussRFunc.o galaxy/Box_Muller.o galaxy/ReadBMP.o \
 	galaxy/CalculateDensity.o galaxy/CalculateColours.o galaxy/GlobularCluster.o \
@@ -361,7 +370,7 @@ LIBS   = $(LIB_OPT) $(OMP)
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cu.o:
-	$(NVCC) -c $(CUFLAGS) -o "$@" "$<"
+	$(NVCC) -c --compiler-options "$(CUFLAGS)" -o "$@" "$<"
 
 $(EXEC): $(OBJS)
 	$(CC) $(OPTIONS) $(OBJS) $(LIBS) $(RLIBS) -o $(EXEC) $(LIB_MPIIO) $(LIB_HDF5)

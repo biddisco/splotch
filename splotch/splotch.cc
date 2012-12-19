@@ -280,10 +280,11 @@ int main (int argc, const char **argv)
 
     tstack_pop("Output");
 
-// TIM: FIX THIS cuda_timeReport is not defined anywhere
-//#if (defined(OPENCL) || defined(CUDA))
-//    cuda_timeReport();
-//#endif
+
+  // Also meant to happen when using CUDA - unimplemented.
+  #if (defined(OPENCL))
+     cuda_timeReport();
+  #endif
     timeReport();
 
     mpiMgr.barrier();
