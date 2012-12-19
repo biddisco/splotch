@@ -206,7 +206,7 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
   return x*dparams.yres+y;
 }
 
-#define NPSIZE 128
+#define NPSIZE 64
 
 //device render function k_render1
 // a_eq_e = false is not supported
