@@ -91,13 +91,17 @@ fov=30
 ############################
 # CUDA SETUP
 ############################
-#the maximun pixels in a rendering task
-max_region =800
+#number of GPUs to use per MPI task
+gpu_number=1
 
-#number of cores per node
+#number of cores per node (it is required if gpu_number > 1)
 #cores_number=
 
+#particle_mem_factor= 	(default: 4)
 
-#number of GPUs to use
-gpu_number =1
-
+# RENDERING ALGORITHM PARAMETERS
+#width of the boundary around the image tile (default=8)
+tile_boundary_width = 8
+# x and y side dimension of the image tile, in terms of pixels (default=12)
+tile_x-side=12 
+tile_y-side=12
