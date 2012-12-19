@@ -98,7 +98,7 @@ gpu_number=1
 #cores_number=
 
 #particle_mem_factor= 	(default: 4)
-
+gpu_info=false          (default: true)
 # RENDERING ALGORITHM PARAMETERS
 #width of the boundary around the image tile (default=8)
 tile_boundary_width = 8
