@@ -5,7 +5,7 @@ CuPolicy::CuPolicy(int xres, int yres, paramfile &params)
     res.first = xres;
     res.second = yres;
     boundary_width = params.find<int>("tile_boundary_width", 8); // width of the boundary around the image tile = max particle radius
-    tile_size.first = params.find<int>("tile_x-side", 2*boundary_width);  // x side dimension of the image tile, in terms of pixels
+    tile_size.first = params.find<int>("tile_x-side", 12);  // x side dimension of the image tile, in terms of pixels
     tile_size.second = params.find<int>("tile_y-side", tile_size.first); // y side dimension of the image tile, in terms of pixels
     x_num_tiles = xres/tile_size.first;
     if (xres%tile_size.first) x_num_tiles++;
