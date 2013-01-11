@@ -755,16 +755,56 @@ were used for the code compilation.
 \subsection{GPU performance tuning}
 \label{sec:gpuperf}
 In order to get high performance on the GPGPUs, an important aspect is the occupancy (i.e. exploit the underlying architecture as much as possibile trying to avoid that some core is idle during the kernel execution).
-From an algorithmic point of view, it is strictly related to the number of registers and the size of shared memory used in the kernel because they define the number of resident CUDA blocks (blocks/SM) during the execution. 
-Another important factor is the size of the number of threads per block. Therefore it is important to find a good trade-off among this factors in order to achieve a high occupancy. In our implementation, the Rendering kernel is the most critical in this sense. This kernel uses a significat part of the shared memory because each block stores here the Btile and a number $n_p$ of particles to be rendered. 
+From an algorithmic point of view, it is strictly related to the number of threads per block, the number of registers and the size of shared memory used in the kernel because they define the number of resident CUDA blocks (blocks/SM) during the execution. 
+Therefore it is important to find a good trade-off among these factors in order to achieve a high occupancy. 
 
-Hence $n_p$, the tile side $t_s$ and its boundary width $r_0$ are parameters that must be carefully tuned:    
-the tile side defines the number of threads per block and, together with its boundary and $n_p$, the amount of shared memory used.
-Since $r_0$ is also critical for the particle classification, we cannot reduce it as much as we like. This limitation and the necessity to store a fixed number of particles in the shared memory for an efficient access to the global memory, do not allow us to reach a full occupancy of the board for the execution of this kernel. 
-The tile side is also important in order to reduce the load balancing issue among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
-Fixed $n_p=256$, after some tests, the maximum real occupancy obtained is only $33\%$ for a tile side ranging from 16 to 8. However the best performance is obtained when $t_s = 12$.
+In our implementation, the Rendering kernel is the most critical in this sense. This kernel uses a significat part of the shared memory because each block stores here the Btile and a number $n_p$ of particles to be rendered. 
+Hence $n_p$, the tile side $t_s$ and its boundary width $r_0$ are parameters that must be carefully tuned. 
+Since $r_0$ is critical both for the particle classification and the CUDA block size, we cannot reduce it as much as we like (we suggest to set $r_0=6$ or $r_0=8$), therefore our tests were focused on finding the best configuration for $n_p$ and $t_s$ which are mainly related to the amount of shared memory used and quite independent of the image resolution. Notice that the tile side is also relevant to the load balancing among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 
-%CLA MARZIA: ripetere i test al variare di n_p e mettere tabella
+Some possible configurations for these two parameters and the corresponding algorithm performance are presented in Table~\ref{tab:tuning}. In our tests the boundary width and the image resolution are fixed so that the amount of particles processed by the device is always the same. The rendering time includes the computation for all the types of particles (the host contribution is completely overlapped by the device because we have considered a test case were most of the particles are processed by the GPU). Since the tile size affects other computation parts of the code (e.g. particle distribution among tiles), we also consider the total CUDA time as a performance index of the rendering algorithm. 
+The necessity to store the Btile and a fixed number of particles in the shared memory for an efficient access to the global memory, do not allow us to reach a full occupancy of the board for the execution of the rendering kernel: the maximum real occupancy obtained is $66.7\%$ both for $n_p = 64$ and $n_p=32$. However the best performance is obtained when $n_p=64$ and $t_s = 12$, which is the configuration used in the following tests.
+
+\begin{table}
+\caption{Rendering performance results according to different values of the kernel parameters. We set $r_0=8$ and the resolution $N_{pix}=1024$.}
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+$n_p$ & $t_s$ (pixels) & Kernel & Rendering & Total CUDA \\
+& & Occupancy & Time (sec.) & Time (sec.) \\
+\hline
+256   & 16 & 0.333 & 9.186 & 16.38 \\
+\hline
+      & 14 & 0.333 & 7.345  & 15.30 \\
+\hline
+      & 12 & 0.333 & 6.881  & 14.01 \\
+\hline
+      & 10 & 0.333 & 6.768 & 14.06 \\
+\hline
+128   & 16 & 0.333 & 9.159 & 17.00 \\
+\hline
+      & 14 & 0.333 & 7.302  & 15.30 \\
+\hline
+      & 12 & 0.5 & 5.074  & 12.08 \\
+\hline
+      & 10 & 0.5 & 5.016 & 12.30 \\ 
+\hline
+64    & 16 & 0.5 & 6.516 & 14.23 \\
+\hline
+      & 14 & 0.5 & 5.387 & 12.55 \\
+\hline
+      & 12 & 0.667 & 4.423 & 11.34 \\
+\hline
+      & 10 & 0.667 & 4.393 & 11.45 \\ 
+\hline
+32    & 12 & 0.667 & 4.515 & 12.41 \\
+\hline
+      & 10 & 0.667 & 4.483 & 12.43 \\ 
+\hline
+\end{tabular}
+\end{center}
+\label{tab:tuning}
+\end{table}
 
 \subsection{Performance analysis}
 \label{sec:performance}
@@ -927,7 +967,7 @@ between the time on the GPU and that on the CPU.
 \centering
 \includegraphics[scale=0.5]{images/over.eps}
 \caption{Overhead of the various components implemented for the Splotch's
-GPU refactoring. Absloute time is shown on the left image. On the right
+GPU refactoring. Absolute time is shown on the left image. On the right
 the ratio between the time spent in each component and the total GPU 
 overhead is shown.}
 \label{fig:over}
