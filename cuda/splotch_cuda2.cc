@@ -24,7 +24,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   int ntiles = policy->GetNumTiles();
 
   // num particles to manage at once
-  float factor = g_params.find<float>("particle_mem_factor", 2);
+  float factor = g_params.find<float>("particle_mem_factor", 3);
   long int len = cu_get_chunk_particle_count(policy, sizeof(cu_particle_sim), ntiles, factor);
 
   if (len <= 0)
@@ -57,9 +57,11 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
      if (endP > nP) endP = nP;
      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres);
      // combine host results of chunks
+     tstack_push("combine images");
      for (int x=0; x<xres; x++)
       for (int y=0; y<yres; y++)
         pic[x][y] += Pic_host[x][y];
+     tstack_pop("combine images");
      cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
      startP = endP;
     }

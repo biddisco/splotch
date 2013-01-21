@@ -202,11 +202,11 @@ int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres
     return 0;
   }
   tstack_pop("Data copy");
-
+  tstack_push("combine images");
   for (int x=0; x<xres; x++)
    for (int y=0; y<yres; y++)
       Pic_host[x][y] += Pic[x*yres+y];
-
+  tstack_pop("combine images");
   delete[] Pic;
   return 1;
 }
