@@ -87,7 +87,8 @@ void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_render1
   (int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
 void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv);
-void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv);
+void cu_addC3(int nP, int nC3, int res, cu_gpu_vars* pgv);
+void cu_add_images(int res, cu_gpu_vars* pgv);
 void cu_end(cu_gpu_vars* pgv);
 long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles, float pfactor);
 void getCuTransformParams(cu_param &para_trans,

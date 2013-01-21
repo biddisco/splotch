@@ -62,35 +62,35 @@ __global__ void k_process
   float r = p[m].r;
   float I = p[m].I;
   int ptype = p[m].type;
-  cu_color e;
-  e.r=p[m].e.r;
-  e.g=p[m].e.g;
-  e.b=p[m].e.b;
+ // cu_color e;
+ // e.r=p[m].e.r;
+ // e.g=p[m].e.g;
+ // e.b=p[m].e.b;
 
   //now do x,y,z
-  float zminval = 0.0;
-  float zmaxval = 1e23;
+ // float zminval = 0.0;
+ // float zmaxval = 1e23;
   float x,y,z;
   x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
   y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
 
-  if(z <= zminval){p[m].active = false; p_active[m]=-1;return;};
-  if(z >= zmaxval){p[m].active = false; p_active[m]=-1;return;};
+  if(z <= 0.0f){p[m].active = false; p_active[m]=-1;return;};
+  if(z >= 1e23){p[m].active = false; p_active[m]=-1;return;};
   //do r
   float xfac2 = dparams.xfac;
-  const float   res2 = 0.5f*dparams.xres;
-  const float   ycorr = 0.5f*(dparams.yres-dparams.xres);
+  //const float   res2 = 0.5f*dparams.xres;
+  //const float   ycorr = 0.5f*(dparams.yres-dparams.xres);
   if (!dparams.projection)
     {
-    x = res2 * (x+dparams.fovfct*dparams.dist)*xfac2;
-    y = res2 * (y+dparams.fovfct*dparams.dist)*xfac2 + ycorr;
+    x = 0.5f*dparams.xres * (x+dparams.fovfct*dparams.dist)*xfac2;
+    y = 0.5f*dparams.xres * (y+dparams.fovfct*dparams.dist)*xfac2 + 0.5f*(dparams.yres-dparams.xres);
     }
   else
     {
     xfac2=1.f/(dparams.fovfct*z);
-    x = res2 * (x+dparams.fovfct*z)*xfac2;
-    y = res2 * (y+dparams.fovfct*z)*xfac2 + ycorr;
+    x = 0.5f*dparams.xres * (x+dparams.fovfct*z)*xfac2;
+    y = 0.5f*dparams.xres * (y+dparams.fovfct*z)*xfac2 +  0.5f*(dparams.yres-dparams.xres);
     }
 
 #ifdef SPLOTCH_CLASSIC
@@ -102,7 +102,7 @@ __global__ void k_process
   I *= 8.f*dparams.h2sigma/(sqrtf(Pi)*r*r);
 #endif
 
-  r *= res2*xfac2;
+  r *= 0.5f*dparams.xres*xfac2;
   const float rcorr= sqrtf(r*r + dparams.minrad_pix*dparams.minrad_pix)/r;
   r *= rcorr;
 #ifdef SPLOTCH_CLASSIC
@@ -116,7 +116,7 @@ __global__ void k_process
   p_active[m] = -1;	// non active particle
 
   // compute region occupied by the partile
-  float raux=dparams.rfac;
+  //float raux=dparams.rfac;
   const float rfacr=dparams.rfac*r;
   int minx=int(x-rfacr+1.f);
   if (minx>=dparams.xres) return;
@@ -145,6 +145,11 @@ __global__ void k_process
 
 //coloring
 // get color, associated from physical quantity contained in e.r, from lookup table
+  cu_color e;
+  e.r=p[m].e.r;
+  e.g=p[m].e.g;
+  e.b=p[m].e.b;
+
   if (!dparams.col_vector[ptype])
      e = get_color(ptype, e.r, mapSize, types);
 
@@ -309,7 +314,10 @@ __global__ void k_render1
   for (int i=threadIdx.x; i<tile_sidex*tile_sidey; i=i+blockDim.x) 
   {
      j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
-     pic[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+     k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+     pic[k].r += Btile[j].r;
+     pic[k].g += Btile[j].g;
+     pic[k].b += Btile[j].b;
   }
   __syncthreads();
 
@@ -326,7 +334,10 @@ __global__ void k_render1
     for (int i = threadIdx.x; i<tile_sidex*width; i=i+step) 
     {
       j = k0 + i + (i/width)*(tile_sidey+width); //add correction due to the boundary
-      pic1[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+      pic1[k].r += Btile[j].r;
+      pic1[k].g += Btile[j].g;
+      pic1[k].b += Btile[j].b;
     }
   }
   else if ((threadIdx.x >= step)  && (ymax < dparams.yres))
@@ -335,7 +346,10 @@ __global__ void k_render1
     for (int i = threadIdx.x - step; i<tile_sidex*width; i=i+step) 
     {
       j = k0 + i + (i/width)*(tile_sidey+width); //add correction due to the boundary
-      pic1[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+      pic1[k].r += Btile[j].r;
+      pic1[k].g += Btile[j].g;
+      pic1[k].b += Btile[j].b;
     }
   }
   __syncthreads();
@@ -347,7 +361,10 @@ __global__ void k_render1
     for (int i=threadIdx.x; i<tile_sidey*width; i=i+step) 
     {
       j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
-      pic2[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+      pic2[k].r += Btile[j].r;
+      pic2[k].g += Btile[j].g;
+      pic2[k].b += Btile[j].b;
     }
   }
   else if ((threadIdx.x >= step)  && (xmax < dparams.xres))
@@ -356,7 +373,10 @@ __global__ void k_render1
     for (int i=threadIdx.x - step; i<tile_sidey*width; i=i+step) 
     {
       j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
-      pic2[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+      pic2[k].r += Btile[j].r;
+      pic2[k].g += Btile[j].g;
+      pic2[k].b += Btile[j].b;
     }
   }
   __syncthreads();
@@ -367,28 +387,40 @@ __global__ void k_render1
   if ((threadIdx.x < blockDim.x/4) && (xo > 0) && (yo > 0))
   {
      j = threadIdx.x + (threadIdx.x/width)*(tile_sidey+width);
-     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+     k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+     pic3[k].r += Btile[j].r;
+     pic3[k].g += Btile[j].g;
+     pic3[k].b += Btile[j].b;
   }
   else if ((threadIdx.x >= blockDim.x/4 && threadIdx.x < blockDim.x/2) && (xo > 0) && (ymax < dparams.yres))
   {
      k0 = width + tile_sidey; 
      i = threadIdx.x - blockDim.x/4; 
      j = k0 + i + (i/width)*(tile_sidey+width);
-     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+     k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+     pic3[k].r += Btile[j].r;
+     pic3[k].g += Btile[j].g;
+     pic3[k].b += Btile[j].b;
   }
   else if ((threadIdx.x >= blockDim.x/2 && threadIdx.x < 3*blockDim.x/4) && (xmax < dparams.xres) && (yo > 0))
   {
      k0 = (width + tile_sidex)*(tile_sidey+2*width);
      i = threadIdx.x - blockDim.x/2; 
      j = k0 + i + (i/width)*(tile_sidey+width);
-     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+     k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+     pic3[k].r += Btile[j].r;
+     pic3[k].g += Btile[j].g;
+     pic3[k].b += Btile[j].b;
   }
   else if ((threadIdx.x >= 3*blockDim.x/4) && (xmax < dparams.xres) && (ymax < dparams.yres))
   {
      k0 = (width + tile_sidex)*(tile_sidey+2*width) + width + tile_sidey;
      i = threadIdx.x - 3*blockDim.x/4; 
      j = k0 + i + (i/width)*(tile_sidey+width);
-     pic3[pixelLocalToGlobal(j,xo,yo,width,tile_sidey)] = Btile[j];
+     k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
+     pic3[k].r += Btile[j].r;
+     pic3[k].g += Btile[j].g;
+     pic3[k].b += Btile[j].b;
   }
 
 }

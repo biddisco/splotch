@@ -19,7 +19,7 @@
 
 using namespace std;
 
-int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, COLOUR *Pic, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres)
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres)
 {
   cudaError_t error;
 
@@ -116,13 +116,6 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //   particle proper rendering 
   // ----------------------------
 
-  //clear the device image
-  size_t size_Im = xres * yres * sizeof(cu_color);
-  cudaMemset(gv->d_pic,0,size_Im);
-  cudaMemset(gv->d_pic1,0,size_Im);
-  cudaMemset(gv->d_pic2,0,size_Im);
-  cudaMemset(gv->d_pic3,0,size_Im);
-
   tstack_push("CUDA Rendering");
 
   // C3 particles rendering on the device
@@ -181,20 +174,39 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   }
 
-  tstack_push("images combine");
-  cu_combine(newParticle, nC3, xres * yres, gv);
+  tstack_push("point-like particles rendering");
+  cu_addC3(newParticle, nC3, xres * yres, gv);
   cudaThreadSynchronize();
-  tstack_pop("images combine");
+  tstack_pop("point-like particles rendering");
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
 
   tstack_pop("CUDA Rendering");
 
-  // copy back the image
-  tstack_push("Data copy");
-  error = cudaMemcpy(Pic, gv->d_pic, size_Im, cudaMemcpyDeviceToHost);
-  if (error != cudaSuccess) cout << "Device Memcpy error!" << endl; 
-  tstack_pop("Data copy");
-
   if (host_part) cudaFreeHost(host_part);
   return nHostPart+newParticle;
+}
+
+int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres)
+{
+  int res = xres*yres;
+  // add images on the device: pic+pic1+pic2+pic3
+  cu_add_images(res, gv);
+
+  COLOUR *Pic = new COLOUR [res];
+  // copy back the image
+  tstack_push("Data copy");
+  cudaError_t error = cudaMemcpy(Pic, gv->d_pic, res * sizeof(cu_color), cudaMemcpyDeviceToHost);
+  if (error != cudaSuccess) 
+  {
+    cout << "Device Memcpy error!" << endl;
+    return 0;
+  }
+  tstack_pop("Data copy");
+
+  for (int x=0; x<xres; x++)
+   for (int y=0; y<yres; y++)
+      Pic_host[x][y] += Pic[x*yres+y];
+
+  delete[] Pic;
+  return 1;
 }

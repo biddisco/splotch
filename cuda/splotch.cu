@@ -124,24 +124,28 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
      cout << "Device Malloc: image allocation error!" << endl;
      return 1;
    }
+  cudaMemset(pgv->d_pic,0,size);
   error = cudaMalloc((void**) &pgv->d_pic1, size); 
   if (error != cudaSuccess)
    {
      cout << "Device Malloc: image 1 allocation error!" << endl;
      return 1;
    }
+  cudaMemset(pgv->d_pic1,0,size);
   error = cudaMalloc((void**) &pgv->d_pic2, size); 
   if (error != cudaSuccess)
    {
      cout << "Device Malloc: image 2 allocation error!" << endl;
      return 1;
    }
+  cudaMemset(pgv->d_pic2,0,size);
   error = cudaMalloc((void**) &pgv->d_pic3, size); 
   if (error != cudaSuccess)
    {
      cout << "Device Malloc: image 3 allocation error!" << endl;
      return 1;
    }
+  cudaMemset(pgv->d_pic3,0,size);
 
   // tiles
   size = (ntiles+1)*sizeof(int);
@@ -224,8 +228,7 @@ void cu_init_colormap(cu_colormap_info h_info, cu_gpu_vars* pgv)
   pgv->colormap_ptypes = h_info.ptypes;
   }
 
-
-void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv)
+void cu_add_images(int res, cu_gpu_vars* pgv)
 {
   //fetch grid dim and block dim and call device
   dim3 dimGrid, dimBlock;
@@ -233,6 +236,16 @@ void cu_combine(int nP, int nC3, int res, cu_gpu_vars* pgv)
 
   cudaFuncSetCacheConfig(k_add_images, cudaFuncCachePreferL1);
   k_add_images<<<dimGrid,dimBlock>>>(res, pgv->d_pic, pgv->d_pic1, pgv->d_pic2, pgv->d_pic3);
+}
+
+void cu_addC3(int nP, int nC3, int res, cu_gpu_vars* pgv)
+{
+  //fetch grid dim and block dim and call device
+  dim3 dimGrid, dimBlock;
+  pgv->policy->GetDimsBlockGrid(res, &dimGrid, &dimBlock);
+
+  cudaFuncSetCacheConfig(k_add_images, cudaFuncCachePreferL1);
+  //k_add_images<<<dimGrid,dimBlock>>>(res, pgv->d_pic, pgv->d_pic1, pgv->d_pic2, pgv->d_pic3);
 
   if (nC3 > 0)
   {
