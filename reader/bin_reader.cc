@@ -10,9 +10,9 @@
 
 using namespace std;
 
-namespace {
-
 float smooth_factor = 1.0;
+
+namespace {
 
 void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   int &nfields, int64 &mybegin, int64 &npart, int64 &npart_total)
@@ -74,11 +74,12 @@ void bin_reader_finish (vector<particle_sim> &points, bifstream &inp)
   for (tsize i=0; i<points.size(); ++i)
     {
     points[i].type=0;
-    minr = min(minr,points[i].r);
-    maxr = max(maxr,points[i].r);
+    minr = min(minr,points[i].x);
+    maxr = max(maxr,points[i].x);
     }
   mpiMgr.allreduce(maxr,MPI_Manager::Max);
   mpiMgr.allreduce(minr,MPI_Manager::Min);
+  //cout << ">>>>>>>> : " << minr << " , " << maxr << endl;
   inp.close();
   }
 
@@ -109,7 +110,7 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
     points[i].x = buffer[qty_idx[0]];
     points[i].y = buffer[qty_idx[1]];
     points[i].z = buffer[qty_idx[2]];
-    points[i].r = (qty_idx[3]>=0) ? buffer[qty_idx[3]] : smooth_factor;
+    points[i].r = (qty_idx[3]>=0) ? smooth_factor*buffer[qty_idx[3]] : smooth_factor;
     points[i].I = (qty_idx[4]>=0) ? buffer[qty_idx[4]] : 0.5;
     points[i].e.r = (qty_idx[5]>=0) ? buffer[qty_idx[5]] : 1.0;
     //points[i].e.r = buffer[qty_idx[5]];
@@ -143,24 +144,24 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points)
       inp.get(&buffer[0],npart);
       }
 
-#define CASEMACRO__(num,str,noval) \
+#define CASEMACRO__(num,str,noval,ss) \
       case num: \
         if (qty_idx[num]>=0) \
-          for (int64 i=0; i<npart; ++i) points[i].str = buffer[i]; \
+          for (int64 i=0; i<npart; ++i) points[i].str = ss*buffer[i]; \
         else \
           for (int64 i=0; i<npart; ++i) points[i].str = noval; \
         break;
 
     switch(qty)
       {
-      CASEMACRO__(0,x,0)
-      CASEMACRO__(1,y,0)
-      CASEMACRO__(2,z,0)
-      CASEMACRO__(3,r,smooth_factor)
-      CASEMACRO__(4,I,.5)
-      CASEMACRO__(5,e.r,1.0)
-      CASEMACRO__(6,e.g,0)
-      CASEMACRO__(7,e.b,0)
+      CASEMACRO__(0,x,0,1.0)
+      CASEMACRO__(1,y,0,1.0)
+      CASEMACRO__(2,z,0,1.0)
+      CASEMACRO__(3,r,smooth_factor,smooth_factor)
+      CASEMACRO__(4,I,.5,1.0)
+      CASEMACRO__(5,e.r,1.0,1.0)
+      CASEMACRO__(6,e.g,0,1.0)
+      CASEMACRO__(7,e.b,0,1.0)
       }
     }
 
