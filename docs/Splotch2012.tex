@@ -50,13 +50,52 @@ The software package is completely self-contained with no dependencies from exte
 \item
 {\it Data Loading} - Several readers are available supporting different formats. As a minimum ($x$, $y$, $z$) scalars are required representing the positions of particles in cartesian or any other (user-defined) customised coordinate systems.
 \item
-{\it Rasterization and Processing} - Firstly, normalisation together with other necessary calculations (e.g. logarithms of processed quantities) are performed. Secondly, particle coordinates and other geometric quantities (e.g. smoothing lengths - see below) are roto-translated and projected according to camera settings. At this point all active particles (i.e. contributing to the final rendering) are identified and assigned to RGB colours via user-defined colour tables. For the sake of simplicity in the following sections this phase will be referred to as {\it Rasterization}.
+{\it Rasterization and Processing} - Firstly, normalisation together with other necessary 
+calculations (e.g. logarithms of processed quantities) are performed. Secondly, particle 
+coordinates and other geometric quantities (e.g. smoothing lengths - see below) are 
+roto-translated and projected according to camera settings. At the end of this
+stage particles coordinates are calculated in the image reference frame. At this point all active 
+particles (i.e. contributing to the final rendering) are identified.
+For the sake of simplicity in the following sections 
+this phase will be referred to as {\it Rasterization}.
 \item
-{\it Rendering} - The contributions of individual particles to pixels of the final image are calculated via a radiative transfer equation - see below.
-\item
-{\it Saving} - Final compositions of the image are performed and saved (in the current version as TGA images).
-\end{itemize}
-The non GPU-assisted original Splotch realisation is described in \cite{2008NJPh...10l5006D}. 
+{\it Rendering} - The contributions of individual particles to pixels of the final 
+image are calculated solving the radiative transfer equation  \cite{1991par..book.....S}:
+\begin{equation}\label{rad}
+\frac{d\bf{I_{\lambda}}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I_{\lambda}}(x))\rho_p^{\lambda}(x),
+\end{equation}
+where $I_{\lambda}$ is the intensity of pixel $x$ for the three color components, 
+$\lambda$ = R, G and B, $\rho_p^{\lambda}(x)$ is a quantity transported by the particle $p$ 
+(e.g. temperature or density),
+which contributes to the intensity of color $\lambda$ of pixel $x$ and $\bf{E}_p$ and $\bf{A}_p$
+are the coefficients of radiation emission and absorption respectively. The two coefficents 
+can be associated to a quantity transported by the particle $p$.
+
+Equation \eqref{rad} is solved for each color component using a finite differences 
+approximation along the lines of sight originating from each pixel. Each 
+particle contributes to a pixel according to a Gaussian distribution:
+\begin{equation}\label{smooth}
+\rho_p(x)=\rho_p\exp(-r^2/\sigma_p^2),
+\end{equation}
+where $r$ is the distance of the particle $p$ from the pixel and 
+$\sigma_p$ is a smoothing length deployed for modelling the particle size. 
+Although individual particles contribute to all pixels of the rendered images, 
+for practical purposes it is handy to use a compact support of this
+Gaussian distribution. The distribution is considered to be zero at a given
+distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative factor.
+Any rays passing $p$ at larger distances are unaffected by $\rho_p$.
+
+The RGB components can be defined by different quantities. For instance, colors 
+can be associated to the three components of the velocity field $\bf v$, so that 
+$\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, 
+like the mass density or the temperature, can be mapped
+to the RGB components via colour look-up tables (or palette). 
+
+The emission and absorption coefficient have in general different values. For parallel processing
+$\bf{E}_p=\bf{A}_p$ is set, so that the final image does not depend on the particles
+integration order. This strongly simplify the parallel implementation and improve
+performance, without affecting, in most cases, the image quality.
+
 %The parallelised Splotch implementation mixing OpenMP / MPI, together with a discussion %on the performances achieved can be found in \cite{jin:high-performance}.
 %In the same figure, also the parts subject to the GPU implementation are shown, 
 %anticipating the discussion of the following sections.The workflow is shown in Figure~\ref{fig:workflow}, where the parts of the algorithm parallelized
@@ -67,31 +106,7 @@ The non GPU-assisted original Splotch realisation is described in \cite{2008NJPh
 %\caption{Splotch workflow}
 %\label{fig:workflow}
 %\end{figure}
-To facilitate the presentation in this paper we provide below a brief description of the most computationally demanding component of Splotch realised in two stages:
 
-\begin{itemize}
-\item
-A particle $p$ with coordinates $\vec r$ transports a scalar quantity $\rho_p(\vec r)$ 
-(e.g. representing mass density or temperature) used for modulating the contribution of $p$ to rendered images according to a Gaussian distribution: 
-\begin{equation}\label{smooth}
-\rho_p(\vec r)=\rho_{0,p}\exp(-r^2/\sigma_p^2),
-\end{equation}
-where $\sigma_p$ is a smoothing length deployed for modelling relevant particle sizes. Although individual particles contribute to all pixels of the rendered images, for practical purposes it is handy to use a compact support of this
-Gaussian distribution. The distribution is considered to be zero at a given
-distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative factor.
-Any rays passing $p$ at larger distances are unaffected by $\rho_p$.
-
-\item
-The red, green and blue colour components for $p$ are calculated independently. The intensity $\bf{I}$ (for an RGB channel) for a ray travelling through a dataset is modelled by a radiative transfer equation \cite{1991par..book.....S} as follows:
-\begin{equation}\label{rad}
-\frac{d\bf{I}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I}(x))\rho_p(x),
-\end{equation}
-The terms $\bf{E}_p$, $\bf{A}_p$ represent the strength of radiation emission and absorption respectively.  
-For prescribed scalar quantities associated with $p$ (e.g. density, velocity dispersion, temperature or others), the mapping to the RGB components of $\bf{E}_p$ and $\bf{A}_p$ is implemented as a transfer function via colour look-up tables (or palettes). Although default palettes are provided these can be user-customised to allow maximum flexibility. For prescribed vector quantities associated with $p$ (e.g. velocity, magnetic field or others) their ($x$, $y$, $z$) components can be mapped to the RGB components of $\bf{E}_p$ and $\bf{A}_p$. 
-%The optical depth of $p$ can be modulated too using another scalar property (e.g. density).
-\end{itemize}
-In general it is recommended to set $\bf{E}_p=\bf{A}_p$, which typically produces visually appealing images. This is presently a necessary setting for the CUDA (and MPI?) implementation of Splotch. 
-%This constraint will be eliminated in the next releases of the code.
 \section{The GPU Code}
 \label{sec:gpu-code}
 GPUs represent an efficient tool to improve the performance of a numerical code.
