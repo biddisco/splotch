@@ -67,7 +67,7 @@ image are calculated solving the radiative transfer equation  \cite{1991par..boo
 where $I_{\lambda}$ is the intensity of pixel $x$ for the three color components, 
 $\lambda$ = R, G and B, $\rho_p^{\lambda}(x)$ is a quantity transported by the particle $p$ 
 (e.g. temperature or density),
-which contributes to the intensity of color $\lambda$ of pixel $x$ and $\bf{E}_p$ and $\bf{A}_p$
+which contributes to the intensity of color $\lambda$ of pixel $x$ and $\bf{E}_p$, and $\bf{A}_p$
 are the coefficients of radiation emission and absorption respectively. The two coefficents 
 can be associated to a quantity transported by the particle $p$.
 
@@ -75,9 +75,10 @@ Equation \eqref{rad} is solved for each color component using a finite differenc
 approximation along the lines of sight originating from each pixel. Each 
 particle contributes to a pixel according to a Gaussian distribution:
 \begin{equation}\label{smooth}
-\rho_p(x)=\rho_p\exp(-r^2/\sigma_p^2),
+\rho_p^{\lambda}(x)=\rho_p^{\lambda}\exp(-r^2/\sigma_p^2),
 \end{equation}
-where $r$ is the distance of the particle $p$ from the pixel and 
+where $\rho_p^{\lambda}$ is the value read from the data file, 
+$r$ is the distance of the particle $p$ from the pixel and 
 $\sigma_p$ is a smoothing length deployed for modelling the particle size. 
 Although individual particles contribute to all pixels of the rendered images, 
 for practical purposes it is handy to use a compact support of this
