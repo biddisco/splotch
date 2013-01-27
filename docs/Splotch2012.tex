@@ -101,19 +101,9 @@ to the RGB components via colour look-up tables (or palettes). The emission and 
 %\label{fig:workflow}
 %\end{figure}
 
-\section{The GPU Code}
+\section{GPU Considerations}
 \label{sec:gpu-code}
-GPUs represent an efficient tool to improve the performance of a numerical code.
-However, algorithms have to be reimplemented in order to run on such accelerators. 
-Often, a complete redesign is necessary to achieve good performace and in many
-cases such performance is much lower than the nominal one. Nevertheless, even in 
-the case of moderate performance improvements, a GPU enabled code allows the 
-user to exploit the full power of the majority of the HPC systems currently 
-available, which combine usual multicore processors with multiple graphic accelerators.
-
-Splotch has undergone such refactoring process, adopting the CUDA paradigm 
-for an effective usage of the GPU. The basic steps accomplished in
-the realization of the GPU code, are presented in the next sections. 
+Although GPUs offer an excellent platform for improving performances of numerical codes, a complete redesign of algorithms is often necessary and dramatic improvements cannot be guaranteed. Nevertheless, even when moderate performance gains are achieved, GPU enabled codes allow full exploitation of modern HPC systems combining multicore processors with multiple GPUs. Splotch has been refactored by exploiting CUDA as discussed in section 4. We review below the fundamentals of CUDA programming so as to discuss details of a performance model developed to guide our developments.
 
 %The potential dependency of any pixel of the image from any data point,
 %makes the distribution of work between GPU's cores challenging to implement
@@ -121,38 +111,19 @@ the realization of the GPU code, are presented in the next sections.
 %In section XXX, we propose a simple performance model that has
 %driven the implementation of the GPU enabled Splotch kernels.
 
-\subsection{The CUDA programming model} 
+\subsection{CUDA Paradigm} 
 \label{sec:cuda}
 
-For the implementation of the GPU code we have adopted the CUDA 
-programming model \cite{cudaurl},
-that is currently the standard ``de facto'' for GPU programming.
-CUDA is developed by NVIDIA, closely mapping the underlying
-hardware (NVIDIA cards), leading to an optimal tuning of the performance.
-The limited portability represents its main drawback, somewhat mitigated
-by the diffusion of NVIDIA GPUs.
-The CUDA standard offers access to highly parallelized modern GPU architectures via a simplified C/C++ or Fortran language interface. It is designed to support joint CPU/GPU execution of an application, where serial sections are performed by the CPU (host), while those which exhibit rich amount of data parallelism, are performed by the GPU (device) as CUDA kernels. The CPU and the GPU have separate memory spaces so data must be transferred from each other via PCI Express 
-bus (hereafter PCI-E). 
-CUDA kernels launch is asynchronous, so that the host can
- perform the following instructions of the code while the device is computing. If one of them requires the completion 
-of the kernel execution, then it is necessary to call the \textit{cudaDeviceSyncrhonize}() function before executing it.
-A kernel is written for a single thread and instantiated as a grid of many lightweight parallel threads, organized into blocks of the same size. A thread is an independent element of work and maps to a hardware core (Streaming Processor - SP). A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves through barrier synchronization and ``fast'' shared memory. 
-This is possible because threads belonging to the same block are executed on the same multiprocessor (SM). On the other hand
- synchronization is not possible between blocks of a grid. The limited amount of memory limits the number of 
-blocks that can simultaneously reside in the same SM. Moreover when one block stalls the runtime system switch to 
-a different one, hence there is no guaranteed order of execution.
+The CUDA programming model \cite{cudaurl} by NVIDIA currently represents the standard ``de facto'' for GPU programming. The underlying GPUs are closely mapped leading to optimal performances. The obvious drawback of limited portability is somewhat mitigated by the diffusion of NVIDIA GPUs. Access to highly parallelized modern GPU architectures is offered through a simplified C/C++ or Fortran API supporting joint CPU/GPU execution. Serial procedures are performed by the CPU (host), while those which exhibit rich amount of data parallelism are performed by the GPU (device) realized as CUDA kernels. The CPU and GPU have their own memory spaces so data transfers from each other must use the PCI Express bus (hereafter PCI-E). 
 
-Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. They are scheduling units in SM:
-all threads in the same warp execute the same instruction (Single-Instruction, Multiple-Thread). Hence, programmers should minimize the number of execution branches inside the same warp. It is convenient to assign a large number of warps to each SM (high occupancy), because the long waiting time of some warp instructions is hidden by executing instructions from other warps  and therefore the selection of ready warps for execution does not introduce any idle time into the execution timeline (zero-overhead thread scheduling). 
+The launch of CUDA kernels is asynchronous allowing the host to execute code instructions while the device is computing. If either of them requires a kernel execution to be completed then it is necessary to call the function \textit{cudaDeviceSyncrhonize}(). A kernel is instantiated as a grid of lightweight parallel threads organized into blocks of the same size. A thread represents an independent work element and maps to a hardware core (or streaming processor - SM). A block is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves via barrier synchronization and fast shared memory. This is possible because threads belonging to the same block are executed on the same SM. However synchronization is not possible between blocks. The limited amount of memory limits the number of  blocks that can reside in a particular SM simultaneously. Moreover when the execution of a block stalls, the runtime system switches to a different block - in other words there is no guaranteed order for the execution of blocks.
 
-\subsection{Performance model and analysis}
+Once a block is assigned to a SM, it is partitioned into 32-thread units called warps. All threads belonging to a particular warp are scheduled to execute the same instruction (Single-Instruction, Multiple-Thread). To optimise performance programmers must thus ensure a minimal number of execution branches inside warps. Assigning a large number of warps to each SM (high occupancy) can be beneficial as the long waiting time of some warp instructions can be hidden by executing instructions from other warps and therefore selection of ready warps for execution does not introduce any idle times into the overall execution timeline - achieving zero-overhead thread scheduling. 
+
+\subsection{Performance Model}
 \label{sec:model}
 
-Splotch's main computational kernels are {\it Rasterization} and {\it Rendering}.
-The initial data load phase, though often demanding, will not be treated
-here since it is not subject to the GPU implementation. The final save image stage
-is not relevant for the performance.
-
+The main computation in Splotch occurs during the stages of {\it Rasterization} and {\it Rendering}.
 %The main parameters of the model are $N_{part}$, the number of particles
 %to be processed, and $N_{pix}$, the number of pixels of the final image
 %(in general we can consider square images with $N_{pix}=N_{pix}^2$). For 
@@ -172,7 +143,6 @@ is not relevant for the performance.
 %& N_{Image} \propto N_{pix}^2,
 %\end{align}
 %where $N_{kernel}$ is the number of operations for a given kernel.
-
 %The Normalization, Geometry and Coloring kernels are  
 %perfectly data parallel, each particle being processed independently from the others.
 %Thus they are expected to fit the GPU programming model. 
@@ -182,122 +152,72 @@ is not relevant for the performance.
 %This dependency leads to strong changes in the computational effort and makes
 %the work-load hard to balance, when this is distributed among many-processors
 %systems.
-
-In order to model the Splotch algorthm's performance, we split the different timings
-required to perform the main computational steps. 
-The Splotch's performance can be quantified as time spent on the CPU, time spent on the GPU
-and time spent to move data among different memories:
+The overall performance can be quantified as times spent on the CPU, the GPU
+and for performing data transfers among different memories:
 \begin{equation}\label{Ts}
 T_{TOT} = T_{cpu} + T_{pci} + T_{gpu} + T_{Mgpu},
 \end{equation}
-where $T_{TOT}$ is the total time, 
-$T_{cpu}$ is the time spent on the CPU, $T_{gpu}$ is the time
-spent on the GPU for computation, $T_{pci}$ is the time needed to move data from
-the CPU to GPU and back through the PCI-E bus and $T_{Mgpu}$ is the time 
-spent in moving data among the global and the shared memory on the GPU.
+where $T_{TOT}$ denotes total times, 
+$T_{cpu}$ and $T_{gpu}$ represent times spent on the CPU and GPU respectively, $T_{pci}$ are times needed for data transfers from the CPU to GPU and vice-versa via PCI-E, and finally $T_{Mgpu}$ are times required for data transfers between the global and shared memory on the GPU. Although a class of particles (see our classification strategy described in section 4.1) is handled by the CPU, their processing times ($T_{cpu}$) are in general negligible compared to $T_{gpu}$, so these are embedded into GPU processing times by using the asyncronous operational mode of CUDA. The main terms of $\eqref{Ts}$ are discussed in more detail in the remainder of this section.  
+%\medskip
+%\noindent
+%\subsubsection{CPU Computation}
+%{\bf CPU Computation}
+%\noindent
 
-\medskip
-\noindent
-{\bf Data transfers}
 
-\noindent
-Data offload to the GPU is one of the critical steps in the algorithm. 
-The minimum amount of data 
-to be moved to the GPU is represented by the particles information 
-(coordinates, fields, smoothing length). If $S_{part}$ is the
-size of a single particle (in the current implementation $S_{part}=35$ bytes) and 
-$N_{part}$ is the number of particles to be processed,
-$N_{part} S_{part}$ is the total amount of particle data that has to be moved to the device.
-The final processed image (the result) is the only data that has to be copied back to
-the CPU. Thus, in principle, only $12 N_{pix}^2$ bytes (R, G, B float values) have to be transferred at
-the end of the rendering phase. Here, $N_{pix}$ is the linear resolution in pixels of the 
-image (we consider square images, the generalization to rectangular images being
-straightforward). 
-
-Particles' data offload can be accomplished either in a single or in a few operations, 
-depending on the data size (if it fits the available GPU memory) and/or
-in order to exploit CUDA streams, which allow to overlap communication 
-and computation, hiding the data transfer overhead.  
-In order to implement this solution, data has to be
-split in chunks and passed to the GPU one after the other, in a loop. Whilst chuncks 
-are transferred, computation on previous chuncks, already stored on the GPU
-memory, can be carried out. 
-The data transfer time can be estimated as:
+\subsubsection{Data Transfers ($T_{pci}$)}
+Let us denote by $S_{part}$ the number of \textit{Bytes} required for representing single particles (35 \textit{Bytes} are used in the current implementation). Assuming an overall number of particles $N_{part}$, the overall amount of \textit{Bytes} required to be transferred to the GPU is $N_{part} S_{part}$. Additionally the rendered images of Splotch calculated in the GPU are also required to be transferred to the CPU. Assuming square images (generalisation to rectangular images is pretty straightforward) and denoting $N_{pix}$ horizontal (or vertical) image resolutions, a number of $12 N_{pix}^2$ \textit{Bytes} (R, G, B float values) has to be transferred. To load particles into the GPU effectively datasets are split into chunks and are transferred to the GPU by using a loop - one after the other. As chuncks are being transferred, computation on chuncks already residing in the GPU memory is performed. The overall data transfer times are:
 \begin{equation}\label{pci}
 T_{pci} =  N_{chunks} \tau_{pci} + {N_{part} S_{part} + 12 N_{pix}^2 \over 
 \mu_{pci}},
 \end{equation}
-where $\tau_{pci}$ is the transfer time latency and $\mu_{pci}$ is the
-bus bandwidth, $N_{chunks}$ is the number 
-of copy stages. 
-Equation $\eqref{pci}$ shows that performance
-depends linearly both on the number of particles and on the number of pixels.
-In the case of large datasets we have that
-$N_{part} >> N_{pix}^2$. For instance, the test case adopted
-in Section~\ref{sec:results} consists in $N_{part} \sim 10^8$
-and $N_{pix}^2 \sim 10^6$. In such cases, the contribution of $N_{pix}^2$
-to $T_{pci}$ is negligible.
+where $\tau_{pci}$, $\mu_{pci}$ represent transfer time latency and bus bandwidth, and $N_{chunks}$ is the number of copy stages. Equation $\eqref{pci}$ indicates that performances depend linearly not only on the number of particles but also on the number of image resolution. Assuming very large-scale datasets ($N_{part} >> N_{pix}^2$) the contribution of $N_{pix}^2$ to $T_{pci}$ becomes negligible (as an example see test case described in section~\ref{sec:results} in which $N_{part} \sim 10^8$
+and $N_{pix}^2 \sim 10^6$).
 
-Splitting data in sub-chunks does not
-cause any meaningful overhead if the copy latency is kept small, that is:
+% and depending upon the relevant sizes (i.e. relative to the on board GPU memory) , we can deploy either a single or in a few operations, 
+%depending on the data size (if it fits the available GPU memory) and/or
+%in order to exploit CUDA streams, which allow to overlap communication 
+%and computation, hiding the data transfer overhead. 
+Splitting datasets into chunks does not cause any meaningful overheads if the copy latency is small, that is:
 \begin{equation}
 N_{chunks} < {N_{part} S_{part}\over \tau_{pci}\mu_{pci}}.
 \end{equation}
-For instance, if $N_{part}$ is $O(10^8)$, $N_{chunks}$ can be up to $10^5$ before
-contributing to the overhead.
+As an example if $N_{part}$ is $O(10^8)$, then $N_{chunks}$ can be up to $10^5$ before
+generating any overheads. Data transfers in addition to the ones described by equation $\eqref{pci}$ may be required by Splotch (for details on this aspect see Section~\ref{sec:implementation}).
 
-Equations $\eqref{pci}$ considers only the main data tranfers of
-the Splotch's algorithm. However, further data tranfers may be necessary.
-This aspect will be treated in Section~\ref{sec:implementation}.
-
-\medskip
-\noindent
-{\bf GPU computation}
-
-\noindent
-The time spent in processing the particles on the GPU can be estimated as:
+%\medskip
+%\noindent
+%{\bf GPU Computation}
+\subsubsection{GPU Computation ($T_{gpu}$)}
+%\noindent
+The time required for processing particles on the GPU can be estimated by:
 \begin{equation}
-T_{gpu} = N_{op}/\nu_{GPU},
+T_{gpu} = N_{op}/\nu_{GPU}
 \end{equation}
-where $\nu_{GPU}$ is the GPU flops/sec rate and
+where $\nu_{GPU}$ is the GPU's flops/sec rate, and $N_{op}$ is the overall number of operations:
 \begin{equation}\label{ops}
 N_{op} = N_{part}(\alpha + \gamma R_s^2) + f_{GPU},
 \end{equation}
-with $\alpha$ and $\gamma$ estimating the number of operation of 
-the Rasterization kernel  
-and of the Rendering kernel respectively. The function 
-$f_{GPU}$ takes into account any GPU specific kernel (i.e. a kernel
-which is not present in the original code), necessary to the GPU implementation. 
+with $\alpha$ and $\gamma$ representing the number of operations in the \textit{Rasterization} and \textit{Rendering} kernels respectively. The function 
+$f_{GPU}$ takes into account other GPU specific kernels (i.e. procedures
+which are not present in the original Splotch) that are necessary for our GPU implementation. %CLAUDIO - PLEASE CLARIFY THIS LAST SENTENCE E.G. GIVE A REFERENCE TO A SECTION BELOW? ALSO NOT SURE WHY GAMMA IS CHOSEN, MIGHT BE EASIER FOR THE READER TO USE ALPHA AND BETA SYMBOLS INSTEAD (OTHERWISE THEY MAY ASSUME THERE MUST BE A BETA SOMEWHERE)?
+Finally the parameter $R_s$ encapsulates an expectation value for the radius of particles $R_s = <r(p)>$,
 
-The parameter $R_s$ is the most peculiar dependency of the Splotch's rendering
-algorithm. It is defined as the expectation value of the particles radii:
-$R_s = <r(p)>$, where
 \begin{equation}\label{radius}
 r(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
 \end{equation} 
-$A(p)$ being the function to tranform to image coordinates,
-$\chi$ a proper factor defining the compact support size (see  
-equation \eqref{smooth}) and $S_{box}$ the computational box size.
-The particle radius depends both on the intrinsic properties of the particle
-and on the camera position. The same particle can have a negligible size
-from one point of view and it can affect the whole image from a different one.
-On the other hand, particles close to each other can have different radii depending
-on their intrinsic characteristics. The dependency from $r(p)$ poses 
-two major problems to the GPU implementation of the rendering 
-algorithm. First, two threads acting on different particles could try 
-to update the same pixel (see Figure~\ref{fig:particles}).
-This can cause frequent concurrent accesses to memory
-which lead to wrong results. 
-Second, different particles can affect a different number of pixels. Therefore, a good load balancing
-between threads is hard to achieve.  
-Specific solution must be designed to circumvent such difficulties 
-without paying big penalties in terms of performance (as would happen, for instance,
-adopting atomic updates, supported by CUDA, but too slow to be used for continuous 
-updates of the pixels values).
+where $A(p)$ is the transformation to rendered image coordinates, $\chi$ is a suitably defined factor determining compact support size (see equation \eqref{smooth}) and $S_{box}$ represents a computational box for input datasets.
+%CLAUDIO - SIGMA P IS NOT REFERRED TO?
+The radius of individual particles depends both on their intrinsic properties and on camera settings. Although a particle may exhibit a negligible size from one point of view, it may affect the entire rendered image from another. Also, particles close to each other can have different radius depending on their intrinsic characteristics.
 
-Finally, it is interesting to stress that $T_{gpu}$ depends linearly on the number of particles. 
-This feature should be preserved by the GPU implementation. In particular, the term 
-$f_{GPU}$ does not have to introduce any higher order dependency from $N_{part}$. 
+The dependency from $r(p)$ is the source of two major problems for GPU implementations. Firstly, two threads acting on different particles could try 
+to update the same image coordinates (see Figure~\ref{fig:particles}) causing concurrent accesses to memory thus leading to erroneous results. 
+Secondly, different particles can affect different numbers of pixels. Therefore, it is hard to achieve optimal load balancing among threads.  
+Customized solutions must thus be adopted to circumvent the aforementioned problems while avoiding paying large performance penalties. For example, this would be the case if atomic updates supported by CUDA were to be adopted - this method would be too slow to be used effectively for continuously 
+updating rendered image pixels. %CLAUDIO - THE CONCEPT IN THIS LAST SENTENCE MUST BE EXPLAINED MORE CLEARLY - CAN YOU REPHRASE?
+
+To conclude this section we observe that $T_{gpu}$ depends linearly on the number of particles ($N_{part}$). This feature is important to be preserved in a GPU implementation of Splotch - $f_{GPU}$ should not introduce any higher order dependency. 
 
 \begin{figure}
 \centering
@@ -307,90 +227,58 @@ $f_{GPU}$ does not have to introduce any higher order dependency from $N_{part}$
 \end{figure}
 
 
-\medskip
-\noindent
-{\bf Memory accesses}
-
-\noindent
-Global-shared memory data transfers can be estimated 
-as the number of loads from the global to the shared memory of the available 
-streaming multiprocessors plus the number of stores from the shared to the global memory: 
+%\medskip
+%\noindent
+%{\bf Memory Access}
+\subsubsection{Accessing Memory ($T_{Mgpu}$)}
+%\noindent
+Data transfers between global and shared memory can be estimated 
+as the sum of the number of loads of available 
+streaming multiprocessors from global to shared memory plus number of stores from shared to global memory:%CLAUDIO - THE CONCEPTS OF LOADS OF AVAILABLE SM'S AND STORES MUST BE EXPLAINED CLEARLY TO AID BETTER UNDERSTANDING FROM UNFAMILIAR READERS 
 \begin{equation}
 N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
 \end{equation}
-where $N_{load,p}$ and $N_{store,p}$ are the number of loads and stores of the 
-particles, while $N_{store,pix}$ is the number of stores of the image (no loads 
-are expected, since the image is created on the GPU). 
-Furthermore, memory access overhead can be estimated as $N_{Ngpu} \nu_{mem}$,
-where $N_{Ngpu}$ is the total amount of memory accesses, $\nu_{mem}$
-is the memory frequency. 
-Hence, the time for moving data among memories is:
+where $N_{load,p}$ and $N_{store,p}$ are the number of loads and stores of individual 
+particles, and $N_{store,pix}$ is the number of stores of rendered images (no loads 
+are expected since images are created on the GPU). 
+Furthermore, memory access overheads can be estimated as $N_{Ngpu} \nu_{mem}$. $N_{Ngpu}$ is the overall number of memory accesses and $\nu_{mem}$ represents memory frequency. The overall times required for moving data among memories are thus calculated by:
 \begin{equation}\label{tmgpu}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part}
 + 12 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
 + N_{Ngpu} \nu_{mem} + g_{GPU},
 \end{equation}
+%CLAUDIO - THIS EQUATION MUST BE SPLIT SOMEHOW INTO TWO LINES TO BE MORE LEGIBLE FOR THE READER
 where $\mu_{gpu}$ is the global memory bandwidth
 and $g_{GPU}$ the time 
-spent on memory accesses by the GPU specific
-functions. 
+spent on memory accesses by GPU specific functions. Equation \eqref{tmgpu} indicates that performances related to global-shared memory data transfers depend on $N_{load,p}$, $N_{store,p}$ - these quantify amounts of data transferred from global to shared memories and vice-versa. Achieved performances depend on memory bandwidth.
 
-Equation \eqref{tmgpu} shows that the performance related to global-shared memory 
-data transfers
-depends on the two parameters $N_{load,p}$ and $N_{store,p}$, that quantify the
-total amount of data transferred from the global to the shared memories 
-and back, whose performance depends on the memory bandwidth.
-The optimal solution would be to have only a single data transfer
-($N_{load,p} = 1$ and $N_{store,p} = 0$), with each thread
-fully processing a different particle. This {\it one-thread-per-particle} solution guarantees
-the best exploitation of the GPU architecture.
-This solution, though ideal, is not practical, the main reason being the frequent race conditions
-rising from threads trying to concurrently update the same pixels.
-Only the Rasterization kernel is data parallel and can adopt the {\it one-thread-per-particle}
-approach. Each particle, in fact, is processed independently from the others. For this kernel
-$N_{load,p} = 1$ and, since processed particles
-have to be copied back to the global memory to be rendered, $N_{store,p} = 1$.
+An optimal solution would be to realize a single data transfer only
+(i.e. $N_{load,p} = 1$ and $N_{store,p} = 0$) with each thread processing a different particle fully. Such an approach ({\it one-thread-per-particle}) would guarantee optimal exploitation of GPU architectures. Nevertheless this is not practical, the main reason being that frequent race conditions may arise, i.e. threads attempting to concurrently update identical pixels in the rendered images.
+Only our {\it Rasterization} kernel is data parallel and can thus implement fully the {\it one-thread-per-particle} approach - in fact particles are processed independently. Consequently $N_{load,p} = 1$ and since processed particles must be copied back to the global memory to be rendered $N_{store,p} = 1$. The {\it Rendering} kernel is envisaged to require an additional data load, but no more store 
+stages are necessary (particles can be ``forgotten'' once their contribution is calculated).
 
-The rendering part is expected to require a futher particle data load step, while no more store 
-stages are necessary (particles can be ``forgotten'' after their contribution to the assigned pixels 
-is calculated).
-
-The $T_{Mgpu}$ term depends linearly on the image size. Once more, 
-for large datasets, this term appears to be negligible. However, since
+We observe that $T_{Mgpu}$ depends linearly on image sizes, though for very large-scale datasets this term is negligible. However, as
 particles falling outside the field of view are not processed (``inactive'' particles,
-see Figure~\ref{fig:fov} for an example),
-depending on the camera position, the ratio between the number of active particles
+see Figure~\ref{fig:fov}),
+%LEGEND OF THIS FIGURE TOO LONG - SHOULD FIX IN THE FINAL VERSION
+depending on camera settings, the ratio between the number of active particles
 and the number of pixels can substantially decrease. Therefore, 
 the image related term can give a meaningful contribution to
-the computing time. 
+the computing time.%CLAUDIO - PLEASE EXPLAIN MORE CLEARLY THE LAST TWO SENTENCES I.E. RATIO BETWEEN ACTIVE PARTICLES AND NUMBER OF PIXELS? ALSO MAYBE THIS PARA SHOULD BE MERGED WITH THE NEXT PARA?
 
-A critical term of equation \eqref{tmgpu} is represented by the memory access
+A critical term in equation \eqref{tmgpu} is represented by the memory access
 latency $N_{Ngpu} \nu_{mem}$. The access to memory is slow in comparison to
 the available bandwidth, so a small number of accesses, $N_{Ngpu}$, is crucial
-to the performance. This can be achieved by standard caching strategies, that
-however are effective only if data coalesced access (in particular data contiguity) is guaranteed. In other words,
-if contiguous particle data moved to the GPU L2 cache can be reused efficiently
+to performance. This can be achieved by standard caching strategies, that
+however are effective only if data coalesced access (in particular data contiguity) can be guaranteed, i.e. if contiguous particle data moved to the GPU L2 cache can be reused efficiently
 by the various threads. This is possible only through a global reorganization 
-of the particle data. Such reorganization can however lead to an important
-working and memory usage overhead.
+of the particle data. However such a reorganization can generate non-neglible working and memory usage overheads.
+% CLAUDIO - CLARIFY, WORKING OVERHEAD?
+Any additional memory access specific to GPU implementations of Splotch must be realised so as to avoid introduction of excessive overheads thus preserving the overall linear scalability related to the number of particles.
+%
 
-Any further memory access specific to the GPU implementation algorithm,
-must be implemented 
-avoiding the introduction of eccessive overheads and preserving the overall
-linear scalability with the number of particles.
 
-\medskip
-\noindent
-{\bf CPU computation}
-
-\noindent
-The final contribution to equation \eqref{Ts} is $T_{cpu}$. In principle this should be negligible, 
-the large part of the work being performed by the GPU. Actually, the CPU
-can contribute to process part of the particles. Using
-CUDA asyncronous operational mode, this work can be overlapped 
-to the GPU work. 
-
-\section{The CUDA implementation}
+\section{CUDA Implementation}
 \label{sec:implementation}
 
 As soon as data is loaded in the global memory of the GPU, each particle is processed 
@@ -459,7 +347,8 @@ $i(p) = -1$, if it belongs to C1 class;
 $0 \le i(p) < N$, if it belongs to C2 class and its centre falls in the $i$-th tile of the image;  
 \item
 $i(p) = N$, if it belongs to C3 class, i.e. is point-like.
-\end{itemize}
+\end{itemize}\bibliography{master}
+
 The parameter $N$ is the number of tiles the image is divided in. It is defined as
 \begin{equation}
 N_t = {N_{pix}^2\over t_x*t_y},   
