@@ -1,13 +1,26 @@
-\documentclass[11pt]{article}
+\documentclass[1p]{elsarticle}
+
 \usepackage{amssymb,amsmath}
 \usepackage{graphicx} 
+
+\journal{Journal of Parallel and Distributed Computing}
+
+\begin{document}
+\begin{frontmatter}
 
 \title{Splotch on GPUs Using the CUDA Paradigm}
 %\author{M. Rivi, C. Gheller, M.Krokos}
 \author{.........}
 
-\begin{document}
-\maketitle
+\begin{abstract}
+...
+\end{abstract}
+
+\begin{keyword}
+Scientific visualization \sep GPU \sep CUDA
+\end{keyword}
+
+\end{frontmatter}
 
 \section{Introduction}
 \label{sec:intro}
@@ -277,8 +290,9 @@ of the particle data. However such a reorganization can generate non-neglible wo
 Any additional memory access specific to GPU implementations of Splotch must be realised so as to avoid introduction of excessive overheads thus preserving the overall linear scalability related to the number of particles.
 %
 
+ 
 
-\section{CUDA Implementation}
+\section{The CUDA implementation}
 \label{sec:implementation}
 
 As soon as data is loaded in the global memory of the GPU, each particle is processed 
@@ -347,8 +361,7 @@ $i(p) = -1$, if it belongs to C1 class;
 $0 \le i(p) < N$, if it belongs to C2 class and its centre falls in the $i$-th tile of the image;  
 \item
 $i(p) = N$, if it belongs to C3 class, i.e. is point-like.
-\end{itemize}\bibliography{master}
-
+\end{itemize}
 The parameter $N$ is the number of tiles the image is divided in. It is defined as
 \begin{equation}
 N_t = {N_{pix}^2\over t_x*t_y},   
@@ -451,7 +464,6 @@ megabytes of data. The same holds for the reduction of the two partial images.
 
 \section{Tests and results}
 \label{sec:results}
-
 We have analyzed the performance of Splotch's GPU implementation in a number of cases, designed in 
 order to stress the different features of the algorithm, 
 comparing the results 
@@ -500,7 +512,6 @@ Some possible configurations for these two parameters and the corresponding algo
 The necessity to store the Btile and a fixed number of particles in the shared memory for an efficient access to the global memory, do not allow us to reach a full occupancy of the board for the execution of the rendering kernel: the maximum real occupancy obtained is $66.7\%$ both for $n_p = 64$ and $n_p=32$. However the best performance is obtained when $n_p=64$ and $t_x = 12$, which is the configuration used in the following tests.
 
 \begin{table}
-\caption{Rendering performance results according to different values of the kernel parameters. We set $r_0=8$ and the resolution $N_{pix}=1024$.}
 \begin{center}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
@@ -536,13 +547,13 @@ $n_p$ & $t_x$ (pixels) & Kernel & Rendering & Total CUDA \\
       & 10 & 0.667 & 4.483 & 12.43 \\ 
 \hline
 \end{tabular}
+\caption{Rendering performance results according to different values of the kernel parameters. We set $r_0=8$ and the resolution $N_{pix}=1024$.}
 \end{center}
 \label{tab:tuning}
 \end{table}
 
 \subsection{Performance analysis}
 \label{sec:performance}
-
 The main tests' parameters are the data size ($N_{part}$),
 the image size ($N_{pix}^2$) and the distribution of the number of pixels 
 per particle ($r(p)$) and its expectation value $R_s$.
@@ -602,8 +613,6 @@ Figure~\ref{fig:panorama} shows the images created by Splotch at the different r
 The image size is kept constant in all the tests, with $N_{pix}$=1000.
 
 \begin{table}
-\caption{Average particle radius (left column), number of active particle (center)
-and computing time (right column) for seven tests performed varying the average radius.}
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
@@ -625,6 +634,8 @@ $R_s$ (pixels) & Active Particles & Time (sec.) \\
 \hline
 \end{tabular}
 \end{center}
+\caption{Average particle radius (left column), number of active particle (center)
+and computing time (right column) for seven tests performed varying the average radius.}
 \label{tab:radius}
 \end{table}
 
@@ -689,7 +700,7 @@ be a good indication as parallelized codes do not scale linearly with numbers of
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{images/speedup.pdf}
+\includegraphics[scale=0.5]{images/speedup.eps}
 \caption{
 Speed-up of the Rendering and Rasterization kernels, defined as the ratio
 between the time on the GPU and that on the CPU.
@@ -771,7 +782,6 @@ the GPU (e.g. at large radii), such solution would be anyway ineffective.
 
 \section{Conclusions and Next Steps}
 \label{sec:conclusions}
-
 The CUDA implementation of Splotch allows to exploit GPUs 
 for the visualization of huge data volumes, such those produced both 
 by experiments/observations and by computer simulations. Current trends
@@ -807,7 +817,8 @@ MPI capabilities of Splotch. This step is expected to pose important
 challenges especially to find the optimal balance in the workload of each of the different 
 system components.
 
-\bibliographystyle{plain}
+
+\bibliographystyle{model1-num-names}
 \bibliography{master.bib}	
 
 \end{document}
