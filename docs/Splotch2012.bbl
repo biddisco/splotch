@@ -1,0 +1,91 @@
+\begin{thebibliography}{10}
+
+\bibitem{2008NJPh...10l5006D}
+K.~{Dolag}, M.~{Reinecke}, C.~{Gheller}, S.~{Imboden},
+\newblock {Splotch: visualizing cosmological simulations},
+\newblock {New Journal of Physics}, 10 (2008) 125006.
+
+\bibitem{Fraedrich:2009:TMV}
+R.~{Fraedrich}, J.~{Schneider}, R.~{Westermann},
+\newblock Exploring the "millennium run" - scalable rendering of large-scale
+  cosmological datasets,
+\newblock {IEEE Transactions on Visualization and Computer Graphics
+  (Proceedings Visualization / Information Visualization 2009)}, 15(6),
+  November-December 2009.
+
+\bibitem{2012ASPC..461...45H}
+A.~H. {Hassan}, C.~J. {Fluke}, D.~G. {Barnes},
+\newblock {Unleashing the Power of Distributed CPU/GPU Architectures: Massive
+  Astronomical Data Analysis and Visualization Case Study},
+\newblock in: P.~{Ballester}, D.~{Egret}, N.~P.~F. {Lorente} (Eds.),{
+  Astronomical Data Analysis Software and Systems XXI}, {
+  ASP Conference Series}, 461 (2012) p.~45.
+
+\bibitem{cudaurl}
+http://developer.nvidia.com/cuda/.
+
+\bibitem{openmpurl}
+http://openmp.org.
+
+\bibitem{visit}
+https://wci.llnl.gov/codes/visit/.
+
+\bibitem{thrusturl}
+http://thrust.github.com.
+
+\bibitem{splash}
+http://users.monash.edu.au/ dprice/splash/.
+
+\bibitem{tipsyurl}
+http://www hpcc.astro.washington.edu/tools/tipsy/tipsy.html.
+
+\bibitem{deus}
+http://www.deus consortium.org/.
+
+\bibitem{hdf5}
+http://www.hdfgroup.org/HDF5/.
+
+\bibitem{gadgeturl}
+http://www.mpa garching.mpg.de/gadget/.
+
+\bibitem{millennium}
+http://www.mpa garching.mpg.de/galform/virgo/millennium/.
+
+\bibitem{paraview}
+http://www.paraview.org/.
+
+\bibitem{horizon}
+http://www.projet horizon.fr.
+
+\bibitem{vtk}
+http://www.vtk.org/.
+
+\bibitem{jin:high-performance}
+Z.~Jin, M.~ Krokos, M.~Rivi, C.~Gheller, K.~Dolag, M.~Reinecke,
+\newblock High-performance astrophysical visualization using Splotch,
+\newblock {Procedia Computer Science}, 1 (2010) pp.1775--1784.
+
+\bibitem{2012arXiv1208.3206K}
+R.~{Kaehler}, O.~{Hahn}, T.~{Abel},
+\newblock {A Novel Approach to Visualizing Dark Matter Simulations},
+\newblock {ArXiv e-prints}, August 2012.
+
+\bibitem{RadixSort}
+D.~{Merrill}, A.~{Grimshaw},
+\newblock Revising sorting for gpgpu stream architectures,
+\newblock {Technical Report CS2010-03, Department of Computer Science,
+  University of Virginia}, February 2010.
+
+\bibitem{1991par..book.....S}
+F.~{Shu},
+\newblock Physics of Astrophysics: Volume I Radiation,
+\newblock Published by University Science Books, 648 Broadway, Suite 902, New
+  York, NY 10012, 1991.
+
+\bibitem{2011ApJS..195...11W}
+J.~{Woodring}, K.~{Heitmann}, J.~{Ahrens}, P.~{Fasel}, C.-H. {Hsu}, S.~{Habib},
+ A.~{Pope},
+\newblock {Analyzing and Visualizing Cosmological Simulations with ParaView},
+\newblock {The Astrophysical Journal Supplement Series}, 195:11, July 2011.
+
+\end{thebibliography}
