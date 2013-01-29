@@ -66,8 +66,7 @@ The implementation of Splotch is self-contained with no dependencies from extern
 {\it Rasterization and Processing} - Firstly, normalisation together with other necessary 
 calculations (e.g. logarithms of processed quantities) are performed. Secondly, particle 
 coordinates and other geometric quantities (e.g. smoothing lengths - see below) are 
-roto-translated and projected according to camera settings. At the end of this
-stage particle coordinates are calculated in the image reference frame. % CLAUDIO THIS PREVIOUS SENTENCE IS UNCLEAR TO THE UNFAMILIAR READER, I.E. WHAT IS THE IMAGE REFERENCE FRAME? I SUGGEST TO DELETE COMPLETELY
+roto-translated and projected according to camera settings. 
 At this point all active 
 particles (i.e. contributing to the final rendering) are identified.
 For the sake of simplicity in the following sections 
@@ -76,13 +75,14 @@ this phase will be referred to as {\it Rasterization}.
 {\it Rendering} - The contributions of individual particles to pixels of the final 
 image are calculated by solving the radiative transfer equation  \cite{1991par..book.....S}:
 \begin{equation}\label{rad}
-\frac{d\bf{I_{\lambda}}(x)}{dx}=(\bf{E}_p-\bf{A}_p\bf{I_{\lambda}}(x))\rho_p^{\lambda}(x),
+\frac{d\bf{I_{\lambda}}(x)}{dx}=(E_p-A_p\bf{I_{\lambda}}(x))\rho_p^{\lambda}(x),
 \end{equation}
 where $I_{\lambda}$ is the intensity of pixel $x$ for its three color components ($\lambda$ = R, G and B), $\rho_p^{\lambda}(x)$ is a physical quantity transported by the particle $p$ 
 (e.g. temperature or density),
-which contributes to the intensity of color $\lambda$ of pixel $x$, and $\bf{E}_p$ and $\bf{A}_p$
+which contributes to the intensity of color $\lambda$ of pixel $x$, and $E_p$ and $A_p$
 are the coefficients of radiation emission and absorption respectively. These two coefficients 
-can be associated to a physical quantity transported by particle $p$.% CLAUDIO THIS PREVIOUS SENTENCE IS UNCLEAR TO THE UNFAMILIAR READER, I SUGGEST TO EITHER REPHRASE OR DELETE COMPLETELY
+can be set either constant or they can depend from one of the quantities associated 
+to the particle (e.g. the mass density or the pressure of a particle). 
 \end{itemize}
 Equation \eqref{rad} is solved for each color component using a finite differences 
 approximation along a line of sight originating from each pixel on the final rendering. Each 
@@ -101,7 +101,7 @@ distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative 
 The RGB components can be defined by exploiting different physical quantities. For instance, colors 
 can be associated to the three components of the velocity field $\bf v$, so that 
 $\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped
-to the RGB components via colour look-up tables (or palettes). The emission and absorption coefficients have in general different values. However for parallel implementations of Splotch $\bf{E}_p=\bf{A}_p$ is deployed, so that final renderings are independent of integration order of particles. This is not a severe restriction, it allows to simplify parallel implementations of the algorithm to so as to improve performances, without affecting, in most cases, the rendering quality.% CLAUDIO THIS PREVIOUS SENTENCE IS UNCLEAR TO THE UNFAMILIAR READER, WHAT EXACTY DO WE MEAN BY SAYING THAT IN MOST CASES THE RENDERING QUALITY IS NOT AFFECTED, A REVIEWER MAY ASK IN WHICH CASES IT IS AFFECTED AND BY HOW MUCH?  WE NEED TO CLARIFY HERE IF SETTING A = E IS A SERIOUS RESTRICTION OR NOT - IN ANY CASE WE CAN SAY THAT THE ORIGINAL SPLOTCH HAS A = E AND WE HAVE JUST OPTIMISED THAT FORM OF SPLOTCH BY USING CUDA SO IT DOES NOT AFFECT THE WORK PRESENTED IN THIS PAPER - BUT IT HAS TO BE CLARIFIED AS EXPLAINED PREVIOUSLY.
+to the RGB components via colour look-up tables (or palettes). The emission and absorption coefficients have in general different values. However for parallel implementations of Splotch $E_p=A_p$ is deployed, so that final renderings are independent of integration order of particles. This is not a severe restriction, it allows to simplify parallel implementations of the algorithm to so as to improve performances, without affecting, in most cases, the rendering quality.% CLAUDIO THIS PREVIOUS SENTENCE IS UNCLEAR TO THE UNFAMILIAR READER, WHAT EXACTY DO WE MEAN BY SAYING THAT IN MOST CASES THE RENDERING QUALITY IS NOT AFFECTED, A REVIEWER MAY ASK IN WHICH CASES IT IS AFFECTED AND BY HOW MUCH?  WE NEED TO CLARIFY HERE IF SETTING A = E IS A SERIOUS RESTRICTION OR NOT - IN ANY CASE WE CAN SAY THAT THE ORIGINAL SPLOTCH HAS A = E AND WE HAVE JUST OPTIMISED THAT FORM OF SPLOTCH BY USING CUDA SO IT DOES NOT AFFECT THE WORK PRESENTED IN THIS PAPER - BUT IT HAS TO BE CLARIFIED AS EXPLAINED PREVIOUSLY.
 
 %The parallelised Splotch implementation mixing OpenMP / MPI, together with a discussion %on the performances achieved can be found in \cite{jin:high-performance}.
 %In the same figure, also the parts subject to the GPU implementation are shown, 
@@ -210,25 +210,24 @@ T_{gpu} = N_{op}/\nu_{GPU}
 \end{equation}
 where $\nu_{GPU}$ is the GPU's flops/sec rate, and $N_{op}$ is the overall number of operations:
 \begin{equation}\label{ops}
-N_{op} = N_{part}(\alpha + \gamma R_s^2) + f_{GPU},
+N_{op} = N_{part}(\alpha + \beta R_s^2) + f_{GPU},
 \end{equation}
-with $\alpha$ and $\gamma$ representing the number of operations in the \textit{Rasterization} and \textit{Rendering} kernels respectively. The function 
+with $\alpha$ and $\beta$ representing the number of operations in the \textit{Rasterization} and \textit{Rendering} kernels respectively. The function 
 $f_{GPU}$ takes into account other GPU specific kernels (i.e. procedures
-which are not present in the original Splotch) that are necessary for our GPU implementation. %CLAUDIO - PLEASE CLARIFY THIS LAST SENTENCE E.G. GIVE A REFERENCE TO A SECTION BELOW? ALSO NOT SURE WHY GAMMA IS CHOSEN, MIGHT BE EASIER FOR THE READER TO USE ALPHA AND BETA SYMBOLS INSTEAD (OTHERWISE THEY MAY ASSUME THERE MUST BE A BETA SOMEWHERE)?
+which are not present in the original Splotch) that are necessary for the GPU implementation
+(see section Section~\ref{sec:implementation}.
 Finally the parameter $R_s$ encapsulates an expectation value for the radius of particles $R_s = <r(p)>$,
 
 \begin{equation}\label{radius}
 r(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
 \end{equation} 
-where $A(p)$ is the transformation to rendered image coordinates, $\chi$ is a suitably defined factor determining compact support size (see equation \eqref{smooth}) and $S_{box}$ represents a computational box for input datasets.
-%CLAUDIO - SIGMA P IS NOT REFERRED TO?
+where $A(p)$ is the transformation to rendered image coordinates, $\chi$ and $\sigma_p$ are defined by equation \eqref{smooth} and $S_{box}$ represents a computational box for input datasets. }
 The radius of individual particles depends both on their intrinsic properties and on camera settings. Although a particle may exhibit a negligible size from one point of view, it may affect the entire rendered image from another. Also, particles close to each other can have different radius depending on their intrinsic characteristics.
 
 The dependency from $r(p)$ is the source of two major problems for GPU implementations. Firstly, two threads acting on different particles could try 
 to update the same image coordinates (see Figure~\ref{fig:particles}) causing concurrent accesses to memory thus leading to erroneous results. 
 Secondly, different particles can affect different numbers of pixels. Therefore, it is hard to achieve optimal load balancing among threads.  
-Customized solutions must thus be adopted to circumvent the aforementioned problems while avoiding paying large performance penalties. For example, this would be the case if atomic updates supported by CUDA were to be adopted - this method would be too slow to be used effectively for continuously 
-updating rendered image pixels. %CLAUDIO - THE CONCEPT IN THIS LAST SENTENCE MUST BE EXPLAINED MORE CLEARLY - CAN YOU REPHRASE?
+Customized solutions must thus be adopted to circumvent the aforementioned problems while avoiding paying large performance penalties. For instance, atomic updates (supported by CUDA) could be adopted for a safe update of the pixel value. However, this would have led to the serialization of the algorithm and thus, to a drop of the performance. 
 
 To conclude this section we observe that $T_{gpu}$ depends linearly on the number of particles ($N_{part}$). This feature is important to be preserved in a GPU implementation of Splotch - $f_{GPU}$ should not introduce any higher order dependency. 
 
@@ -246,8 +245,8 @@ To conclude this section we observe that $T_{gpu}$ depends linearly on the numbe
 \subsubsection{Accessing Memory ($T_{Mgpu}$)}
 %\noindent
 Data transfers between global and shared memory can be estimated 
-as the sum of the number of loads of available 
-streaming multiprocessors from global to shared memory plus number of stores from shared to global memory:%CLAUDIO - THE CONCEPTS OF LOADS OF AVAILABLE SM'S AND STORES MUST BE EXPLAINED CLEARLY TO AID BETTER UNDERSTANDING FROM UNFAMILIAR READERS 
+as the sum of the number of loads 
+GPU's global to shared memory plus number of stores from shared to global memory:
 \begin{equation}
 N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
 \end{equation}
@@ -256,11 +255,12 @@ particles, and $N_{store,pix}$ is the number of stores of rendered images (no lo
 are expected since images are created on the GPU). 
 Furthermore, memory access overheads can be estimated as $N_{Ngpu} \nu_{mem}$. $N_{Ngpu}$ is the overall number of memory accesses and $\nu_{mem}$ represents memory frequency. The overall times required for moving data among memories are thus calculated by:
 \begin{equation}\label{tmgpu}
+\begin{split}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part}
-+ 12 N_{store,pix} N_{pix}^2\over \mu_{gpu}}
++ 12 N_{store,pix} N_{pix}^2\over \mu_{gpu}} + \\
 + N_{Ngpu} \nu_{mem} + g_{GPU},
+\end{split}
 \end{equation}
-%CLAUDIO - THIS EQUATION MUST BE SPLIT SOMEHOW INTO TWO LINES TO BE MORE LEGIBLE FOR THE READER
 where $\mu_{gpu}$ is the global memory bandwidth
 and $g_{GPU}$ the time 
 spent on memory accesses by GPU specific functions. Equation \eqref{tmgpu} indicates that performances related to global-shared memory data transfers depend on $N_{load,p}$, $N_{store,p}$ - these quantify amounts of data transferred from global to shared memories and vice-versa. Achieved performances depend on memory bandwidth.
@@ -270,14 +270,7 @@ An optimal solution would be to realize a single data transfer only
 Only our {\it Rasterization} kernel is data parallel and can thus implement fully the {\it one-thread-per-particle} approach - in fact particles are processed independently. Consequently $N_{load,p} = 1$ and since processed particles must be copied back to the global memory to be rendered $N_{store,p} = 1$. The {\it Rendering} kernel is envisaged to require an additional data load, but no more store 
 stages are necessary (particles can be ``forgotten'' once their contribution is calculated).
 
-We observe that $T_{Mgpu}$ depends linearly on image sizes, though for very large-scale datasets this term is negligible. However, as
-particles falling outside the field of view are not processed (``inactive'' particles,
-see Figure~\ref{fig:fov}),
-%LEGEND OF THIS FIGURE TOO LONG - SHOULD FIX IN THE FINAL VERSION
-depending on camera settings, the ratio between the number of active particles
-and the number of pixels can substantially decrease. Therefore, 
-the image related term can give a meaningful contribution to
-the computing time.%CLAUDIO - PLEASE EXPLAIN MORE CLEARLY THE LAST TWO SENTENCES I.E. RATIO BETWEEN ACTIVE PARTICLES AND NUMBER OF PIXELS? ALSO MAYBE THIS PARA SHOULD BE MERGED WITH THE NEXT PARA?
+For very large-scale datasets, the images size gives a meaningful contribution to $T_{Mgpu}$ only if the number of active particles (particles falling in the field of view, see Figure~\ref{fig:fov}) is of the same order of (or smaller than) the number of pixels. This can happen for specific camera settings.
 
 A critical term in equation \eqref{tmgpu} is represented by the memory access
 latency $N_{Ngpu} \nu_{mem}$. The access to memory is slow in comparison to
@@ -285,12 +278,8 @@ the available bandwidth, so a small number of accesses, $N_{Ngpu}$, is crucial
 to performance. This can be achieved by standard caching strategies, that
 however are effective only if data coalesced access (in particular data contiguity) can be guaranteed, i.e. if contiguous particle data moved to the GPU L2 cache can be reused efficiently
 by the various threads. This is possible only through a global reorganization 
-of the particle data. However such a reorganization can generate non-neglible working and memory usage overheads.
-% CLAUDIO - CLARIFY, WORKING OVERHEAD?
-Any additional memory access specific to GPU implementations of Splotch must be realised so as to avoid introduction of excessive overheads thus preserving the overall linear scalability related to the number of particles.
-%
-
- 
+of the particle data, which has to be designed ensuring that no significant overheads are introduced and  
+that overall linear scalability with the number of particles is preserved.
 
 \section{The CUDA implementation}
 \label{sec:implementation}
@@ -364,7 +353,7 @@ $i(p) = N$, if it belongs to C3 class, i.e. is point-like.
 \end{itemize}
 The parameter $N$ is the number of tiles the image is divided in. It is defined as
 \begin{equation}
-N_t = {N_{pix}^2\over t_x*t_y},   
+N_t = {N_{pix}^2\over t_x \times t_y},   
 \end{equation}
 where $t_x$ and $t_y$ are the tile sides in pixels. In the code, these are input parameters 
 that can be set according to the specific use case to tune the performance. As default it is set $t_x=t_y=12$ (see section~5.1 for more details). 
@@ -401,7 +390,7 @@ assigning particles related to the same image tile to a block of CUDA threads
 and exploit the shared memory and thread synchronization within the block to store 
 and compose the image tile. The local size of the tile is defined so that each particle 
 belonging to it to be entirely contained in the tile. This is achieved by 
-adding to the $body$ of the tile of $t_x*t_y$ pixels a $boundary$ of $r_0$ pixels around it (see Figure~\ref{fig:fov}). We will refer to this extended tile as a \textit{Btile}.
+adding to the $body$ of the tile of $t_x \times t_y$ pixels a $boundary$ of $r_0$ pixels around it (see Figure~\ref{fig:fov}). We will refer to this extended tile as a \textit{Btile}.
 
 Particles are accessed in chunks of $n_p$ elements. Each chunk is accessed and stored 
 in the shared memory by a single read operation, performed simultaneously by all (or almost all) the threads of the block. Then, the particles of the chunk are rendered sequentially, each with a single parallel operation: each pixel of the particle is processed by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). 
