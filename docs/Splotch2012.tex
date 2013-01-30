@@ -8,7 +8,7 @@
 \begin{document}
 \begin{frontmatter}
 
-\title{Splotch on GPUs Using the CUDA Paradigm}
+\title{GPU accelerated particle visualization with Splotch}
 %\author{M. Rivi, C. Gheller, M.Krokos}
 \author{.........}
 
@@ -100,7 +100,7 @@ distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative 
 Equation \eqref{rad} is solved for each color component using a finite differences 
 approximation along a line of sight originating from each pixel on the final rendering. 
 For most of astrophysical applications, where matter density is usually extremely low, the equation can be solved in the {\it optically thin} regime, where the absorbtion term can be neglected. This makes the calculation independent of integration order of particles, allowing a simplified parallel implementations of the algorithm, without affecting the rendering quality and the correcteness of the images. 
-The RGB components can be defined by exploiting different physical quantities. For instance, colors 
+
 can be associated to the three components of the velocity field $\bf v$, so that 
 $\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped to the RGB components via colour look-up tables (or palettes). 
 
@@ -390,7 +390,6 @@ is intrinsically time-consuming, requiring intensive memory usage.
 The performance of the approach for rendering regular particles is also influenced
 by the size of the shared memory, which limits the number of resident blocks
 per multiprocessor during the execution of the kernel, thus reducing the theoretical
-%CLA: trattare da qualche parte il load balancing
 occupancy (see Section~\ref{sec:gpuperf})).
 %A further issue is related to the
 %unbalanced work load of each block. In fact the number of particles falling
