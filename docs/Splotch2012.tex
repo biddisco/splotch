@@ -75,38 +75,34 @@ this phase will be referred to as {\it Rasterization}.
 {\it Rendering} - The contributions of individual particles to pixels of the final 
 image are calculated by solving the radiative transfer equation  \cite{1991par..book.....S}:
 \begin{equation}\label{rad}
-\frac{d\bf{I_{\lambda}}(x)}{dx}=(E_p-A_p\bf{I_{\lambda}}(x))\rho_p^{\lambda}(x),
+\frac{d\bf{I^{\lambda}}{(\bf x)}}{dx}=(E-A\bf{I^{\lambda}}({\bf x}))\rho^{\lambda}({\bf x}),
 \end{equation}
-where $I_{\lambda}$ is the intensity of pixel $x$ for its three color components ($\lambda$ = R, G and B), $\rho_p^{\lambda}(x)$ is a physical quantity transported by the particle $p$ 
-(e.g. temperature or density),
-which contributes to the intensity of color $\lambda$ of pixel $x$, and $E_p$ and $A_p$
-are the coefficients of radiation emission and absorption respectively. These two coefficients 
-can be set either constant or they can depend from one of the quantities associated 
-to the particle (e.g. the mass density or the pressure of a particle). 
-\end{itemize}
-Equation \eqref{rad} is solved for each color component using a finite differences 
-approximation along a line of sight originating from each pixel on the final rendering. Each 
-particle contributes to a pixel according to a Gaussian distribution:
+where $I^{\lambda}$ represents the three color components, red, green and blue ($\lambda$ = R, G and B), of the radiation intensity at position ${\bf x}$, $x$ is is the co-ordinate along the optical path, and $E$ and $A$ are the coefficients of radiation emission and absorption respectively. The quantity $\rho^{\lambda}({\bf x})$ is calculated as:
 \begin{equation}\label{smooth}
-\rho_p^{\lambda}(x)=\rho_{0,p}^{\lambda}\exp(-r^2/\sigma_p^2),
+\rho^{\lambda}({\bf x}) = \sum_{p=1}^{N_{part}} \rho_p W(r_p,\sigma_p,\chi),
 \end{equation}
-where $\rho_{0,p}^{\lambda}$ comes from the input simulation, 
-$r$ is the distance of the particle $p$ from the pixel and 
-$\sigma_p$ is a smoothing length deployed for modelling the particle size. 
-Although individual particles contribute to all pixels of the rendered images, 
-for practical purposes it is handy to use a compact support of this
+where $\rho_p$ is a discrete field transported by particles (e.g. mass density or temperature), and $W(r_p,\sigma_p,\chi)$ is a smoothing kernel defined as:
+\begin{equation}\label{kernel}
+W(r_p,\sigma_p,\chi) = \exp(-r_p^2/\sigma_p^2)\qquad {\rm for}\quad  r<\chi\sigma_p,
+\end{equation}
+and
+\begin{equation}\label{kernel1}
+W(r_p,\sigma_p,\chi) = 0 \qquad {\rm for}\quad r>\chi\sigma_p,
+\end{equation}
+where
+$r=\vert {\bf x_p}-{\bf x} \vert$ is the distance of the particle $p$ with coordinates ${\bf x_p}$ from ${\bf x}$ and $\sigma_p$ is a smoothing length defining a compact support for the
 Gaussian distribution. The distribution is considered to be zero at a given
-distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative factor, so that any rays passing at distances larger than $\chi\cdot\sigma_p$ are completely unaffected by $\rho_p$.
+distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative factor, so that any rays passing at dist
+ances larger than $\chi\sigma_p$ are completely unaffected by $\rho_p$.
+\end{itemize}
 
+Equation \eqref{rad} is solved for each color component using a finite differences 
+approximation along a line of sight originating from each pixel on the final rendering. 
+For most of astrophysical applications, where matter density is usually extremely low, the equation can be solved in the ``optically thin'' regime, where the absorbtion term can be neglected. This makes the calculation independent of integration order of particles, allowing a simplified parallel implementations of the algorithm, without affecting the rendering quality and the correcteness of the images. 
 The RGB components can be defined by exploiting different physical quantities. For instance, colors 
 can be associated to the three components of the velocity field $\bf v$, so that 
-$\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped
-to the RGB components via colour look-up tables (or palettes). The emission and absorption coefficients have in general different values. However for parallel implementations of Splotch $E_p=A_p$ is deployed, so that final renderings are independent of integration order of particles. This is not a severe restriction, it allows to simplify parallel implementations of the algorithm to so as to improve performances, without affecting, in most cases, the rendering quality.% CLAUDIO THIS PREVIOUS SENTENCE IS UNCLEAR TO THE UNFAMILIAR READER, WHAT EXACTY DO WE MEAN BY SAYING THAT IN MOST CASES THE RENDERING QUALITY IS NOT AFFECTED, A REVIEWER MAY ASK IN WHICH CASES IT IS AFFECTED AND BY HOW MUCH?  WE NEED TO CLARIFY HERE IF SETTING A = E IS A SERIOUS RESTRICTION OR NOT - IN ANY CASE WE CAN SAY THAT THE ORIGINAL SPLOTCH HAS A = E AND WE HAVE JUST OPTIMISED THAT FORM OF SPLOTCH BY USING CUDA SO IT DOES NOT AFFECT THE WORK PRESENTED IN THIS PAPER - BUT IT HAS TO BE CLARIFIED AS EXPLAINED PREVIOUSLY.
+$\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped to the RGB components via colour look-up tables (or palettes). 
 
-%The parallelised Splotch implementation mixing OpenMP / MPI, together with a discussion %on the performances achieved can be found in \cite{jin:high-performance}.
-%In the same figure, also the parts subject to the GPU implementation are shown, 
-%anticipating the discussion of the following sections.The workflow is shown in Figure~\ref{fig:workflow}, where the parts of the algorithm parallelized
-%either with MPI or with OpenMP are emphasized. 
 %\begin{figure}
 %\centering
 %\includegraphics[scale=0.18]{images/flowsplotch.eps}
@@ -221,7 +217,7 @@ Finally the parameter $R_s$ encapsulates an expectation value for the radius of 
 \begin{equation}\label{radius}
 r(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
 \end{equation} 
-where $A(p)$ is the transformation to rendered image coordinates, $\chi$ and $\sigma_p$ are defined by equation \eqref{smooth} and $S_{box}$ represents a computational box for input datasets. }
+where $A(p)$ is the transformation to rendered image coordinates, $\chi$ and $\sigma_p$ are defined by equation \eqref{smooth} and $S_{box}$ represents a computational box for input datasets. 
 The radius of individual particles depends both on their intrinsic properties and on camera settings. Although a particle may exhibit a negligible size from one point of view, it may affect the entire rendered image from another. Also, particles close to each other can have different radius depending on their intrinsic characteristics.
 
 The dependency from $r(p)$ is the source of two major problems for GPU implementations. Firstly, two threads acting on different particles could try 
@@ -768,6 +764,8 @@ computation. However, this is currently prevented from the adoption of
 Thrust libraries, that, in its current version, does not support asynchronous operations. Furthermore,
 in some situations, when the CPU workload is larger than that of
 the GPU (e.g. at large radii), such solution would be anyway ineffective.  
+
+%CLAU: METTERE CHE IL CASO NEGATIVO NON E' COMUNE
 
 \section{Conclusions and Next Steps}
 \label{sec:conclusions}
