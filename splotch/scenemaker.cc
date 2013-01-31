@@ -398,7 +398,7 @@ sceneMaker::sceneMaker (paramfile &par)
       fidx = params.find<double>("fidx",0);
 
       if (scenes.size()>0)
-        if (approx(fidx,stringToData<double>(scenes[scenes.size()-1].sceneParameters.find("fidx")->second)))
+        if (approx(fidx,scenes[scenes.size()-1].sceneParameters.find<double>("fidx"),0.))
           scenes[scenes.size()-1].keep_particles=reuse=true;
 
       scenes.push_back(scene(sceneParameters,outfilen,false,reuse));
@@ -427,9 +427,9 @@ sceneMaker::sceneMaker (paramfile &par)
       vec3 lookat(params.find<double>("lookat_x"),
                   params.find<double>("lookat_y"),
                   params.find<double>("lookat_z"));
-      vec3 campos(stringToData<double>(sa.sceneParameters["camera_x"]),
-                  stringToData<double>(sa.sceneParameters["camera_y"]),
-                  stringToData<double>(sa.sceneParameters["camera_z"]));
+      vec3 campos(sa.sceneParameters.find<double>("camera_x"),
+                  sa.sceneParameters.find<double>("camera_y"),
+                  sa.sceneParameters.find<double>("camera_z"));
       vec3 sky(params.find<double>("sky_x",0),
                params.find<double>("sky_y",0),
                params.find<double>("sky_z",1));
@@ -448,14 +448,14 @@ sceneMaker::sceneMaker (paramfile &par)
       double distance = eye_separation * view.Length();
 
       vec3 campos_r = campos - right / right.Length() * distance*0.5;
-      sa.sceneParameters["camera_x"] = dataToString(campos_r.x);
-      sa.sceneParameters["camera_y"] = dataToString(campos_r.y);
-      sa.sceneParameters["camera_z"] = dataToString(campos_r.z);
+      sa.sceneParameters.setParam("camera_x",campos_r.x);
+      sa.sceneParameters.setParam("camera_y",campos_r.y);
+      sa.sceneParameters.setParam("camera_z",campos_r.z);
 
       vec3 campos_l = campos + right / right.Length() * distance*0.5;
-      sb.sceneParameters["camera_x"] = dataToString(campos_l.x);
-      sb.sceneParameters["camera_y"] = dataToString(campos_l.y);
-      sb.sceneParameters["camera_z"] = dataToString(campos_l.z);
+      sb.sceneParameters.setParam("camera_x",campos_l.x);
+      sb.sceneParameters.setParam("camera_y",campos_l.y);
+      sb.sceneParameters.setParam("camera_z",campos_l.z);
 
       sa.outname = "left_"+sa.outname;
       sb.outname = "right_"+sb.outname;
@@ -725,8 +725,8 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   const scene &scn=scenes[cur_scene];
 
   // patch the params object with parameter values relevant to the current scene
-  std::map<std::string,std::string> sceneParameters=scn.sceneParameters;
-  for (std::map<std::string,std::string>::iterator it=sceneParameters.begin(); it!=sceneParameters.end(); ++it)
+  std::map<std::string,std::string> sceneParameters=scn.sceneParameters.getParams();
+  for (std::map<std::string,std::string>::const_iterator it=sceneParameters.begin(); it!=sceneParameters.end(); ++it)
   {
     params.setParam(it->first, it->second);
   }

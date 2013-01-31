@@ -13,7 +13,7 @@ class sceneMaker
   private:
     struct scene
     {
-      std::map<std::string,std::string> sceneParameters;
+      paramfile sceneParameters;
 
       std::string outname;
       bool keep_particles, reuse_particles;
