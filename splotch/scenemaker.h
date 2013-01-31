@@ -48,9 +48,9 @@ class sceneMaker
     std::vector<particle_sim> p_orig;
 
     // only used if interpol_mode>0
-    void particle_interpolate(std::vector<particle_sim> &p, double frac);
+    void particle_interpolate(std::vector<particle_sim> &p, double frac) const;
 
-    void particle_normalize(std::vector<particle_sim> &p, bool verbose);
+    void particle_normalize(std::vector<particle_sim> &p, bool verbose) const;
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 

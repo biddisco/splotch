@@ -35,7 +35,7 @@
 
 using namespace std;
 
-void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
+void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) const
   {
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
@@ -198,47 +198,50 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
 Mesh_vis * Mesh = NULL;
 Mesh_dim MeshD;
 
-void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
-{
-  cout << "particle_interpolate() : Time 1,2 = " << time1 << "," << time2 << endl << flush;
+void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
+  {
+  cout << "particle_interpolate() : Time 1,2 = "
+       << time1 << "," << time2 << endl << flush;
 
   releaseMemory(p);
 
   double v_unit1, v_unit2;
   if (interpol_mode>1)
-  {
+    {
     double h = params.find<double>("hubble",0.7);
     double O = params.find<double>("omega",0.3);
     double L = params.find<double>("lambda",0.7);
     double mparsck = 3.0856780e+24;
     double l_unit = params.find<double>("l_unit",3.0856780e+21);
     double v_unit = params.find<double>("v_unit",100000.00);
-    double t1 = log(sqrt(L/O*time1*time1*time1)+sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
-    double t2 = log(sqrt(L/O*time2*time2*time2)+sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+    double t1 = log(sqrt(L/O*time1*time1*time1)
+      +sqrt((L/O*time1*time1*time1)+1))/1.5/sqrt(L)/h/1e7*mparsck;
+    double t2 = log(sqrt(L/O*time2*time2*time2)
+      +sqrt((L/O*time2*time2*time2)+1))/1.5/sqrt(L)/h/1e7*mparsck;
     double dt = (t2 - t1) * h;
     v_unit1=v_unit/l_unit/sqrt(time1)*dt;
     v_unit2=v_unit/l_unit/sqrt(time2)*dt;
-  }
+    }
 
   vector<pair<MyIDType,MyIDType> > v;
   v.reserve(min(p1.size(),p2.size()));
-  {
+    {
     tsize i1=0,i2=0;
     while(i1<p1.size() && i2<p2.size())
-    {
-      if (id1[idx1[i1]]==id2[idx2[i2]])
       {
+      if (id1[idx1[i1]]==id2[idx2[i2]])
+        {
         //  if(p1[idx1[i1]].type==p2[idx2[i2]].type)
         v.push_back(pair<MyIDType,MyIDType>(idx1[i1],idx2[i2]));
         i1++;
         i2++;
-      }
+        }
       else if (id1[idx1[i1]]<id2[idx2[i2]])
         i1++;
       else if (id1[idx1[i1]]>id2[idx2[i2]])
         i2++;
+      }
     }
-  }
 
   tsize npart=v.size();
   p.resize(npart);
@@ -246,149 +249,142 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p, double frac)
   bool periodic = params.find<bool>("periodic",true);
   double boxhalf = boxsize / 2;
 
-  #pragma omp parallel
-  {
-    int i;
-    #pragma omp for schedule(guided,1000)
-    for (i=0; i<npart; ++i)
+#pragma omp parallel
+{
+  int i;
+#pragma omp for schedule(guided,1000)
+  for (i=0; i<npart; ++i)
     {
-      tsize i1=v[i].first, i2=v[i].second;
-      /*
-      planck_assert (p1[i1].type==p2[i2].type,
-        "interpolate: cannot interpolate between different particle types!");
-      */
-      vec3f pos;
-      double x1,x2,y1,y2,z1,z2;
+    tsize i1=v[i].first, i2=v[i].second;
+    /*
+    planck_assert (p1[i1].type==p2[i2].type,
+      "interpolate: cannot interpolate between different particle types!");
+    */
+    vec3f pos;
+    double x1,x2,y1,y2,z1,z2;
 
-      x1 = p1[i1].x;
-      x2 = p2[i2].x;
-      y1 = p1[i1].y;
-      y2 = p2[i2].y;
-      z1 = p1[i1].z;
-      z2 = p2[i2].z;
+    x1 = p1[i1].x;
+    x2 = p2[i2].x;
+    y1 = p1[i1].y;
+    y2 = p2[i2].y;
+    z1 = p1[i1].z;
+    z2 = p2[i2].z;
 
-      if (periodic)
+    if (periodic)
       {
-        if(abs(x2 - x1) > boxhalf)
-          (x2 > x1) ? x2 -= boxsize : x2 += boxsize;
+      if(abs(x2 - x1) > boxhalf)
+        (x2 > x1) ? x2 -= boxsize : x2 += boxsize;
 
-        if(abs(y2 - y1) > boxhalf)
-          (y2 > y1) ? y2 -= boxsize : y2 += boxsize;
+      if(abs(y2 - y1) > boxhalf)
+        (y2 > y1) ? y2 -= boxsize : y2 += boxsize;
 
-        if(abs(z2 - z1) > boxhalf)
-          (z2 > z1) ? z2 -= boxsize : z2 += boxsize;
+      if(abs(z2 - z1) > boxhalf)
+        (z2 > z1) ? z2 -= boxsize : z2 += boxsize;
       }
-      if (interpol_mode>1)
+    if (interpol_mode>1)
       {
-        double vda_x = 2 * (x2-x1) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
-        double vda_y = 2 * (y2-y1) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
-        double vda_z = 2 * (z2-z1) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
-        pos.x = x1 + vel1[i1].x * v_unit1 * frac
-                + 0.5 * (vel2[i2].x * v_unit2 - vel1[i1].x * v_unit1 + vda_x) * frac * frac;
-        pos.y = y1 + vel1[i1].y * v_unit1 * frac
-                + 0.5 * (vel2[i2].y * v_unit2 - vel1[i1].y * v_unit1 + vda_y) * frac * frac;
-        pos.z = z1 + vel1[i1].z * v_unit1 * frac
-                + 0.5 * (vel2[i2].z * v_unit2 - vel1[i1].z * v_unit1 + vda_z) * frac * frac;
+      double vda_x = 2 * (x2-x1) - (vel1[i1].x*v_unit1 + vel2[i2].x*v_unit2);
+      double vda_y = 2 * (y2-y1) - (vel1[i1].y*v_unit1 + vel2[i2].y*v_unit2);
+      double vda_z = 2 * (z2-z1) - (vel1[i1].z*v_unit1 + vel2[i2].z*v_unit2);
+      pos.x = x1 + vel1[i1].x * v_unit1 * frac
+              + 0.5*(vel2[i2].x*v_unit2 - vel1[i1].x*v_unit1 + vda_x)*frac*frac;
+      pos.y = y1 + vel1[i1].y * v_unit1 * frac
+              + 0.5*(vel2[i2].y*v_unit2 - vel1[i1].y*v_unit1 + vda_y)*frac*frac;
+      pos.z = z1 + vel1[i1].z * v_unit1 * frac
+              + 0.5*(vel2[i2].z*v_unit2 - vel1[i1].z*v_unit1 + vda_z)*frac*frac;
       }
-      else
+    else
       {
-        pos.x = (1-frac) * x1  + frac*x2;
-        pos.y = (1-frac) * y1  + frac*y2;
-        pos.z = (1-frac) * z1  + frac*z2;
+      pos.x = (1-frac) * x1  + frac*x2;
+      pos.y = (1-frac) * y1  + frac*y2;
+      pos.z = (1-frac) * z1  + frac*z2;
       }
 
-      p[i]=particle_sim(
-             COLOUR((1-frac) * p1[i1].e.r + frac*p2[i2].e.r,
-                    (1-frac) * p1[i1].e.g + frac*p2[i2].e.g,
-                    (1-frac) * p1[i1].e.b + frac*p2[i2].e.b),
-             pos.x,pos.y,pos.z,
-             (1-frac) * p1[i1].r  + frac*p2[i2].r,
-             (1-frac) * p1[i1].I  + frac*p2[i2].I,
-             p1[i1].type,p1[i1].active);
+    p[i]=particle_sim(
+            COLOUR((1-frac) * p1[i1].e.r + frac*p2[i2].e.r,
+                  (1-frac) * p1[i1].e.g + frac*p2[i2].e.g,
+                  (1-frac) * p1[i1].e.b + frac*p2[i2].e.b),
+            pos.x,pos.y,pos.z,
+            (1-frac) * p1[i1].r  + frac*p2[i2].r,
+            (1-frac) * p1[i1].I  + frac*p2[i2].I,
+            p1[i1].type,p1[i1].active);
     }
-  }
+}
 
-  params.setParam("time",     dataToString( (1.-frac)*time1     + frac*time2     ));
-  if ((redshift1 > 0.0) && (redshift2 > 0.0))
-    params.setParam("redshift", dataToString( (1.-frac)*redshift1 + frac*redshift2 ));
+  params.setParam("time", dataToString((1.-frac)*time1 + frac*time2));
+  if ((redshift1>0.0) && (redshift2>0.0))
+    params.setParam("redshift",dataToString((1.-frac)*redshift1+frac*redshift2));
 
-  if(mpiMgr.master())
-  {
+  if (mpiMgr.master())
     cout << "particle_interpolate() : p1.size(), p2.size(), p.size() : "
         << p1.size() << ", " << p2.size() << ", " << p.size() << endl << flush;
   }
-}
 
 
 sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
-{
+  {
   double fidx = params.find<double>("fidx",0);
 
   std::map<std::string,std::string> sceneParameters;
-  sceneParameters.clear();
 
   string outfile = params.find<string>("outfile","demo");
 
   // do nothing if we are only analyzing ...
   if (params.find<bool>("AnalyzeSimulationOnly",false))
-  {
+    {
     string outfilen = outfile+intToString(0,4);
     scenes.push_back(scene(sceneParameters,outfilen,false,false));
     return;
-  }
+    }
 
   string geometry_file = params.find<string>("scene_file","");
   interpol_mode = params.find<int>("interpolation_mode",0);
   if (geometry_file=="")
-  {
+    {
     string outfilen = outfile+intToString(0,4);
     scenes.push_back(scene(sceneParameters,outfilen,false,false));
-  }
+    }
   else
-  {
+    {
 /*
     if (interpol_mode>0)
       planck_assert(mpiMgr.num_ranks()==1,
-                    "Sorry, interpolating between files is not yet MPI parallelized ...");
+       "Sorry, interpolating between files is not yet MPI parallelized ...");
 */
 
     ifstream inp(geometry_file.c_str());
     planck_assert (inp, "could not open scene file '" + geometry_file +"'");
     int current_scene = params.find<int>("scene_start",0);
     int scene_incr = params.find<int>("scene_incr",1);
-    //
+
     string line;
     getline(inp, line);
     double tmpDbl;
     if (sscanf(line.c_str(),"%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
           &tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl,&tmpDbl)==10)
-    {
+      {
       //      cerr << "DEBUG: old geometry file format detected." << endl;
       line.assign("camera_x camera_y camera_z lookat_x lookat_y lookat_z sky_x sky_y sky_z fidx");
       inp.seekg(0, ios_base::beg);
-    }
-    else
-    {
-      //      cerr << "DEBUG: new geometry file format detected." << endl;
-    }
-    //
+      }
+
     std::vector<std::string> sceneParameterKeys, sceneParameterValues;
     split(line, sceneParameterKeys);
 
     if (mpiMgr.master())
-    {
+      {
       cout << endl << "The following parameters are dynamically modified by the scene file: " << endl;
       for(unsigned int i=0;i<sceneParameterKeys.size();i++)
         cout << sceneParameterKeys[i] << " ";
       cout << endl << flush;
-    }
+      }
 
     for (int i=0; i<current_scene; ++i)
       getline(inp, line);
 
     while (getline(inp, line))
-    {
+      {
       sceneParameters.clear();
       string outfilen = outfile+intToString(current_scene,4);
       split(line, sceneParameterValues);
@@ -409,15 +405,15 @@ sceneMaker::sceneMaker (paramfile &par)
       current_scene += scene_incr;
       for (int i=0; i<scene_incr-1; ++i)
         getline(inp, line);
+      }
     }
-  }
   double eye_separation = degr2rad * params.find<double>("EyeSeparation",0);
   if (eye_separation>0)
-  {
+    {
     vector<scene> sc_orig;
     sc_orig.swap(scenes);
     for (tsize i=0; i<sc_orig.size(); ++i)
-    {
+      {
       scenes.push_back(sc_orig[i]);
       scenes.push_back(sc_orig[i]);
       scene &sa = scenes[scenes.size()-2], &sb = scenes[scenes.size()-1];
@@ -428,11 +424,15 @@ sceneMaker::sceneMaker (paramfile &par)
       // FIXME: For all components: we have to first test if they are present in the sa.sceneParameters
       //        and if not read them from the param file.
       //        For the moment we assume that camera is in sceneParameters and the rest in the param file
-      vec3 lookat(params.find<double>("lookat_x"),params.find<double>("lookat_y"),params.find<double>("lookat_z"));
+      vec3 lookat(params.find<double>("lookat_x"),
+                  params.find<double>("lookat_y"),
+                  params.find<double>("lookat_z"));
       vec3 campos(stringToData<double>(sa.sceneParameters["camera_x"]),
                   stringToData<double>(sa.sceneParameters["camera_y"]),
                   stringToData<double>(sa.sceneParameters["camera_z"]));
-      vec3 sky(params.find<double>("sky_x",0),params.find<double>("sky_y",0),params.find<double>("sky_z",1));
+      vec3 sky(params.find<double>("sky_x",0),
+               params.find<double>("sky_y",0),
+               params.find<double>("sky_z",1));
 
       vec3 view = lookat - campos;
 
@@ -459,17 +459,17 @@ sceneMaker::sceneMaker (paramfile &par)
 
       sa.outname = "left_"+sa.outname;
       sb.outname = "right_"+sb.outname;
+      }
     }
   }
-}
 
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
-{
-  if (scenes[cur_scene].reuse_particles)
   {
+  if (scenes[cur_scene].reuse_particles)
+    {
     particle_data=p_orig;
     return;
-  }
+    }
 
   tstack_push("Input");
   if (mpiMgr.master())
@@ -480,222 +480,222 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   double frac=(fidx-snr1)/spacing;
 
   switch (simtype)
-  {
-  case 0:
-    bin_reader_tab(params,particle_data);
-    break;
-  case 1:
-    bin_reader_block(params,particle_data);
-    break;
-  case 2:
-    if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
     {
-      cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
-      cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
-      if (snr1==snr2_now)
-      {
-        cout << " old2 = new1!" << endl;
-        //
-        if ((mpiMgr.num_ranks()>1) // <-- only makes sense with true MPI runs
-            &&
-            params.find<bool>("mpi_interpolation_reread_data",false)) // <-- saves some memory at the expense of re-reading the dataset p1 (formerly p2)
+    case 0:
+      bin_reader_tab(params,particle_data);
+      break;
+    case 1:
+      bin_reader_block(params,particle_data);
+      break;
+    case 2:
+      if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
         {
-          // re-read the data set since no backup copy can be expected to exist in memory
-          cout << " re-reading new1 " << snr1 << endl;
+        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
+        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+        if (snr1==snr2_now)
+          {
+          cout << " old2 = new1!" << endl;
+
+          if ((mpiMgr.num_ranks()>1) // <-- only makes sense with true MPI runs
+              &&
+              params.find<bool>("mpi_interpolation_reread_data",false)) // <-- saves some memory at the expense of re-reading the dataset p1 (formerly p2)
+            {
+            // re-read the data set since no backup copy can be expected to exist in memory
+            cout << " re-reading new1 " << snr1 << endl;
+            gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
+            redshift1=-1.0;
+            mpiMgr.barrier();
+            tstack_replace("Input","Particle index generation");
+            buildIndex(id1.begin(),id1.end(),idx1);
+            tstack_replace("Particle index generation","Input");
+            }
+          else
+            {
+            // MPI and non-MPI default case
+            mpiMgr.barrier();
+            MpiStripRemoteParticles();
+            mpiMgr.barrier();
+            //
+            p1.clear();   p1.swap(p2);
+            id1.clear();  id1.swap(id2);
+            idx1.clear(); idx1.swap(idx2);
+            vel1.clear(); vel1.swap(vel2);
+            //
+            time1 = time2;
+            }
+          snr1_now = snr1;
+          }
+        if (snr1_now!=snr1)
+          {
+          cout << " reading new1 " << snr1 << endl;
+          //
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
           redshift1=-1.0;
           mpiMgr.barrier();
           tstack_replace("Input","Particle index generation");
           buildIndex(id1.begin(),id1.end(),idx1);
           tstack_replace("Particle index generation","Input");
+          //
+          snr1_now = snr1;
+          }
+        if (snr2_now!=snr2)
+          {
+          cout << " reading new2 " << snr2 << endl;
+          gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
+          mpiMgr.barrier();
+          tstack_replace("Input","Particle index generation");
+          buildIndex(id2.begin(),id2.end(),idx2);
+          tstack_replace("Particle index generation","Input");
+          redshift2 = -1.0;
+          snr2_now = snr2;
+          //
+          mpiMgr.barrier();
+          MpiFetchRemoteParticles();
+          mpiMgr.barrier();
+          }
         }
-        else
+      else
         {
-          // MPI and non-MPI default case
-          mpiMgr.barrier();
-          MpiStripRemoteParticles();
-          mpiMgr.barrier();
-          //
-          p1.clear();   p1.swap(p2);
-          id1.clear();  id1.swap(id2);
-          idx1.clear(); idx1.swap(idx2);
-          vel1.clear(); vel1.swap(vel2);
-          //
-          time1 = time2;
+        double time;
+        gadget_reader(params,interpol_mode,particle_data,id1,vel1,snr1,time,boxsize);
+        // extend the parameter list to be able to output the information later to the frame-specific logfile
+        params.setParam("time", dataToString(time));
         }
-        snr1_now = snr1;
-      }
-      if (snr1_now!=snr1)
-      {
-        cout << " reading new1 " << snr1 << endl;
-        //
-        gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
-        redshift1=-1.0;
-        mpiMgr.barrier();
-        tstack_replace("Input","Particle index generation");
-        buildIndex(id1.begin(),id1.end(),idx1);
-        tstack_replace("Particle index generation","Input");
-        //
-        snr1_now = snr1;
-      }
-      if (snr2_now!=snr2)
-      {
-        cout << " reading new2 " << snr2 << endl;
-        gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
-        mpiMgr.barrier();
-        tstack_replace("Input","Particle index generation");
-        buildIndex(id2.begin(),id2.end(),idx2);
-        tstack_replace("Particle index generation","Input");
-        redshift2 = -1.0;
-        snr2_now = snr2;
-        //
-        mpiMgr.barrier();
-        MpiFetchRemoteParticles();
-        mpiMgr.barrier();
-      }
-    }
-    else
-    {
-      double time;
-      gadget_reader(params,interpol_mode,particle_data,id1,vel1,snr1,time,boxsize);
-      // extend the parameter list to be able to output the information later to the frame-specific logfile
-      params.setParam("time", dataToString(time));
-    }
-    break;
-  case 3:
+      break;
+    case 3:
 #if 0
     enzo_reader(params,particle_data);
 #else
     planck_fail("Enzo reader not available in this version!");
 #endif
-    break;
-  case 4:
-  {
-    double dummy;
-    gadget_millenium_reader(params,particle_data,0,&dummy);
-    break;
-  }
-  case 5:
-#if defined(USE_MPIIO)
-  {
-    float maxr, minr;
-    bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
-  }
-#else
-  planck_fail("mpi reader not available in non MPI compiled version!");
-#endif
-  break;
-  case 6:
-    mesh_reader(params,particle_data);
-    break;
-#ifdef HDF5
-  case 7:
-    hdf5_reader(params,particle_data);
-    break;
-  case 8:
-    // GADGET HDF5 READER
-    //
-    if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
-    {
-      cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
-      cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
-      if (snr1==snr2_now)
+      break;
+    case 4:
       {
-        cout << " old2 = new1!" << endl;
-        //
-        if ((mpiMgr.num_ranks()>1) && params.find<bool>("mpi_interpolation_reread_data",false))
+      double dummy;
+      gadget_millenium_reader(params,particle_data,0,&dummy);
+      break;
+      }
+    case 5:
+#if defined(USE_MPIIO)
+      {
+      float maxr, minr;
+      bin_reader_block_mpi(params,particle_data, &maxr, &minr, mpiMgr.rank(), mpiMgr.num_ranks());
+      }
+#else
+      planck_fail("mpi reader not available in non MPI compiled version!");
+#endif
+      break;
+    case 6:
+      mesh_reader(params,particle_data);
+      break;
+#ifdef HDF5
+    case 7:
+      hdf5_reader(params,particle_data);
+      break;
+    case 8:
+      // GADGET HDF5 READER
+      //
+      if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
         {
-          // re-read the data set since no backup copy exists in memory
-          cout << " re-reading new1 " << snr1 << endl;
+        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
+        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+        if (snr1==snr2_now)
+          {
+          cout << " old2 = new1!" << endl;
+          //
+          if ((mpiMgr.num_ranks()>1) && params.find<bool>("mpi_interpolation_reread_data",false))
+            {
+            // re-read the data set since no backup copy exists in memory
+            cout << " re-reading new1 " << snr1 << endl;
+            gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,redshift1,boxsize);
+            mpiMgr.barrier();
+            tstack_replace("Input","Particle index generation");
+            buildIndex(id1.begin(),id1.end(),idx1);
+            tstack_replace("Particle index generation","Input");
+            }
+          else
+            {
+            // MPI and non-MPI default case
+            mpiMgr.barrier();
+            MpiStripRemoteParticles();
+            mpiMgr.barrier();
+            //
+            p1.clear();   p1.swap(p2);
+            id1.clear();  id1.swap(id2);
+            idx1.clear(); idx1.swap(idx2);
+            vel1.clear(); vel1.swap(vel2);
+            //
+            time1 = time2;
+            redshift1 = redshift2;
+            }
+          snr1_now = snr1;
+          }
+        if (snr1_now!=snr1)
+          {
+          cout << " reading new1 " << snr1 << endl;
           gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,redshift1,boxsize);
           mpiMgr.barrier();
           tstack_replace("Input","Particle index generation");
           buildIndex(id1.begin(),id1.end(),idx1);
           tstack_replace("Particle index generation","Input");
+          snr1_now = snr1;
+          }
+        if (snr2_now!=snr2)
+          {
+          cout << " reading new2 " << snr2 << endl;
+          gadget_hdf5_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,redshift2,boxsize);
+          mpiMgr.barrier();
+          tstack_replace("Input","Particle index generation");
+          buildIndex(id2.begin(),id2.end(),idx2);
+          tstack_replace("Particle index generation","Input");
+          snr2_now = snr2;
+          //
+          mpiMgr.barrier();
+          MpiFetchRemoteParticles();
+          mpiMgr.barrier();
+          }
         }
-        else
+      else
         {
-          // MPI and non-MPI default case
-          mpiMgr.barrier();
-          MpiStripRemoteParticles();
-          mpiMgr.barrier();
-          //
-          p1.clear();   p1.swap(p2);
-          id1.clear();  id1.swap(id2);
-          idx1.clear(); idx1.swap(idx2);
-          vel1.clear(); vel1.swap(vel2);
-          //
-          time1 = time2;
-          redshift1 = redshift2;
+        double time, redshift;
+        gadget_hdf5_reader(params,interpol_mode,particle_data,id1,vel1,0,time,redshift,boxsize);
+        // extend the parameter list to be able to output the information later to the frame-specific logfile
+        params.setParam("time", dataToString(time));
+        params.setParam("redshift", dataToString(redshift));
         }
-        snr1_now = snr1;
-      }
-      if (snr1_now!=snr1)
-      {
-        cout << " reading new1 " << snr1 << endl;
-        gadget_hdf5_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,redshift1,boxsize);
-        mpiMgr.barrier();
-        tstack_replace("Input","Particle index generation");
-        buildIndex(id1.begin(),id1.end(),idx1);
-        tstack_replace("Particle index generation","Input");
-        snr1_now = snr1;
-      }
-      if (snr2_now!=snr2)
-      {
-        cout << " reading new2 " << snr2 << endl;
-        gadget_hdf5_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,redshift2,boxsize);
-        mpiMgr.barrier();
-        tstack_replace("Input","Particle index generation");
-        buildIndex(id2.begin(),id2.end(),idx2);
-        tstack_replace("Particle index generation","Input");
-        snr2_now = snr2;
-        //
-        mpiMgr.barrier();
-        MpiFetchRemoteParticles();
-        mpiMgr.barrier();
-      }
-    }
-    else
-    {
-      double time, redshift;
-      gadget_hdf5_reader(params,interpol_mode,particle_data,id1,vel1,0,time,redshift,boxsize);
-      // extend the parameter list to be able to output the information later to the frame-specific logfile
-      params.setParam("time", dataToString(time));
-      params.setParam("redshift", dataToString(redshift));
-    }
-    break;
+      break;
 #endif
 #ifdef SPLVISIVO
-  case 10:
-    if(!visivo_reader(params,particle_data,opt))
-      planck_fail("Invalid read data ...");
-    break;
+    case 10:
+      if(!visivo_reader(params,particle_data,opt))
+        planck_fail("Invalid read data ...");
+      break;
 #endif
-  case 11:
-    tipsy_reader(params,particle_data);
-    break;
+    case 11:
+      tipsy_reader(params,particle_data);
+      break;
 #ifdef HDF5
-  case 12:
-    h5part_reader(params,particle_data);
-    break;
+    case 12:
+      h5part_reader(params,particle_data);
+      break;
 #endif
-   case 13:
-    ramses_reader(params,particle_data);
-    break;
+    case 13:
+      ramses_reader(params,particle_data);
+      break;
     }
 
   mpiMgr.barrier();
   tstack_pop("Input");
 
   if (interpol_mode>0)
-  {
+    {
     if (mpiMgr.master())
       cout << "Interpolating between " << p1.size() << " and " <<
            p2.size() << " particles ..." << endl;
     tstack_push("Time interpolation");
     particle_interpolate(particle_data,frac);
     tstack_pop("Time interpolation");
-  }
+    }
   tstack_push("Particle ranging");
   tsize npart_all = particle_data.size();
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
@@ -710,13 +710,12 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 
   bool boost = params.find<bool>("boost",false);
   if(boost)
-  {
+    {
     cout << "Boost setup..." << endl;
     mesh_creator(particle_data, &Mesh, &MeshD);
     randomizer(particle_data, Mesh, MeshD);
+    }
   }
-
-}
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<particle_sim> &r_points,
                                vec3 &campos, vec3 &lookat, vec3 &sky, string &outfile)
