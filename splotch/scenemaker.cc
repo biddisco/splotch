@@ -324,17 +324,13 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 sceneMaker::sceneMaker (paramfile &par)
   : cur_scene(-1), params(par), snr1_now(-1), snr2_now(-1)
   {
-  double fidx = params.find<double>("fidx",0);
-
-  std::map<std::string,std::string> sceneParameters;
-
-  string outfile = params.find<string>("outfile","demo");
+  string outfile = params.find<string>("outfile");
 
   // do nothing if we are only analyzing ...
   if (params.find<bool>("AnalyzeSimulationOnly",false))
     {
     string outfilen = outfile+intToString(0,4);
-    scenes.push_back(scene(sceneParameters,outfilen,false,false));
+    scenes.push_back(scene(outfilen,false,false));
     return;
     }
 
@@ -343,16 +339,10 @@ sceneMaker::sceneMaker (paramfile &par)
   if (geometry_file=="")
     {
     string outfilen = outfile+intToString(0,4);
-    scenes.push_back(scene(sceneParameters,outfilen,false,false));
+    scenes.push_back(scene(outfilen,false,false));
     }
   else
     {
-/*
-    if (interpol_mode>0)
-      planck_assert(mpiMgr.num_ranks()==1,
-       "Sorry, interpolating between files is not yet MPI parallelized ...");
-*/
-
     ifstream inp(geometry_file.c_str());
     planck_assert (inp, "could not open scene file '" + geometry_file +"'");
     int current_scene = params.find<int>("scene_start",0);
@@ -385,30 +375,38 @@ sceneMaker::sceneMaker (paramfile &par)
 
     while (getline(inp, line))
       {
-      sceneParameters.clear();
+      paramfile scnpar;
       string outfilen = outfile+intToString(current_scene,4);
       split(line, sceneParameterValues);
 
       planck_assert(sceneParameterKeys.size()==sceneParameterValues.size(),
         "ERROR in scene file detected, please check!  Quitting.");
       for (unsigned int i=0; i<sceneParameterKeys.size(); i++)
-        sceneParameters[sceneParameterKeys[i]] = sceneParameterValues[i];
+        scnpar.setParam(sceneParameterKeys[i], sceneParameterValues[i]);
+
+      double fidx = scnpar.find<double>("fidx",params.find<double>("fidx",0.));
+
       bool reuse=false;
-
-      fidx = params.find<double>("fidx",0);
-
       if (scenes.size()>0)
-        if (approx(fidx,scenes[scenes.size()-1].sceneParameters.find<double>("fidx"),0.))
+        {
+        double fidxold = scenes[scenes.size()-1].sceneParameters.find<double>
+          ("fidx",params.find<double>("fidx",0.));
+        if (approx(fidx,fidxold))
           scenes[scenes.size()-1].keep_particles=reuse=true;
+        }
 
-      scenes.push_back(scene(sceneParameters,outfilen,false,reuse));
+      scnpar.setVerbosity(false);
+      scenes.push_back(scene(scnpar,outfilen,false,reuse));
       current_scene += scene_incr;
       for (int i=0; i<scene_incr-1; ++i)
         getline(inp, line);
       }
     }
-  double eye_separation = degr2rad * params.find<double>("EyeSeparation",0);
-  if (eye_separation>0)
+
+  bool do_stereo = params.find<double>("EyeSeparation",0)!=0.;
+  for (tsize m=0; m<scenes.size(); ++m)
+    do_stereo = do_stereo || scenes[m].sceneParameters.find<double>("EyeSeparation",0)!=0.;
+  if (do_stereo)
     {
     vector<scene> sc_orig;
     sc_orig.swap(scenes);
@@ -417,22 +415,23 @@ sceneMaker::sceneMaker (paramfile &par)
       scenes.push_back(sc_orig[i]);
       scenes.push_back(sc_orig[i]);
       scene &sa = scenes[scenes.size()-2], &sb = scenes[scenes.size()-1];
+      paramfile &sp(sa.sceneParameters);
       sa.keep_particles=true;
-      sb.keep_particles=false;
+// MR: I think the next line is not necessary
+//      sb.keep_particles=false;
       sb.reuse_particles=true;
+      double eye_separation = degr2rad * sp.find<double>("EyeSeparation",
+        params.find<double>("EyeSeparation",0));
 
-      // FIXME: For all components: we have to first test if they are present in the sa.sceneParameters
-      //        and if not read them from the param file.
-      //        For the moment we assume that camera is in sceneParameters and the rest in the param file
-      vec3 lookat(params.find<double>("lookat_x"),
-                  params.find<double>("lookat_y"),
-                  params.find<double>("lookat_z"));
-      vec3 campos(sa.sceneParameters.find<double>("camera_x"),
-                  sa.sceneParameters.find<double>("camera_y"),
-                  sa.sceneParameters.find<double>("camera_z"));
-      vec3 sky(params.find<double>("sky_x",0),
-               params.find<double>("sky_y",0),
-               params.find<double>("sky_z",1));
+      vec3 lookat(sp.find<double>("lookat_x",params.find<double>("lookat_x")),
+                  sp.find<double>("lookat_y",params.find<double>("lookat_y")),
+                  sp.find<double>("lookat_z",params.find<double>("lookat_z")));
+      vec3 campos(sp.find<double>("camera_x",params.find<double>("camera_x")),
+                  sp.find<double>("camera_y",params.find<double>("camera_y")),
+                  sp.find<double>("camera_z",params.find<double>("camera_z")));
+      vec3 sky(sp.find<double>("sky_x",params.find<double>("sky_x",0)),
+               sp.find<double>("sky_y",params.find<double>("sky_y",0)),
+               sp.find<double>("sky_z",params.find<double>("sky_z",1)));
 
       vec3 view = lookat - campos;
 

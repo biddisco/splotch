@@ -9,20 +9,22 @@
 #include "splotch/splotchutils.h"
 
 class sceneMaker
-{
+  {
   private:
     struct scene
-    {
+      {
       paramfile sceneParameters;
 
       std::string outname;
       bool keep_particles, reuse_particles;
 
-      scene (std::map<std::string,std::string> &scnParms,
+      scene (const paramfile &scnParms,
           const std::string &oname, bool keep, bool reuse)
-      : sceneParameters(scnParms), outname(oname),
-        keep_particles(keep), reuse_particles(reuse) {}
-    };
+        : sceneParameters(scnParms), outname(oname),
+          keep_particles(keep), reuse_particles(reuse) {}
+      scene (const std::string &oname, bool keep, bool reuse)
+        : outname(oname), keep_particles(keep), reuse_particles(reuse) {}
+      };
 
     std::vector<scene> scenes;
     int cur_scene;
@@ -73,6 +75,6 @@ class sceneMaker
   bool getNextScene (std::vector<particle_sim> &particle_data,
       std::vector<particle_sim> &r_points, vec3 &campos,
       vec3 &lookat, vec3 &sky, std::string &outfile);
-};
+  };
 
 #endif
