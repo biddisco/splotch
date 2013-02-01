@@ -9,11 +9,15 @@
 \begin{frontmatter}
 
 \title{GPU Accelerated Particle Visualization with Splotch}
-%\author{M. Rivi, C. Gheller, M.Krokos}
-\author{.........}
+\author[1]{Marzia Rivi} 
+\address[1]{Department of Physics, University of Oxford, Keble Road, OX1 3RH Oxford, United Kingdom}
+\author[2]{Claudio Gheller}
+\address[2]{ETH-CSCS, via Trevano 131, 6900 Lugano, Switzerland}
+\author[3]{Mel Krokos}
+\address[3]{...  University of Portsmouth, ...}
 
 \begin{abstract}
-...
+Splotch is a light and fast software tool for visualization of point-like datasets, coming from astronomical observations or numerical particle-based computer simulations. Its main peculiarities are represented by high quality images, obtained by adopting a specialized ray-tracing approach, and the support of large data volumes by the exploitation of multi-core and multi-node systems by means of an effective mix of the OpenMP and MPI parallel programming paradigms. In order to exploit GPUs as well, a CUDA version of Splotch has been implemented. The main steps required to adapt the Splotch algorithm to GPU architectures and get good performances out of it will be described. Results of a number of tests and benchmarks will be also presented. 
 \end{abstract}
 
 \begin{keyword}
@@ -30,7 +34,7 @@ algorithms \cite{} which can be very expensive if employed for
 large-scale datasets \cite{}. Visual exploration and discovery can then represent invaluable tools, e.g. by providing scientists with prompt and intuitive insights enabling them to identify interesting characteristics and thus define regions of interest within which
 to apply time-consuming methods. Additionally, they can be a very effective way in discovering and understanding correlations in data patterns, or in identifying unexpected behaviours, thus saving valuable resources, e.g. by terminating promptly on going numerical simulations producing unreliable results. Visual exploration and discovery tools can also provide effective means for communicating scientific results not only to researchers \cite{} but also to members of the general public \cite{}.
 
-There is a long tradition within astrophysical communities in developing and deploying visual discovery tools for large-scale datasets represented by images, complex surveys, data cubes or N-body simulations. Consequently astrophysics represents an ideal discipline for exploiting High Performance Computing (HPC) devices, e.g. large multi-core and multi-node systems, providing all necessary resources for coping with large-scale datasets, e.g. computational power, large memory sizes, sufficient storage capacities and fast network speeds. A recent example is given by Hassan et al. (see related works and references in \cite{2012ASPC..461...45H}), who focus on forthcoming generations of radio surveys (ASKAP and SKA \cite{}), which are expected to produce very large datasets. Visual tools play a crucial role in exploring data cubes through a mesh-based volume rendering approach boosted by the efficient usage of GPUs. A further example, is given by Fraedrich et al. \cite{Fraedrich:2009:TMV}, who
+There is a long tradition within astrophysical communities in developing and deploying visual discovery tools for large-scale datasets represented by images, complex surveys, data cubes or N-body simulations. Consequently astrophysics represents an ideal discipline for exploiting High Performance Computing (HPC) devices, e.g. large multi-core and multi-node systems, providing all necessary resources for coping with large-scale datasets, e.g. computational power, large memory sizes, sufficient storage capacities and fast network speeds. A recent example is given by Hassan et al. (see related works and references in~\cite{2012ASPC..461...45H}), who focus on forthcoming generations of radio surveys (ASKAP~\cite{askap} and SKA~\cite{ska}), which are expected to produce very large datasets. Visual tools play a crucial role in exploring data cubes through a mesh-based volume rendering approach boosted by the efficient usage of GPUs. A further example, is given by Fraedrich et al. \cite{Fraedrich:2009:TMV}, who
 investigated scalability in visualizing large-scale particle-based cosmological 
 simulations focusing on the Millennium run \cite{millennium}, and presented methods to reduce the associated limitations on PC architectures based on levels-of-detail.
 Recently Kaheler et al. \cite{2012arXiv1208.3206K} presented an algorithm specifically designed for N-body simulations. Their approach is based on a tetrahedral tessellation of the computational domain with mesh vertices defined by the simulation's dark matter particle positions and offers several GPU-assisted rendering solutions. This article includes an excellent review of methods for effective visualisation of particle based datasets (the reader is referred to \cite{2012arXiv1208.3206K} for details).
