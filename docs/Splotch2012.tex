@@ -486,11 +486,12 @@ $n_p$ & $t_x$ (pixels) & Kernel & Rendering & Total CUDA \\
 \label{tab:tuning}
 \end{table}
 
+%CLAAAAAA
 \subsection{Performance analysis}
 \label{sec:performance}
-The main tests' parameters are the data size ($N_{part}$),
-the image size ($N_{pix}^2$) and the distribution of the number of pixels 
-per particle ($r(p)$) and its expectation value $R_s$.
+The main tests' parameters are the data size ($N_{part}$), the image size ($N_{pix}$)
+and the distribution of the number of pixels 
+per particle $r(p)$ (see equation \eqref{radius}) and its expectation value $R_s$.
 
 \medskip
 \noindent 
@@ -512,10 +513,10 @@ by the GPU.
 Figure~\ref{fig:scalability} shows different timings, progressively increasing the number of particles
 from about $10^7$ up to the total size of about $2.2\times 10^8$. 
 The overall computing time scales linearly, 
-confirming that the the GPU code preserves the linear dependency from the 
-number of particles. 
+confirming that the the GPU code preserves the essential feature of linear dependency from the 
+data size. 
 The Rasterization time always represent 
-a minor contribution to the overall time, resulting approximately ibetween the 5 and the 10\% of the processing 
+a minor contribution to the overall time, resulting between the 5 and the 10\% of the processing 
 time. For the original serial implementation, this ratio varies between the 35\% and the 60\%.
 This proves that the {\it one-thread-per-particle} approach adopted for this kernel
 is extremely effective, making its impact on computing time almost negligible.
@@ -529,25 +530,46 @@ This overhead  will be discussed in detail later in this section.
 
 \medskip
 \noindent
-{\bf Scalability with radii and comparison with the CPU}
+{\bf Scalability with the image size, the radii and comparison with the CPU}
 
 \noindent
-The smoothing radius depends both on the intrinsic properties of the particle
-and from the camera position. 
-As discussed in Section~\ref{sec:model} , this has a big impact 
-on the implementation of the GPU rendering kernel and
-on the performance. In order to investigate the dependency of the performance from
-the smoothing radii, we have performed a number of tests (seven test)
+The performance dependency from the image size, $N_{pix}$, 
+is presented in Figure~\ref{fig:pixels}. 
+Computing times have been estimated 
+keeping the dataset size and the camera position unchanged and progressively increasing
+$N_{pix}$, from 128 to 4096. The main contribution to the computing times 
+is given by the smoothing radii, which depends linearly from the image resolution.
+Hence, according to equation \eqref{ops}, each particle contributes to a number of pixels 
+that grows with the square of $N_{pix}$. As long as the image size is small with 
+respect to the dataset size (for this particular configuration, $N_{pix} < 1024$), 
+the computing time is constant and the dependency from $N_{pix}$ can be neglected. 
+For large image sizes, the resolution contribution becomes dominant and the computing
+time rises rapidly.  
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{images/pixels.eps}
+\caption{Splotch's scalability on the GPU with the image size $N_{pix}$ (camera position is 
+kept fixed).}
+\label{fig:pixels}
+\end{figure}
+
+In the next series of tests, the dependency of the computing time from the smoothing 
+radius as been analized keeping the image resolution fixed to $N_{pix} = 1000$ 
+and changing the camera position, the other setting that affects the radii 
+distribution $r(p)$. 
+We have performed seven tests
 setting the camera (i.e. the point of view) progressively closer to the dataset center. 
 The first camera position was chosen so that the data cube lies inside the image; the second was set so that the cube fits exactly the size of the image. Then the camera position is closer and closer the box center. Figure~\ref{fig:panorama} shows the images created by Splotch at the different radii.
 The image size is kept constant in all the tests, with $N_{pix}$=1000.
  
 Approaching the center of the 
 data cube, the radii distribution moves to larger values. This is 
-shown in figre Figure~\ref{fig:radii} and expressed synthetically 
-by the average $R_s$ radius, whose values, for the different cases, are presented in 
+shown in Figure~\ref{fig:radii} and expressed synthetically 
+by the average $R_s=<r(p)>$ radius, whose values, for the different cases, are presented in 
 Table~\ref{tab:radius}, together with the corresponding number of active particles and computing time. 
 
+%CLAAAA END
 \begin{figure}
 \centering
 %\includegraphics[scale=0.5]{images/radii.eps}
@@ -562,19 +584,19 @@ Table~\ref{tab:radius}, together with the corresponding number of active particl
 \hline
 $R_s$ (pixels) & Active Particles & Time (sec.) \\
 \hline
-0.30   & 226894837  & 21.12 \\
+0.30   & 226894837  & 12.89 \\
 \hline
-0.62   & 225972201  & 22.50 \\
+0.62   & 225972201  & 12.52 \\
 \hline
-0.72   & 212746328  & 21.79 \\
+0.72   & 212746328  & 12.20 \\
 \hline
-1.40   & 153647633  & 18.88 \\
+1.40   & 153647633  & 10.05 \\
 \hline
-3.90   & 64756141   & 25.22 \\
+3.90   & 64756141   & 14.85 \\
 \hline
-8.99   & 13686588   & 28.06 \\
+8.99   & 13686588   & 16.11 \\
 \hline
-13.66  & 4222214    & 22.15 \\
+13.66  & 4222214    & 12.75 \\
 \hline
 \end{tabular}
 \end{center}
@@ -615,9 +637,9 @@ rises quickly.
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{images/scalaomp.eps}
-\caption{GPU and CPU performance at different radii. Black line represents the GPU 
-computing time, blue lines the CPU times from 16 cores (light blue) to 1 core
-(dark blue).}
+\caption{GPU and CPU performance at different radii. Black (GPU) line represents the GPU 
+computing time, blue lines the CPU times from 12 cores (light blue, OMP12 curve) to 1 core
+(dark blue, OMP1 line).}
 \label{fig:gpucpu}
 \end{figure}
 
@@ -632,7 +654,7 @@ at small radii ($R_s < 2$) the speed-up of the GPU version (defined as the ratio
 \centering
 \includegraphics[scale=0.5]{images/speedup.eps}
 \caption{
-Speed-up of the Rendering and Rasterization kernels, defined as the ratio
+Speed-up of the Rendering (red line, squares) and Rasterization (black line, diamonds) kernels, defined as the ratio
 between the time on the GPU and that on the CPU.
 }
 \label{fig:speedup}
