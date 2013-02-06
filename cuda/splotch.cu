@@ -303,7 +303,7 @@ long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles,
    size_t spareMem = 20*(1<<20);
    long int arrayParticleSize = gMemSize - 4*ImSize - 2*tiles - spareMem;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
-   long int maxlen = policy->GetMaxGridSize() * policy->GetBlockSize();
+   long int maxlen = (long int)policy->GetMaxGridSize() * (long int)policy->GetBlockSize();
    if (len > maxlen) len = maxlen;
    return len;
   }
