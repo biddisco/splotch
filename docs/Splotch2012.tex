@@ -419,7 +419,7 @@ To perform the tests presented in this section an important aspect is ensuring h
 %Notice that the tile side is also relevant to the load balancing among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 
 A number of possible $n_p$ and $t_s$ values are illustrated in Table~\ref{tab:tuning}. We considered the situation in which the majority of particles is non-large so that they are processed by the GPU. This way we obtain meaningful rendering times for our optimization as the host computation is overlapped by the device computation completely. We observe that storing Btiles together with a fixed number of particles in shared memory (for achieving rapid access to global memory) restricts full GPU occupancy. The maximum occupancy obtained is $66.7\%$ for small tiles ($t_s = 10^{2}$ or $t_s = 12^{2}$) and small chunks of particles ($n_p = 32$ or $n_p=64$). Taking into account total CUDA times, optimal performance is achieved for $n_p=64$ and $t_s = 12^{2}$, so we employ these values for testing in the next sections.
-
+%MARZIA - PLEASE CHECK FOR SOME REASON THE TABLE IS 1, BUT IN TEXT IT APPEARS AS 5.1? IS IT THEIR STYLEFILE?
 \begin{table}
 \label{tab:tuning}
 \begin{center}
