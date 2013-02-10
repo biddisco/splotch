@@ -397,61 +397,36 @@ per multiprocessor during the execution of the kernel, thus reducing the device 
 %(see Section~\ref{sec:gpuperf}).
 A further issue is related to the unbalanced work load among blocks. In fact the number of particles falling in each tile can vary in a significant way from one tile to another. All these aspects will be quantitatively analyzed in the next section.
 
-\section{Tests and results}
+\section{Results}
 \label{sec:results}
-We have analyzed the performance of Splotch's GPU implementation in a number of cases, designed in 
-order to stress the different features of the algorithm, 
-comparing the results 
-obtained using the GPU to those obtained with the original code on the CPU. 
 
 \begin{figure}
 \centering
 \includegraphics[scale=0.6]{images/box.eps}
-\caption{The simulated box, visualized by Splotch. White dots represent stars and galaxies, while the 
-diffused blue component is the gas.}
+\caption{N-body Gadget simulation based on 400 million particles classified as {\it dark matter}, {\it gas} and {\it stars} respectively. Stars and galaxies are represented by white dots. The diffused blue color illustrates gas.}
 \label{fig:box}
 \end{figure}
 
-The dataset adopted in all the tests is the result of a medium sized cosmological 
-N-body simulation performed using the Gadget code \cite{gadgeturl}. It consists in about 
-400 million particles, with about 200 million of dark matter particles, the same amount 
-of baryonic matter (herafter ``gas'') and about 10 million star particles. 
-All particles are characterized by their spatial coordinates, velocities
-and smoothing length. 
-Both the gas and the stars have a number of other quantities associated, that can be used 
-as color and intensity. Mass density and temperature for the former, spectral type and age
-for the latter. Dark matter is not used in our tests. Figure~\ref{fig:box} shows 
-the entire data cube visualized by Splotch.
+An N-body simulation performed using Gadget \cite{gadgeturl} was used for the tests we discuss in this section. The simulation is based on about 400 million particles consisting of 200 million {\it dark matter} particles, 200 million baryonic matter particles (hereafter referred to as {\it gas}) and around 10 million {\it star} particles. Particles possess a number of physical quantities, e.g. vectors capturing spatial coordinates and velocities, or scalars representing smoothing length. Additionally gas particles are associated with {\it temperature} and {\it mass density}. Also, {\it spectral type} and {\it age} are properties of star particles. Such quantities can be exploited in highly-detailed renderings, e.g. for modulating colors and intensities appropriately. 
 
-The large size of the dataset, $\approx 7.5$ GB, can be handled only by a large memory computing node. 
-This is not an issue for the GPU, since data are split 
-in smaller chunks and loaded iteratively on the accelerator. 
+We used GCC 4.4.6 and CUDA 5.0 for compilation. Execution was performed on a computing node containing a dual-socket six-core Intel Xeon 5650 2.6 GHz processor with 24 GB shared memory and a pair of NVIDIA Tesla M2090 GPUs with 6 GB of GDDR5 memory, 177 GB/sec main memory bandwidth and peak performance of 665 GFlops/sec. Although such a large memory computing node is necessary for handling our test simulation ($\approx 7.5$ GB) no GPU issues arise as data is loaded in small chunks iteratively. This section presents a performance analysis of our GPU implementation and compares to the parallelized CPU version of Splotch. Figure~\ref{fig:box} illustrates the test simulation.
 
-Our tests have all been performed on a dual-socket six-cores Intel Xeon 5650 processor,
-running at 2.6 GHz, with 24 GB of shared memory 
-each equipped with two NVIDIA Tesla M2090 GPU with 6 GB of GDDR5 memory,
-177 GB/sec main memory bandwidth, 665 GFlops/sec of peak performance DP. GCC 4.4.6 and CUDA 5.0 
-were used for the code compilation.
-
-\subsection{GPU performance tuning}
+\subsection{Tuning}
 \label{sec:gpuperf}
-In order to get high performance on the GPGPUs, an important aspect is the occupancy (i.e. exploit the underlying architecture as much as possibile trying to avoid that some core is idle during the kernel execution).
-From an algorithmic point of view, it is strictly related to the number of threads per block, the number of registers and the size of shared memory used in the kernel because they define the number of resident CUDA blocks (blocks/SM) during the execution. 
-Therefore it is important to find a good trade-off among these factors in order to achieve a high occupancy. 
+To perform the tests presented in this section an important aspect is ensuring high {\it occupancy} by exploiting underlying GPUs appropriately so as to avoid the situation in which cores remain idle during kernel execution. Occupancy depends upon the number of threads per block, the number of registers and finally the size of shared memory used in a kernel - as these define the number of resident CUDA blocks (blocks/SM) during execution. We have empirically estimated a good trade-off among these parameters for the rendering kernel of our implementation. This kernel may potentially use significant shared memory due to the fact that Btiles together with a number of particles need to be stored. As the boundary width of Btiles is critical for realizing particle classification and for determining sizes of CUDA blocks, we suggest to fix this (e.g. 8) and focus instead on optimizing the relevant number of particles ($n_p$) and surface area of Btiles ($t_s$) respectively.
+% MARZIA- PLEASE EXPLAIN IN THE PREVIOUS SECTION WHAT IS THE REASONING FOR SETTING THE BOUNDARY TO 8?
+% MARZIA - THE SECTION BELOW HAS BEEN COMMENTED OUT FOR THE TIME BEING, IF IT IS TO INCLUDE IT PLEASE REPHRASE AS DISCUSSED IN THE TELCO.
+%Notice that the tile side is also relevant to the load balancing among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 
-In our implementation, the Rendering kernel is the most critical in this sense. This kernel uses a significat part of the shared memory because each block stores here the Btile and a number $n_p$ of particles to be rendered. 
-Hence $n_p$, the tile side $t_x$ (for simplicity we set $t_x=t_y$) and its boundary width $r_0$ are parameters that must be carefully tuned. 
-Since $r_0$ is critical both for the particle classification and the CUDA block size, we cannot reduce it as much as we like (we suggest to set $r_0=6$ or $r_0=8$), therefore our tests were focused on finding the best configuration for $n_p$ and $t_x$ which are mainly related to the amount of shared memory used and quite independent of the image resolution. Notice that the tile side is also relevant to the load balancing among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
-
-Some possible configurations for these two parameters and the corresponding algorithm performance are presented in Table~\ref{tab:tuning}. In our tests the boundary width and the image resolution are fixed so that the amount of particles processed by the device is always the same. The rendering time includes the computation for all the types of particles (the host contribution is completely overlapped by the device because we have considered a test case were most of the particles are processed by the GPU). Since the tile size affects other computation parts of the code (e.g. particle distribution among tiles), we also consider the total CUDA time as a performance index of the rendering algorithm. 
-The necessity to store the Btile and a fixed number of particles in the shared memory for an efficient access to the global memory, do not allow us to reach a full occupancy of the board for the execution of the rendering kernel: the maximum real occupancy obtained is $66.7\%$ both for $n_p = 64$ and $n_p=32$. However the best performance is obtained when $n_p=64$ and $t_x = 12$, which is the configuration used in the following tests.
+A number of possible $n_p$ and $t_s$ values are illustrated in Table~\ref{tab:tuning}. We considered the situation in which the majority of particles is non-large so that they are processed by the GPU. This way we obtain meaningful rendering times for our optimization as the host computation is overlapped by the device computation completely. We observe that storing Btiles together with a fixed number of particles in shared memory (for achieving rapid access to global memory) restricts full GPU occupancy. The maximum occupancy obtained is $66.7\%$ for small tiles ($t_s = 10^{2}$ or $t_s = 12^{2}$) and small chunks of particles ($n_p = 32$ or $n_p=64$). Taking into account total CUDA times, optimal performance is achieved for $n_p=64$ and $t_s = 12^{2}$, so we employ these values for testing in the next sections.
 
 \begin{table}
+\label{tab:tuning}
 \begin{center}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
-$n_p$ & $t_x$ (pixels) & Kernel & Rendering & Total CUDA \\
-& & Occupancy & Time (sec.) & Time (sec.) \\
+$n_p$ & $\frac{t_s}{2}$ & Kernel & Rendering & Total CUDA \\
+& & Occupancy & Times (sec.) & Times (sec.) \\
 \hline
 256   & 16 & 0.333 & 9.186 & 16.38 \\
 \hline
@@ -482,9 +457,8 @@ $n_p$ & $t_x$ (pixels) & Kernel & Rendering & Total CUDA \\
       & 10 & 0.667 & 4.483 & 12.43 \\ 
 \hline
 \end{tabular}
-\caption{Rendering performance results according to different values of the kernel parameters. We set $r_0=8$ and the resolution $N_{pix}=1024$.}
+\caption{The rendering times obtained for different numbers of $n_p$ (number of particles) and $t_s$ (surface area of Btiles). Square tiles with boundary 8 are considered while the resolution of rendered images is $1024^{2}.$}
 \end{center}
-\label{tab:tuning}
 \end{table}
 
 %CLAAAAAA
