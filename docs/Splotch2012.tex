@@ -462,88 +462,43 @@ $n_p$ & $\frac{t_s}{2}$ & Kernel & Rendering & Total CUDA \\
 \end{table}
 
 %CLAAAAAA
-\subsection{Performance analysis}
+\subsection{Performance Analysis}
 \label{sec:performance}
-The main tests' parameters are the data size ($N_{part}$), the image size ($N_{pix}$)
-and the distribution of the number of pixels 
-per particle $r(p)$ (see equation \eqref{radius}) and its expectation value $R_s$.
+This section discusses scalability of our implementation in terms of sizes of datasets (Section~\ref{sec:datasizes}), rendered images (Section~\ref{sec:imagesizes}) and distribution of smoothing lengths (Section~\ref{sec:smoothingradius}).
 
-\medskip
-\noindent 
-{\bf Scalability with data size}
-
-\noindent
-A first series of tests analyze the scalability of the code
-with the size of the processed dataset. In these tests, both the image size
-and the camera position are kept fixed and set so that all the particles are processed 
-by the GPU.
-
+\subsubsection{Data Sizes}
+\label{sec:datasizes}
+To analyze scalability in terms of sizes of datasets objectively we fixed the sizes of rendered images and camera settings so that all particles are classified as non-large and are thus processed by the GPU entirely. Figure~\ref{fig:scalability} illustrates the obtained timings when progressively increasing the overall number of particles
+from about $10^7$ to roughly $2.2\times 10^8$. Computing times scale linearly confirming that our implementation preserves an essential feature of the original CPU Splotch. 
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{images/scalan.eps}
-\caption{Scalability of different Splotch's kernels on the GPU with the dataset size.}
+\caption{Scalability of Splotch kernels on the GPU in relation to dataset sizes.}
 \label{fig:scalability}
 \end{figure}
-
-Figure~\ref{fig:scalability} shows different timings, progressively increasing the number of particles
-from about $10^7$ up to the total size of about $2.2\times 10^8$. 
-The overall computing time scales linearly, 
-confirming that the the GPU code preserves the essential feature of linear dependency from the 
-data size. 
-The Rasterization time always represent 
-a minor contribution to the overall time, resulting between the 5 and the 10\% of the processing 
-time. For the original serial implementation, this ratio varies between the 35\% and the 60\%.
-This proves that the {\it one-thread-per-particle} approach adopted for this kernel
-is extremely effective, making its impact on computing time almost negligible.
-The ``Rendering'' time 
-is due to the proper rendering kernel. It shows a perfect linear scalability
-with $N_{part}$ and represents one of the two main contributions
-to the computing time, the other being the sum of the overheads related to all those 
-parts specific to the GPU code refactoring 
-(e.g. host-device copy time, particle distribution etc.). 
-This overhead  will be discussed in detail later in this section.
-
-\medskip
-\noindent
-{\bf Scalability with the image size, the radii and comparison with the CPU}
-
-\noindent
-The performance dependency from the image size, $N_{pix}$, 
-is presented in Figure~\ref{fig:pixels}. 
-Computing times have been estimated 
-keeping the dataset size and the camera position unchanged and progressively increasing
-$N_{pix}$, from 128 to 4096. The main contribution to the computing times 
-is given by the smoothing radii, which depends linearly from the image resolution.
-Hence, according to equation \eqref{ops}, each particle contributes to a number of pixels 
-that grows with the square of $N_{pix}$. As long as the image size is small with 
-respect to the dataset size (for this particular configuration, $N_{pix} < 1024$), 
-the computing time is constant and the dependency from $N_{pix}$ can be neglected. 
-For large image sizes, the resolution affects significantly the particle classification. Its contribution becomes dominant and the computing
-time rises rapidly because most of the particles become medium and large.  
+Rasterization requires a fraction of the overall time, 5\% to 10\%, compared to that of the CPU Splotch which varies from 35\% to 60\%. This is a strong indication that our {\it one-thread-per-particle} approach for this kernel is extremely effective. We also observe a perfect linear scalability of the rendering times with $N_{part}$, these representing one of the two main contributions to overall computing times, the other being the sum of the overheads related to all those parts specific to the GPU code refactoring (e.g. times for host-device copy or distribution of particles - see Section~\ref{sec:discussion}). 
+%CLAUDIO - REGARDING THE OBSERVATIONS ON RASTERIZATION TIMES, IS THERE A FIGURE TO SHOW THIS? HOW DO WE COME TO THE NUMBERS 5-10% AND 35-6-%? PERHAPS WE REQUIRE LABELING IN FIGURE 4, WHAT DO THE TRIANGLES, STARS, SMALL AND LARGE SQUARES REPRESENT?
+\subsubsection{Image Sizes}
+\label{sec:imagesizes}
+Overall performance in relation to image sizes $N_{pix}$ is illustrated in Figure~\ref{fig:pixels}. Keeping the underlying dataset sizes and camera settings fixed, we obtained computing times by progressively increasing
+$N_{pix}$ from 128 to 4096. According to \eqref{ops} each particle contributes to a number of pixels 
+that is analogous to $N_{pix}^{2}$. As long as image sizes are small relative to dataset sizes (for our particular configuration this translates to $N_{pix} < 1024$), overall computing times are constant. For large image sizes their resolution may affect significantly the classification of particles potentially increasing overall computing times dramatically.
 
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{images/pixels.eps}
-\caption{Splotch's scalability on the GPU with the image size $N_{pix}$ (camera position is 
-kept fixed).}
+\caption{Splotch's scalability on the GPU in relation to image sizes $N_{pix}$ (camera settings are fixed).}
 \label{fig:pixels}
 \end{figure}
-
-In the next series of tests, the dependency of the computing time from the smoothing 
-radius as been analized keeping the image resolution fixed to $N_{pix} = 1000$ 
-and changing the camera position, the other setting that affects the radii 
-distribution $r(p)$. 
-We have performed seven tests
-setting the camera (i.e. the point of view) progressively closer to the dataset center. 
-The first camera position was chosen so that the data cube lies inside the image; the second was set so that the cube fits exactly the size of the image. Then the camera position is closer and closer the box center. Figure~\ref{fig:panorama} shows the images created by Splotch at the different radii.
+%CLAUDIO - THERE IS A FIGURE 6 LEGEND HANGING AROUND HERE, NOT SURE WHY?
+\subsubsection{Smoothing Radius}
+\label{sec:smoothingradius}
+We obtained objective overall timings for scalability relating to resolution of rendered images by fixing $N_{pix} = 1024$ and progressively changing the camera position so as to resemble a typical user interaction scenario, namely a zoom in operation. The starting camera position ensures that the entire box of the simulation is rendered. Next we ensure that the simulation box just about fits into the rendered images. A few other camera positions have also been set so as to reach closer and closer towards the centre of the simulation. Figure~\ref{fig:panorama} illustrates rendered images generated for the different camera positions.
 %The image size is kept constant in all the tests, with $N_{pix}$=1000.
- 
-Approaching the center of the 
-data cube, the radii distribution moves to larger values. This is 
-shown in Figure~\ref{fig:radii} and expressed synthetically 
-by the average $R_s=<r(p)>$ radius, whose values, for the different cases, are presented in 
-Table~\ref{tab:radius}, together with the corresponding number of active particles and computing time. 
-
+ We observe that approaching the center of the simulation results in larger smoothing lengths (See Figure~\ref{fig:radii}) as expressed by the average $R_s=<r(p)>$ radius and illustrated by Table~\ref{tab:radius} showing these values together with number of active particles and computing times. 
+% CLAUDIO - IS THERE A FIGURE 6 MISSING HERE (RADII)?
+Overall computing times change according to the number of active particles. As we approach the centre of the simulation there are fewer active particles exhibiting increased smoothing length. For values larger than unity, a relevant fraction of the particles is large contributing to several pixels, thus increasing computing times with the square of their radius. These trends tend to compensate keeping overall times from 10 to 16 seconds.
+%CLAUDIO - THIS LAST SENTENCE REQUIRES REPHRASING TO MAKE IT CLEARER. ALSO THE TERMS SMOOTHING LENGTH AND RADIUS ARE USED INTERCHANGEABLY - IT WOULD BE GOOD TO DECIDE FROM THE VERY BEGINNING OF THE PAPER  ON USING ONE OF THESE TERMS ONLY, FOR CONSISTENCY
 %CLAAAA END
 \begin{figure}
 \centering
@@ -575,28 +530,22 @@ $R_s$ (pixels) & Active Particles & Time (sec.) \\
 \hline
 \end{tabular}
 \end{center}
-\caption{Average particle radius (left column), number of active particle (center)
-and computing time (right column) for seven tests performed varying the average radius.}
+\caption{Illustration of average particle radius (left column) together with number of active particles (center)
+and computing times (right column) for a typical zoom-in operation performed to vary average radius.}
 \label{tab:radius}
 \end{table}
-
 
 \begin{figure}
 \centering
 \includegraphics[scale=0.2]{images/panorama.eps}
-\caption{The particle distribution rendered by Splotch at different camera positions: from very 
-far from (top-left image), to very close to the dataset center.}
+\caption{A particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation: starting from very far (top-left image) and reaching very close to the center of the simulation.}
+%CLAUDIO - HERE AS DISCUSSED IT WOULD BE GOOD TO SHOW THE ZOOM IN, PERHAPS A SMALL RECTANGLE THAT BECOMES LARGER TO SHOW THE AREA WITHIN WHICH WE ZOOM IN
 \label{fig:panorama}
 \end{figure}
-
-The measured total computing time changes according
-to the number of active particle, that decreases approaching the center of the particle 
-distribution, and the radius $R_s$, that progressively increases. At values of 
-$R_s$ larger than unity, a relevant fraction of the particles has radii comparable to the image size
-contributing to a large number of pixels, so increasing the computing time 
-with the square of their radius. The two opposite trends tend to compensate, keeping  
-the computing time between 10 and 16 seconds.
-
+%CLAUDIO - NOT SURE IF YOU WOULD LIKE TO MOVE THIS SECTION ON DISCUSSION IN THE NEXT SECTION (CONCLUSIONS AND FUTURE DEVELOPMENTS), TOGETHER PERHAPS WITH THE SHORT "DISCUSSION" SECTION FROM SECTION 4?
+\subsection{Discussion}
+\label{sec:discussion}
+We compare our results to the parallelized CPU version of Splotch and conclude with a discussion on the performance achieved by all GPU kernels implemented.
 The same tests have been carried out also with the original Splotch code, exploiting the OpenMP parallel capabilities to run on 1, 2, 4, 8 and 12 processors, in order 
 to compare the performance of the two different implementations. The OpenMP was preferred to the MPI parallel implementation being its design closer to that of the CUDA version. The results are presented in Figure~\ref{fig:gpucpu}. 
 Since the number of processed particles depends on
@@ -620,10 +569,6 @@ computing time, blue lines the CPU times from 12 cores (light blue, OMP12 curve)
 
 The comparison between the GPU and the multicore performance show that 
 at small radii ($R_s < 2$) the speed-up of the GPU version (defined as the ratio between the CPU and the GPU times) can be larger than a factor of 6, compared to a single CPU. If we consider the parallel implementation, it is interesting to note that in this range of radii, GPU performance is comparable to that obtained from 8 cores. This is because parallel codes do not scale linearly with the number of processors. At radii $R_s > 2$ the performance of the CUDA implementation tends to decrease, due to the larger number of particles processed by the CPU. Even in the worst case scenario, however, the GPU version is faster than the single core (see next section for further details). 
-
-\medskip
-\noindent
-{\bf GPU timing breakdown}
 
 \begin{figure}
 \centering
@@ -698,7 +643,7 @@ the GPU overhead. This is due mainly to the efficient design of the
 algorithm, which takes full advantage of the multi-thread architecture 
 of the accelerator. 
 
-\section{Conclusions and Next Steps}
+\section{Conclusions and Future Developments}
 \label{sec:conclusions}
 The CUDA implementation of Splotch allows to exploit GPUs 
 for the visualization of huge data volumes, such those produced both 
