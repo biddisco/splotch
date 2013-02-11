@@ -1,4 +1,14 @@
-\begin{thebibliography}{10}
+\begin{thebibliography}{12}
+
+\bibitem{SpaceMission}
+P.~{Massimino}, M.~{Bandieramonte}, U.~{Becciani}, A.~{Costa}, M.~{Krokos}, C.~{Petta}, C.~{Pistagna}, S.~{Riggi}, E.~{Sciacca}, F.~{Vitello},
+\newblock {SpaceMission - Learning Astrophysics through Mobile Gaming},
+\newblock {Astronomical Data Analysis Software and Systems XXII}, 2012.
+
+\bibitem{VisIVOGateway}
+E.~{Sciacca}, F.~{Vitello}, U.~{Becciani}, A.~{Costa}, P.~{Massimino}, M.~{Bandieramonte}, M.~{Krokos}, C.~{Petta}, C.~{Pistagna}, S.~{Riggi}, F.~{Vitello},
+\newblock {VisIVO Workflow-Oriented Science Gateway for Astrophysical Visualization},
+\newblock {Proc. of Parallel, Distributed, and Network-Based Processing, IEEE Computer Society Press, (to appear)}, 2013.
 
 \bibitem{2008NJPh...10l5006D}
 K.~{Dolag}, M.~{Reinecke}, C.~{Gheller}, S.~{Imboden},
