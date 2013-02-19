@@ -17,7 +17,7 @@
 \address[3]{...  University of Portsmouth, ...}
 \author[4]{Klaus Dolag}
 \address[4]{}
-\author[5]{Martin Reineke}
+\author[5]{Martin Reinecke}
 \address[5]{}
 
 \begin{abstract}
@@ -43,7 +43,7 @@ investigated scalability in visualizing large-scale particle-based cosmological
 simulations focusing on the Millennium run \cite{millennium}, and presented methods to reduce the associated limitations on PC architectures based on levels-of-detail.
 Recently Kaheler et al. \cite{2012arXiv1208.3206K} presented an algorithm specifically designed for N-body simulations. Their approach is based on a tetrahedral tessellation of the computational domain with mesh vertices defined by the simulation's dark matter particle positions and offers several GPU-assisted rendering solutions. This article includes an excellent review of methods for effective visualisation of particle based datasets (the reader is referred to \cite{2012arXiv1208.3206K} for details).
 
-A number of popular, open-source software packages attempt to address the challenges associated with large-scale datasets and exploitation of HPC devices, e.g. VisIt~\cite{visit} and Paraview~\cite{paraview}. Both are based on VTK \cite{vtk} and support a fairly large variety of data types, file formats and visual discovery solutions. They can be used either as stand alone tools (running on a user's workstation) or in a client-server configuration (deploying services remotely). Both tools support in-situ visualization allowing visualization procedures to be embedded in a simulation, thus generating images during a simulation run (i.e. no data files are required) and enabling computational steering. An application of ParaView to large-scale cosmological simulations can be found in \cite{2011ApJS..195...11W}. Neither of the these packages provides customised tools for astrophysics,  e.g. particle visualization capabilities are limited. Often the underlying computational performances and/or memory usage are not highly optimized, thus preventing effective deployment of these packages on modern, large-scale astrophysical datasets. A VTK-based open-source software package focusing on astrophysics is VisIVO~\cite{visivo}. Although its main limitation is lack of interactivity, it has been recently released in the form of a science gateway offering a web-based, workflow-enabled framework seamlessly integrating large-scale, multi-dimensional datasets and applications for processing and visualization by exploiting distributed computing infrastructures \cite{VisIVOGateway}. Advanced users are able to create, change, invoke, and monitor workflows while standard users are provided with customized web interfaces hiding all underlying technical aspects. Tipsy \cite{tipsyurl} and Splash \cite{splash} are further examples of software packages specifically designed for particle-based datasets. Applicability of these packages to large-scale datasets is limited as they operate in stand-alone mode without any support for HPC resources.
+A number of popular, open-source software packages attempt to address the challenges associated with large-scale datasets and exploitation of HPC devices, e.g. VisIt~\cite{visit} and Paraview~\cite{paraview}. Both are based on VTK~\cite{vtk} and support a fairly large variety of data types, file formats and visual discovery solutions. They can be used either as stand alone tools (running on a user's workstation) or in a client-server configuration (deploying services remotely). Both tools support in-situ visualization~\cite{in-situ} allowing visualization procedures to be embedded in a simulation, thus generating images during a simulation run (i.e. no data files are required) and enabling computational steering. An application of ParaView to large-scale cosmological simulations can be found in \cite{2011ApJS..195...11W}. Neither of the these packages provides customised tools for astrophysics,  e.g. particle visualization capabilities are limited. Often the underlying computational performances and/or memory usage are not highly optimized, thus preventing effective deployment of these packages on modern, large-scale astrophysical datasets. A VTK-based open-source software package focusing on astrophysics is VisIVO~\cite{visivo}. Although its main limitation is lack of interactivity, it has been recently released in the form of a science gateway offering a web-based, workflow-enabled framework seamlessly integrating large-scale, multi-dimensional datasets and applications for processing and visualization by exploiting distributed computing infrastructures \cite{VisIVOGateway}. Advanced users are able to create, change, invoke, and monitor workflows while standard users are provided with customized web interfaces hiding all underlying technical aspects. Tipsy \cite{tipsyurl} and Splash \cite{splash} are further examples of software packages specifically designed for particle-based datasets. Applicability of these packages to large-scale datasets is limited as they operate in stand-alone mode without any support for HPC resources.
 
 This paper concentrates on {\it Splotch} \cite{2008NJPh...10l5006D} which is a ray-casting algorithm for effectively visualizing large-scale, particle-based numerical simulations. Very high-quality visualisations can be generated by Splotch for modern large-scale cosmological simulations, e.g. the Millennium trilogy \cite{millennium}, the Horizon and MareNostrum runs \cite{horizon} or the DEUS simulation \cite{deus}. The underlying models in these simulations typically reproduce the evolution of a representative fraction of the universe by means of hundreds of billions of fluid elements (described as particles) and interacting with each other through gravitational forces. The typical size of a fixed time output (or {\it snapshot}) employed by Splotch can range from several hundreds of GBs to a number of tens of TBs recording ID, position and velocity of particles together with additional properties, e.g. local smoothing length, density and velocity dispersion. Although developed for numerical simulations, Splotch has being successfully used 
 also in other contexts, e.g. visualizing real galaxy systems \cite{}.
@@ -60,8 +60,9 @@ also in other contexts, e.g. visualizing real galaxy systems \cite{}.
 The original Splotch algorithm has been optimized in terms of memory usage and exploitation of standard HPC architectures, e.g. multi-core processors and multi-node supercomputing systems by adopting the MPI paradigm \cite{jin:high-performance} and OpenMP (see Section~2). However nowadays HPC systems are increasingly populated with GPUs employed not just as graphic accelerators but also as computational co-processors providing outstanding performances with power consumption being comparable to standard CPUs \cite{}. On suitable classes of algorithms, GPUs can ensure speed-up factors of about an order of magnitude with respect to that of standard multicore CPU \cite{}. Supercomputers are thus increasingly equipped with several hundreds of GPUs that can overlap their computing capability with that of CPUs, minimising considerably overall times-to-solution of high-end scientific problems.
 
 This paper discusses the issues we faced in designing and implementing a new version of Splotch using the CUDA paradigm to fully exploit modern HPC infrastructures. The main issue was optimizing rendering of variable radius particles, dependent both on their intrinsic size and on the point of view, posing several problems for the GPU computation in terms of race conditions and workload balancing. A preliminary investigation as reported in \cite{jin:high-performance} had to be redesigned from the ground up to avoid data transfers during GPU computation. We have deployed the Thrust library \cite{thrusturl} and designed a number of optimized solutions for rendering particles according to a new classification strategy. Our approach can accelerate the original Splotch up to a factor of 6, when compared to a single core, and 
-can give performance comparable to that of cores using the shared memory parallel model. 
-This improved performance is achieved without affecting the performance features of the original Splotch - linear scalability on the number of particles and image sizes. Section~2 is a short description of the Splotch algorithmic approach. Background on CUDA paradigm and a performance model that guided our re-designing of Splotch are discussed in Section~3. Our implementation is presented in Section~4 in which we describe our strategy on how to classify particles and rendering them accordingly. Section~5 presents our reference datasets for benchmarking and discusses performance results including scalability related to sizes of datasets and smoothing radius. Section~6 presents conclusions and pointers to future developments.
+can give performance comparable to that of 8 cores using the shared memory parallel model. 
+This improved performance is achieved without affecting the performance features of the original Splotch - linear scalability on the number of particles. 
+Section~2 is a short description of the Splotch algorithmic approach. Background on CUDA paradigm and a performance model that guided our re-designing of Splotch are discussed in Section~3. Our implementation is presented in Section~4 in which we describe our strategy on how to classify particles and rendering them accordingly. Section~5 presents our reference datasets for benchmarking and discusses performance results including scalability related to sizes of datasets and smoothing radius. Section~6 presents conclusions and pointers to future developments.
 
 \section{Splotch Overview}
 \label{sec:overview}
@@ -69,17 +70,16 @@ This improved performance is achieved without affecting the performance features
 Splotch generates high-quality images through a customised ray-casting approach, described in detail in \cite{2008NJPh...10l5006D}.  
 The implementation of Splotch is self-contained with no dependencies from external libraries (apart of course from those needed for parallelism and to support specific file formats, e.g. HDF5 \cite{hdf5}). The code is pure C++ and compilation is straightforward through suitable makefile scripts.
 %The current implementation of Splotch \cite{} adheres to a simple software engineering design allowing for easy extensions, e.g. incorporating new data readers. 
-To aid the presentation in this paper the main stages of Splotch as summarised as below:
+To aid the presentation in this paper the main stages of Splotch are summarised as below:
 \begin{itemize}
 \item
 {\it Data Loading} - Several readers are available supporting different formats. As a minimum, three scalars are required, representing particles' cartesian coordinates in a generic phase space (usually geometric coordinates are used but any other meaningful choice is possible).
 \item
-{\it Processing and Rasterization} - Particle
+{\it Processing and Rasterization} - Normalisation together with other necessary 
+calculations (e.g. logarithms of processed quantities) are performed. Particle
 coordinates and other geometric quantities (e.g. smoothing lengths - see below) are
 roto-translated and projected according to camera settings.
-Active particles (i.e. contributing to the final rendering) are identified.
-Normalisation together with other necessary 
-calculations (e.g. logarithms of processed quantities) are performed on active particles. 
+Active particles (i.e. contributing to the final rendering) are identified and RGB color components are assigned to each of them.
 For the sake of simplicity in the following sections 
 this phase will be referred to as {\it Rasterization}.
 \item
@@ -108,7 +108,9 @@ where ${\bf I}({\bf x})$ represents the radiation intensity at position ${\bf x}
 %$r=\vert {\bf x_p}-{\bf x} \vert$ is the distance of the particle $p$ with coordinates ${\bf x_p}$ from ${\bf x}$ and $\sigma_p$ is a smoothing length defining a compact support for the Gaussian distribution. 
 The distribution is considered to be zero at a given distance $\chi\cdot\sigma_p$, where $\chi$ is a suitably-defined multiplicative factor, so that any rays passing at distances larger than $\chi\sigma_p$ are completely unaffected by $\rho_p$.
 
-In general it is recommended to set ${\bf E}_p \propto {\bf A}_p$,
+%%CLAUDIO: Ho messo l'uguaglianza perche' l'alternativa era specificare una costante di proporzionalita' INDIPENDENTE dalle particelle, scritto in quel modo poteva sembrare che per ogni particella la costante di proporzionalita' potesse variare...
+
+In general it is recommended to set ${\bf E}_p = {\bf A}_p$,
 which typically produces visually appealing images.
 This makes the calculation independent of integration order of particles, allowing a simplified parallel implementations of the algorithm.
 For special applications,
@@ -121,7 +123,7 @@ particle property (e.g. its temperature, density, etc.).
 %This makes the calculation independent of integration order of particles, allowing a simplified parallel implementations of the algorithm, without affecting the rendering quality and the correctedness of the images. 
 
 Equation \eqref{rad} is solved for each color component (R, G and B). Such components can be defined by exploiting different physical quantities. For instance, colors  can be associated to the three components of the velocity field $\bf v$, so that 
-$\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped to the RGB components via colour look-up tables (or palettes). 
+$\rho_p^{R}=v_x$, $\rho_p^{G}=v_y$ and $\rho_p^{B}=v_z$. Conversely, a scalar quantity, such as mass density or temperatures, can be mapped to the RGB components via color look-up tables (or palettes). 
 \end{itemize}
 Large-scale datasets are supported by exploiting HPC architectures by means of an effective mix of OpenMP / MPI parallel programming paradigms. The MPI implementation~\cite{jin:high-performance}  simply distributes chunks of particles among several tasks, each one performing a serial computation and producing a partial image. The final image is finally composed by the root processor.  
  
@@ -144,9 +146,9 @@ Splotch has been enabled to GPU by exploiting the CUDA programming model. In thi
 
 The CUDA programming model \cite{cudaurl} by NVIDIA currently represents the standard ``de facto'' for GPU programming. The underlying GPUs are closely mapped leading to optimal performances. The obvious drawback of limited portability is somewhat mitigated by the diffusion of NVIDIA GPUs. Access to highly parallelized modern GPU architectures is offered through a simplified C/C++ or Fortran API supporting joint CPU/GPU execution. Serial procedures are performed by the CPU (host), while those which exhibit rich amount of data parallelism are performed by the GPU (device) realized as CUDA kernels. The CPU and GPU have their own memory spaces so data transfers from each other must use the PCI Express bus (hereafter PCI-E). 
 
-The launch of CUDA kernels is asynchronous allowing the host to execute code instructions while the device is computing. If either of them requires a kernel execution to be completed then it is necessary to call a synchronization function. A kernel is instantiated as a grid of lightweight parallel threads organized into blocks of the same size. A thread represents an independent work element and maps to a hardware core (or streaming processor - SP). A {\em block} is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves via barrier synchronization and fast shared memory. This is possible because threads belonging to the same block are executed on the same streaming multiprocessor - SM. However synchronization is not possible between blocks. The limited amount of memory limits the number of  blocks that can reside in a particular SM simultaneously. Moreover when the execution of a block stalls, the runtime system switches to a different block - in other words there is no guaranteed order for the execution of blocks.
+The launch of CUDA kernels is asynchronous allowing the host to execute code instructions while the device is computing. If the host requires a kernel execution to be completed then it is necessary to call a device synchronization function. A kernel is instantiated as a grid of lightweight parallel threads organized into blocks of the same size. A thread represents an independent work element and maps to a hardware core (or streaming processor - SP). A {\em block} is a 1D, 2D or 3D set of concurrently executing threads that can cooperate among themselves via barrier synchronization and fast shared memory. This is possible because threads belonging to the same block are executed on the same streaming multiprocessor - SM. However synchronization is not possible between blocks. The limited amount of memory limits the number of  blocks that can reside in a particular SM simultaneously. Moreover when the execution of a block stalls, the runtime system switches to a different block - in other words there is no guaranteed order for the execution of blocks.
 
-Once a block is assigned to a SM, it is partitioned into 32-thread units called {\em warps}. All threads belonging to a particular warp are scheduled to execute the same instruction (Single-Instruction, Multiple-Thread). To optimise performance programmers should thus ensure no execution branches inside warps. Assigning a large number of warps to each SM (high occupancy) is also beneficial as the long waiting time of some warp instructions can be hidden by executing instructions from other warps and therefore selection of ready warps for execution does not introduce any idle times into the overall execution timeline - achieving zero-overhead thread scheduling. 
+Once a block is assigned to a SM, it is partitioned into 32-thread units called {\em warps}. All threads belonging to a particular warp are scheduled to execute the same instruction (Single-Instruction, Multiple-Thread). To optimise performance programmers should thus avoid or minimize execution branches inside warps. Assigning a large number of warps to each SM (high occupancy) is also beneficial as the long waiting time of some warp instructions can be hidden by executing instructions from other warps and therefore selection of ready warps for execution does not introduce any idle times into the overall execution timeline - achieving zero-overhead thread scheduling. 
 
 \subsection{Performance Model}
 \label{sec:model}
@@ -169,7 +171,7 @@ $T_{cpu}$ and $T_{gpu}$ represent times spent on the CPU and GPU respectively, $
 
 
 \subsubsection{Data Transfers}
-Let us denote by $S_{part}$ the number of Bytes required for representing single particles (35 Bytes are used in the current implementation). Assuming an overall number of particles $N_{part}$, the overall amount of bytes required to be transferred to the GPU is $N_{part} S_{part}$. Additionally the rendered image of Splotch calculated in the GPU is the only data required to be transferred to the CPU. Assuming square images (generalisation to rectangular images is straightforward) and denoting $N_{pix}$ horizontal (or vertical) image resolutions, a number of $12 N_{pix}^2$ Bytes (R, G, B float values) has to be transferred. 
+Let us denote by $S_{part}$ the number of bytes required for representing single particles (35 Bytes are used in the current implementation). Assuming an overall number of particles $N_{part}$, the overall amount of bytes required to be transferred to the GPU is $N_{part} S_{part}$. Additionally the rendered image of Splotch calculated in the GPU is the only data required to be transferred to the CPU. Assuming square images (generalisation to rectangular images is straightforward) and denoting $N_{pix}$ horizontal (or vertical) image resolutions, a number of $12 N_{pix}^2$ Bytes (R, G, B float values) has to be transferred. 
 Since processor memory is in general larger than GPU memory,
 datasets are split into chunks and are transferred to the GPU by using a loop - one after the other. The overall data transfer times are:
 \begin{equation}\label{pci}
@@ -202,14 +204,14 @@ T_{gpu} = N_{op}/\nu_{GPU}
 \end{equation}
 where $\nu_{GPU}$ is the GPU's flops/sec rate, and $N_{op}$ is the overall number of operations:
 \begin{equation}\label{ops}
-N_{op} = N_{part}(\alpha + \beta R_s^2) + f_{GPU},
+N_{op} = N_{part}(\alpha + \beta R_0^2) + f_{GPU},
 \end{equation}
 with $\alpha$ and $\beta$ representing the number of operations in the \textit{Rasterization} and \textit{Rendering} kernels respectively
 and corresponds to analogous terms in the original algorithm. 
 The function $f_{GPU}$ accounts for GPU specific kernels. 
 These kernels are necessary to adapt the code to the GPU architecture and optimize its performance.
 The details will be presented and discussed in Section~\ref{sec:implementation} and Section~\ref{sec:results}.
-Finally the parameter $R_s$ encapsulates an expectation value for the radius of particles $R_s = <r(p)>$,
+Finally the parameter $R_0$ encapsulates an expectation value for the radius of particles projected on the final image $R_0 = <r(p)>$,
 
 \begin{equation}\label{radius}
 r(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
@@ -224,6 +226,7 @@ Customized solutions must thus be adopted to circumvent the aforementioned probl
 
 To conclude this section we observe that $T_{gpu}$ depends linearly on the number of particles ($N_{part}$). This feature is important to be preserved in a GPU implementation of Splotch.
 
+%%CLAUDIO: Is it possible to reduce the figure? I think it too large...
 \begin{figure}
 \centering
 \includegraphics[scale=0.2]{images/particles.eps}
@@ -270,62 +273,63 @@ A critical term in equation \eqref{tmgpu} is represented by the memory access
 latency $N_{Ngpu} \nu_{mem}$. The access to memory is slow in comparison to
 the available bandwidth, so a small number of accesses, $N_{Ngpu}$, is crucial
 to performance. This can be achieved by standard caching strategies, that
-however are effective only if data coalesced access (in particular data contiguity) can be guaranteed, i.e. if contiguous particle data moved to the GPU L2 cache can be reused efficiently
-by the various threads. This is possible only through a global reorganization 
-of the particle data, which has to be designed ensuring that no significant overheads are introduced and  
-that overall linear scalability with the number of particles is preserved.
+however are effective only if data coalesced access (i.e. data are accessed by warps in one single memory transaction) can be guaranteed, in particular if consecutive particle data moved to the GPU L2 cache can be reused efficiently by consecutive threads. This is possible only through a global reorganization of the particle data, which has to be designed ensuring that no significant overheads are introduced and that overall linear scalability with the number of particles is preserved.
 
 \section{CUDA Implementation}
 \label{sec:implementation}
 
-Once particles are loaded into the GPU's global memory, the {\it Rasterization} kernel starts processing them. We can follow an efficient {\it one-thread-per-particle} approach, so that the entire computation on individual particles (e.g. geometric transformation and coloring) is carried out by single threads - no interaction with any other processes is necessary. This allows exploiting the underlying GPU architecture fully. Subsequently the {\it Rendering} kernel takes over. As explained previously (see Section~\ref{sec:model}), for the rendering we cannot adopt a {\it one-thread-per-particle} approach. Moreover memory usage must be managed carefully.
+Once particles are loaded into the GPU's global memory, the {\it Rasterization} kernel starts processing them. We can follow an efficient {\it one-thread-per-particle} approach, so that the entire computation on individual particles (e.g. geometric transformation and coloring) is carried out by single threads - no interaction with any other processes is necessary. 
+%This allows exploiting the underlying GPU architecture fully. (already stated before!) 
+Subsequently the {\it Rendering} kernel takes over. As explained previously (see Section~\ref{sec:model}), for the rendering we cannot adopt a {\it one-thread-per-particle} approach. Moreover memory usage must be managed carefully.
 
 To handle particles in an efficient way we observe that depending upon their radius ($r(p)$) as defined by equation \eqref{radius} rendering can be performed differently. As an example, since particles with a small radius typically influence single pixels on the rendered images, we can process these by deploying a {\it one-thread-per-particle} approach (see Section~\ref{sec:smallparticles}). On the other hand, particles with very large radius affect sizeable areas of the rendered images, so these are not suitable for efficient GPU processing (see Section~\ref{sec:largeparticles}). Finally, particles with radius within a suitably defined range influence only small fractions of the rendered images, so we process these by using a highly-efficient tiling strategy (see Section~\ref{sec:mediumparticles})
 
-We classify particles in three categories (in the {\it Rasterization} kernel) according to their radius as follows:
+Therefore, we classify particles in three categories according to their radius as follows:
 
 \begin{itemize}
 \item
 {\it Small (S)} : $r(p) \le r_{sml}$,
 \item
-{\it Medium (M)} : $0.5 < r(p) \le r_0$,
+{\it Medium (M)} : $r_{sml} < r(p) \le r_0$,
 \item
 {\it Large (L)} : $r(p) > r_0$.
 \end{itemize}
 where $r_{sml} = 0.5$ so that {\it Small} particles fall inside a single pixel, and 
 $r_0$ is set according to the image tiling scheme which divides the rendered image
-in a number of rectangular tiles:  
+in a number of tiles:  
 \begin{equation}
 N_{tiles} = {N_{pix}^2\over t_x \times t_y},
 \end{equation}
 where $t_x$ and $t_y$ are parameters defining the sizes of tile sides in pixels.
-Details of the scheme are given in the next sections. An example of particle classification from different points of view is shown in Figure~\ref{fig:fov}.
+%Details of the scheme are given in the next sections. 
+An example of particle classification from different points of view is shown in Figure~\ref{fig:fov}.
 
-Each particle is labeled with a {\it tile index} $i(p)$ as follows:
+Each particle is labeled (in the {\it Rasterization} kernel) with a {\it tile index} $i(p)$ as follows:
 \begin{itemize}
 \item
 $i(p) = -2$, {\it non-active} particles (i.e. outside the field of view);
 \item
 $i(p) = N_{tiles}$, {\it small} particles;
 \item
-$0 \le i(p) < N_{tiles}$, {\it medium} particles;  
+$0 \le i(p) < N_{tiles}$, {\it medium} particles, whose center falls in the $i(p)$-th tile;  
 \item
 $i(p) = -1$, {\it large} particles.
 \end{itemize}
 
-Subsequent to classification we remove from the device memory all inactive and large particles. At this point, the remaining particles have to be sorted by the $i(p)$ key and the number of particles with the same index has to be calculated.
+Subsequent to classification we transfer all large particles back to the host and remove them together with all inactive ones from the device memory. At this point, the remaining particles have to be sorted by the $i(p)$ key and the number of particles with the same index has to be calculated.
 %At the end of this operation, all particles with the same tile index are contiguous in memory,
 %providing an optimal memory access pattern and can be easily isolated for tiles assignment and processing.
 %A specific kernel has been developed to implement these operations.
 This sorting operation is important as it allows to manage particles array on the device and it is  
-necessary for the efficient execution of subsequent operations, e.g. reduction by key and prefix sums, because memory accesses to the array elements involved in a CUDA operation are efficient when consecutive threads access consecutive elements.
+necessary for the efficient execution of subsequent operations, e.g. reduction by key and prefix sums.
+%, because memory accesses to the array elements involved in a CUDA operation are efficient when consecutive threads access consecutive elements.
 
 As sorting is intrinsically an expensive operation, we use an efficient implementation provided by the Thrust library \cite{thrusturl}. Thrust is a C++ template library for CUDA which mimics the Standard Template Library and provides optimized functions for managing very large data arrays. For our purposes, Thrust implements a highly optimized Radix Sort algorithm for primitive types (e.g., chars, ints, floats, and doubles). Also, functions are provided for reduction by key and prefix sums, their performance increasing the larger the input data arrays. As these functions scale linearly with data sizes (sorting scales by $kN_{part}$, where $k$ is the number of significant key bits \cite{RadixSort}), our GPU implementation preserves Splotch's overall linear dependency on the number of input particles. The sections below describe the rendering details for individual classes ({\it small}, {\it medium}, {\it large}) of particles.
 
 \begin{figure}
 \centering
 \includegraphics[scale=0.15]{images/fov.eps}
-\caption{The scene with five particles from two different points of view. Different tiles are
+\caption{The scene with five particles from two different points of view. Different square tiles are
 represented with different colors and boundary width is 3 pixels. {\em Left}: All particles contributes to the image (lie in the FOV), particles 1, 3 and 5
 are medium, particle 4 is small. Particle~2, is classified as large since its radius exceeds the boundary width. {\em Right}: The camera moved toward particle~1. All the radii change due to the new point
 of view. Classification of particles 4 and 5 does not change, while particle~3
@@ -338,22 +342,22 @@ Particle~1 becomes large.
 
 \subsection{Small Particles}
 \label{sec:smallparticles}
-Only the position of individual particles within rendered images has to be calculated. This can be efficiently carried out by assigning CUDA threads to particles. However, since different threads can affect the same pixel in the rendered images, their contribution (fragments) cannot be directly accumulated. Thus firstly we allocate a buffer (index buffer) in the device memory to store particle positions. Secondly, the image is produced by reducing by key (pixel position) all fragments - these are equal to the color associated to particles from rasterization. 
+Only the position of individual particles within rendered images has to be calculated. This can be efficiently carried out by assigning CUDA threads to particles. However, since different threads can affect the same pixel in the rendered images, their contribution (fragments) cannot be directly accumulated. Thus firstly we allocate a buffer (index buffer) in the device memory to store particle positions. Secondly, the image is updated by reducing by key (pixel position) all fragments - these are equal to the color associated to particles from rasterization - and adding each pixel contribution to the image.
 %Particles are sorted by pixel id followed by reducing contiguous elements falling on the identical pixels using functions from the Thrust library.
 
 \subsection{Medium Particles}
 \label{sec:mediumparticles}
 Our \textit{tiling scheme} for rendering medium particles on the device consists of assigning particles related to the same image tile to a block of CUDA threads and exploiting the shared memory and thread synchronization within the block to store and compose image tiles. The local size of the tile is defined so that each particle belonging to it, is entirely contained within the tile. This is achieved by adding to the $body$ of the tile of $t_x \times t_y$ pixels a $boundary$ of $r_0$ pixels around it (see Figure~\ref{fig:fov}). We will refer to this extended tile as a \textit{Btile}.
 
-Particles are accessed in chunks of $n_p$ elements. Each chunk is accessed and stored in the shared memory by a single read operation, performed simultaneously by the threads of the block. Then, the particles of the chunk are rendered sequentially, each with a single parallel operation so that each pixel of the particle is processed by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). The block dimension is equal to the size of the biggest medium particle, in order to have a thread of the block available for rendering each pixel of the current particle. 
+Particles are accessed in chunks of $n_p$ elements. Each chunk is accessed and stored in the shared memory by a single read operation, performed simultaneously by the threads of the block. Then, the particles of the chunk are rendered sequentially, each with a single parallel operation so that each pixel of the particle is processed by a different thread of the block (the pixel number processed by each thread may change as the particle varies, but it remains in the Btile). The block dimension is equal to the size of the biggest medium particle, in order to have enough threads of the block for rendering each pixel of the current particle. 
 This solution avoids race conditions when composing the image tile, since each
 thread of the same block accesses different pixels. Moreover the workload of each
 thread is well balanced because each thread processes either one o no pixels for each particle, independently of the particle size. 
 
-When all particles of the block are rendered, the contribution of the Btile is added to the image stored in the global memory. Specific care has been taken to avoid missing contributions coming
-from overlapping regions (boundaries). Since CUDA blocks are order independent, three more copies of the image in the global memory are necessary to store corners, rows and columns of the boundary respectively without race conditions. The final rendered image is then obtained by executing a follow up kernel compositing these copies.
+When all particles of the block are rendered, the contribution of the Btile is added to the image stored in the global memory. Specific care has been taken to avoid race conditions due to contributions coming
+from overlapping regions (boundaries). Since CUDA blocks are order independent, three more copies of the image in the global memory are necessary to store corners, rows and columns of the boundary respectively. The final rendered image is then obtained by executing a follow up kernel compositing these copies.
 
-Note that, even if the OpenMP implementation use a tiling scheme these two approach are quite different. While large particles can be split among different tiles in the OpenMP version, this solution is much more complicated for CUDA because particles falling in several tiles must be replicated for each tile affected by them and added to particles array. This allowed us to render only particles completely contained in one single tile extended with a suitable boundary. 
+Note that, even if the OpenMP implementation use a tiling scheme these two approaches are quite different. While large particles can be split among different tiles in the OpenMP version, this solution is much more complicated for CUDA because particles falling in several tiles must be replicated for each tile affected by them and added to particles array. For this reason we have been able to render on the device only particles completely contained in one single tile extended with a suitable boundary. 
 
 \subsection{Large Particles}
 \label{sec:largeparticles}
@@ -370,7 +374,7 @@ whilst the calculation on the GPU is on-going. Once the particles are back to th
 their processing can be performed concurrently to that of the GPU.  
 This way, we manage to exploit both the host and the device simultaneously.
 This solution is effective as long as the number of large particles
-is much smaller than the sum of small and regular particles. As a worst case scenario (although highly unlikely in practise), if all particles are classified as large, the overall performance would degenerate to that of the serial implementation of Splotch.
+is much smaller than the sum of small and regular particles. As a worst case scenario (although highly unlikely in practise), if all particles are classified as large, the rendering performance would degenerate to that of the serial implementation of Splotch.
 
 Once all calculations are completed, the two partial images (one processed by the GPU the other by the CPU) are composed to generate the final rendered image. Such operation is performed by the CPU, once the GPU partial image has been transferred, with a single copy operation, to its memory. 
 
@@ -395,23 +399,24 @@ A further issue is related to the unbalanced work load among blocks. In fact the
 
 An N-body simulation performed using Gadget \cite{gadgeturl} was used for the tests we discuss in this section. The simulation is based on about 400 million particles consisting of 200 million {\it dark matter} particles, 200 million baryonic matter particles (hereafter referred to as {\it gas}) and around 10 million {\it star} particles. Particles possess a number of physical quantities, e.g. vectors capturing spatial coordinates and velocities, or scalars representing smoothing length. Additionally gas particles are associated with {\it temperature} and {\it mass density}. Also, {\it spectral type} and {\it age} are properties of star particles. Such quantities can be exploited in highly-detailed renderings, e.g. for modulating colors and intensities appropriately. 
 
-We used GCC 4.4.6 and CUDA 5.0 for compilation. Execution was performed on a computing node containing a dual-socket six-core Intel Xeon 5650 2.6 GHz processor with 24 GB shared memory and a pair of NVIDIA Tesla M2090 GPUs with 6 GB of GDDR5 memory, 177 GB/sec main memory bandwidth and peak performance of 665 GFlops/sec. Although such a large memory computing node is necessary for handling our test simulation ($\approx 7.5$ GB) no GPU issues arise as data is loaded in small chunks iteratively. This section presents a performance analysis of our GPU implementation and compares to the parallelized CPU version of Splotch. Figure~\ref{fig:box} illustrates the test simulation.
+We used GCC 4.4.6 and CUDA 5.0 for compilation. Execution was performed on a computing node containing a dual-socket six-core Intel Xeon 5650 2.6 GHz processor with 24 GB shared memory and a pair of NVIDIA Tesla M2090 GPUs with 6 GB of GDDR5 memory, 177 GB/sec main memory bandwidth and peak performance of 665 GFlops/sec. Although such a large memory computing node is necessary for handling our test simulation ($\approx 7.5$ GB) no GPU issues arise as data is loaded in small chunks iteratively. This section presents a performance analysis of our GPU implementation and compares to the parallelized CPU version of Splotch. Figure~\ref{fig:box} illustrates the test simulation, which visualize...
+%CLAUDIO: could you finish the sentence? I mean which physical property is represented in the image? Mass density? It should be reported in the figure caption too.
 
 \subsection{Tuning}
 \label{sec:gpuperf}
-To perform the tests presented in this section an important aspect is ensuring high {\it occupancy} by exploiting underlying GPUs appropriately so as to avoid the situation in which cores remain idle during kernel execution. Occupancy depends upon the number of threads per block, the number of registers and finally the size of shared memory used in a kernel - as these define the number of resident CUDA blocks (blocks/SM) during execution. We have empirically estimated a good trade-off among these parameters for the rendering kernel of our implementation. This kernel may potentially use significant shared memory due to the fact that Btiles together with a number of particles need to be stored. As the boundary width of Btiles is critical for realizing particle classification and for determining sizes of CUDA blocks, we suggest to fix this (e.g. 8) and focus instead on optimizing the relevant number of particles ($n_p$) and surface area of Btiles ($t_s$) respectively.
-% MARZIA- PLEASE EXPLAIN IN THE PREVIOUS SECTION WHAT IS THE REASONING FOR SETTING THE BOUNDARY TO 8?
-% MARZIA - THE SECTION BELOW HAS BEEN COMMENTED OUT FOR THE TIME BEING, IF IT IS TO INCLUDE IT PLEASE REPHRASE AS DISCUSSED IN THE TELCO.
-%Notice that the tile side is also relevant to the load balancing among different blocks: as the tile side decreases the work load is less unbalanced. However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
+To perform the tests presented in this section an important aspect is ensuring high {\it occupancy} by exploiting underlying GPUs appropriately so as to avoid the situation in which cores remain idle during kernel execution. Occupancy depends upon the number of threads per block, the number of registers and the size of shared memory used in a kernel - as these define the number of resident CUDA blocks (blocks/SM) during execution. We have empirically estimated a good trade-off among these parameters for the rendering kernel of our implementation. This kernel may potentially use significant shared memory due to the fact that Btiles together with a number of particles need to be stored. As the boundary width of Btiles is critical for realizing particle classification and for determining sizes of CUDA blocks, we suggest to fix this no larger than 8, because of the small shared memory size, and focus instead on optimizing the relevant number of particles ($n_p$) and the size of tiles (for simplicity we consider square tiles of size $t_x^2$) respectively.
+ 
+Notice that the tile size is also relevant to the load balancing among different blocks: as the tile size decreases the work load is less unbalanced. 
+%However this problem cannot completely overcome when the dataset distribution is heterogenous at all scales. Therefore a further investigation must be done for this issue.
 
-A number of possible $n_p$ and $t_s$ values are illustrated in Table~\ref{tab:tuning}. We considered the situation in which the majority of particles is non-large so that they are processed by the GPU. This way we obtain meaningful rendering times for our optimization as the host computation is overlapped by the device computation completely. We observe that storing Btiles together with a fixed number of particles in shared memory (for achieving rapid access to global memory) restricts full GPU occupancy. The maximum occupancy obtained is $66.7\%$ for small tiles ($t_s = 10^{2}$ or $t_s = 12^{2}$) and small chunks of particles ($n_p = 32$ or $n_p=64$). Taking into account total CUDA times, optimal performance is achieved for $n_p=64$ and $t_s = 12^{2}$, so we employ these values for testing in the next sections.
-%MARZIA - PLEASE CHECK FOR SOME REASON THE TABLE IS 1, BUT IN TEXT IT APPEARS AS 5.1? IS IT THEIR STYLEFILE?
+A number of possible $n_p$ and $t_x$ values are illustrated in Table~\ref{tab:tuning}. We considered the situation in which the majority of particles is non-large so that they are processed by the GPU. This way we obtain meaningful rendering times for our optimization as the host computation is overlapped by the device computation completely. We observe that storing Btiles together with a fixed number of particles in shared memory (for optimizing memory access) restricts full GPU occupancy. The maximum occupancy obtained is $66.7\%$ for small tiles ($t_x = 10$ or $t_x = 12$) and small chunks of particles ($n_p = 32$ or $n_p=64$). Taking into account total CUDA times, optimal performance is achieved for $n_p=64$ and $t_x = 12$, so we employ these values for testing in the next sections.
+
 \begin{table}
 \label{tab:tuning}
 \begin{center}
 \begin{tabular}{|l|l|l|l|l|}
 \hline
-$n_p$ & $\frac{t_s}{2}$ & Kernel & Rendering & Total CUDA \\
+$n_p$ & $t_x$ & Kernel & Rendering & Total CUDA \\
 & & Occupancy & Times (sec.) & Times (sec.) \\
 \hline
 256   & 16 & 0.333 & 9.186 & 16.38 \\
@@ -443,17 +448,18 @@ $n_p$ & $\frac{t_s}{2}$ & Kernel & Rendering & Total CUDA \\
       & 10 & 0.667 & 4.483 & 12.43 \\ 
 \hline
 \end{tabular}
-\caption{The rendering times obtained for different numbers of $n_p$ (number of particles) and $t_s$ (surface area of Btiles). Square tiles with boundary 8 are considered while the resolution of rendered images is $1024^{2}.$}
+\caption{The rendering times obtained for different numbers of $n_p$ (number of particles) and $t_x$ (tile side). Square tiles with boundary 8 are considered while the resolution of rendered images is $1024^{2}.$}
 \end{center}
 \end{table}
 
 \subsection{Performance Analysis}
 \label{sec:performance}
-This section discusses scalability of our implementation in terms of sizes of datasets (Section~\ref{sec:datasizes}), rendered images (Section~\ref{sec:imagesizes}) and distribution of smoothing lengths (Section~\ref{sec:smoothingradius}).
+This section discusses performances of our implementation in terms of scalability with the sizes of datasets and rendered images (Section~\ref{sec:scalability}), comparison with the CPU version (Section~\ref{sec:speed-up}) and the GPU overhead (Section~\ref{sec:overhead}).
 
-\subsubsection{Data Sizes}
-\label{sec:datasizes}
-To analyze scalability in terms of sizes of datasets objectively we fixed the sizes of rendered images and camera settings so that all particles are classified as non-large and are thus processed by the GPU entirely. Figure~\ref{fig:scalability} illustrates the obtained timings when progressively increasing the overall number of particles
+\subsubsection{Scalability}
+\label{sec:scalability}
+To analyze scalability in terms of sizes of datasets objectively we fixed the size of rendered images and camera settings so that all particles are classified as non-large and are thus processed by the GPU entirely. 
+Figure~\ref{fig:scalability} illustrates the obtained timings when progressively increasing the overall number of particles
 from about $10^7$ to roughly $2.2\times 10^8$. Computing times scale linearly confirming that our implementation preserves this essential feature of the original CPU Splotch. 
 \begin{figure}
 \centering
@@ -461,32 +467,43 @@ from about $10^7$ to roughly $2.2\times 10^8$. Computing times scale linearly co
 \caption{Scalability of Splotch kernels on the GPU in relation to dataset sizes.}
 \label{fig:scalability}
 \end{figure}
-Rasterization requires a fraction of the overall time, 5\% to 10\%, compared to that of the CPU Splotch which varies from 35\% to 60\%. This is a strong indication that our {\it one-thread-per-particle} approach for this kernel is extremely effective. We also observe a perfect linear scalability of the rendering times with $N_{part}$, these representing one of the two main contributions to overall computing times, the other being the sum of the overheads related to all those parts specific to the GPU code refactoring (e.g. times for host-device copy or distribution of particles - see Section~\ref{sec:discussion}). 
+%CLAUDIO: I suggest to add the meaning of the y-axis in the plot, i.e. computing time 
+Rasterization requires a fraction of the overall time, 5\% to 10\%, compared to that of the CPU Splotch which varies from 35\% to 60\%. This is a strong indication that our {\it one-thread-per-particle} approach for this kernel is extremely effective. We also observe a perfect linear scalability of the rendering times with $N_{part}$, these representing one of the two main contributions to overall computing times, the other being the sum of the overheads related to all those parts specific to the GPU code refactoring (e.g. times for host-device copy or distribution of particles - see Section~\ref{sec:overhead}). 
 %CLAUDIO - REGARDING THE OBSERVATIONS ON RASTERIZATION TIMES, IS THERE A FIGURE TO SHOW THIS? HOW DO WE COME TO THE NUMBERS 5-10% AND 35-6-%? PERHAPS WE REQUIRE LABELING IN FIGURE 4, WHAT DO THE TRIANGLES, STARS, SMALL AND LARGE SQUARES REPRESENT?
 %ANSWER: I HAVE TO FIND THE DATA. I AGREE THAT QUANTITATIVE DETAILS WOULD BE GOOD
-\subsubsection{Image Sizes}
-\label{sec:imagesizes}
-Overall performance in relation to image sizes $N_{pix}$ is illustrated in Figure~\ref{fig:pixels}. Keeping the underlying dataset sizes and camera settings fixed, we obtained computing times by progressively increasing
-$N_{pix}$ from 128 to 4096. According to \eqref{ops} each particle contributes to a number of pixels 
-that is analogous to $N_{pix}^{2}$. As long as image sizes are small relative to dataset sizes (for our particular configuration this translates to $N_{pix} \le 1024$), overall computing times are constant. For large image sizes their resolution may affect significantly the classification of particles potentially increasing overall computing times dramatically.
+%\subsubsection{Image Sizes}
+%\label{sec:imagesizes}
+Overall performance in relation to image sizes $N_{pix}^2$ is illustrated in Figure~\ref{fig:pixels}. Keeping the underlying dataset size and camera settings fixed, we obtained computing times by progressively increasing
+$N_{pix}$ from 128 to 4096. According to \eqref{ops} each particle contributes to a number of pixels that is proportional to $N_{pix}^{2}$. As long as image sizes are small relative to dataset sizes (for our particular configuration this translates to $N_{pix} \le 1024$), overall computing times are constant. For large image sizes their resolution may affect significantly the classification of particles potentially increasing overall computing times dramatically.
 
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{images/pixels.eps}
-\caption{Splotch's scalability on the GPU in relation to image sizes $N_{pix}$ (camera settings are fixed).}
+\caption{Splotch's scalability on the GPU in relation to image side $N_{pix}$ (camera settings are fixed).}
 \label{fig:pixels}
 \end{figure}
-\subsubsection{Smoothing Radius}
-\label{sec:smoothingradius}
-We obtained objective overall timings for scalability relating to resolution of rendered images by fixing $N_{pix} = 1024$ and progressively changing the camera position so as to resemble a typical user interaction scenario, namely a zoom in operation. The starting camera position ensures that the entire box of the simulation is rendered (Test 1). Next we ensure that the simulation box just about fits into the rendered images (Test 2). A few other camera positions have also been set so as to reach closer and closer towards the centre of the simulation (Tests 3 to 7). Figure~\ref{fig:panorama} illustrates rendered images generated for the different camera positions.
- We observe that approaching the center of the simulation results in larger smoothing lengths (See Figure~\ref{fig:radii}) as expressed by the average $R_s=<r(p)>$ radius and illustrated by Table~\ref{tab:radius} showing these values together with number of active particles and computing times. 
+%CLAUDIO: I suggest to add the meaning of the y-axis in the plot, i.e. total computing time
+\subsubsection{Speed-up}
+\label{sec:speed-up}
+%THIS IS WRONG: We obtained objective overall timings for scalability relating to resolution of rendered images  
+In next series of tests, we discuss the speed-up achieved with respect to the CPU performance. The dependency of the computing time from the smoothing length has been analysed keeping the image resolution fixed ($N_{pix} = 1024$) and progressively changing the camera position so as to resemble a typical user interaction scenario, namely a zoom in operation. The starting camera position ensures that the entire box of the simulation is rendered (Test 1). Next we ensure that the simulation box just about fits into the rendered images (Test 2). A few other camera positions have also been set so as to reach closer and closer towards the centre of the simulation (Tests 3 to 7). Figure~\ref{fig:panorama} illustrates rendered images generated for the different camera positions.
+We observe that approaching the center of the simulation results in larger smoothing lengths as expressed by the average $R_0=<r(p)>$ radius and illustrated by Figure~\ref{fig:radii}. Table~\ref{tab:radius} shows these values together with the number of active particles and computing times. 
 Overall computing times change according to the number of active particles. As we approach the centre of the simulation there are fewer active particles exhibiting increased smoothing length. For values larger than unity, a relevant fraction of the particles is large contributing to several pixels, thus increasing computing times with the square of their radius. These trends tend to compensate keeping overall times from 10 to 16 seconds.
 %CLAUDIO - THIS LAST SENTENCE REQUIRES REPHRASING TO MAKE IT CLEARER. ALSO THE TERMS SMOOTHING LENGTH AND RADIUS ARE USED INTERCHANGEABLY - IT WOULD BE GOOD TO DECIDE FROM THE VERY BEGINNING OF THE PAPER  ON USING ONE OF THESE TERMS ONLY, FOR CONSISTENCY
 %ANSWER: OK I'LL DO THAT
 \begin{figure}
 \centering
+\includegraphics[scale=0.2]{images/panorama.eps}
+\caption{A particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation: starting from very far (top-left image) and reaching very close to the center of the simulation.}
+%CLAUDIO - HERE AS DISCUSSED IT WOULD BE GOOD TO SHOW THE ZOOM IN, PERHAPS A SMALL RECTANGLE THAT BECOMES LARGER TO SHOW THE AREA WITHIN WHICH WE ZOOM IN
+%ANSWER: I'LL DO THAT IN THE NEXT DAYS
+\label{fig:panorama}
+\end{figure}
+
+\begin{figure}
+\centering
 \includegraphics[scale=0.5]{images/radii.eps}
-\caption{Fractional distribution of the particles radii in the seven tests (dark blue line refers to Test 1, light blu to Test 7). Radius bins in the x-axis corresponds to: $r\le 2$-bin 1, $2<r\le 4$-bin 2, $4<r\le 8$-bin 3, $8<r\le 16$-bin 4, $r>16$-bin 5. 
+\caption{Fractional distribution of the particles radii in the seven tests (dark blue line refers to Test 1, light blu to Test 7). Radius bins in the x-axis corresponds to: $r\le 2$ (bin~1), $2<r\le 4$ (bin~2), $4<r\le 8$ (bin~3), $8<r\le 16$ (bin~4), $r>16$ (bin~5). 
 }
 \label{fig:radii}
 \end{figure}
@@ -495,7 +512,7 @@ Overall computing times change according to the number of active particles. As w
 \begin{center}
 \begin{tabular}{|l|l|l|l|}
 \hline
-Test ID & $R_s$ (pixels) & Active Particles & Time (sec.) \\
+Test ID & $R_0$ (pixels) & Active Particles & Time (sec.) \\
 \hline
 Test 1  & 0.30   & 226894837  & 12.89 \\
 \hline
@@ -518,21 +535,13 @@ and computing times (column 4) for each performed test (test ID is presented in 
 \label{tab:radius}
 \end{table}
 
-\begin{figure}
-\centering
-\includegraphics[scale=0.2]{images/panorama.eps}
-\caption{A particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation: starting from very far (top-left image) and reaching very close to the center of the simulation.}
-%CLAUDIO - HERE AS DISCUSSED IT WOULD BE GOOD TO SHOW THE ZOOM IN, PERHAPS A SMALL RECTANGLE THAT BECOMES LARGER TO SHOW THE AREA WITHIN WHICH WE ZOOM IN
-%ANSWER: I'LL DO THAT IN THE NEXT DAYS
-\label{fig:panorama}
-\end{figure}
+
 %CLAUDIO - NOT SURE IF YOU WOULD LIKE TO MOVE THIS SECTION ON DISCUSSION IN THE NEXT SECTION (CONCLUSIONS AND FUTURE DEVELOPMENTS), TOGETHER PERHAPS WITH THE SHORT "DISCUSSION" SECTION FROM SECTION 4?
 %ANSWER: ACTUALLY I LIKE AS IT IS NOW!!!
-\subsection{Discussion}
-\label{sec:discussion}
+% THE FOLLOWING IS NOT A SEPARATE SECTION
+%\subsection{Discussion}
+%\label{sec:discussion}
 For a meaningful comparison we obtained overall timings for the CPU Splotch exploiting the OpenMP paradigm on 1, 2, 4, 8 and 12 processors respectively. OpenMP was selected (instead of MPI) as the design of this parallelized CPU Splotch is conceptually closer to our CUDA implementation (see Section~\ref{sec:overview}). The results are illustrated in Figure~\ref{fig:gpucpu} which uses computing times per particle as the number of processed particles depends on camera settings.
-
-The GPU curve exhibits a bi-modal behaviour depending upon the radius. For small values, computing times are almost constant since the overall calculation is dominated by $N_{part}$. For values larger than unity the dependency from the square of the radius dominates and computing times rise rapidly. The comparison between the GPU and the multicore performance show that at small radii ($< 2$) the speed-up gained by the GPU implementation can be larger than a factor of 6 compared to a single CPU. Considering the OpenMP implementation of Splotch we observe that within this range of radii, GPU performance is comparable to that obtained from 8 cores. This is because parallel codes do not scale linearly with the number of processors. At large radii ($> 2$) the performance of CUDA deteriorates naturally as the majority of particles is CPU processed. Nevertheless assuming a worst case scenario GPU Splotch is always faster than single core execution. 
 
 \begin{figure}
 \centering
@@ -550,29 +559,32 @@ Observed speed-ups for rendering (red curve, squares) and rasterization (black c
 \label{fig:speedup}
 \end{figure}
 
+The GPU curve exhibits a bi-modal behaviour depending upon the radius. For small values, computing times are almost constant since the overall calculation is dominated by $N_{part}$. For values larger than unity the dependency from the square of the radius dominates and computing times rise rapidly. The comparison between the GPU and the multicore performance show that at small radii ($R_0 < 2$) the speed-up gained by the GPU implementation can be larger than a factor of 6 compared to a single CPU. Considering the OpenMP implementation of Splotch we observe that within this range of radii, GPU performance is comparable to that obtained from 8 cores. This is because parallel codes do not scale linearly with the number of processors. At large radii ($R_0 > 2$) the performance of CUDA deteriorates naturally as the majority of particles is CPU processed. Nevertheless assuming a worst case scenario GPU Splotch is always faster than single core execution. 
+
+We conclude this section with a discussion on the performance achieved by all GPU kernels implemented. We compare computing times required for rasterization and rendering on the GPU and CPU respectively (See Figure~\ref{fig:speedup}). As regards the rendering kernel a speed-up of around 13 is obtained for average radii around unity. For smaller radii the speed-up tends to decrease due to the lower occupancy of the rendering kernel processing medium particles. In fact, either there is a small number of such particles or most of them do not have the maximum radius which define the size of CUDA blocks.
+% MARZIA - NEED SOME MODE DETAIL HERE REGARDING THE LOWER OCCUPANCY, E.G. HOW MUCH LOWER THAN THE EXPECTED OCCUPANCY?
+% ANSWER - CLAUDIO, could you estimate how many particles are medium and the range of their size for Test 1 to 4? 
+As the radius grows, performance decreases due to the increasing number of large particles.
+Regarding the rasterization kernel due to the {\it one-thread-per-particle} approach it is strongly accelerated with observed speed-ups ranging from 45 to 65.  
+
+\subsubsection{Overheads}
+\label{sec:overhead}
+Finally, we discuss the GPU overheads, i.e. times required by functions specific to our GPU implementation. To this extend a number of operations are necessary, e.g. for offloading particles to GPU (OffLoad), sorting and reducing for preparing Btiles and optimizing memory displacement (Sort), removing non active particles, packing and copying back particles that have to be rendered by the CPU (Select) and finally, performing partial images composition. Figure~\ref{fig:over} presents the overhead of different GPU specific functions as times spent by the function divided by overall computing times. The black curve shows total overheads which can be up to 60\% and particularly significant for small radii. As most of the particles are active the sort and reduce 
+functions (blue line with crosses) are heavy. For large radii this overhead is negligible as most of the particles are inactive. 
+
 \begin{figure}
 \centering
 \includegraphics[scale=0.5]{images/over1.eps}
 \caption{Overhead of the various components implemented for the Splotch's
 GPU refactoring. The ratio between the time spent in each component and the total processing 
-time is shown. The lack line (diamonds) shows total overhead, the green line (triangles) shows the Select time overhead, the red line (squares) represents the Offload time, the blue line (crosses) shows the Sort time.}
+time is shown. The black line (diamonds) shows total overhead, the green line (triangles) shows the Select time overhead, the red line (squares) represents the OffLoad time, the blue line (crosses) shows the Sort time.}
 \label{fig:over}
 \end{figure}
 
-We conclude this section with a discussion on the performance achieved by all GPU kernels implemented. Firstly we compare computing times required for rasterization and rendering on the GPU and CPU respectively (See Figure~\ref{fig:speedup}). As regards the rendering kernel a speed-up of around 13 is obtained for
-average radii around unity. For smaller radii the speed-up tends to decrease due to the lower occupancy of medium particles in the rendering kernel.
-% MARZIA - NEED SOME MODE DETAIL HERE REGARDING THE LOWER OCCUPANCY, E.G. HOW MUCH LOWER THAN THE EXPECTED OCCUPANCY?
-As the radius grows, performance decreases due to the increasing number of large particles.
-Regarding the rasterization kernel due to the {\it one-thread-per-particle} approach it is strongly
-accelerated with observed speed-ups ranging from 45 to 65.  
-
-Secondly we discuss {\it GPU overheads}, i.e. times required by functions specific to our GPU implementation. To this extend a number of operations are necessary, e.g. for offloading partcles to GPU (OffLoad), sorting and reducing for preparing Btiles and optimizing memory displacement (Sort), removing non active particles and packing and copying back particles that have to be rendered by the CPU (Select) and finally, combining Btiles for rendering. Figure~\ref{fig:over} presents the overhead of different GPU specific functions as times spent by the function divided by overall computing times. The black curve shows total overheads which can be up to 60\% and particularly significant for small radii. As most of the particles are active the sort and reduce 
-functions (blue line with crosses) are heavy. For large radii this overhead is negligible as most of the particles are inactive. 
-
-The red curve represents offload times which are constant in our tests (as all particles are moved to the GPU irrespectively of camera position) about 15\% of overall overheads. This contribution tends to decrease at larger radii due to the increased overall processing times. The Select times are slighlty higher than that of OffLoad and this tends to decrease at larger radii, when more particles are moved back to the CPU, hence coalesced memory access can be effectively exploited. Finally, image composition (and any other CUDA set up times) can always be considered negligible contribution, e.g. creating rendered images accounts for approximately 0.1\% of GPU overheads. This is due to the efficient design of our 
-implementation which takes full advantage of the multi-thread architecture 
+The red curve represents offload times which are constant in our tests (as all particles are moved to the GPU irrespectively of camera position), about 15\% of overall overheads. This contribution tends to decrease at larger radii due to the increased overall processing times. The Select times are slighlty higher than that of OffLoad and this tends to decrease at larger radii, when more particles are moved back to the CPU, hence coalesced memory access can be effectively exploited. Finally, image composition (and any other CUDA set up times) can always be considered negligible contribution, e.g. creating rendered images accounts for approximately 0.1\% of GPU overheads. This is due to the efficient design of our implementation which takes full advantage of the multi-thread architecture 
 of the GPU.
 % MARZIA - NEED TO EXPLAIN A LITTLE MORE HERE, about the 0.1% TO JUSTIFY. ALSO WHAT WOULD THE PERCENTAGE BE FOR THE SETTING UP CUDA OVERHEAD?
+% ANSWER: I WOULD REMOVE THIS PART, IT IS NOT RELEVANT AND IT IS NOT REPORTED IN THE PLOT
 
 % CLAUDIO - THE NEXT PARA SHOULD PERHAPS GO INTO THE LAST SECTION OF THE PAPER AS DISCUSSED?
 % ANSWER: I WOLUD WRITE SOMETHING IN THE CONCLUSIONS ONLY
@@ -582,7 +594,6 @@ of the GPU.
 %Thrust libraries, that, in its current version, does not support asynchronous operations. Furthermore,
 %in some situations, when the CPU workload is larger than that of
 %the GPU (e.g. at large radii), such solution would be anyway ineffective. 
-
 
 \section{Conclusions and Future Developments}
 \label{sec:conclusions}
@@ -601,16 +612,15 @@ In fact, the main computational kernel, the Rendering kernel, poses serious diff
 to the GPU's programming model, that privileges highly data parallel algorithms.
 In order to overcome such difficulties, Splotch's rendering algorithm has been
 redesigned with the introduction of specific kernels. These kernels 
-introduce an overhead that can be up to the 50\% the overall computing
+introduce an overhead that can be up to the 60\% the overall computing
 time. Nevertheless, the final code overperforms the original CPU
 version of up to a factor of 6, which rises to a factor of 8 when the OpenMP,
 multithread parallel version is considered for comparison. Further optimization can
 be obtained by the adoption of CUDA streams, overlapping computation 
-and data movements. However this is currently prevented by the usage of the 
-Thrust libraries, that do not support such kind of operational mode. 
-The Splotch GPU code retains also two important features of the original
-code: the linear scalability with the number of particles and with the 
-image size. 
+and data movements. However this is currently prevented by the rendering of large particles on the CPU and the usage of the Thrust library that do not support such kind of operational mode. 
+The Splotch GPU code retains also an important feature of the original
+code: the linear scalability with the number of particles.
+% THIS IS WRONG: and with the image size. 
 
 Although not extraordinary, the attained GPU performance is sufficient 
 to run efficiently on the hybrid computing nodes that are more and 
@@ -620,8 +630,6 @@ multiple GPUs, multiple cores and multiple nodes, exploiting respectively the Op
 MPI capabilities of Splotch. This step is expected to pose important 
 challenges especially to find the optimal balance in the workload of each of the different 
 system components.
-
-
 
 Although GPUs offer an excellent platform for improving performances of numerical codes, a complete redesign of algorithms is often necessary and dramatic improvements cannot be guaranteed. Nevertheless, even when moderate performance gains are achieved, GPU enabled codes allow full exploitation of modern HPC systems combining multicore processors with multiple GPUs. 
 

@@ -107,4 +107,9 @@ J.~{Woodring}, K.~{Heitmann}, J.~{Ahrens}, P.~{Fasel}, C.-H. {Hsu}, S.~{Habib},
 \newblock {Analyzing and Visualizing Cosmological Simulations with ParaView},
 \newblock {The Astrophysical Journal Supplement Series}, 195:11, July 2011.
 
+\bibitem{in-situ}
+M.~Rivi, L.~Calori, G.~Muscianisi, V.~Slavnic, 
+\newblock {In-situ visualization: state-of-the-art and some use cases}, 
+\newblock {PRACE Whitepaper}, http://www.prace-ri.eu/Visualisation, 2012.
+
 \end{thebibliography}
