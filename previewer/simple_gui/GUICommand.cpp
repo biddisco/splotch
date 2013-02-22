@@ -292,7 +292,7 @@ namespace previewer
 			// Run splotch as a new process
 			if(DoesStringBegin(command, "RUN"))
 			{
-				std::string arg = "./"+GetArgFromString(currentCommandLine, 2)+" "+GetArgFromString(currentCommandLine, 3)+" &";
+				std::string arg = "./"+GetArgFromString(currentCommandLine, 2)+" "+GetArgFromString(currentCommandLine, 3);
 				system(arg.c_str());
 				currentCommandLine = "Program running, check cli for more details";
 			}
