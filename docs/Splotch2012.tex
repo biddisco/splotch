@@ -236,7 +236,7 @@ To conclude this section we observe that $T_{gpu}$ depends linearly on the numbe
 %%CLAUDIO: Is it possible to reduce the figure? I think it too large...
 \begin{figure}
 \centering
-\includegraphics[scale=0.2]{images/particles.eps}
+\includegraphics[scale=0.1]{images/particles.eps}
 \caption{Two particles with different radii influencing the same pixels.}
 \label{fig:particles}
 \end{figure}
@@ -599,7 +599,7 @@ Regarding the rasterization kernel due to the {\it one-thread-per-particle} appr
 
 \subsubsection{Overheads}
 \label{sec:overhead}
-Finally, we discuss the GPU overheads, i.e. times required by functions specific to our GPU implementation. To this extend a number of operations are necessary, e.g. for offloading particles to GPU (OffLoad), sorting and reducing for preparing Btiles and optimizing memory displacement (Sort), removing non active particles, packing and copying back particles that have to be rendered by the CPU (Select) and finally, performing partial images composition. Figure~\ref{fig:over} presents the overhead of different GPU specific functions as times spent by the function divided by overall computing times. The black curve shows total overheads which can be up to 60\% and particularly significant for small radii. As most of the particles are active the sort and reduce 
+Finally, we discuss the GPU overheads, i.e. times required by functions specific to our GPU implementation. To this extend a number of operations are necessary, e.g. for offloading particles to GPU (OffLoad), sorting and reducing for preparing Btiles and optimizing memory displacement (Sort), removing non active particles, packing and copying back particles that have to be rendered by the CPU (Select) and finally, performing partial images composition. Figure~\ref{fig:over} presents the overhead of different GPU specific functions as times spent by the function divided by overall computing times. The black curve shows total overheads which can be up to 50\% and particularly significant for small radii. As most of the particles are active the sort and reduce 
 functions (blue line with crosses) are heavy. For large radii this overhead is negligible as most of the particles are inactive. 
 
 \begin{figure}
@@ -637,7 +637,7 @@ In fact, the main computational kernel, the Rendering kernel, poses serious diff
 to the GPU's programming model, that privileges highly data parallel algorithms.
 In order to overcome such difficulties, Splotch's rendering algorithm has been
 redesigned with the introduction of specific kernels. These kernels 
-introduce an overhead that can be up to the 60\% the overall computing
+introduce an overhead that can be up to the 50\% the overall computing
 time. Nevertheless, the final code overperforms the original CPU
 version of up to a factor of 6, which rises to a factor of 8 when the OpenMP,
 multithread parallel version is considered for comparison. Further optimization can
