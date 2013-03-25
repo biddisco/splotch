@@ -46,7 +46,8 @@ http://www.vtk.org/, accessed on 25/03/2013.
 \bibitem{in-situ}
 M.~Rivi, L.~Calori, G.~Muscianisi and V.~Slavnic, 
 \newblock {In-Situ Visualization: State-of-the-Art and Some Use Cases}, 
-\newblock {PRACE White Paper, http://www.prace-ri.eu/Visualisation}, 2012.
+\newblock {PRACE White Paper, 2012},
+\newblock {http://www.prace-ri.eu/Visualisation/, accessed on 25/03/2013.} 
 
 \bibitem{2011ApJS..195...11W}
 J.~{Woodring}, K.~{Heitmann}, J.~{Ahrens}, P.~{Fasel}, C.~{Hsu}, S.~{Habib} and A.~{Pope},
@@ -85,12 +86,19 @@ http://www.projet horizon.fr/, accessed on 25/03/2013.
 http://www.deus consortium.org/, accessed on 25/03/2013.
 
 \bibitem{m83-vis}
-galaxy reconstruction ref.
+B.~Koribalsky, C.~Gheller and K.~Dolag,
+%CLAUDIO
+%OPEN to be completed
 
 \bibitem{jin:high-performance}
 Z.~Jin, M.~ Krokos, M.~Rivi, C.~Gheller, K.~Dolag and M.~Reinecke,
 \newblock {High-Performance Astrophysical Visualization using Splotch},
 \newblock {Procedia Computer Science, Vol. 1(1), pp. 1775-1784}, 2010.
+
+\bibitem{Reinecke}
+M.~Reinecke, personal communication, 2010?
+%CLAUDIO
+%OPEN Is it ok?
 
 \bibitem{openmpurl}
 http://openmp.org/, accessed on 25/03/2013.
