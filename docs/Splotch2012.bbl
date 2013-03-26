@@ -1,134 +1,123 @@
-\begin{thebibliography}{13}
-
-\bibitem{DataTsunami}
-G.~{Berriman} and S.~{Groom},
-\newblock {How will Astronomy Archives Survive the Data Tsunami?},
-\newblock {Communications of the ACM, Vol. 54(12), pp. 52-56}, 2011.
-
-\bibitem{DAV}
-J.~{Ahrens}, D.~{Rogers} and B.~{Springmeyer},
-\newblock {Visualization and Data Analysis at the Exascale},
-\newblock {NNSA White Paper, Accelerated Strategic Computing (ASC) Exascale Environment Planning Process}, 2011.
-
-\bibitem{2012ASPC..461...45H}
-A.~{Hassan}, C.~{Fluke} and D.~{Barnes},
-\newblock {Unleashing the Power of Distributed CPU/GPU Architectures: Massive Astronomical Data Analysis and Visualization Case Study},
-\newblock {Astronomical Data Analysis Software and Systems XXI, P. Ballester (Ed.), ASP Conference Series, Vol. 461, pp. 45-48}, 2012. 
-
-\bibitem{askap}
-http://www.atnf.csiro.au/projects/askap/, accessed on 25/03/2013.
-
-\bibitem{ska}
-http://www.skatelescope.org/, accessed on 25/03/2013.
-
-\bibitem{Fraedrich:2009:TMV}
-R.~{Fraedrich}, J.~{Schneider} and R.~{Westermann},
-\newblock {Exploring the Millennium Run - Scalable Rendering of Large-Scale Cosmological Datasets},
-\newblock {IEEE Transactions on Visualization and Computer Graphics, Vol. 15(6), pp. 1251-1258}, 2009.
-
-\bibitem{millennium}
-http://www.mpa garching.mpg.de/galform/virgo/millennium/, accessed on 25/03/2013.
-
-\bibitem{2012arXiv1208.3206K}
-R.~{Kaehler}, O.~{Hahn} and T.~{Abel},
-\newblock {A Novel Approach to Visualizing Dark Matter Simulations},
-\newblock {IEEE Transactions on Visualization and Computer Graphics, Vol. 18(12), pp. 2078-2087}, 2012.
-
-\bibitem{visit}
-https://wci.llnl.gov/codes/visit/, accessed on 25/03/2013.
-
-\bibitem{paraview}
-http://www.paraview.org/, accessed on 25/03/2013.
-
-\bibitem{vtk}
-http://www.vtk.org/, accessed on 25/03/2013.
-
-\bibitem{in-situ}
-M.~Rivi, L.~Calori, G.~Muscianisi and V.~Slavnic, 
-\newblock {In-Situ Visualization: State-of-the-Art and Some Use Cases}, 
-\newblock {PRACE White Paper, 2012},
-\newblock {http://www.prace-ri.eu/Visualisation/, accessed on 25/03/2013.} 
-
-\bibitem{2011ApJS..195...11W}
-J.~{Woodring}, K.~{Heitmann}, J.~{Ahrens}, P.~{Fasel}, C.~{Hsu}, S.~{Habib} and A.~{Pope},
-\newblock {Analyzing and Visualizing Cosmological Simulations with ParaView},
-\newblock {The Astrophysical Journal Supplement Series, 195:11}, 2011.
-
-\bibitem{visivo}
-http://visivo.oact.inaf.it:8080/, accessed on 25/03/2013.
-
-\bibitem{VisIVOGateway}
-E.~{Sciacca}, F.~{Vitello}, U.~{Becciani}, A.~{Costa}, P.~{Massimino}, M.~{Bandieramonte}, M.~{Krokos}, C.~{Petta}, C.~{Pistagna}, S.~{Riggi} and F.~{Vitello},
-\newblock {VisIVO Workflow-Oriented Science Gateway for Astrophysical Visualization},
-\newblock {Proc. of Parallel, Distributed, and Network-Based Processing, IEEE Computer Society Press, (to appear)}, 2013.
-
-\bibitem{tipsyurl}
-http://www hpcc.astro.washington.edu/tools/tipsy/tipsy.html/, accessed on 25/03/2013.
-
-\bibitem{splash}
-http://users.monash.edu.au/ dprice/splash/, accessed on 25/03/2013.
-
-\bibitem{glnemo}
-http://www.oamp.fr/dynamique/jcl/glnemo/, accessed on 25/03/2013.
-
-\bibitem{partiview}
-http://virdir.ncsa.illinois.edu/partiview/, accessed on 25/03/2013.
-
-\bibitem{2008NJPh...10l5006D}
-K.~{Dolag}, M.~{Reinecke}, C.~{Gheller} and S.~{Imboden},
-\newblock {Splotch: Visualizing Cosmological Simulations},
-\newblock {New Journal of Physics, 10, 125006}, 2008.
-
-\bibitem{horizon}
-http://www.projet horizon.fr/, accessed on 25/03/2013.
-
-\bibitem{deus}
-http://www.deus consortium.org/, accessed on 25/03/2013.
-
-\bibitem{m83-vis}
-B.~Koribalsky, C.~Gheller and K.~Dolag,
-%CLAUDIO
-%OPEN to be completed
-
-\bibitem{jin:high-performance}
-Z.~Jin, M.~ Krokos, M.~Rivi, C.~Gheller, K.~Dolag and M.~Reinecke,
-\newblock {High-Performance Astrophysical Visualization using Splotch},
-\newblock {Procedia Computer Science, Vol. 1(1), pp. 1775-1784}, 2010.
-
-\bibitem{Reinecke}
-M.~Reinecke, personal communication, 2010?
-%CLAUDIO
-%OPEN Is it ok?
-
-\bibitem{openmpurl}
-http://openmp.org/, accessed on 25/03/2013.
-
-\bibitem{cudaurl}
-http://developer.nvidia.com/cuda/, accessed on 25/03/2013.
-
-\bibitem{thrusturl}
-http://thrust.github.com/, accessed on 25/03/2013.
-
-\bibitem{hdf5}
-http://www.hdfgroup.org/HDF5/, accessed on 25/03/2013.
-
-\bibitem{1991par..book.....S}
-F.~{Shu},
-\newblock Physics of Astrophysics: Volume I Radiation,
-\newblock University Science Books, New York, NY 10012, 1991.
-
-\bibitem{gadgeturl}
-http://www.mpa garching.mpg.de/gadget/, accessed on 25/03/2013.
-
-\bibitem{RadixSort}
-D.~{Merrill} and A.~{Grimshaw},
-\newblock Revising Sorting for gpgpu Stream Architectures,
-\newblock {Technical Report CS2010-03, Department of Computer Science,
-  University of Virginia}, 2010.
-  
- \bibitem{GPUTech}
-T.~{Dykes}, M.~{Rivi}, C.~{Gheller}, M.~{Krokos}, K.~{Dolag} and M.~{Reinecke}
-\newblock CUDA Splotch: GPU Accelerated Astrophysical Visualization,
-\newblock {NVIDIA GPU Technology Conference}, 2013.
+\begin{thebibliography}{21}
+\expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
+\providecommand{\bibinfo}[2]{#2}
+\ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
+%Type = Inproceedings
+\bibitem[{{Hassan} et~al.(2012){Hassan}, {Fluke}, and
+  {Barnes}}]{2012ASPC..461...45H}
+\bibinfo{author}{A.~H. {Hassan}}, \bibinfo{author}{C.~J. {Fluke}},
+  \bibinfo{author}{D.~G. {Barnes}},
+\newblock \bibinfo{title}{{Unleashing the Power of Distributed CPU/GPU
+  Architectures: Massive Astronomical Data Analysis and Visualization Case
+  Study}},
+\newblock in: \bibinfo{editor}{P.~{Ballester}}, \bibinfo{editor}{D.~{Egret}},
+  \bibinfo{editor}{N.~P.~F. {Lorente}} (Eds.), \bibinfo{booktitle}{Astronomical
+  Data Analysis Software and Systems XXI}, volume \bibinfo{volume}{461} of
+  \textit{\bibinfo{series}{Astronomical Society of the Pacific Conference
+  Series}}, p.~\bibinfo{pages}{45}.
+%Type = Article
+\bibitem[{{Fraedrich} et~al.(2009){Fraedrich}, {Schneider}, and
+  {Westermann}}]{Fraedrich:2009:TMV}
+\bibinfo{author}{R.~{Fraedrich}}, \bibinfo{author}{J.~{Schneider}},
+  \bibinfo{author}{R.~{Westermann}},
+\newblock \bibinfo{title}{Exploring the "millennium run" - scalable rendering
+  of large-scale cosmological datasets},
+\newblock \bibinfo{journal}{IEEE Transactions on Visualization and Computer
+  Graphics (Proceedings Visualization / Information Visualization 2009)}
+  \bibinfo{volume}{15} (\bibinfo{year}{2009}).
+%Type = Misc
+\bibitem[{http://www.mpa
+  garching.mpg.de/galform/virgo/millennium/(????)}]{millennium}
+\bibinfo{author}{http://www.mpa garching.mpg.de/galform/virgo/millennium/},
+  ????
+%Type = Article
+\bibitem[{{Kaehler} et~al.(2012){Kaehler}, {Hahn}, and
+  {Abel}}]{2012arXiv1208.3206K}
+\bibinfo{author}{R.~{Kaehler}}, \bibinfo{author}{O.~{Hahn}},
+  \bibinfo{author}{T.~{Abel}},
+\newblock \bibinfo{title}{{A Novel Approach to Visualizing Dark Matter
+  Simulations}},
+\newblock \bibinfo{journal}{ArXiv e-prints}  (\bibinfo{year}{2012}).
+%Type = Misc
+\bibitem[{https://wci.llnl.gov/codes/visit/(????)}]{visit}
+\bibinfo{author}{https://wci.llnl.gov/codes/visit/}, ????
+%Type = Misc
+\bibitem[{http://www.paraview.org/(????)}]{paraview}
+\bibinfo{author}{http://www.paraview.org/}, ????
+%Type = Misc
+\bibitem[{http://www.vtk.org/(????)}]{vtk}
+\bibinfo{author}{http://www.vtk.org/}, ????
+%Type = Article
+\bibitem[{{Woodring} et~al.(2011){Woodring}, {Heitmann}, {Ahrens}, {Fasel},
+  {Hsu}, {Habib}, and {Pope}}]{2011ApJS..195...11W}
+\bibinfo{author}{J.~{Woodring}}, \bibinfo{author}{K.~{Heitmann}},
+  \bibinfo{author}{J.~{Ahrens}}, \bibinfo{author}{P.~{Fasel}},
+  \bibinfo{author}{C.-H. {Hsu}}, \bibinfo{author}{S.~{Habib}},
+  \bibinfo{author}{A.~{Pope}},
+\newblock \bibinfo{title}{{Analyzing and Visualizing Cosmological Simulations
+  with ParaView}},
+\newblock \bibinfo{journal}{The Astrophysical Journal Supplement Series}
+  \bibinfo{volume}{195} (\bibinfo{year}{2011}) \bibinfo{pages}{11}.
+%Type = Misc
+\bibitem[{http://www
+  hpcc.astro.washington.edu/tools/tipsy/tipsy.html(????)}]{tipsyurl}
+\bibinfo{author}{http://www hpcc.astro.washington.edu/tools/tipsy/tipsy.html},
+  ????
+%Type = Misc
+\bibitem[{http://users.monash.edu.au/ dprice/splash/(????)}]{splash}
+\bibinfo{author}{http://users.monash.edu.au/ dprice/splash/}, ????
+%Type = Article
+\bibitem[{{Dolag} et~al.(2008){Dolag}, {Reinecke}, {Gheller}, and
+  {Imboden}}]{2008NJPh...10l5006D}
+\bibinfo{author}{K.~{Dolag}}, \bibinfo{author}{M.~{Reinecke}},
+  \bibinfo{author}{C.~{Gheller}}, \bibinfo{author}{S.~{Imboden}},
+\newblock \bibinfo{title}{{Splotch: visualizing cosmological simulations}},
+\newblock \bibinfo{journal}{New Journal of Physics} \bibinfo{volume}{10}
+  (\bibinfo{year}{2008}) \bibinfo{pages}{125006--+}.
+%Type = Misc
+\bibitem[{http://www.projet horizon.fr(????)}]{horizon}
+\bibinfo{author}{http://www.projet horizon.fr}, ????
+%Type = Misc
+\bibitem[{http://www.deus consortium.org/(????)}]{deus}
+\bibinfo{author}{http://www.deus consortium.org/}, ????
+%Type = Article
+\bibitem[{K.~Dolag(2013)}]{m83-vis}
+\bibinfo{author}{B.~Koribalsky, K.~Dolag, C.~Gheller},
+\newblock \bibinfo{title}{3d modeling and visualization of the m83 galaxy
+  group},
+\newblock \bibinfo{journal}{In preparation}  (\bibinfo{year}{2013}).
+%Type = Article
+\bibitem[{Jin et~al.(2010)Jin, Krokos, Rivi, Gheller, Dolag, and
+  Reinecke}]{jin:high-performance}
+\bibinfo{author}{Z.~Jin}, \bibinfo{author}{M.~Krokos},
+  \bibinfo{author}{M.~Rivi}, \bibinfo{author}{C.~Gheller},
+  \bibinfo{author}{K.~Dolag}, \bibinfo{author}{M.~Reinecke},
+\newblock \bibinfo{title}{High-performance astrophysical visualization using
+  splotch},
+\newblock \bibinfo{journal}{Procedia Computer Science} \bibinfo{volume}{1}
+  (\bibinfo{year}{2010}) \bibinfo{pages}{1775--1784}.
+%Type = Misc
+\bibitem[{http://developer.nvidia.com/cuda/(????)}]{cudaurl}
+\bibinfo{author}{http://developer.nvidia.com/cuda/}, ????
+%Type = Misc
+\bibitem[{http://thrust.github.com(????)}]{thrusturl}
+\bibinfo{author}{http://thrust.github.com}, ????
+%Type = Misc
+\bibitem[{http://www.hdfgroup.org/HDF5/(????)}]{hdf5}
+\bibinfo{author}{http://www.hdfgroup.org/HDF5/}, ????
+%Type = Book
+\bibitem[{{Shu}(1991)}]{1991par..book.....S}
+\bibinfo{author}{F.~{Shu}}, \bibinfo{title}{{Physics of Astrophysics: Volume I
+  Radiation}}, \bibinfo{publisher}{Published by University Science Books, 648
+  Broadway, Suite 902, New York, NY 10012}, \bibinfo{year}{1991}.
+%Type = Article
+\bibitem[{{Merrill} and {Grimshaw}(2010)}]{RadixSort}
+\bibinfo{author}{D.~{Merrill}}, \bibinfo{author}{A.~{Grimshaw}},
+\newblock \bibinfo{title}{Revising sorting for gpgpu stream architectures},
+\newblock \bibinfo{journal}{Technical Report CS2010-03, Department of Computer
+  Science, University of Virginia}  (\bibinfo{year}{2010}).
+%Type = Misc
+\bibitem[{http://www.mpa garching.mpg.de/gadget/(????)}]{gadgeturl}
+\bibinfo{author}{http://www.mpa garching.mpg.de/gadget/}, ????
 
 \end{thebibliography}
