@@ -192,7 +192,11 @@ An optimal solution would be to realise a single data transfer only
 Only our {\it Rasterization} kernel is data parallel and can thus implement the {\it one-thread-per-particle} approach. For this stage $N_{load,p} = 1$ and since processed particles must be copied back to the global memory to be rendered $N_{store,p} = 1$. The {\it Rendering} kernel is envisaged to require an additional data load, but no more store 
 stages are necessary (particles can be ``forgotten'' once their contribution is calculated).
 
-For very large-scale datasets the $N_{pix}$ related term gives a meaningful contribution to $T_{Mgpu}$ only if the number of active particles is of the same (or smaller) order relative to screen pixels - this can happen for specific camera settings. 
+The contribution to $T_{Mgpu}$ of the term related to the image size is negligible for the cases relevant to this work.
+being $N_{part} >>  N_{pix}^2$. Exceptions can be related to peculiar camera positions, for which the number of 
+active particles can become comparable to the number of pixels. 
+
+#For very large-scale datasets the $N_{pix}$ related term gives a meaningful contribution to $T_{Mgpu}$ only if the number of active particles is of the same (or smaller) order relative to screen pixels - this can happen for specific camera settings. 
 
 A critical term in equation \eqref{tmgpu} is the memory access
 latency $N_{Ngpu} \nu_{mem}$. Access to memory is slow compared to
