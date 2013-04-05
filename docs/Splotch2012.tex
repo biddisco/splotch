@@ -196,7 +196,7 @@ The contribution to $T_{Mgpu}$ of the term related to the image size is negligib
 being $N_{part} >>  N_{pix}^2$. Exceptions can be related to peculiar camera positions, for which the number of 
 active particles can become comparable to the number of pixels. 
 
-#For very large-scale datasets the $N_{pix}$ related term gives a meaningful contribution to $T_{Mgpu}$ only if the number of active particles is of the same (or smaller) order relative to screen pixels - this can happen for specific camera settings. 
+For very large-scale datasets the $N_{pix}$ related term gives a meaningful contribution to $T_{Mgpu}$ only if the number of active particles is of the same (or smaller) order relative to screen pixels - this can happen for specific camera settings. 
 
 A critical term in equation \eqref{tmgpu} is the memory access
 latency $N_{Ngpu} \nu_{mem}$. Access to memory is slow compared to
