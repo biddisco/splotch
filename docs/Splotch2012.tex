@@ -37,7 +37,25 @@
 \maketitle
 
 \begin{abstract}
-Splotch is a rendering algorithm for exploration and visual discovery in particle based datasets coming from astronomical observations or numerical simulations. The strength of Splotch is high resolution/quality imagery and support for large-scale datasets by means of an effective mix of OpenMP and MPI parallel programming paradigms. We discuss the issues faced in designing and implementing a new version of Splotch using the CUDA programming paradigm for exploiting modern HPC infrastructures. An underlying performance model is outlined and a classification strategy for aiding particle rendering is introduced. We present performance results focusing on scalability and acceleration gains. We finally summarise our work and outline directions for future developments.
+Splotch is a rendering algorithm for exploration and visual discovery in
+particle-based datasets coming from astronomical observations or
+numerical simulations. The strengths of the approach are production of
+high quality imagery and support for very large-scale datasets through an
+effective mix of the OpenMP and MPI parallel programming paradigms. This
+article reports our experiences in re-designing Splotch for exploiting
+emerging HPC architectures nowadays increasingly populated with GPUs. A
+performance model is introduced for data transfers, computations and
+memory access, to guide our re-factoring of Splotch.  A number of
+parallelization issues are discussed, in particular relating to race
+conditions and workload balancing, towards achieving optimal
+performances. Our implementation was accomplished by using the CUDA
+programming paradigm exploiting the Thurst library. Our strategy is
+founded on novel schemes achieving optimized data organisation and
+classification of particles. We deploy a reference simulation to present
+performance results on acceleration gains and scalability. We finally
+outline our vision for future work developments including possibilities
+for further optimisations and exploitation of emerging technologies.
+
 \keywords{High-Performance Computing \and Scientific Visualization \and Astrophysics \and CUDA \and GPUs}
 \end{abstract}
  
@@ -492,11 +510,15 @@ The CUDA implementation of Splotch exploits GPUs in modern HPC infrastructures f
 Splotch proved to be a challenging algorithm to adapt for GPU execution. The main computational kernel poses serious difficulties to the GPU's programming model which strongly favours highly parallelised approaches. We redesigned Splotch by introducing a number of specific kernels which may involve overheads of up to 50\% of overall computing times. Nevertheless the original CPU
 version is outperformed by a factor of 6, rising to a factor of 8 when the OpenMP multithread parallelised version is considered for comparison. An important aspect is retaining linear scalability on the number of particles processed.
 
-Further optimizations could be obtained by adopting CUDA streams, overlapping computations and data transfers. However this is currently prevented by the rendering of large particles on the CPU and the Thrust library which provides no support for such operational scenarios. The achieved performance allows exploitation of hybrid computing nodes nowadays increasingly common in HPC infrastructures. However to fully exploit such architectures further work is required towards concurrent usage of multiple GPUs, multiple cores and multiple nodes, and exploitation of the OpenMP and MPI Splotch capability. This work is expected to be challenging especially in the context of finding an optimal balance in the workload of individual system components. Additionally the computing capability of the latest accelerators should be explored, e.g.\ the NVIDIA Tesla K20X GPU which provides unprecedented computing resources, with larger streaming multiprocessors, and novel solutions such as dynamic parallelism and Hyper-Q usage of multicore systems \cite{GK110}. This last feature is particularly relevant for our purposes since it enables
+Further optimizations could be obtained by adopting CUDA streams, overlapping computations and data transfers. However this is currently prevented by the rendering of large particles on the CPU and the Thrust library which provides no support for such operational scenarios.
+
+The achieved performance gains allow exploitation of hybrid computing nodes nowadays increasingly common in HPC infrastructures. However to fully exploit such architectures further work is required towards concurrent usage of multiple GPUs, multiple cores and multiple nodes, and exploitation of the OpenMP and MPI Splotch capability. This work is expected to be challenging especially in the context of finding an optimal balance in the workload of individual system components. Additionally the computing capability of the latest accelerators should be explored, e.g.\ the NVIDIA Tesla K20X GPU which provides unprecedented computing resources, with larger streaming multiprocessors, and novel solutions such as dynamic parallelism and Hyper-Q usage of multicore systems \cite{GK110}. This last feature is particularly relevant for our purposes since it enables
 multiple CPU cores to simultaneously utilise CUDA cores on a single GPU. We envisage this to be particularly effective when off-loaded data can be split in small chunks and progressively copied by different MPI tasks 
 to the GPU memory. A preliminary analysis of Splotch's performance on Kepler architectures has been presented recently \cite{GPUTech}. 
 
-The INTEL Many Integrated Core (MIC) architecture \cite{mic} represents a further interesting solution to be explored in future developments. We envisage that a much easier refactoring of the accelerated algorithm codes will be necessary, as we can exploit the already available OpenMP capability of Splotch. An interesting aspect would be to investigate the maximum possible performance gains, but this may require extensive investigations as such architectures are still largely undiscovered. The vision is to further develop Splotch as an effective approach for large data visualization and discovery, capable of optimally exploiting any underlying HPC devices irrespectively of their specific architectures or availability of specialised graphics libraries, e.g.\ OpenGL. Nevertheless we are also developing specialised utilities such as a lightweight interactive rendering engine mimicking Splotch's imagery for rapid inspections of large-scale astrophysical datasets.
+The INTEL Many Integrated Core (MIC) architecture \cite{mic} represents a further interesting solution to be explored in future developments. We envisage that a much easier refactoring of the accelerated algorithm codes will be necessary, as we can exploit the already available OpenMP capability of Splotch. An interesting aspect would be to investigate the maximum possible performance gains, but this may require extensive investigations as such architectures are still largely undiscovered.
+
+The vision is to further develop Splotch as an effective approach for large data visualization and discovery, capable of optimally exploiting any underlying HPC devices irrespectively of their specific architectures or availability of specialised graphics libraries, e.g.\ OpenGL. Nevertheless we are also developing specialised utilities such as a lightweight interactive rendering engine mimicking Splotch's imagery for rapid inspections of large-scale astrophysical datasets.
 
 \bibliographystyle{spmpsci}
 \bibliography{master}	
