@@ -170,14 +170,15 @@ where $\nu_{GPU}$ is the GPU's flops/sec rate, and $N_{op}$ is the expected over
 \begin{equation}\label{ops}
 N_{op} = N_{part}(\alpha + \beta R_0^2) + f_{GPU},
 \end{equation}
-with $\alpha$ and $\beta$ representing the mean number of operations per particle in the \textit{Rasterization} and \textit{Rendering} kernels respectively.
+with $\alpha$ and $\beta$ representing the number of operations per particle in the \textit{Rasterization} and \textit{Rendering} kernels respectively.
 The function $f_{GPU}$ accounts for GPU specific kernels; these are necessary for adapting the original Splotch code to the GPU architecture and optimizing performance. Details of these kernels are discussed in Sect.~\ref{sec:implementation} and Sect.~\ref{sec:results}.
 Finally the parameter $R_0$ encapsulates an expectation value for the radius of particles projected on Splotch renderings $R_0 = <r(p)>$,
 
 \begin{equation}\label{radius}
 r(p) = A(p){\chi \sigma_p\over S_{box}} N_{pix},
 \end{equation} 
-where $A(p)$ is the transformation to screen coordinates, $\chi$ and $\sigma_p$ are defined by equation \eqref{kernel} and $S_{box}$ represents a normalisation factor associated with the particles under consideration. 
+where $A(p)$ is the transformation to screen coordinates, $\chi$ and $\sigma_p$ are defined by equation \eqref{kernel} and $S_{box}$ represents 
+normalisation factor measuring the size of the bounding box containing all the particles.
 The radius of individual particles depends both on their intrinsic properties and on camera settings. Although a particle may exhibit a negligible size from one point of view, it may affect the entire Splotch rendering from another point of view. Also, particles close to each other can have different radius depending on their intrinsic characteristics.
 
 The dependency from $r(p)$ is the source of two major difficulties for GPU implementations. Firstly, two threads acting on different particles could try 
@@ -203,7 +204,7 @@ N_{Mgpu} = (N_{load,p} + N_{store,p}) N_{part} + N_{store,pix} N_{pix}^2,
 where $N_{load,p}$ and $N_{store,p}$ are the number of loads and stores of individual 
 particles, and $N_{store,pix}$ is the number of stores of rendered images (no loads 
 are expected since images are created on the GPU). 
-Furthermore, memory access overheads can be estimated as $N_{Ngpu} \nu_{mem}$; $N_{Ngpu}$ is the overall number of memory accesses and $\nu_{mem}$ represents memory frequency. The overall time required for moving data among memories are thus calculated by:
+Furthermore, memory access overheads can be estimated as $N_{Ngpu} \nu_{mem}$; $N_{Ngpu}$ is the overall number of memory accesses and $\nu_{mem}$ represents memory frequency. The overall time required for moving data among memories is thus calculated by:
 \begin{equation}\label{tmgpu}
 \begin{split}
 T_{Mgpu} = {(N_{load,p} + N_{store,p}) N_{part} S_{part}
@@ -369,8 +370,8 @@ $n_p$ & $t_x$ & Kernel & Rendering & Total CUDA \\
 %\end{center}
 \end{table}
 
-Therefore, for typical images size ($N_{pix} > 10^3$), considerations on occupancy leads to a small optimal tile size. Also load balancing benefits of this choice, since as tile size decreases, the number of particles per tile decreases as well, and the workload results to be evenly distributed.
-The main drawback of this choice is that for small chuncks, a larger number of particles are classified as large, hence processed on the CPU. We will show in the next sections the overall quantitative consequences of this setup.  
+Therefore, for typical image sizes ($N_{pix} > 10^3$), considerations on occupancy lead to choosing  small tile sizes. Also load balancing benefits of this choice, since as tile size decreases, the number of particles per tile decreases as well, and the workload results to be evenly distributed.
+The main drawback of this choice is that for small chunks, a larger number of particles are classified as large, hence processed on the CPU. We will show in the next sections the overall quantitative consequences of this setup.  
 
 \subsection{Scalability}
 \label{sec:scalability}
@@ -399,10 +400,15 @@ The lines are colored as follows: a) black (diamonds) showing total computing ti
 Overall performance in relation to image sizes $N_{pix}^2$ is illustrated in Fig.~\ref{fig:pixels}. Keeping the underlying dataset size and camera settings fixed, we obtained computing times by progressively increasing
 $N_{pix}$ from ${2}^{7}$ to ${2}^{12}$. According to \eqref{ops} and \eqref{radius} each particle contributes to a number of pixels that is proportional to $N_{pix}^{2}$. As long as image sizes are small relative to dataset sizes (for our particular configuration this translates to $N_{pix} \le 2^{11}$), overall computing times are constant. For large image sizes their resolution may affect significantly the classification of particles potentially increasing overall computing times.
 
-
- 
 \subsection{Speed-up}
 \label{sec:speed-up}
+\begin{figure}
+%\centering
+\includegraphics[scale=0.2]{panorama.eps}
+\caption{Our reference particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation. Starting from very far (top-left, Test 1) and reaching progressively very close to the center of the simulation (bottom-left, Test 6 - the image of Test 7 is omitted). The mass distribution of gas particles is shown.}
+\label{fig:panorama}
+\end{figure}
+
 In the next series of tests, we discuss the speed-up achieved with respect to the original Splotch. 
 The dependency of the computing time from the radius, defined by equation \eqref{radius}, has been analysed maintaining a fixed image resolution at ($N_{pix} = 2^{11}$) and progressively changing the camera position 
 so as to resemble a typical user interaction scenario, namely a zoom in operation. 
@@ -410,13 +416,6 @@ The starting camera position ensures that the entire box of the simulation is re
 Next we ensure that the simulation box just about fits into the rendered images (Test 2). 
 A few other camera positions have also been set so as to reach closer and closer towards the 
 centre of the simulation (Tests 3 to 7). Figure~\ref{fig:panorama} illustrates rendered images generated for the different camera positions.
-
-\begin{figure}
-%\centering
-\includegraphics[scale=0.2]{panorama.eps}
-\caption{Our reference particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation. Starting from very far (top-left, Test 1) and reaching progressively very close to the center of the simulation (bottom-left, Test 6 - the image of Test 7 is omitted). The mass distribution of gas particles is shown.}
-\label{fig:panorama}
-\end{figure}
 
 \begin{figure}
 %\centering
@@ -490,7 +489,7 @@ Regarding the rasterization kernel due to the {\it one-thread-per-particle} appr
 \label{sec:overhead}
 We now discuss the GPU overheads, i.e.\ times required by functions specific to our GPU implementation. To this extend a number of operations are necessary, e.g.\ for offloading particles to GPU (OffLoad), sorting and reducing for preparing Btiles and optimizing memory displacement (Sort), removing non-active particles, but also packing and copying back particles that have to be rendered by the CPU (Select) and performing partial images composition. Fig.~\ref{fig:over} presents the overhead of different GPU specific functions as times spent by the function divided by overall computing times. The black curve shows total overheads which can be up to 50\% and particularly significant for small radii. As most of the particles are active the sort and reduce
 functions (blue line with crosses) are computationally demanding. For large radii this overhead is negligible as most of the particles are inactive. 
-The red curve represents offload times, which are comparable throughout the tests (as all particles are moved to the GPU irrespectively of camera position), and account for about 15\% of overall overheads. This contribution tends to decrease at larger radii due to the increased overall processing times.
+The red curve represents offload times, which are comparable throughout the tests (as all particles are moved to the GPU irrespectively of camera position), and account for about 15\% of overall overheads. This contribution varies according to the overall processing times, as the offload time is independent of the particles radius.
 The Select times are slightly higher than OffLoad and this tends to decrease at larger radii, when more particles are moved back to the CPU, hence coalesced memory access can be effectively exploited. Finally, image composition (and any other CUDA set up times) can always be considered negligible contributions, e.g.\ creating rendered images accounts for approximately 0.1\% of GPU overheads. This is due to the efficient design of our implementation taking full advantage of the multi-thread architecture of GPUs.
 
 \begin{figure}
