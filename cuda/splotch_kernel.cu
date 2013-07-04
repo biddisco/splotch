@@ -26,6 +26,9 @@ __device__ __forceinline__ void clamp (float minv, float maxv, float &val)
   val = min(maxv, max(minv, val));
   }
 
+__device__ __forceinline__   double my_asinh (double val)
+  { return log(val+sqrt(1.+val*val)); }
+
 //fetch a color from color table on device
 __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size, int map_ptypes)
   {
@@ -59,9 +62,45 @@ __global__ void k_process
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
 
-  float r = p[m].r;
-  float I = p[m].I;
+
   int ptype = p[m].type;
+  float r = p[m].r;
+  float er = p[m].e.r;
+  float eg = p[m].e.g;
+  float eb = p[m].e.b;
+  float I = p[m].I;
+
+    // Normalization and clamping 
+
+#ifndef NO_I_NORM
+  // Norm and clamp I
+    if (dparams.inorm_maxs[ptype]==dparams.inorm_mins[ptype])
+      I = 1;
+    else
+      I = (max(dparams.inorm_mins[ptype],min(dparams.inorm_maxs[ptype],I))-dparams.inorm_mins[ptype])/(dparams.inorm_maxs[ptype]-dparams.inorm_mins[ptype]);
+#endif
+
+  // Norm and clamp er
+    if (dparams.cnorm_maxs[ptype]==dparams.cnorm_mins[ptype])
+      er = 1;
+    else
+      er = (max(dparams.cnorm_mins[ptype],min(dparams.cnorm_maxs[ptype],er))-dparams.cnorm_mins[ptype])/(dparams.cnorm_maxs[ptype]-dparams.cnorm_mins[ptype]);
+  
+  // If col_vector[t]
+  // norm and clamp eg and eb
+    if(dparams.col_vector[ptype])
+    {
+      if (dparams.cnorm_maxs[ptype]==dparams.cnorm_mins[ptype])
+        eg = 1;
+      else
+        eg = (max(dparams.cnorm_mins[ptype],min(dparams.cnorm_maxs[ptype],er))-dparams.cnorm_mins[ptype])/(dparams.cnorm_maxs[ptype]-dparams.cnorm_mins[ptype]);
+
+      if (dparams.cnorm_maxs[ptype]==dparams.cnorm_mins[ptype])
+        eb = 1;
+      else
+        eb = (max(dparams.cnorm_mins[ptype],min(dparams.cnorm_maxs[ptype],er))-dparams.cnorm_mins[ptype])/(dparams.cnorm_maxs[ptype]-dparams.cnorm_mins[ptype]);
+    }
+
  // cu_color e;
  // e.r=p[m].e.r;
  // e.g=p[m].e.g;
@@ -146,9 +185,9 @@ __global__ void k_process
 //coloring
 // get color, associated from physical quantity contained in e.r, from lookup table
   cu_color e;
-  e.r=p[m].e.r;
-  e.g=p[m].e.g;
-  e.b=p[m].e.b;
+  e.r=er;
+  e.g=eg;
+  e.b=eb;
 
   if (!dparams.col_vector[ptype])
      e = get_color(ptype, e.r, mapSize, types);
@@ -171,6 +210,61 @@ __global__ void k_process
       //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);
   }
 }
+//---------------------------------------------------------------------------------
+// Ranging - Tim Dykes
+// Calculates logs, asinh is commented out because if it is used
+// it is done on host
+__global__ void k_range(int nP, cu_particle_sim *p)
+{
+
+  //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >=nP) return;
+
+  // Get current particle type
+  int ptype = p[m].type;
+
+  // Check if we need to log10 intensity
+ // 
+  if (dparams.log_int[ptype])
+  { 
+    if(p[m].I > 0)
+        p[m].I = log10(p[m].I);
+    else
+        p[m].I = -38;
+  }
+
+  if (dparams.log_col[ptype])
+  {
+    if(p[m].e.r > 0)
+      {
+      p[m].e.r = log10(p[m].e.r);
+      }
+    else
+      p[m].e.r =-38;
+  }
+//else
+//{
+//  if (dparams.asinh_col[ptype])
+//    p[m].e.r = my_asinh(p[m].e.r);
+//}
+
+  if (dparams.col_vector[ptype])
+  {
+    if (dparams.log_col[ptype])
+    {
+      p[m].e.g = log10(p[m].e.g);
+      p[m].e.b = log10(p[m].e.b);
+    }
+//  if (dparams.asinh_col[ptype])
+//  {
+//    p[m].e.g = my_asinh(p[m].e.g);
+//    p[m].e.b = my_asinh(p[m].e.b);
+//  }
+  }
+
+}
+//---------------------------------------------------------------------------------
 
 //colorize by kernel
 /*__global__ void k_colorize
