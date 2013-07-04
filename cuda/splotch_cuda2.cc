@@ -38,7 +38,8 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
   // enable device and allocate arrays
-  int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness);
+  bool doLogs = true;
+  int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
   tstack_pop("Device setup");
   if (!error)
   {
@@ -55,7 +56,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres);
+     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
      // combine host results of chunks
      tstack_push("combine images");
      for (int x=0; x<xres; x++)
