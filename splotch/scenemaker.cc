@@ -37,10 +37,12 @@ using namespace std;
 
 void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) const
   {
+  // how many particle types are there
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
   arr<Normalizer<float32> > intnorm(nt), colnorm(nt);
 
+  // Get data from parameter file
   for(int t=0; t<nt; t++)
     {
     log_int[t] = params.find<bool>("intensity_log"+dataToString(t),false);
@@ -57,6 +59,80 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) 
   // should be done more elegantly
   arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20);
   int m;
+#ifdef CUDA
+  // In cuda version logs are performed on device
+ for (m=0; m<npart; ++m)
+  {
+    int t=p[m].type;
+
+    if (log_int[t])
+    {
+      if(p[m].I > 0)
+      {
+        inorm[t].collect(p[m].I);
+      }
+      else p[m].I = -38;
+    }
+    else
+      inorm[t].collect(p[m].I);
+
+    if (log_col[t])
+    {
+      if(p[m].e.r > 0)
+      {
+        cnorm[t].collect(p[m].e.r);
+      }
+      else p[m].e.r = -38;
+    }
+    else
+    {
+      if(asinh_col[t])
+        p[m].e.r = my_asinh(p[m].e.r);
+
+      cnorm[t].collect(p[m].e.r);
+    }
+
+    if (col_vector[t])
+    {
+      if (asinh_col[t])
+      {
+        p[m].e.g = my_asinh(p[m].e.g);
+        p[m].e.b = my_asinh(p[m].e.b);
+      }
+
+      cnorm[t].collect(p[m].e.g);
+      cnorm[t].collect(p[m].e.b);
+    }
+  }
+#pragma omp critical
+  for(int t=0; t<nt; t++)
+  {
+   	if(log_int[t])
+   	{
+      if(inorm[t].minv > 0)
+   	    inorm[t].minv = log10(inorm[t].minv);
+      
+   	  if(inorm[t].maxv > 0)
+        inorm[t].maxv = log10(inorm[t].maxv);
+   	}
+ 
+    if (log_col[t])
+    {
+      if(cnorm[t].minv > 0)
+        cnorm[t].minv = log10(cnorm[t].minv);
+
+      if(cnorm[t].maxv > 0)
+        cnorm[t].maxv = log10(cnorm[t].maxv);
+    }
+  }
+
+  for(int t=0; t<nt; t++)
+  {
+    intnorm[t].collect(inorm[t]);
+    colnorm[t].collect(cnorm[t]);
+  }
+}
+#else
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m) // do log calculations if requested
     {
@@ -115,7 +191,7 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) 
     colnorm[t].collect(cnorm[t]);
     }
   }
-
+#endif
   for(int t=0; t<nt; t++)
     {
     mpiMgr.allreduce(intnorm[t].minv,MPI_Manager::Min);
@@ -154,7 +230,24 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) 
            intnorm[t].maxv << " (max) " << endl;
       }
     }
+
   tstack_pop("minmax");
+
+#ifdef CUDA
+
+  // Write max/mins to param file to be used in cuda norm/clamping
+  for(int t=0; t<nt; t++)
+    {
+      params.setParam("intensity_min"+dataToString(t), intnorm[t].minv);
+      params.setParam("intensity_max"+dataToString(t), intnorm[t].maxv);
+      params.setParam("color_min"+dataToString(t), colnorm[t].minv);
+      params.setParam("color_max"+dataToString(t), colnorm[t].maxv);
+    }
+
+  params.setParam("cuda_doLogs", true);
+
+#else
+  std::cout << " Host normalization and clamping" << std::endl;
   tstack_push("clamp");
 
 #pragma omp parallel
@@ -176,6 +269,8 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) 
     }
 }
   tstack_pop("clamp");
+
+#endif
   } // END particle_normalize
 
 // Higher order interpolation would be:
@@ -695,6 +790,41 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     particle_interpolate(particle_data,frac);
     tstack_pop("Time interpolation");
     }
+
+  // If we are using CUDA ranging is done on GPU
+#ifdef CUDA
+  
+  // Check for maxes and mins in parameter file
+  int nt = params.find<int>("ptypes",1);
+  bool found = true;
+  for(int t=0; t<nt; t++)
+  {
+    if(!params.param_present("intensity_min"+dataToString(t)))
+      found = false;
+
+    if(!params.param_present("intensity_max"+dataToString(t)))
+      found = false;
+
+    if(!params.param_present("color_min"+dataToString(t)))
+      found = false;
+
+    if(!params.param_present("color_max"+dataToString(t)))
+      found = false;
+  }
+
+  // If maxes and mins are not specified then run host ranging to determine these
+  if(!found)
+  {
+    tstack_push("Particle ranging");
+    tsize npart_all = particle_data.size();
+    mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+    if (mpiMgr.master())
+      cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
+    particle_normalize(particle_data, true);
+    tstack_pop("Particle ranging");
+  }
+
+#else
   tstack_push("Particle ranging");
   tsize npart_all = particle_data.size();
   mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
@@ -702,7 +832,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     cout << endl << "host: ranging values (" << npart_all << ") ..." << endl;
   particle_normalize(particle_data, true);
   tstack_pop("Particle ranging");
-
+#endif
+  
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
 
 // boost initialization
