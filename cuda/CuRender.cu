@@ -19,7 +19,7 @@
 
 using namespace std;
 
-int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres)
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs)
 {
   cudaError_t error;
 
@@ -31,7 +31,18 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //get parameters for rendering
   int tile_sidex, tile_sidey, width, nxtiles, nytiles;
   gv->policy->GetTileInfo(&tile_sidex, &tile_sidey, &width, &nxtiles, &nytiles);
-  
+
+  //--------------------------------------------------------------------------
+  tstack_push("do logs");
+  // Ranging - Tim Dykes 
+  if(doLogs)
+  {
+    cu_range(nParticle, gv);
+    cudaThreadSynchronize();
+  }
+  tstack_pop("do logs");
+  //--------------------------------------------------------------------------
+
   //--------------------------------------
   //  particle projection and coloring
   //--------------------------------------

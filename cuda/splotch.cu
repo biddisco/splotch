@@ -29,6 +29,19 @@ template<typename T> T findParamWithoutChange
 void getCuTransformParams(cu_param &para_trans,
 paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   {
+
+  // Get ranging parameters
+  // If mins and maxs were not already in parameter file, cuda version of particle_normalize in 
+  // scenemaker will have written them in.
+  int nt = params.find<int>("ptypes",1);
+  for(int t=0; t<nt; t++)
+  {
+      para_trans.inorm_mins[t] = params.find<float>("intensity_min"+dataToString(t));
+      para_trans.inorm_maxs[t] = params.find<float>("intensity_max"+dataToString(t));
+      para_trans.cnorm_mins[t] = params.find<float>("color_min"+dataToString(t));
+      para_trans.cnorm_maxs[t] = params.find<float>("color_max"+dataToString(t));
+  }
+
   int xres = params.find<int>("xres",800),
       yres = params.find<int>("yres",xres);
   float fov = params.find<double>("fov",45); //in degrees
@@ -84,7 +97,7 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   }
 
 
-int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness)
+int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
   {
   cudaError_t error;
   cudaSetDevice (devID); // initialize cuda runtime
@@ -172,19 +185,28 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
   tparams.ptypes    = fparams.find<int>("ptypes",1);
 
   for(int itype=0; itype<tparams.ptypes; itype++)
-    {
+  {
     tparams.brightness[itype] = fparams.find<double>("brightness"+dataToString(itype),1.);
     tparams.brightness[itype] *= b_brightness;
     tparams.col_vector[itype] = fparams.find<bool>("color_is_vector"+dataToString(itype),false);
-    }
+    tparams.log_col[itype] = fparams.find<bool>("color_log"+dataToString(itype),false);
+    tparams.log_int[itype] = fparams.find<bool>("intensity_log"+dataToString(itype),false);
+    tparams.asinh_col[itype] = fparams.find<bool>("color_asinh"+dataToString(itype),false);
+  }
+
+  // Check if logs have already been done by host or not
+  bool dflt = true;
+  std::string key = "cuda_doLogs";
+  doLogs = findParamWithoutChange<bool>(&fparams, key, dflt);
+
 
   //dump parameters to device
   error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
   if (error != cudaSuccess)
-   {
-     cout << "Device Malloc: parameters allocation error!" << endl;
-     return 1;
-   }
+  {
+    cout << "Device Malloc: parameters allocation error!" << endl;
+    return 1;
+  }
   return 0;
   }
 
@@ -201,6 +223,21 @@ int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_va
   }
   return 0;
   }
+
+//---------------------------------------------------------------------------------
+// Ranging Changes - Tim Dykes
+int cu_range(int nP, cu_gpu_vars* pgv)
+  {
+  // Get block and grid dimensions from policy object
+  dim3 dimGrid, dimBlock;
+  pgv->policy->GetDimsBlockGrid(nP, &dimGrid, &dimBlock);
+  
+  // Ranging process
+  k_range<<<dimGrid, dimBlock>>>(nP, pgv->d_pd);
+
+  return 0;
+  }
+//---------------------------------------------------------------------------------
 
 int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
   {
