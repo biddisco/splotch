@@ -82,6 +82,10 @@ namespace previewer
 		InterpolatedDPList = DPL;
 	}
 
+	int AnimationPath::Size()
+	{
+		return DPList.size();
+	}
 
 	void AnimationPath::SetComponent(const std::string& _comp)
 	{

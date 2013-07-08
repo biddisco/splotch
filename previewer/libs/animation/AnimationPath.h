@@ -68,6 +68,8 @@ namespace previewer
 		DataPointList GetDataPointList();
 		DataPointList GetInterpolatedDataPointList();
 
+		int Size();
+
 	private:
 		DataPointList DPList;
 		DataPointList InterpolatedDPList;
