@@ -19,12 +19,12 @@
  *
  */
  
-#include "PP_FBO.h"
+#include "PP_FBOF.h"
 #include "previewer/Previewer.h"
 
 namespace previewer
 {
-	void PP_FBO::Load(const ParticleData& pData)
+	void PP_FBOF::Load(const ParticleData& pData)
 	{
 		//Store passed in data and bounding box
 		particleList = pData.GetParticleList();
@@ -117,14 +117,13 @@ namespace previewer
 		fboTMMaterial->SetTexture(true);
 		fboTMMaterial->LoadTexture(fboTMTex, GL_TEXTURE_2D);
 
-		// Set up Horizontal and Vertical passthroughs for post processing
-
+		// Set up Horizontal and Vertical effects for post processing
 		Fbo_horizontal.Load(ParticleSimulation::GetXRes(), ParticleSimulation::GetYRes());
 
 		GLuint fboHZTex = Fbo_horizontal.GetTexID();
 
 		fboHZMaterial = new PP_ParticleMaterial();
-		fboHZMaterial->Load("PassthroughHZ", false);
+		fboHZMaterial->Load("FilterHZ", false);
 		fboHZMaterial->SetTexture(true);
 		fboHZMaterial->LoadTexture(fboHZTex, GL_TEXTURE_2D);
 
@@ -133,12 +132,11 @@ namespace previewer
 		GLuint fboVTTex = Fbo_vertical.GetTexID();
 
 		fboVTMaterial = new PP_ParticleMaterial();
-		fboVTMaterial->Load("PassthroughVT", false);
+		fboVTMaterial->Load("FilterVT", false);
 		fboVTMaterial->SetTexture(true);
 		fboVTMaterial->LoadTexture(fboVTTex, GL_TEXTURE_2D);
 
-
-		// Set identity matrix for drawin rtt quad to screen
+		// Set identity matrix for drawing rtt quad to screen
 		ident.identity();
 
 		glEnable(GL_PROGRAM_POINT_SIZE);
@@ -154,7 +152,7 @@ namespace previewer
 		//std::cout << "point size granularity: " << glGetFloatv(GL_SMOOTH_POINT_SIZE_GRANULARITY) << std::endl;
 	}
 
-	void PP_FBO::Draw()
+	void PP_FBOF::Draw()
 	{
 		Clear(0.2,0.2,0.2,1.0);
 		// Draw scene into passthrough FBO
@@ -197,6 +195,28 @@ namespace previewer
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Bind material
+		fboTMMaterial->Bind(ident);
+
+		glBegin(GL_QUADS);
+
+		    glTexCoord2f(0,0);  glVertex3f(-1, -1, 0);
+		    glTexCoord2f(0,1);  glVertex3f(-1, 1, 0);
+		    glTexCoord2f(1,1);  glVertex3f(1, 1, 0);
+		    glTexCoord2f(1,0);  glVertex3f(1, -1, 0);
+
+		glEnd();
+
+		fboTMMaterial->Unbind();
+
+		Fbo_horizontal.Unbind();
+
+		// Draw horizontal post-processing fbo into vertical post processing fbo
+		Fbo_vertical.Bind();
+
+		glClearColor(0.1, 0.7, 0.1, 1.0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Bind material
 		fboHZMaterial->Bind(ident);
 
 		glBegin(GL_QUADS);
@@ -209,28 +229,6 @@ namespace previewer
 		glEnd();
 
 		fboHZMaterial->Unbind();
-
-		Fbo_horizontal.Unbind();
-
-		// Draw horizontal post-processing fbo into vertical post processing fbo
-		Fbo_vertical.Bind();
-
-		glClearColor(0.1, 0.7, 0.1, 1.0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// Bind material
-		fboVTMaterial->Bind(ident);
-
-		glBegin(GL_QUADS);
-
-		    glTexCoord2f(0,0);  glVertex3f(-1, -1, 0);
-		    glTexCoord2f(0,1);  glVertex3f(-1, 1, 0);
-		    glTexCoord2f(1,1);  glVertex3f(1, 1, 0);
-		    glTexCoord2f(1,0);  glVertex3f(1, -1, 0);
-
-		glEnd();
-
-		fboVTMaterial->Unbind();
 
 		Fbo_vertical.Unbind();
 
@@ -270,12 +268,12 @@ namespace previewer
 
 	}
 
-	void PP_FBO::Unload()
+	void PP_FBOF::Unload()
 	{
 
 	}
 
-	void PP_FBO::Update()
+	void PP_FBOF::Update()
 	{
 		// Reset camera projection, and update frame buffer objects
 		camera.SetPerspectiveProjection(ParticleSimulation::GetFOV(), ParticleSimulation::GetAspectRatio(), 1, 200000);
@@ -283,7 +281,7 @@ namespace previewer
 		Fbo_ToneMap.Update(ParticleSimulation::GetXRes(), ParticleSimulation::GetYRes());
 	}
 
-	void PP_FBO::OnKeyPress(Event ev)
+	void PP_FBOF::OnKeyPress(Event ev)
 	{
 		// Movement * seconds per frame for uniform movement regardless of framerate 
 		// (* 100 / *0.1 to make scale similar for setters move and rotation)
@@ -319,7 +317,7 @@ namespace previewer
 
 	}
 
-	void PP_FBO::OnMotion(Event ev)
+	void PP_FBOF::OnMotion(Event ev)
 	{
 		//account for mouse moving around screen between clicks or going off the render screen
 		if( (ev.mouseX > (mouseMotionX + 10.f)) || (ev.mouseX < (mouseMotionX - 10.f)) || 
@@ -341,7 +339,7 @@ namespace previewer
 		mouseMotionY = ev.mouseY;
 	} 
 
-	void PP_FBO::genVBO()
+	void PP_FBOF::genVBO()
 	{
 
 		// Generate Vertex Buffer Object with space reserved for data, then insert interleaved data.
@@ -357,7 +355,7 @@ namespace previewer
 		byteInterval = (int)sizeof(particle_sim);
 	}
 
-	void PP_FBO::DrawGeom()
+	void PP_FBOF::DrawGeom()
 	{
 		// Set 3d rendering viewport minimums (0 for drawing to texture)
 		float viewXmin = 0;

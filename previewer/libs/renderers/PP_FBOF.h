@@ -37,7 +37,7 @@ namespace previewer
 #define TEXTURE_WIDTH ParticleSimulation::GetRenderWidth()
 #define TEXTURE_HEIGHT ParticleSimulation::GetRenderWidth()
 
-	class PP_FBO : public IRenderer
+	class PP_FBOF : public IRenderer
 	{
 	public:
 

@@ -114,7 +114,7 @@ namespace previewer
 	    glEnableClientState(GL_VERTEX_ARRAY);
 	    glEnableClientState(GL_COLOR_ARRAY);
 
-	   	// Draw
+	   	// Draw Particles
 	    glDrawArrays(GL_TRIANGLES, 0, vertices.size() );
 
 	    //Disable client states
@@ -131,8 +131,6 @@ namespace previewer
 
 		//Check for error
 		//PrintOpenGLError();
-
-		// Draw GUI
 
 		// Draw labels
 		glDisable(GL_SCISSOR_TEST);
