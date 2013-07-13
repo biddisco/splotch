@@ -59,17 +59,28 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
 }
 
-int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params)
+int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params, int sample_factor)
 {
+  bool doSample = params.find<bool>("sampler",false);
   double h,O,L;
   int blocksize = gadget_find_block (file,"HEAD");
   planck_assert (blocksize>0, "Header block not found");
   file.skip(4);
+  // num particles in this particular file
   file.get(npart,6);
+  if(doSample)
+    for(int i = 0; i < 6; i++)
+      npart[i] /= sample_factor;
+
   file.skip(6*8);
   file >> time;
   file.skip(8+4+4);
+  // num particles in whole dump
   file.get(nparttotal,6);
+  if(doSample)
+    for(int i = 0; i < 6; i++)
+      nparttotal[i] /= sample_factor;
+
   file.skip(4+4);
   file >> boxsize;
   file >> O;
@@ -91,6 +102,35 @@ void gadget_reader(paramfile &params, int interpol_mode,
   int readparallel = params.find<int>("readparallel",1);
   int ptypes = params.find<int>("ptypes",1);
   int ptype_found = -1, ntot = 1;
+
+  // Sampling, this cannot be done while interpolating...
+  // Sample factor is read in as percentage then converted to factor
+  bool doSample = params.find<bool>("sampler",false);
+  int sample_factor = 1;
+  if(doSample && !interpol_mode)
+  { 
+    // If no factor, use 100% sampling ie no sample.
+    sample_factor = params.find<int>("sample_factor",100);
+    if((sample_factor > 0) && (sample_factor <= 100))
+    {
+      sample_factor = 100/sample_factor;
+      if(sample_factor < 2)
+      {
+        cout << "No sampling occuring." << endl;
+        cout << "Data is sampled in fractions, valid sample factors are 1/2, 1/3, 1/4, 1/5 etc" << endl;
+        cout << "Expressed as a percentage in the parameter file, ie. 50, 33, 25, 20 etc" << endl;
+      }
+    }
+    else
+    {
+      cout << "Sample factor given is not a valid percentage, no sampling occuring" << endl;
+      cout << "Data is sampled in fractions, valid sample factors are 1/2, 1/3, 1/4, 1/5 etc" << endl;
+      cout << "Expressed as a percentage in the parameter file, ie. 50, 33, 25, 20 etc" << endl;
+      sample_factor = 1; 
+    }
+  }
+  else if(doSample)
+    cout << " Cannot sample and interpolate. No sampling occuring" << std::endl;
 
   string infilename = params.find<string>("infile");
   string snapdir    = params.find<string>("snapdir",string(""));
@@ -177,10 +217,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
         if(numfiles>1) filename+="."+dataToString(file);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+        // Read header gets numparticles of each type for both this particular file (npartthis) and 
+        // the whole dump (nparttotal)
+        gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
         infile.close();
         //	if((rt==0 && f==0) || !params.find<bool>("AnalyzeSimulationOnly"))
         //	  cout << "    Timestamp from file : t=" << time << endl;
+        // Print useful info on first file read only
         if(rt==0 && f==0)
         {
           cout << "    Total number of particles in file :" << endl;
@@ -225,6 +268,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
             }
           }
         }
+        // Find out how many particles this read task will read
+        // Dependant on requested types (from param file) and availability of data in file
         for(int itype=0;itype<ptypes;itype++)
         {
           int type = params.find<int>("ptype"+dataToString(itype),0);
@@ -233,6 +278,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
           NPartThisReadTask += npartthis[type];
         }
       }
+      // Work out how many particles each individual task will read for this read task
+      // Check difference in sum of particles actually read and number of particles intended
+      // to be read for this read task
       long SumPartThisReadTask = 0;
       for(int t=0;t<NTaskPerRead-1;t++)
       {
@@ -245,9 +293,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
   }
 
+  // Broadcast num particles and rank of broadcast root to all tasks
   mpiMgr.bcast(NPartThisTask,0);
   mpiMgr.bcast(boxsize,0);
 
+  // Master outputs some useful data
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
   {
     cout << " Reading " << numfiles << " files by " << readparallel << " tasks ... " << endl;
@@ -300,7 +350,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       //	cout << " Task: " << ThisTask << " reading file " << filename << endl;
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
       gadget_find_block(infile,"POS");
       infile.skip(4);
       for(int itype=0;itype<ptypes;itype++)
@@ -310,10 +360,10 @@ void gadget_reader(paramfile &params, int interpol_mode,
           type = ptype_found;
         for(int s=LastType+1; s<type; s++)
           if(npartthis[s]>0 && (1<<s & present))
-            infile.skip(4*3*npartthis[s]);
-        arr<float32> ftmp(3*npartthis[type]);
+            infile.skip(4*3*npartthis[s]*sample_factor);
+        arr<float32> ftmp(3*npartthis[type]*sample_factor);
         infile.get(&ftmp[0],ftmp.size());
-        for(unsigned int m=0; m<npartthis[type]; ++m)
+        for(unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
           if(ThisTask == ToTask)
           {
@@ -416,6 +466,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     p.resize(0);
   }
 
+  // If we are interpolating we need to read IDs
   if (interpol_mode>0)
   {
     if (interpol_mode>1)
@@ -436,7 +487,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
           infile.open(filename.c_str(),doswap);
           planck_assert (infile,"could not open input file! <" + filename + ">");
-          gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+          gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
           gadget_find_block(infile,"VEL");
           infile.skip(4);
           for(int itype=0;itype<ptypes;itype++)
@@ -513,7 +564,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
         if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
         infile.open(filename.c_str(),doswap);
         planck_assert (infile,"could not open input file! <" + filename + ">");
-        gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+        gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
         string label_id = params.find<string>("id_label","ID");
         gadget_find_block(infile,label_id);
         infile.skip(4);
@@ -615,7 +666,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
 
       for(int itype=0;itype<ptypes;itype++)
       {
@@ -630,11 +681,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
           int present = params.find<int>("size_present"+dataToString(itype),type);
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
-              infile.skip(4*npartthis[s]);
+              infile.skip(4*npartthis[s]*sample_factor);
         }
-        arr<float32> ftmp(npartthis[type]);
+        arr<float32> ftmp(npartthis[type]*sample_factor);
         if (fix_size == 0.0) infile.get(&ftmp[0],ftmp.size());
-        for (unsigned int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
           if(ThisTask == ToTask)
           {
@@ -685,7 +736,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
 
       for(int itype=0;itype<ptypes;itype++)
       {
@@ -701,7 +752,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
             {
-              int nskip=npartthis[s];
+              int nskip=npartthis[s]*sample_factor;
               if(col_vector)
                 nskip *=3;
               infile.skip(4*nskip);
@@ -711,11 +762,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
           if(mpiMgr.master())
             cout << " Cannot find color field <" << label_col << "> ..." << endl;
         tsize fnread=0;
-        if (read_col>0) fnread=npartthis[type];
-        if ((read_col>0) && col_vector) fnread=3*npartthis[type];
+        if (read_col>0) fnread=npartthis[type]*sample_factor;
+        if ((read_col>0) && col_vector) fnread=3*npartthis[type]*sample_factor;
         arr<float32> ftmp(fnread);
         infile.get(&ftmp[0],ftmp.size());
-        for (unsigned int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
           if(ThisTask == ToTask)
           {
@@ -796,7 +847,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       if(numfiles>1) filename+="."+dataToString(ThisTaskReads[ThisTask]+f);
       infile.open(filename.c_str(),doswap);
       planck_assert (infile,"could not open input file! <" + filename + ">");
-      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params);
+      gadget_read_header(infile,npartthis,time,nparttotal,boxsize,params,sample_factor);
       for(int itype=0;itype<ptypes;itype++)
       {
         int type = params.find<int>("ptype"+dataToString(itype),0);
@@ -808,14 +859,14 @@ void gadget_reader(paramfile &params, int interpol_mode,
           int present = params.find<int>("intensity_present"+dataToString(itype),type);
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
-              infile.skip(4*npartthis[s]);
+              infile.skip(4*npartthis[s]*sample_factor);
         }
         else
           if(mpiMgr.master() && itype==0 && f==0)
             cout << " Cannot find intensity field <" << label_int << "> ..." << endl;
-        arr<float32> ftmp(npartthis[type]);
+        arr<float32> ftmp(npartthis[type]*sample_factor);
         if (read_int>0) infile.get(&ftmp[0],ftmp.size());
-        for (unsigned int m=0; m<npartthis[type]; ++m)
+        for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
           if(ThisTask == ToTask)
           {
