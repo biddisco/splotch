@@ -9,21 +9,21 @@
 #include <cstdlib>
 #include <vector>
 #include "hdf5.h"
+#include "cxxsupport/arr.h"
+#include "cxxsupport/paramfile.h"
+#include "cxxsupport/mpi_support.h"
+#include "cxxsupport/bstream.h"
+#include "splotch/splotchutils.h"
+
 
 using namespace std;
 
-/*
-long Enzo_reader (vector<float> &xpos, vector<float> &ypos, vector<float> &zpos,
-                  vector<float> &scalar, vector<float> &smooth, float *maxr, float *minr)
-*/
-long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zpos,
-                  vector<float> * scalar, vector<float> * smooth, float *maxr, float *minr)
+long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 {
 
    FILE * pFile;
    FILE * auxFile;
    FILE * hdf5File;
-   char hierarchyname[1000];
    char datafilename[1000];
    char outputfilename[1000];
    string groupprefix;
@@ -48,6 +48,8 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
    char groupid[100];
    long gcounter=0;
    float sigma;
+   float *maxr;
+    float *minr;
 
    int ngx[nrank];
    int vngx[nrank];
@@ -89,15 +91,40 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
    MPI_Comm_size(MPI_COMM_WORLD, &npes);
 #endif
 
+// load parameters from parameter file
+
+   float  smooth_factor = params.find<float>("smooth_factor",1.0);
+   int  red = params.find<int>("C1",-1);
+   int  green = params.find<int>("C2",-1);
+   int  blue = params.find<int>("C3",-1);
+   int  intensity = params.find<int>("I",-1);
+   string hierarchyname = params.find<string>("hierarchy_file");
+   int sf[numberoffields];
+   string selfield[numberoffields];
+   sf[0] = red;
+   sf[1] = green;
+   sf[2] = blue;
+   sf[3] = intensity;
+
+   ngx[0] = params.find<int>("nx",16);
+   ngx[1] = params.find<int>("ny",16);
+   ngx[2] = params.find<int>("nz",16);
+   leftcorner[0] = params.find<float>("leftcornerx",0.0);
+   leftcorner[1] = params.find<float>("leftcornery",0.0);
+   leftcorner[2] = params.find<float>("leftcornerz",0.0);
+   rightcorner[0] = params.find<float>("rightcornerx",1.0);
+   rightcorner[1] = params.find<float>("rightcornery",1.0);
+   rightcorner[2] = params.find<float>("rightcornerz",1.0);
+
+   maxlevel = params.find<int>("levels",1);
+   maxlevel--;
+
 // initialize cutout parameters
 
 
-   int sf[numberoffields];
-   string selfield[numberoffields];
-
    groupprefix = "/Grid";
 
-   for(int i=0; i<numberoffields; i++)sf[i]=-1;
+   //for(int i=0; i<numberoffields; i++)sf[i]=-1;
 
    fieldsnames[0] = "/Dark_Matter_Density";
    fieldsnames[1] = "/Density";
@@ -109,74 +136,10 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
    fieldsnames[7] = "/Total_Energy";
    int number_of_fields2read;
 
-// begin of mype=0 read section
-
-   if(mype == 0)
-   {
-   printf("Available fields:\n");
-   for(int i=0; i<numberoffields; i++)
-	printf("%d, %s\n", i, fieldsnames[i].c_str());
-
-   char cfieldsaux[100];
-   string cfields;
-   printf("Input the list of required fields (e.g.: 0,3,7)\n");
-   scanf("%s", cfieldsaux);
-   cfields = cfieldsaux;
-
-   int st_size = cfields.length();
-
-   for(int i=0, j=0; i<st_size; i+=2, j++) 
-   {
-      selfield[j] = cfields.substr(i,1);
-      sf[j] = atoi(selfield[j].c_str());
-      printf("SELECTED FIELD %d %s\n", sf[j], fieldsnames[sf[j]].c_str());
-      number_of_fields2read = j;
-   }
-
-   number_of_fields2read++;
-   printf("NUMBER OF SELECTED FIELD %d\n", number_of_fields2read);
-
-
-   printf ("Input Reduced Hierarchy file name: \n");
-   scanf  ("%s", hierarchyname); 
-   printf ("Input output file name: ");
-   scanf  ("%s", outputfilename); 
-
-// this is the INTEGER number of cells on the level 0 mesh
-
-   printf ("Input number of cells in the base level (int) --> x = \n");
-   scanf  ("%d", &ngx[0]); 
-   printf ("Input number of cells in the base level (int) --> y = \n");
-   scanf  ("%d", &ngx[1]); 
-   printf ("Input number of cells in the base level (int) --> z = \n");
-   scanf  ("%d", &ngx[2]); 
-
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // WARNING X and Z are swapped!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-// this is the position of the left corner of the cutout box in units 0-1
-
-   printf ("Input first sub-box position (0-1) --> x = \n");
-   scanf  ("%lf", &leftcorner[2]); 
-   printf ("Input first sub-box position (0-1) --> y = \n");
-   scanf  ("%lf", &leftcorner[1]); 
-   printf ("Input first sub-box position (0-1) --> z = \n");
-   scanf  ("%lf", &leftcorner[0]); 
-
-// this is the position of the right corner of the cutout box in units 0-1
-
-   printf ("Input second sub-box position (0-1) --> x = \n");
-   scanf  ("%lf", &rightcorner[2]); 
-   printf ("Input second sub-box position (0-1) --> y = \n");
-   scanf  ("%lf", &rightcorner[1]); 
-   printf ("Input second sub-box position (0-1) --> z = \n");
-   scanf  ("%lf", &rightcorner[0]); 
-
-   printf ("Input Max refinement level (0=Base level) MUST BE DEEPEST LEVEL:\n");
-   scanf  ("%d", &maxlevel);
-// end of mype=0 read section
-   }
 #ifdef USEMPI
    MPI_Bcast(&number_of_fields2read, 1, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(sf, number_of_fields2read, MPI_INT, 0, MPI_COMM_WORLD);
@@ -306,7 +269,7 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
 
 // build the datasets
 
-   pFile = fopen (hierarchyname, "r");
+   pFile = fopen (hierarchyname.c_str(), "r");
    fscanf (pFile, "%d", &nfiles);
 
 
@@ -490,54 +453,23 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
 
 	dataarray = new float[sourcesize];
 
+/*
         scalar->resize(total_size);
 	xpos->resize(total_size);
 	ypos->resize(total_size);
 	zpos->resize(total_size);
         smooth->resize(total_size);
+*/
+        points.resize(total_size);
 	
 
         for(long jk=0; jk<sourcesize; jk++)dataarray[jk]=0.0;
 
-	
+// Set the coordinates
 
-// open source file 
-
-        printf("READING DATA FROM %s\n", datafilename);
-	source_id = H5Fopen(datafilename, H5F_ACC_RDONLY, H5P_DEFAULT);
-
-// read dataset from SOURCE
-
-        int kaux = 0;
-	for(int k=0; k<number_of_fields2read; k++)
-	{
-            kaux = sf[k];
-
-            completename = hgroup;
-	    completename.append(fieldsnames[kaux]);
-
-            printf("READING %s from Grid %d\n",completename.c_str(),i);
-	    source_obj = H5Dopen(source_id,completename.c_str());
-	    source_space = H5Dget_space(source_obj);
-
-   	    H5Sget_simple_extent_dims(source_space, s_dims, s_maxdims);
-#ifdef DEBUG   
-	    printf("%d, %d, %d\n", s_dims[0], s_dims[1], s_dims[2]);
-#endif
-
-// create auxiliary memory space for reading, select region and read
-
-            memoryspace = H5Screate_simple (nrank, s_count, s_count);
-	    
-	    H5Sselect_hyperslab(source_space, H5S_SELECT_SET, s_start, s_stride, s_count, s_block);
-
-	    H5Dread(source_obj, H5T_NATIVE_FLOAT, memoryspace, source_space, H5P_DEFAULT, dataarray);
-
-            long jaux=0;
-            printf("vector size = %ld\n", (long)scalar->size());
-            for(long iaux=total_size_old; iaux<total_size; iaux++)
-              {
-               scalar->at(iaux) = dataarray[jaux];
+        long jaux = 0;
+        for(long iaux=total_size_old; iaux<total_size; iaux++)
+        {
 
                long ipp = jaux;
                long ic3d = (int)((float)ipp/(float)(s_count[1]*s_count[2]));
@@ -546,17 +478,76 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
                long kc3d = naux - s_count[2]*jc3d;
 
 
-	       xpos->at(iaux) = lintersect[0] + dxxx[0] * (float)ic3d;
-	       ypos->at(iaux) = lintersect[1] + dxxx[1] * (float)jc3d;
-	       zpos->at(iaux) = lintersect[2] + dxxx[2] * (float)kc3d;
-               smooth->at(iaux) = dxxx[0];
-	       minradius = (minradius <= dxxx[0] ? minradius : dxxx[0]);
-	       maxradius = (maxradius >= dxxx[0] ? maxradius : dxxx[0]);
-	    
-               jaux++;
-              }
+               points[iaux].x   = lintersect[0] + dxxx[0] * (float)ic3d;
+               points[iaux].y   = lintersect[1] + dxxx[1] * (float)jc3d;
+               points[iaux].z   = lintersect[2] + dxxx[2] * (float)kc3d;
+               points[iaux].r   = smooth_factor*dxxx[0];
+               minradius = (minradius <= dxxx[0] ? minradius : dxxx[0]);
+               maxradius = (maxradius >= dxxx[0] ? maxradius : dxxx[0]);
 
-            H5Sclose (memoryspace);
+               jaux++;
+        }
+	
+
+// open source file 
+
+        printf("READING DATA FROM %s\n", datafilename);
+	source_id = H5Fopen(datafilename, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+// read dataset from SOURCE
+// data are read in the following sequence:
+// 0 = color 1 
+// 1 = color 2 
+// 2 = color 3
+// 3 = intensity
+
+        int kaux = 0;
+        number_of_fields2read = 4;
+	for(int k=0; k<number_of_fields2read; k++)
+	{
+            jaux=0;
+            kaux = sf[k];
+
+            if(kaux >= 0)
+            {
+              completename = hgroup;
+	      completename.append(fieldsnames[kaux]);
+
+              printf("READING %s from Grid %d\n",completename.c_str(),i);
+	      source_obj = H5Dopen(source_id,completename.c_str());
+	      source_space = H5Dget_space(source_obj);
+
+   	      H5Sget_simple_extent_dims(source_space, s_dims, s_maxdims);
+#ifdef DEBUG   
+	      printf("%d, %d, %d\n", s_dims[0], s_dims[1], s_dims[2]);
+#endif
+
+// create auxiliary memory space for reading, select region and read
+
+              memoryspace = H5Screate_simple (nrank, s_count, s_count);
+	    
+	      H5Sselect_hyperslab(source_space, H5S_SELECT_SET, s_start, s_stride, s_count, s_block);
+
+	      H5Dread(source_obj, H5T_NATIVE_FLOAT, memoryspace, source_space, H5P_DEFAULT, dataarray);
+              H5Sclose (memoryspace);
+            }
+
+#define CASEMACRO__(num,str,noval,ss) \
+      case num: \
+        if (sf[num]>=0) \
+          for(long iaux=total_size_old; iaux<total_size; iaux++) \
+             {points[iaux].str = ss*dataarray[jaux]; jaux++;}\
+        else \
+          for(long iaux=total_size_old; iaux<total_size; iaux++) points[iaux].str = noval; \
+        break;
+
+            switch(k)
+            {
+               CASEMACRO__(0,e.r,1.0,1.0)
+               CASEMACRO__(1,e.g,0,1.0)
+               CASEMACRO__(2,e.b,0,1.0)
+               CASEMACRO__(3,I,dxxx[0]*dxxx[0]*dxxx[0],1.0)
+             }
 
 // end of loop over fields 
        }
@@ -568,6 +559,7 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
    }
 
 
+
 #ifdef DEBUG   
    //printf("TOTAL NUMBER OF CELLS AT LEVEL 0 = %ld\n", gcounter);
 #endif
@@ -577,8 +569,9 @@ long Enzo_reader (vector<float> * xpos, vector<float> * ypos, vector<float> * zp
 
    fclose (pFile);
 
-   *maxr=maxradius;
-   *minr=minradius;
+   //*maxr=maxradius;
+   //*minr=minradius;
+   cout << "RETURNING FROM ENZO" << endl;
 #ifdef USEMPI
    MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
    MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
