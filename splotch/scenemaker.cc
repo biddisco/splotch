@@ -657,12 +657,10 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
         }
       break;
     case 3:
-#if 0
-    enzo_reader(params,particle_data);
-#else
-    planck_fail("Enzo reader not available in this version!");
-#endif
+      {
+      long num_cells = enzo_reader(params,particle_data);
       break;
+      }
     case 4:
       {
       double dummy;
