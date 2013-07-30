@@ -166,7 +166,8 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 	mymin = min(mymin,p[m1].x);
         mymax = max(mymax,p[m1].x);
     } 
-  cout << "MYMIN, MYMAX: " << mymin << " " << mymax << endl;
+  if (mpiMgr.master())
+    cout << "MYMIN, MYMAX: " << mymin << " " << mymax << endl;
   long countsmall=0;
   long countinter1=0;
   long countinter2=0;
@@ -190,14 +191,16 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
           countactive++;
         }
       }
-    cout << "NUMBER OF ACTIVE PARTICLES = " << countactive << endl;
-    cout << "PARTICLES WITH r < 1 = " << countsmall << endl;
-    cout << "PARTICLES WITH 1 <= r < " << r_th << " = " << countinter1 << endl;
-    cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
-    cout << "PARTICLES WITH 1 <= r < " << 4*r_th << " = " << countinter3 << endl;
-    cout << "PARTICLES WITH 1 <= r < " << 8*r_th << " = " << countinter4 << endl;
-    cout << "PARTICLES WITH r >= " << 8*r_th << " = " << countlarge << endl;
-
+    if (mpiMgr.master())
+      {
+	cout << "NUMBER OF ACTIVE PARTICLES = " << countactive << endl;
+	cout << "PARTICLES WITH r < 1 = " << countsmall << endl;
+	cout << "PARTICLES WITH 1 <= r < " << r_th << " = " << countinter1 << endl;
+	cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
+	cout << "PARTICLES WITH 1 <= r < " << 4*r_th << " = " << countinter3 << endl;
+	cout << "PARTICLES WITH 1 <= r < " << 8*r_th << " = " << countinter4 << endl;
+	cout << "PARTICLES WITH r >= " << 8*r_th << " = " << countlarge << endl;
+      }
     }
 
 
