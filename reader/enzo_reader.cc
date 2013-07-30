@@ -1,3 +1,4 @@
+#ifdef HDF5
 #ifdef USE_MPI
 #include "mpi.h"
 #endif
@@ -584,3 +585,5 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    return total_size;
 
 }
+
+#endif  // HDF5
