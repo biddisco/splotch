@@ -247,7 +247,8 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) 
   params.setParam("cuda_doLogs", true);
 
 #else
-  std::cout << " Host normalization and clamping" << std::endl;
+  if (mpiMgr.master())
+    cout << " Host normalization and clamping" << endl;
   tstack_push("clamp");
 
 #pragma omp parallel
@@ -658,7 +659,11 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       break;
     case 3:
       {
+#ifdef HDF5
       long num_cells = enzo_reader(params,particle_data);
+#else
+      planck_fail("Need HDF5 to read enzo files!  Quitting.");
+#endif
       break;
       }
     case 4:
