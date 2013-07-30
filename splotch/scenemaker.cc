@@ -296,8 +296,9 @@ Mesh_dim MeshD;
 
 void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
   {
-  cout << "particle_interpolate() : Time 1,2 = "
-       << time1 << "," << time2 << endl << flush;
+    if (mpiMgr.master())
+      cout << "particle_interpolate() : Time 1,2 = "
+	   << time1 << "," << time2 << endl << flush;
 
   releaseMemory(p);
 
@@ -585,18 +586,23 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     case 2:
       if (interpol_mode>0) // Here only the two data sets are prepared, interpolation will be done later
         {
-        cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
-        cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+	  if (mpiMgr.master())
+	    {
+	      cout << "Loaded file1: " << snr1_now << " , file2: " << snr2_now << " , interpol fraction: " << frac << endl;
+	      cout << " (needed files : " << snr1 << " , " << snr2 << ")" << endl;
+	    }
         if (snr1==snr2_now)
           {
-          cout << " old2 = new1!" << endl;
+	    if (mpiMgr.master())
+	      cout << " old2 = new1!" << endl;
 
           if ((mpiMgr.num_ranks()>1) // <-- only makes sense with true MPI runs
               &&
               params.find<bool>("mpi_interpolation_reread_data",false)) // <-- saves some memory at the expense of re-reading the dataset p1 (formerly p2)
             {
             // re-read the data set since no backup copy can be expected to exist in memory
-            cout << " re-reading new1 " << snr1 << endl;
+	      if (mpiMgr.master())
+		cout << " re-reading new1 " << snr1 << endl;
             gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
             redshift1=-1.0;
             mpiMgr.barrier();
@@ -622,7 +628,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           }
         if (snr1_now!=snr1)
           {
-          cout << " reading new1 " << snr1 << endl;
+	    if (mpiMgr.master())
+	      cout << " reading new1 " << snr1 << endl;
           //
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
           redshift1=-1.0;
@@ -635,7 +642,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           }
         if (snr2_now!=snr2)
           {
-          cout << " reading new2 " << snr2 << endl;
+	    if (mpiMgr.master())
+	      cout << " reading new2 " << snr2 << endl;
           gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
           mpiMgr.barrier();
           tstack_replace("Input","Particle index generation");
@@ -844,7 +852,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   bool boost = params.find<bool>("boost",false);
   if(boost)
     {
-    cout << "Boost setup..." << endl;
+      if (mpiMgr.master())
+	cout << "Boost setup..." << endl;
     mesh_creator(particle_data, &Mesh, &MeshD);
     randomizer(particle_data, Mesh, MeshD);
     }
@@ -907,7 +916,8 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   bool boost = params.find<bool>("boost",false);
   if(boost)
   {
-    cout << "Boost!!!" << endl;
+    if (mpiMgr.master())
+      cout << "Boost!!!" << endl;
     m_rotation(params, &Mesh, MeshD, campos, lookat, sky);
     p_selector(particle_data, Mesh, MeshD, r_points);
   }
