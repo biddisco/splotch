@@ -134,6 +134,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
   string infilename = params.find<string>("infile");
   string snapdir    = params.find<string>("snapdir",string(""));
+  cout << snapdir << endl;
   string datadir    = params.find<string>("datadir",string(""));
   string filename;
 
@@ -296,6 +297,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   // Broadcast num particles and rank of broadcast root to all tasks
   mpiMgr.bcast(NPartThisTask,0);
   mpiMgr.bcast(boxsize,0);
+  mpiMgr.bcast(time,0);
 
   // Master outputs some useful data
   if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
