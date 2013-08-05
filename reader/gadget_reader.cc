@@ -581,7 +581,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
           //cout << "ParticleID CHECK : " << ftmp[0] << endl << flush;
 
-          tstack_replace("Input","Patching particle IDs");
+          tstack_replace("Reading","Patching particle IDs");
           if(type == 0)
           {
 	    if(mpiMgr.master())
@@ -619,7 +619,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             }
           }
 
-	  tstack_replace("Patching particle IDs","Input");
+	  tstack_replace("Patching particle IDs","Reading");
 
           for(unsigned int m=0; m<npartthis[type]; ++m)
           {

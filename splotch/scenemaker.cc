@@ -566,7 +566,6 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     particle_data=p_orig;
     return;
     }
-
   tstack_push("Input");
   if (mpiMgr.master())
     cout << endl << "reading data ..." << endl;
@@ -574,6 +573,8 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   int spacing = params.find<double>("snapshot_spacing",1);
   int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
   double frac=(fidx-snr1)/spacing;
+
+  tstack_push("Reading");
 
   switch (simtype)
     {
@@ -606,14 +607,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
             gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
             redshift1=-1.0;
             mpiMgr.barrier();
-            tstack_replace("Input","Particle index generation");
+            tstack_replace("Reading","Particle index generation");
             buildIndex(id1.begin(),id1.end(),idx1);
-            tstack_replace("Particle index generation","Input");
+            tstack_replace("Particle index generation","Reading");
             }
           else
             {
             // MPI and non-MPI default case
-	    tstack_replace("Input","Fetch remote particles");
+	    tstack_replace("Reading","Fetch remote particles");
             mpiMgr.barrier();
             MpiStripRemoteParticles();
             mpiMgr.barrier();
@@ -623,7 +624,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
             idx1.clear(); idx1.swap(idx2);
             vel1.clear(); vel1.swap(vel2);
             //
-	    tstack_replace("Fetch remote particles","Input");
+	    tstack_replace("Fetch remote particles","Reading");
             time1 = time2;
             }
           snr1_now = snr1;
@@ -636,9 +637,9 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           gadget_reader(params,interpol_mode,p1,id1,vel1,snr1,time1,boxsize);
           redshift1=-1.0;
           mpiMgr.barrier();
-          tstack_replace("Input","Particle index generation");
+	  tstack_replace("Reading","Particle index generation");
           buildIndex(id1.begin(),id1.end(),idx1);
-          tstack_replace("Particle index generation","Input");
+          tstack_replace("Particle index generation","Reading");
           //
           snr1_now = snr1;
           }
@@ -648,7 +649,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 	      cout << " reading new2 " << snr2 << endl;
           gadget_reader(params,interpol_mode,p2,id2,vel2,snr2,time2,boxsize);
           mpiMgr.barrier();
-          tstack_replace("Input","Particle index generation");
+          tstack_replace("Reading","Particle index generation");
           buildIndex(id2.begin(),id2.end(),idx2);
           tstack_replace("Particle index generation","Fetch remote particles");
           redshift2 = -1.0;
@@ -657,7 +658,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           mpiMgr.barrier();
           MpiFetchRemoteParticles();
           mpiMgr.barrier();
-	  tstack_replace("Fetch remote particles","Input");
+	  tstack_replace("Fetch remote particles","Reading");
           }
         }
       else
@@ -791,7 +792,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
       ramses_reader(params,particle_data);
       break;
     }
-
+  tstack_pop("Reading");
   mpiMgr.barrier();
   tstack_pop("Input");
 
@@ -1356,10 +1357,10 @@ void sceneMaker::MpiFetchRemoteParticles ()
   if (debug_msg)
     cout << "MpiFetchRemoteParticles() : recreating index idx2 ..." << endl << flush;
 
-  tstack_replace("Input","Particle index generation");
+  tstack_replace("Fetch remote particles","Particle index generation");
   idx2.clear();
   buildIndex(id2.begin(), id2.end(), idx2);
-  tstack_replace("Particle index generation","Input");
+  tstack_replace("Particle index generation","Fetch remote particles");
 
   mpiMgr.barrier();
 
@@ -1403,10 +1404,10 @@ void sceneMaker::MpiStripRemoteParticles ()
       if (debug_msg)
         cout << "MpiStripRemoteParticles() : regenerating idx2 ..." << endl << flush;
 
-      tstack_replace("Input","Particle index generation");
+      tstack_replace("Fetch remote particles","Particle index generation");
       idx2.clear();
       buildIndex(id2.begin(), id2.end(), idx2);
-      tstack_replace("Particle index generation","Input");
+      tstack_replace("Particle index generation","Fetch remote particles");
     }
     else
     {
