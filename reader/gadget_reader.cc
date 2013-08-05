@@ -134,7 +134,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
   string infilename = params.find<string>("infile");
   string snapdir    = params.find<string>("snapdir",string(""));
-  cout << snapdir << endl;
+  //  cout << snapdir << endl;
   string datadir    = params.find<string>("datadir",string(""));
   string filename;
 
@@ -581,24 +581,29 @@ void gadget_reader(paramfile &params, int interpol_mode,
 
           //cout << "ParticleID CHECK : " << ftmp[0] << endl << flush;
 
+          tstack_replace("Input","Patching particle IDs");
           if(type == 0)
           {
+	    if(mpiMgr.master())
+	      cout << " WARNING: Patching IDs for gas particles!" << endl;
+ 
             MyIDType bits=1;
             if (sizeof(MyIDType)==4)
             { // IDs are 32 bit unsigned integers
-              cout << " WARNING: Patching IDs for gas particles!" << endl;
               bits=(bits<<30)-1;
               for(unsigned int m=0; m<ftmp.size(); m++)
                 ftmp[m] = ftmp[m] & bits; // remove upper 2 bits of 32bit value 2^30-1
             }
             else
             { // IDs are 64 bit unsigned integers
-              // do nothing
+	      for(unsigned int m=0; m<ftmp.size(); m++)
+		ftmp[m] = ftmp[m] & ((((long long) 1) << 60) - 1);
             }
           }
           else if(type == 4)
           {
-            cout << " WARNING: Patching IDs for star particles!" << endl;
+	    if(mpiMgr.master())
+	      cout << " WARNING: Patching IDs for star particles!" << endl;
             MyIDType bits=1;
             if (sizeof(MyIDType)==4)
             { // IDs are 32 bit unsigned integers
@@ -610,10 +615,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
             { // IDs are 64 bit unsigned integers
               bits=bits<<60;
               for(unsigned int m=0; m<ftmp.size(); m++)
-                ftmp[m] = ftmp[m] + bits;   // adding 2^60
+                ftmp[m] = ftmp[m] + (((long long) 1) << 60);   // adding 2^60
             }
           }
 
+	  tstack_replace("Patching particle IDs","Input");
 
           for(unsigned int m=0; m<npartthis[type]; ++m)
           {
