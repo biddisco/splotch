@@ -613,6 +613,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           else
             {
             // MPI and non-MPI default case
+	    tstack_replace("Input","Fetch remote particles");
             mpiMgr.barrier();
             MpiStripRemoteParticles();
             mpiMgr.barrier();
@@ -622,6 +623,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
             idx1.clear(); idx1.swap(idx2);
             vel1.clear(); vel1.swap(vel2);
             //
+	    tstack_replace("Fetch remote particles","Input");
             time1 = time2;
             }
           snr1_now = snr1;
@@ -648,13 +650,14 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           mpiMgr.barrier();
           tstack_replace("Input","Particle index generation");
           buildIndex(id2.begin(),id2.end(),idx2);
-          tstack_replace("Particle index generation","Input");
+          tstack_replace("Particle index generation","Fetch remote particles");
           redshift2 = -1.0;
           snr2_now = snr2;
           //
           mpiMgr.barrier();
           MpiFetchRemoteParticles();
           mpiMgr.barrier();
+	  tstack_replace("Fetch remote particles","Input");
           }
         }
       else
