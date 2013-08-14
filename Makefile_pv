@@ -37,7 +37,7 @@ OPT += -DPREVIEWER
 
 #--------------------------------------- Select target Computer
 SYSTYPE="generic"
-SYSTYPE="mac"
+#SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
