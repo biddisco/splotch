@@ -37,6 +37,7 @@ OPT += -DPREVIEWER
 
 #--------------------------------------- Select target Computer
 SYSTYPE="generic"
+SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
@@ -60,7 +61,7 @@ else
 endif
 
 # optimization and warning flags (g++)
-OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith -Wold-style-cast
+OPTIMIZE = -std=c++98 -pedantic -Wno-long-long -Wfatal-errors -Wextra -Wall -Wstrict-aliasing=2 -Wundef -Wshadow -Wwrite-strings -Wredundant-decls -Woverloaded-virtual -Wcast-qual -Wcast-align -Wpointer-arith #-Wold-style-cast
 ifeq ($(SYSTYPE),"generic")
 # OPTIMIZE += -O2 -g -D TWOGALAXIES
  OPTIMIZE += -O2 -g
@@ -76,7 +77,7 @@ endif
 endif
 
 # OpenMP compiler switch
-OMP      = #-fopenmp
+OMP      = -fopenmp
 
 SUP_INCL = -I. -Icxxsupport -Ic_utils
 
@@ -85,6 +86,11 @@ ifeq (USE_MPIIO,$(findstring USE_MPIIO,$(OPT)))
  SUP_INCL += -Impiio-1.0/include/
 endif
 
+ifeq ($(SYSTYPE),"mac")
+
+SUP_INCL += -I/usr/X11/include -include uint_typedef.h
+
+endif
 
 # Configuration for the VIZ visualization cluster at the Garching computing centre (RZG):
 # ->  gcc/OpenMPI_1.4.2
@@ -236,7 +242,7 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	      splotch/splotchutils.o splotch/splotch.o \
 	      splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
 	      booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o \
-	      reader/ramses_reader.o
+	      reader/ramses_reader.o 
 
 OBJS1 = galaxy/Galaxy.o galaxy/GaussRFunc.o galaxy/Box_Muller.o galaxy/ReadBMP.o \
 	galaxy/CalculateDensity.o galaxy/CalculateColours.o galaxy/GlobularCluster.o \
@@ -284,12 +290,12 @@ endif
 #
 # Uncomment below to use Programmable Pipeline rendering using Vertex Buffer Objects and shaders + geometry shader + FBOs
 #---------------------------------- 
-# RENDER_METHOD = PPFBO
+RENDER_METHOD = PPFBO
 #----------------------------------
 #
 # Uncomment below to use Programmable Pipeline rendering using Vertex Buffer Objects and shaders + geometry shader + FBOs + post processing filtering effects
 #---------------------------------- 
-RENDER_METHOD = PPFBOF
+#RENDER_METHOD = PPFBOF
 #----------------------------------
 #
 # Uncomment for previewer DEBUG mode
@@ -298,8 +304,14 @@ RENDER_METHOD = PPFBOF
 #---------------------------------- 
 
 ifeq (PREVIEWER,$(findstring PREVIEWER,$(OPT)))
- # Link libs
- LIB_OPT += -lGL -lXext -lX11
+# Link libs
+
+#ifeq ($SYSTYPE,"mac")
+ LIB_OPT += -L/usr/X11R6/lib -lXext -lX11 -lGL
+#else
+# LIB_OPT += -lGL -lXext -lX11
+#endif
+
 # Current build specific settings
 # Build specific objects are added to OBJS list, depending on renderer choice
 # The current include for the auto-generated CurrentRenderer header file will be specified
