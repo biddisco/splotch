@@ -6,13 +6,14 @@
 // Ramses file reader for particle or amr data (or both)
 // Tim Dykes
 //
-// Use C1, C2, C3, I in parameter file to set the AMR data to visualise. 
+// Use red,green and blue parameters in parameter file to set the data to visualise. 
 // Correct IDs for these can be found in ramses_helper_lib
 // 
-// Note when using C1+C2+C3 set colour_is_vector0=T, if just one CX variable
-// is used then set colour_is_vector0=F.
+// amr uses red0,green0,blue0. If drawing just particle data, then use the same parameters
+// if drawing both types of data use red1,green1,blue1 for particle variables
 //
-// Particle data drawn using velocity as C1,C2,C3
+// Note when using red+green+blue set colour_is_vector0=T, if just one colour variable
+// is used then set colour_is_vector0=F.
 //
 //----------------------------------------------------------------------------
 
