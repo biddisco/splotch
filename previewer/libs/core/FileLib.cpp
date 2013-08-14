@@ -209,10 +209,7 @@ namespace previewer
 			{
 				// Check if colour is vector, if so there will be no colourmap to load
 				if (splotchParams->find<bool>("color_is_vector"+dataToString(i),false))
-				{
 					std::cout << " color of ptype " << i << " is vector, so no colormap to load ..." << std::endl;
-					return 0;
-				}
 				else
 				{
 					// Read palette file
