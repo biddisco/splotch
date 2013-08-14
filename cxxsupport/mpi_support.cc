@@ -187,7 +187,7 @@ void MPI_Manager::recvRawVoid (void *data, NDT type, tsize num, tsize src) const
 void MPI_Manager::sendrecvRawVoid (const void *sendbuf, tsize sendcnt,
   tsize dest, void *recvbuf, tsize recvcnt, tsize src, NDT type) const
   {
-  if ((rank_!=src) || (rank_!=dest)) return;
+  if ((rank_!=int(src)) || (rank_!=int(dest))) return;
   assert_unequal(sendbuf,recvbuf);
 
   MPI_Datatype dtype = ndt2mpi(type);
@@ -198,7 +198,7 @@ void MPI_Manager::sendrecv_replaceRawVoid (void *data, NDT type, tsize num,
   tsize dest, tsize src) const
   {
   if (dest==src) return;
-  if ((rank_!=src) || (rank_!=dest)) return;
+  if ((rank_!=int(src)) || (rank_!=int(dest))) return;
 
   MPI_Sendrecv_replace (data,num,ndt2mpi(type),dest,0,src,0,LS_COMM,
     MPI_STATUS_IGNORE);
