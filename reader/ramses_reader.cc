@@ -1,6 +1,7 @@
 #include "reader.h"
 #include "ramses_helper_lib.h"
 #include <time.h>
+#include "cxxsupport/mpi_support.h"
 
 //----------------------------------------------------------------------------
 // Ramses file reader for particle or amr data (or both)
@@ -61,8 +62,19 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 
 	srand((unsigned)time(0));
 
+
 	// Read info file
 	info_file info(repo);
+
+	// Get MPI info
+	int ntasks = mpiMgr.num_ranks();
+	int rankthistask = mpiMgr.rank();
+
+	// MPI setup
+#ifdef USE_MPI
+	if(mpiMgr.master())
+		std::cout << "RAMSES READER MPI: Reading output from " << info.ncpu << " cpus with " << ntasks << " tasks." << std::endl;
+#endif
 
 	if(mode == 0 || mode == 2)
 	{
@@ -99,18 +111,20 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 		else C3 = 0;
 		if(check == 2) 
 		{
-			std::cout << "Ramses reader: must set either one or three param file elements red, green, blue, not two. Aborting." << std::endl;
+			if(mpiMgr.master())
+				std::cout << "Ramses reader: must set either one or three param file elements red, green, blue, not two. Aborting." << std::endl;
 			exit(0);
 		}
 
 		if(info.ndim != 3)
 		{
-			std::cout << "Ramses amr reader: non 3 dimension data detected. Aborting" << std::endl;
+			if(mpiMgr.master())
+				std::cout << "Ramses amr reader: non 3 dimension data detected. Aborting" << std::endl;
 			exit(0);
 		}
 
-
-		std::cout << "Reading AMR data... " << std::endl;
+		if(mpiMgr.master())
+			std::cout << "Reading AMR data... " << std::endl;
 
 		for(unsigned icpu = 0; icpu < info.ncpu; icpu++)
 		{
@@ -121,8 +135,11 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			if( (C1 != -1 && (C1 < 0 || C1 >= hydro.meta.nvar)) || (C2 != -1 && (C2 < 0 || C2 >= hydro.meta.nvar)) ||
 				(C3 != -1 && (C3 < 0 || C3 >= hydro.meta.nvar)) || (!const_i && (intensity[0] < 0 || intensity[0] >= hydro.meta.nvar)) )
 			{
-				std::cout << "Trying to read variables that are not in file, there are " << hydro.meta.nvar << " hydro variables in file.";
-				std::cout << "Check red,green,blue,intensity parameters. Aborting." << std::endl;
+				if(mpiMgr.master())
+				{
+					std::cout << "Trying to read variables that are not in file, there are " << hydro.meta.nvar << " hydro variables in file.";
+					std::cout << "Check red,green,blue,intensity parameters. Aborting." << std::endl;
+				}
 				exit(0);
 			}
 
@@ -153,6 +170,10 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			F90_Arr2D<unsigned> gridsons;
 			int* sonindex = 0;
 
+			unsigned gridsthistask = 0;
+			unsigned firstgrid = 0;
+			unsigned gridsthisdomain = 0;
+
 			// Loop over levels within file
 			for(unsigned ilevel = 0; ilevel < amr.meta.nlevelmax; ilevel++)
 			{
@@ -162,17 +183,62 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					// Check there are grids for this domain
 					if(ngridfile(idomain,ilevel) > 0)
 					{
+						// Work out how many grids this task should read
+						gridsthisdomain = ngridfile(idomain,ilevel);
+
+						// If less grids than tasks, first task reads all grids (should do 1 grid per task...)
+						if(gridsthisdomain < ntasks)
+						{
+							if(mpiMgr.master())
+							{
+								gridsthistask = gridsthisdomain;
+								firstgrid = 0;
+							}
+							else 
+								gridsthistask = 0;
+						}
+						else
+						{
+							// Otherwise split grids amongst tasks, ensuring final task reads any remainder 
+							gridsthistask = gridsthisdomain/ntasks;
+							firstgrid = gridsthistask*rankthistask;
+                        	//if(rankthistask == ntasks-1)
+                            //    gridsthistask = gridsthisdomain - firstgrid;	
+
+                            // Work out remaining grids and add to task's load
+                            int remain = gridsthisdomain % ntasks;
+                            if(remain)
+                            {
+                            	if(remain>rankthistask)
+                            	{
+                            		firstgrid+=rankthistask;
+                            		gridsthistask+=1;
+                            	}
+                            	else
+                            		firstgrid+=remain;
+                            }
+						}
+
+						//std::cout <<" ilevel: "<<ilevel<< " Idomain: "<<idomain<<" Rank "<<rankthistask<<": Reading "<<gridsthistask<<" grids out of "<<gridsthisdomain<<" first: "<<firstgrid<<std::endl;
+					}
+					else
+						gridsthistask = 0;
+
+					// If this task is allocated grids to read
+					if(gridsthistask > 0)
+					{
+
 						// Allocate arrays
 						// Used to tempstore one type of variable for n grids (n grids refers to all grids in this domain and level) (xdp)
-						gridvars = new double[ngridfile(idomain,ilevel)];
+						gridvars = new double[gridsthistask];
 						// Used to store 3 coords for n grids (xxdp)
-						gridcoords.resize(ngridfile(idomain,ilevel), amr.meta.ndim);
+						gridcoords.resize(gridsthistask, amr.meta.ndim);
 						// Used to store set of hydro variables per cell (8) for n grids (vvdp)
-						gridcellhydro.resize(ngridfile(idomain,ilevel),amr.meta.twotondim,hydro.meta.nvar);
+						gridcellhydro.resize(gridsthistask,amr.meta.twotondim,hydro.meta.nvar);
 						// Used to store son indices of n grids (8 indices per grid) (sdp)
-						gridsons.resize(ngridfile(idomain,ilevel),amr.meta.twotondim);
+						gridsons.resize(gridsthistask,amr.meta.twotondim);
 						// Tempstore particular cell son index for n grids when reading (idp)
-						sonindex = new int[ngridfile(idomain,ilevel)]; 
+						sonindex = new int[gridsthistask]; 
 
 						// Start reading AMR data
 						// Skip grid index, next index and prev index
@@ -182,8 +248,9 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 						for(unsigned idim = 0; idim < amr.meta.ndim; idim++)
 						{
 							// Read n grid coordinates for 1 dimension and store in gridcoords
-							amr.file.Read1DArray(gridvars);
-							for(unsigned igrid = 0; igrid < ngridfile(idomain,ilevel); igrid++)
+							// Read subarray
+							amr.file.Read1DArray(gridvars, firstgrid, gridsthistask);
+							for(unsigned igrid = 0; igrid < gridsthistask; igrid++)
 								gridcoords(igrid,idim) = gridvars[igrid];
 						}
 						// Skip father (1) and neighbour (2ndim) indices
@@ -192,20 +259,23 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 						// Read son (cell) indices, 8 per grid
 						for(unsigned icell = 0; icell < amr.meta.twotondim; icell++)
 						{
-							amr.file.Read1DArray(sonindex);
-							for(unsigned igrid = 0; igrid < ngridfile(idomain,ilevel); igrid++)
+							// Read subarray
+							amr.file.Read1DArray(sonindex, firstgrid, gridsthistask);
+							for(unsigned igrid = 0; igrid < gridsthistask; igrid++)
 								gridsons(igrid,icell) = sonindex[igrid];
 						}
-
 						// Skip cpu and refinement maps
 						amr.file.SkipRecords(amr.meta.twotondim*2);
 					}
+					// Otherwise skip these grids
+					else if((ngridfile(idomain,ilevel) > 0) && (gridsthistask == 0))
+						amr.file.SkipRecords(3+amr.meta.ndim+1+(2*amr.meta.ndim)+amr.meta.twotondim+(amr.meta.twotondim*2));
 
 					// Start reading hydro data
 					hydro.file.SkipRecords(2);
 
-					// Check there are grids for this domain
-					if(ngridfile(idomain,ilevel) > 0)
+					// If this task is allocated grids to read
+					if(gridsthistask > 0)
 					{
 						// Loop over cells (8 per grid)
 						for(unsigned icell = 0; icell < amr.meta.twotondim; icell++)
@@ -214,9 +284,10 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 							for(unsigned ivar = 0; ivar < hydro.meta.nvar; ivar++)
 							{
 								// Read set of hydro variables for a particular cell for n grids
-								hydro.file.Read1DArray(gridvars);
+								// Read subarray
+								hydro.file.Read1DArray(gridvars, firstgrid, gridsthistask);
 								// Loop through n grids for this domain at this level
-								for(unsigned igrid = 0; igrid < ngridfile(idomain,ilevel); igrid+=1)
+								for(unsigned igrid = 0; igrid < gridsthistask; igrid++)
 								{
 									
 									// Store hydro variables in correct location
@@ -232,6 +303,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 										iy = (icell - (4*iz))/2;
 										ix = icell - (2*iy) - (4*iz);
 										// Calculate absolute coordinates + jitter, and generate particle
+										// randomize location within cell using same method as io_ramses.f90:
 										// call ranf(localseed,xx)
                                         // xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
                                         float r = (float)rand()/(float)RAND_MAX;
@@ -261,11 +333,15 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 						gridsons.Delete();
 						if(sonindex) delete[] sonindex;
 					} 
+					// Skip grids from a domain that contains grids but none of which are read by this task
+					else if(ngridfile(idomain,ilevel) > 0 && gridsthistask == 0)
+						hydro.file.SkipRecords(hydro.meta.nvar*amr.meta.twotondim);
+
 				} // End loop over domains
 			} // End loop over levels
 		} // End loop over files
-
-		std::cout << "Read " << nlevelmax << " levels for " << info.ncpu << " domains." << std::endl;
+		if(mpiMgr.master())
+			std::cout << "Read " << nlevelmax << " levels for " << info.ncpu << " domains." << std::endl;
 	}
 
 	// read points
@@ -314,8 +390,10 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			exit(0);
 		}
 
-		int originalSize = points.size();
-		std::cout << "Reading particle data..." << std::endl;
+		//int originalSize = points.size();
+		if(mpiMgr.master())
+			std::cout << "Reading particle data..." << std::endl;
+		
 		for(unsigned ifile = 0; ifile < info.ncpu; ifile++)
 		{
 			// Open file and check header
@@ -327,9 +405,42 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 				exit(0);
 			}
 
+			// Check number of particles to be read, divide up amongst tasks
+			unsigned partsthisfile = part.meta.npart;
+			unsigned partsthistask = partsthisfile/ntasks;
+			unsigned firstpart = partsthistask*rankthistask;
+
+			// Spread remainder of particles amongst tasks
+			int remain = partsthisfile%ntasks;
+			if(remain)
+			{
+				if(remain>rankthistask)
+				{
+					firstpart+=rankthistask;
+					partsthistask+=1;
+				}
+				else
+					firstpart+=remain;				
+			}
+
+			// Handle the rare occurance that there are less particles than tasks. 
+			// In this case rank 0 reads all particles.
+			if(partsthisfile < ntasks)
+			{
+				if(mpiMgr.master())
+				{
+					firstpart = 0;
+					partsthistask = partsthisfile;
+				}
+				else
+					continue;
+			}
+
+			//std::cout<<"ifile: "<<ifile<<" rank: "<<rankthistask<<" P_thisfile: "<<partsthisfile<<" P_thistask: "<<partsthistask<<" P_1: "<<firstpart<<std::endl; 
+
 			// Resize for extra particles
 			int previousSize = points.size();
-			points.resize(points.size()+part.meta.npart);
+			points.resize(points.size()+partsthistask);
 
 
 			float* fstorage = 0;
@@ -341,12 +452,12 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			part.file.Peek(dSize);
 			if(dSize/sizeof(float) == part.meta.npart)
 			{
-				fstorage = new float[part.meta.npart];
+				fstorage = new float[partsthistask];
 				dType = 'f';
 			}
 			else if(dSize/sizeof(double) == part.meta.npart)
 			{
-				dstorage = new double[part.meta.npart];
+				dstorage = new double[partsthistask];
 				dType = 'd';
 			}
 			else
@@ -361,29 +472,29 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			// Read positions
 			if(dType=='f')
 			{
-				part.file.Read1DArray(fstorage);
+				part.file.Read1DArray(fstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].x = fstorage[i-previousSize] * scale3d;
 
-				part.file.Read1DArray(fstorage);
+				part.file.Read1DArray(fstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].y = fstorage[i-previousSize] * scale3d;
 
-				part.file.Read1DArray(fstorage);
+				part.file.Read1DArray(fstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].z = fstorage[i-previousSize] * scale3d;
 			}
 			else
 			{
-				part.file.Read1DArray(dstorage);
+				part.file.Read1DArray(dstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].x = dstorage[i-previousSize] * scale3d;
 
-				part.file.Read1DArray(dstorage);
+				part.file.Read1DArray(dstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].y = dstorage[i-previousSize] * scale3d;
 
-				part.file.Read1DArray(dstorage);
+				part.file.Read1DArray(dstorage, firstpart, partsthistask);
 				for(unsigned i = previousSize; i < points.size(); i++)
 					points[i].z = dstorage[i-previousSize] * scale3d;
 			}
@@ -398,13 +509,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(i==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
-						part.file.Read1DArray(fstorage);
+						part.file.Read1DArray(fstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.r = fstorage[i-previousSize];		
 					}
 					else
 					{
-						part.file.Read1DArray(dstorage);
+						part.file.Read1DArray(dstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.r = dstorage[i-previousSize];							
 					}		
@@ -414,13 +525,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(i==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
-						part.file.Read1DArray(fstorage);
+						part.file.Read1DArray(fstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.g = fstorage[i-previousSize];		
 					}
 					else
 					{
-						part.file.Read1DArray(dstorage);
+						part.file.Read1DArray(dstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.g = dstorage[i-previousSize];							
 					}	
@@ -430,13 +541,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(i==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
-						part.file.Read1DArray(fstorage);
+						part.file.Read1DArray(fstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.b = fstorage[i-previousSize];		
 					}
 					else
 					{
-						part.file.Read1DArray(dstorage);
+						part.file.Read1DArray(dstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].e.b = dstorage[i-previousSize];							
 					}	
@@ -446,13 +557,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(i==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
-						part.file.Read1DArray(fstorage);
+						part.file.Read1DArray(fstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].I = fstorage[i-previousSize] * intense_factor[type];		
 					}
 					else
 					{
-						part.file.Read1DArray(dstorage);
+						part.file.Read1DArray(dstorage, firstpart, partsthistask);
 						for(unsigned i = previousSize; i < points.size(); i++)
 							points[i].I = dstorage[i-previousSize] * intense_factor[type];							
 					}	
@@ -476,18 +587,22 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			if(dstorage) delete[] dstorage;
 		}
 
-		std::cout << "Read " << points.size() - originalSize << " particles." << std::endl;
+		//std::cout << "Read " << points.size() - originalSize << " particles." << std::endl;
 
 	}
 	
 	if(mode!= 0  && mode != 1 && mode != 2)
 	{
-		// Explain mode parameter usage and quit
-		std::cout << "Reader parameters incorrect. Please set read_mode in parameter file (default 0).\n";
-		std::cout << "read_mode=0 for amr data only.\n";
-		std::cout << "read_mode=1 for point data only.\n";
-		std::cout << "read_mode=2 for both amr + point data.\n";
-		std::cout << "Note: You must have amr_ and hydro_ files for opt 0, part_ files for opt1, and all 3 for opt 2." << std::endl;
+		if(mpiMgr.master())
+		{
+			// Explain mode parameter usage and quit
+			std::cout << "Reader parameters incorrect. Please set read_mode in parameter file (default 0).\n";
+			std::cout << "read_mode=0 for amr data only.\n";
+			std::cout << "read_mode=1 for point data only.\n";
+			std::cout << "read_mode=2 for both amr + point data.\n";
+			std::cout << "Note: You must have amr_ and hydro_ files for opt 0, part_ files for opt1, and all 3 for opt 2." << std::endl;
+		}
+		exit(0);
 	}
 
 }
