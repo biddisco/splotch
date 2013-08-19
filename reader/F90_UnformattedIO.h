@@ -1,6 +1,6 @@
 #ifndef F90_UNFORMATTEDIO_H
 #define F90_UNFORMATTEDIO_H
-
+#include "cxxsupport/mpi_support.h"
 //----------------------------------------------------------------------------
 // Helper library for I/O with Fortran unformatted write files
 // Tim Dykes
@@ -77,7 +77,7 @@ public:
 	void Open(std::string filename) 
 	{
 		file.open(filename.c_str(), std::ios::in);
-		if(!file)
+		if(!file.is_open())
 			std::cout << "Failed to open fortran file: " << filename << std::endl;
 	}
 
@@ -92,7 +92,7 @@ public:
 		file.read((char*)&post,PREPOST_DATA);
 
 		if((pre != sizeof(T)) || (pre != post)) {
-			std::cout << "Failed scaler read from fortran file..." << std::endl;
+			std::cout << "Failed scaler read from fortran file: pre != post" << std::endl;
 		}
 	}
 
@@ -108,7 +108,42 @@ public:
 
 		file.read((char*)&post, PREPOST_DATA);
 		if(pre!=post)
-			std::cout << "Failed read fortran 1d array."<< std::endl;
+		{
+			if(mpiMgr.master())
+				std::cout << "Failed read fortran 1d array: pre != post"<< std::endl;
+		}
+	}
+
+	// Read subsection of 1D array
+	// firstelement and numelements are in terms of array elements of size T
+	template <typename T>
+	void Read1DArray(T* arr, unsigned firstelement, unsigned numelements)
+	{
+		unsigned pre, post;
+		file.read((char*)&pre, PREPOST_DATA);
+
+		// Validate
+		if((firstelement + numelements) > (pre/sizeof(T)))
+		{
+			std::cout << "Failed read fortran 1d array subsection: Requested more elements than array contains; from rank: " << mpiMgr.rank() << std::endl;
+		}
+
+		// Skip to start record
+		if(firstelement>0)
+			file.seekg(firstelement*sizeof(T),std::ios::cur);
+
+		for(unsigned n = 0; n < numelements; n++)
+			file.read((char*)&arr[n], sizeof(T));
+
+		//Skip to end
+		if(((firstelement+numelements)*sizeof(T))<pre)
+			file.seekg((pre - ((firstelement+numelements)*sizeof(T))),std::ios::cur);
+
+		file.read((char*)&post, PREPOST_DATA);
+		if(pre!=post)
+		{
+			std::cout << "Failed read fortran 1d array subsection: pre != post; from rank: " << mpiMgr.rank() << std::endl;
+		}
 	}
 
 	// Read 2d array of predefined size arr[xdim][ydim]
@@ -126,7 +161,7 @@ public:
 
 		file.read((char*)&post, PREPOST_DATA);
 		if(pre!=post)
-			std::cout << "Failed read fortran 2d array..." << std::endl;
+			std::cout << "Failed read fortran 2d array: pre != post" << std::endl;
 	}
 
 	// Read 3d array of predefined size arr[xdim][ydim][zdim]
@@ -145,7 +180,7 @@ public:
 		file.read((char*)&post, PREPOST_DATA);
 
 		if(pre!=post)
-			std::cout << "Failed read fortran 3d array..." << std::endl;
+			std::cout << "Failed read fortran 3d array: pre != post" << std::endl;
 	}
 
 	// Skip single record (scalar or array)
@@ -161,7 +196,7 @@ public:
 		}
 
 		if(pre != post)
-			std::cout << "Failed record skip" << std::endl;
+			std::cout << "Failed record skip: pre != post" << std::endl;
 	}
 
 	// Skip N records (scalar or array)
@@ -179,7 +214,7 @@ public:
 			}
 
 			if(pre != post)
-				std::cout << "Failed record skip" << std::endl;
+				std::cout << "Failed record skip: pre != post" << std::endl;
 		}
 	}
 
