@@ -56,13 +56,13 @@ private:
 	{
 		// Work out filename according to ramses convention
 		// Infile begins amr_
-		filename = repo+"/amr_";
+		filename = repo.substr(0,repo.size()-15)+"/amr_";
 
 		// Append id with 5 digit precision
 		std::stringstream ss;
 		ss.width(5);
 		ss.fill('0');
-		ss << std::right << repo.substr(repo.size()-5,5); 
+		ss << std::right << repo.substr(repo.size()-9,5); 
 
 		// Append ext
 		filename += (ss.str() + ".out"); 
@@ -151,13 +151,13 @@ private:
 	{
 		// Work out filename according to ramses convention
 		// Infile begins amr_
-		filename = repo+"/hydro_";
+		filename = repo.substr(0,repo.size()-15)+"/hydro_";
 
 		// Append id with 5 digit precision
 		std::stringstream ss;
 		ss.width(5);
 		ss.fill('0');
-		ss << std::right << repo.substr(repo.size()-5,5); 
+		ss << std::right << repo.substr(repo.size()-9,5); 
 
 		// Append ext
 		filename += (ss.str() + ".out"); 
@@ -228,13 +228,13 @@ private:
 	{
 		// Work out filename according to ramses convention
 		// Infile begins amr_
-		filename = repo+"/part_";
+		filename = repo.substr(0,repo.size()-15)+"/part_";
 
 		// Append id with 5 digit precision
 		std::stringstream ss;
 		ss.width(5);
 		ss.fill('0');
-		ss << std::right << repo.substr(repo.size()-5,5); 
+		ss << std::right << repo.substr(repo.size()-9,5); 
 
 		// Append ext
 		filename += (ss.str() + ".out"); 
@@ -340,16 +340,19 @@ private:
 		// Work out filename according to ramses convention
 
 		// Infile begins amr_
-		filename = repo+"/info_";	
+		// filename = repo+"/info_";	
 
-		// Append id with 5 digit precision
-		std::stringstream ss;
-		ss.width(5);
-		ss.fill('0');
-		ss << std::right << repo.substr(repo.size()-5,5); 
+		// // Append id with 5 digit precision
+		// std::stringstream ss;
+		// ss.width(5);
+		// ss.fill('0');
+		// ss << std::right << repo.substr(repo.size()-9,5); 
 
-		// Append ext
-		filename += (ss.str() + ".txt"); 
+		// // Append ext
+		// filename += (ss.str() + ".txt"); 
+
+		// We now use info file as the input so no need to work out filename
+		filename = repo;
 	}
 	
 	// Read the rightmost piece of data in a string to any type that can be converted via stringstream
