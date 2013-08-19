@@ -275,7 +275,6 @@ public:
 		std::ifstream infile(filename.c_str(), std::ios::in);
 		if(!infile)
 			std::cout << "Cannot open info file: " << filename  << std::endl;
-		else std::cout << "Reading ramses info file..." << std::endl;
 		
 		std::string scratch;
 		std::getline(infile, scratch);	
