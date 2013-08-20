@@ -103,8 +103,7 @@ public:
 		unsigned pre, post;
 		file.read((char*)&pre, PREPOST_DATA);
 
-		for(unsigned n = 0; n < (pre/sizeof(T)); n++)
-			file.read((char*)&arr[n], sizeof(T));
+		file.read((char*)&arr[0], pre);
 
 		file.read((char*)&post, PREPOST_DATA);
 		if(pre!=post)
@@ -132,8 +131,7 @@ public:
 		if(firstelement>0)
 			file.seekg(firstelement*sizeof(T),std::ios::cur);
 
-		for(unsigned n = 0; n < numelements; n++)
-			file.read((char*)&arr[n], sizeof(T));
+		file.read((char*)&arr[0],numelements*sizeof(T));
 
 		//Skip to end
 		if(((firstelement+numelements)*sizeof(T))<pre)
