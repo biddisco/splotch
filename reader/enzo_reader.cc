@@ -87,7 +87,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    int mype=0;
    int npes=1;
 
-#ifdef USEMPI
+#ifdef USE_MPI
    MPI_Comm_rank(MPI_COMM_WORLD, &mype);
    MPI_Comm_size(MPI_COMM_WORLD, &npes);
 #endif
@@ -95,9 +95,9 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 // load parameters from parameter file
 
    float  smooth_factor = params.find<float>("smooth_factor",1.0);
-   int  red = params.find<int>("C1",-1);
-   int  green = params.find<int>("C2",-1);
-   int  blue = params.find<int>("C3",-1);
+   int  red = params.find<int>("red",-1);
+   int  green = params.find<int>("green",-1);
+   int  blue = params.find<int>("blue",-1);
    int  intensity = params.find<int>("I",-1);
    string hierarchyname = params.find<string>("hierarchy_file");
    int sf[numberoffields];
@@ -141,7 +141,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 // WARNING X and Z are swapped!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#ifdef USEMPI
+#ifdef USEMPI-OLD
    MPI_Bcast(&number_of_fields2read, 1, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(sf, number_of_fields2read, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(&hierarchyname[0], 1000, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -273,6 +273,14 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    pFile = fopen (hierarchyname.c_str(), "r");
    fscanf (pFile, "%d", &nfiles);
 
+// check if the number of processors is less than the number of files
+
+   if(nfiles < npes)
+   {
+      printf("Only the case with a number of MPI processes less or equal than files is supported\n");
+      printf("NPES = %d, Nfiles = %d, aborting...\n", npes, nfiles);
+      exit(11);
+   }
 
    int acont=0;
    long countt=0;
@@ -573,7 +581,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    //*maxr=maxradius;
    //*minr=minradius;
    cout << "RETURNING FROM ENZO" << endl;
-#ifdef USEMPI
+#ifdef USEMPI-OLD
    MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
    MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
 #endif
