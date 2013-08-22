@@ -18,11 +18,16 @@
 //
 //----------------------------------------------------------------------------
 
+#define MIN_GRIDS_PER_READ 100
 
 void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 {
 	// Check parameter for read mode, points/amr/both
 	int mode = params.find<int>("read_mode",0);
+
+	int parallelmode = params.find<int>("parallel_read_mode",0);
+	if(parallelmode != 0 && parallelmode != 1)
+		std::cout << "Incorrect parallel_read_mode setting. Set to 0 or 1." << std::endl;
 
 	// Get repository, otherwise assume data is in currentdirectory
 	std::string repo = params.find<std::string>("infile","");
@@ -126,7 +131,53 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 		if(mpiMgr.master())
 			std::cout << "Reading AMR data... " << std::endl;
 
-		for(unsigned icpu = 0; icpu < info.ncpu; icpu++)
+		int nfiles = info.ncpu;
+		int readsthistask = nfiles;
+		int firstread = 0;
+
+		// Parallel mode = 0 means cpu per file (good for generally small files)
+		// Parallel mode = 1 means multiple cpus per file (good for generally large files)
+		if(parallelmode == 0)
+		{
+			// If less files than tasks, read one file per task for all available files
+			if(nfiles<ntasks)
+			{
+				if(rankthistask<nfiles)
+				{
+					firstread = rankthistask;
+					readsthistask = 1;
+				}
+				else
+				{
+					// This task will read no particles
+					firstread = 0;
+					readsthistask = 0;
+					// Push a fake particle to stop MPI crying about lack of data
+					points.push_back(particle_sim(COLOUR(0,0,0),0,0,0,0,0,0,0));
+				}
+			}
+			else
+			{
+				// Split files amongst tasks
+				readsthistask = nfiles/ntasks;
+				firstread = readsthistask*rankthistask;
+
+	            // Work out remaining files and distribute
+	            int remain = nfiles % ntasks;
+	            if(remain)
+	            {
+	            	if(remain>rankthistask)
+	            	{
+	            		firstread+=rankthistask;
+	            		readsthistask+=1;
+	            	}
+	            	else
+	            		firstread+=remain;
+	            }
+			}
+		}
+
+		for(unsigned icpu = firstread; icpu < (firstread+readsthistask); icpu++)
 		{
 			// Open hydro file and read metadata
 			hydro_file hydro(repo, icpu+1);
@@ -173,6 +224,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			unsigned gridsthistask = 0;
 			unsigned firstgrid = 0;
 			unsigned gridsthisdomain = 0;
+			unsigned currentworkproc = 0;
 
 			// Loop over levels within file
 			for(unsigned ilevel = 0; ilevel < amr.meta.nlevelmax; ilevel++)
@@ -180,49 +232,90 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 				// Loop over domains within level (this would be ncpu+nboundary if nboundary>0)
 				for(unsigned idomain = 0; idomain < amr.meta.ncpu; idomain++)
 				{
-					// Check there are grids for this domain
-					if(ngridfile(idomain,ilevel) > 0)
-					{
-						// Work out how many grids this task should read
-						gridsthisdomain = ngridfile(idomain,ilevel);
 
-						// If less grids than tasks, first task reads all grids (should do 1 grid per task...)
-						if(gridsthisdomain < ntasks)
+					// Check there are grids for this domain, process dependant on parallel read mode
+					if(parallelmode == 0)
+						gridsthistask = ngridfile(idomain,ilevel);
+					else
+					{
+						if(ngridfile(idomain,ilevel) > 0)
 						{
-							if(mpiMgr.master())
+							// Work out how many grids this task should read
+							gridsthisdomain = ngridfile(idomain,ilevel);
+
+							// If less grids than MIN_GRIDS_PER_READ*tasks, reduce tasks until we have a useful share ratio 
+							if(gridsthisdomain < MIN_GRIDS_PER_READ*ntasks)
 							{
-								gridsthistask = gridsthisdomain;
-								firstgrid = 0;
+								// Each task should read minimum of MIN_GRIDS_PER_READ grids, work out how many tasks to use
+								int subtasks = gridsthisdomain/MIN_GRIDS_PER_READ;
+								
+								// If we only need one processor
+								if(subtasks<2) 
+								{
+									subtasks = 1;
+									if(rankthistask==currentworkproc)
+									{
+										firstgrid = 0;
+										gridsthistask = gridsthisdomain;
+									}
+									else 
+									{
+										gridsthistask = 0;
+										firstgrid = 0;
+									}
+								}
+								// Is this task is amongst subtasks designated with reading?
+								else if( (rankthistask >= currentworkproc && rankthistask < (currentworkproc+subtasks)) ||
+								    (currentworkproc+subtasks >= ntasks && rankthistask < (currentworkproc+subtasks-ntasks)) ) 
+								{
+									// Check how many grids to read, and where to start reading
+									gridsthistask = gridsthisdomain/subtasks;
+									// Work out subrank (rank relative to number of subtasks)
+									int subrank = rankthistask;
+									while(subrank >= subtasks)
+										subrank -= subtasks;
+									firstgrid = gridsthistask*subrank;
+									// Final process reads remainder
+									if(subrank == subtasks-1)
+										gridsthistask = gridsthisdomain-firstgrid;
+
+								}
+								else 
+								{
+									gridsthistask = 0;
+									firstgrid = 0;
+								}
+								// Move currentworkproc
+								currentworkproc+=subtasks;
+								if(currentworkproc>=ntasks)
+									currentworkproc -= ntasks;
 							}
-							else 
-								gridsthistask = 0;
+							// In this case we have enough grids to allocate at least 100 grids per task
+							else
+							{
+								// Split grids amongst tasks
+								gridsthistask = gridsthisdomain/ntasks;
+								firstgrid = gridsthistask*rankthistask;
+
+	                            // Work out remaining grids and add to task's load
+	                            int remain = gridsthisdomain % ntasks;
+	                            if(remain)
+	                            {
+	                            	if(remain>rankthistask)
+	                            	{
+	                            		firstgrid+=rankthistask;
+	                            		gridsthistask+=1;
+	                            	}
+	                            	else
+	                            		firstgrid+=remain;
+	                            }
+							}
+
+							//std::cout <<" ilevel: "<<ilevel<< " Idomain: "<<idomain<<" Rank "<<rankthistask<<": Reading "<<gridsthistask<<" grids out of "<<gridsthisdomain<<" first: "<<firstgrid<<std::endl;
 						}
 						else
-						{
-							// Otherwise split grids amongst tasks, ensuring final task reads any remainder 
-							gridsthistask = gridsthisdomain/ntasks;
-							firstgrid = gridsthistask*rankthistask;
-                        	//if(rankthistask == ntasks-1)
-                            //    gridsthistask = gridsthisdomain - firstgrid;	
-
-                            // Work out remaining grids and add to task's load
-                            int remain = gridsthisdomain % ntasks;
-                            if(remain)
-                            {
-                            	if(remain>rankthistask)
-                            	{
-                            		firstgrid+=rankthistask;
-                            		gridsthistask+=1;
-                            	}
-                            	else
-                            		firstgrid+=remain;
-                            }
-						}
-
-						//std::cout <<" ilevel: "<<ilevel<< " Idomain: "<<idomain<<" Rank "<<rankthistask<<": Reading "<<gridsthistask<<" grids out of "<<gridsthisdomain<<" first: "<<firstgrid<<std::endl;
+							gridsthistask = 0;
 					}
-					else
-						gridsthistask = 0;
 
 					// If this task is allocated grids to read
 					if(gridsthistask > 0)
@@ -267,8 +360,8 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 						// Skip cpu and refinement maps
 						amr.file.SkipRecords(amr.meta.twotondim*2);
 					}
-					// Otherwise skip these grids
-					else if((ngridfile(idomain,ilevel) > 0) && (gridsthistask == 0))
+					// Otherwise skip these grids (only in parallelmode 1)
+					else if((ngridfile(idomain,ilevel) > 0) && (gridsthistask == 0) && (parallelmode == 1))
 						amr.file.SkipRecords(3+amr.meta.ndim+1+(2*amr.meta.ndim)+amr.meta.twotondim+(amr.meta.twotondim*2));
 
 					// Start reading hydro data
@@ -306,7 +399,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 										// randomize location within cell using same method as io_ramses.f90:
 										// call ranf(localseed,xx)
                                         // xp(pc,l)=xx*boxlen*dx+xc(l)-boxlen*dx/2
-                                        float r = (float)rand()/(float)RAND_MAX;
+                                        // float r = (float)rand()/(float)RAND_MAX;
 										particle_sim p;
 										p.x = ((((float)rand()/(float)RAND_MAX) * amr.meta.boxlen * dx) +(amr.meta.boxlen * (gridcoords(igrid,0) + (double(ix)-0.5) * dx )) - (amr.meta.boxlen*dx/2)) * scale3d;
 										p.y = ((((float)rand()/(float)RAND_MAX) * amr.meta.boxlen * dx) +(amr.meta.boxlen * (gridcoords(igrid,1) + (double(iy)-0.5) * dx )) - (amr.meta.boxlen*dx/2)) * scale3d;
@@ -333,13 +426,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 						gridsons.Delete();
 						if(sonindex) delete[] sonindex;
 					} 
-					// Skip grids from a domain that contains grids but none of which are read by this task
-					else if(ngridfile(idomain,ilevel) > 0 && gridsthistask == 0)
+					// Skip grids from a domain that contains grids but none of which are read by this task (only for parallel mode 1)
+					else if(ngridfile(idomain,ilevel) > 0 && gridsthistask == 0 && parallelmode == 1)
 						hydro.file.SkipRecords(hydro.meta.nvar*amr.meta.twotondim);
-
 				} // End loop over domains
 			} // End loop over levels
 		} // End loop over files
+
 		if(mpiMgr.master())
 			std::cout << "Read " << nlevelmax << " levels for " << info.ncpu << " domains." << std::endl;
 	}
@@ -393,8 +486,55 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 		//int originalSize = points.size();
 		if(mpiMgr.master())
 			std::cout << "Reading particle data..." << std::endl;
+
+		int nfiles = info.ncpu;
+		int readsthistask = nfiles;
+		int firstread = 0;
+
+		// Parallel mode = 0 means cpu per file (good for generally small files)
+		// Parallel mode = 1 means multiple cpus per file (good for generally large files)
+		if(parallelmode == 0)
+		{
+			// If less files than tasks, read one file per task for all available files
+			if(nfiles<ntasks)
+			{
+				if(rankthistask<nfiles)
+				{
+					firstread = rankthistask;
+					readsthistask = 1;
+				}
+				else 
+				{
+					// This task will read no particles
+					firstread = 0;
+					readsthistask = 0;
+					// Push a fake particle to stop MPI crying about lack of data
+					points.push_back(particle_sim(COLOUR(0,0,0),0,0,0,0,0,0,0));
+				}
+			}
+			else
+			{
+				// Split files amongst tasks
+				readsthistask = nfiles/ntasks;
+				firstread = readsthistask*rankthistask;
+
+	            // Work out remaining files and distribute
+	            int remain = nfiles % ntasks;
+	            if(remain)
+	            {
+	            	if(remain>rankthistask)
+	            	{
+	            		firstread+=rankthistask;
+	            		readsthistask+=1;
+	            	}
+	            	else
+	            		firstread+=remain;
+	            }
+			}
+		}
+
 		
-		for(unsigned ifile = 0; ifile < info.ncpu; ifile++)
+		for(unsigned ifile = firstread; ifile < (firstread+readsthistask); ifile++)
 		{
 			// Open file and check header
 			part_file part(repo, ifile+1);
@@ -410,32 +550,39 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			unsigned partsthistask = partsthisfile/ntasks;
 			unsigned firstpart = partsthistask*rankthistask;
 
-			// Spread remainder of particles amongst tasks
-			int remain = partsthisfile%ntasks;
-			if(remain)
+			if(parallelmode == 0)
 			{
-				if(remain>rankthistask)
-				{
-					firstpart+=rankthistask;
-					partsthistask+=1;
-				}
-				else
-					firstpart+=remain;				
+				firstpart = 0;
+				partsthistask = partsthisfile;
 			}
-
-			// Handle the rare occurance that there are less particles than tasks. 
-			// In this case rank 0 reads all particles.
-			if(partsthisfile < ntasks)
+			else
 			{
-				if(mpiMgr.master())
+				// Spread remainder of particles amongst tasks
+				int remain = partsthisfile%ntasks;
+				if(remain)
 				{
-					firstpart = 0;
-					partsthistask = partsthisfile;
+					if(remain>rankthistask)
+					{
+						firstpart+=rankthistask;
+						partsthistask+=1;
+					}
+					else
+						firstpart+=remain;				
 				}
-				else
-					continue;
-			}
 
+				// Handle the rare occurance that there are less particles than tasks. 
+				// In this case rank 0 reads all particles.
+				if(partsthisfile < ntasks)
+				{
+					if(mpiMgr.master())
+					{
+						firstpart = 0;
+						partsthistask = partsthisfile;
+					}
+					else
+						continue;
+				}
+			}
 			//std::cout<<"ifile: "<<ifile<<" rank: "<<rankthistask<<" P_thisfile: "<<partsthisfile<<" P_thistask: "<<partsthistask<<" P_1: "<<firstpart<<std::endl; 
 
 			// Resize for extra particles
@@ -500,13 +647,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			}
 
 			// Read appropriate data
-			for(int i = 0; i < 5; i++)
+			for(int idata = 0; idata < 5; idata++)
 			{
-				if(C1 == i)
+				if(C1 == idata)
 				{
 					// If metallicity is requested, skip to metallicity position.
 					// Dont request metallicity if it is not in the file...
-					if(i==4) part.file.SkipRecords(3);
+					if(idata==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
@@ -520,9 +667,9 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 							points[i].e.r = dstorage[i-previousSize];							
 					}		
 				}
-				else if(C2 == i)
+				else if(C2 == idata)
 				{
-					if(i==4) part.file.SkipRecords(3);
+					if(idata==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
@@ -536,9 +683,9 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 							points[i].e.g = dstorage[i-previousSize];							
 					}	
 				}
-				else if(C3 == i)
+				else if(C3 == idata)
 				{
-					if(i==4) part.file.SkipRecords(3);
+					if(idata==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
@@ -552,9 +699,9 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 							points[i].e.b = dstorage[i-previousSize];							
 					}	
 				}
-				else if(!const_i && intensity[type] == i)
+				else if(!const_i && intensity[type] == idata)
 				{
-					if(i==4) part.file.SkipRecords(3);
+					if(idata==4) part.file.SkipRecords(3);
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
@@ -569,7 +716,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					}	
 				}
 				// Skip to next record if not final read
-				else if(i < 4) part.file.SkipRecord();				
+				else if(idata < 4) part.file.SkipRecord();				
 			}
 
 
