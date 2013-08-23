@@ -250,7 +250,7 @@ namespace previewer
 				{	
 					// Replace lookat with camera - lookat
 					std::string parameter2 = animationPaths[j].GetParameter();
-					if(parameter == "camera_y")
+					if(parameter2 == "camera_y")
 					{
 						DataPointList cameraDpl = animationPaths[j].GetInterpolatedDataPointList();
 						for(uint k = 0; k < dpl.size(); k++)
@@ -265,7 +265,7 @@ namespace previewer
 				{	
 					// Replace lookat with camera - lookat
 					std::string parameter2 = animationPaths[j].GetParameter();
-					if(parameter == "camera_z")
+					if(parameter2 == "camera_z")
 					{
 						DataPointList cameraDpl = animationPaths[j].GetInterpolatedDataPointList();
 						for(uint k = 0; k < dpl.size(); k++)
