@@ -2,7 +2,7 @@
 #include "ramses_helper_lib.h"
 #include <time.h>
 #include "cxxsupport/mpi_support.h"
-
+#include <string.h>
 //----------------------------------------------------------------------------
 // Ramses file reader for particle or amr data (or both)
 // Tim Dykes
@@ -10,11 +10,14 @@
 // Use red,green and blue parameters in parameter file to set the data to visualise. 
 // Correct IDs for these can be found in ramses_helper_lib
 // 
-// amr uses red0,green0,blue0. If drawing just particle data, then use the same parameters
+// amr uses red0,green0,blue0. If drawing just particle data then use the same parameters
 // if drawing both types of data use red1,green1,blue1 for particle variables
 //
 // Note when using red+green+blue set colour_is_vector0=T, if just one colour variable
-// is used then set colour_is_vector0=F.
+// is used then set colour_is_vector0=F. (also for just one colour var, use red...)
+//
+// Parallel read mode 0 for many small files (1cpu per file) mode 1 for small number
+// of very large files (multiple cpus per file)
 //
 //----------------------------------------------------------------------------
 
@@ -80,6 +83,26 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	if(mpiMgr.master())
 		std::cout << "RAMSES READER MPI: Reading output from " << info.ncpu << " cpus with " << ntasks << " tasks." << std::endl;
 #endif
+
+	// Sampling
+	// Sample factor is read in as percentage then converted to factor
+	bool doSample = params.find<bool>("sampler",false);
+	float sample_factor = params.find<float>("sample_factor",100);;
+	if(sample_factor < 0 || sample_factor > 100)
+	{
+		if(mpiMgr.master())
+			std::cout << "Invalid sample factor: " << sample_factor << "\n Use a percentage to sample, ie sample_factor=50\n";
+		exit(0);
+	}
+	else
+	{
+		if(mpiMgr.master())
+		{
+			std::cout << "Sampler: Chosen sample percentage: " << sample_factor << "%\n";
+			std::cout << "Sampling nearest available fraction of data: 1/" << (100/sample_factor)<< std::endl; 
+		}
+	}
+	std::vector<particle_sim> pointfilter;
 
 	if(mode == 0 || mode == 2)
 	{
@@ -176,6 +199,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	            }
 			}
 		}
+
 
 		for(unsigned icpu = firstread; icpu < (firstread+readsthistask); icpu++)
 		{
@@ -415,7 +439,10 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 										p.type = 0;
 										p.active = active;
 
-										points.push_back(p);
+										if(doSample)
+											pointfilter.push_back(p);
+										else
+											points.push_back(p);
 									}
 								} // End loop over grids
 							} // End loop over hydro vars
@@ -429,6 +456,16 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					// Skip grids from a domain that contains grids but none of which are read by this task (only for parallel mode 1)
 					else if(ngridfile(idomain,ilevel) > 0 && gridsthistask == 0 && parallelmode == 1)
 						hydro.file.SkipRecords(hydro.meta.nvar*amr.meta.twotondim);
+
+					// Sampling
+					if(doSample)
+					{
+						int stride = (100/sample_factor);
+						for(int i = 0; i < pointfilter.size(); i += stride)
+							points.push_back(pointfilter[i]);
+						pointfilter.clear();
+					}
+
 				} // End loop over domains
 			} // End loop over levels
 		} // End loop over files
@@ -483,7 +520,6 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			exit(0);
 		}
 
-		//int originalSize = points.size();
 		if(mpiMgr.master())
 			std::cout << "Reading particle data..." << std::endl;
 
@@ -585,10 +621,14 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			}
 			//std::cout<<"ifile: "<<ifile<<" rank: "<<rankthistask<<" P_thisfile: "<<partsthisfile<<" P_thistask: "<<partsthistask<<" P_1: "<<firstpart<<std::endl; 
 
-			// Resize for extra particles
-			int previousSize = points.size();
-			points.resize(points.size()+partsthistask);
 
+			// Resize for extra particles
+			//int previousSize = points.size();
+			//points.resize(points.size()+partsthistask);
+
+			// Doubel check pointfilter is empty
+			pointfilter.clear();
+			pointfilter.resize(partsthistask);
 
 			float* fstorage = 0;
 			double* dstorage = 0;
@@ -620,30 +660,30 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			if(dType=='f')
 			{
 				part.file.Read1DArray(fstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].x = fstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].x = fstorage[i] * scale3d;
 
 				part.file.Read1DArray(fstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].y = fstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].y = fstorage[i] * scale3d;
 
 				part.file.Read1DArray(fstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].z = fstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].z = fstorage[i] * scale3d;
 			}
 			else
 			{
 				part.file.Read1DArray(dstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].x = dstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].x = dstorage[i] * scale3d;
 
 				part.file.Read1DArray(dstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].y = dstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].y = dstorage[i] * scale3d;
 
 				part.file.Read1DArray(dstorage, firstpart, partsthistask);
-				for(unsigned i = previousSize; i < points.size(); i++)
-					points[i].z = dstorage[i-previousSize] * scale3d;
+				for(unsigned i = 0; i < pointfilter.size(); i++)
+					pointfilter[i].z = dstorage[i] * scale3d;
 			}
 
 			// Read appropriate data
@@ -657,14 +697,14 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.r = fstorage[i-previousSize];		
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.r = fstorage[i];		
 					}
 					else
 					{
 						part.file.Read1DArray(dstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.r = dstorage[i-previousSize];							
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.r = dstorage[i];							
 					}		
 				}
 				else if(C2 == idata)
@@ -673,14 +713,14 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.g = fstorage[i-previousSize];		
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.g = fstorage[i];		
 					}
 					else
 					{
 						part.file.Read1DArray(dstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.g = dstorage[i-previousSize];							
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.g = dstorage[i];							
 					}	
 				}
 				else if(C3 == idata)
@@ -689,14 +729,14 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.b = fstorage[i-previousSize];		
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.b = fstorage[i];		
 					}
 					else
 					{
 						part.file.Read1DArray(dstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].e.b = dstorage[i-previousSize];							
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].e.b = dstorage[i];							
 					}	
 				}
 				else if(!const_i && intensity[type] == idata)
@@ -705,14 +745,14 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 					if(dType=='f')
 					{
 						part.file.Read1DArray(fstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].I = fstorage[i-previousSize] * intense_factor[type];		
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].I = fstorage[i] * intense_factor[type];		
 					}
 					else
 					{
 						part.file.Read1DArray(dstorage, firstpart, partsthistask);
-						for(unsigned i = previousSize; i < points.size(); i++)
-							points[i].I = dstorage[i-previousSize] * intense_factor[type];							
+						for(unsigned i = 0; i < pointfilter.size(); i++)
+							pointfilter[i].I = dstorage[i] * intense_factor[type];							
 					}	
 				}
 				// Skip to next record if not final read
@@ -721,20 +761,33 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 
 
 			// Insert param data
-			for(unsigned i = previousSize; i < points.size(); i++)
+			for(unsigned i = 0; i < pointfilter.size(); i++)
 			{
-				points[i].r = smooth_factor[type];
-				points[i].type = type;
-				points[i].active = active;
-				if(const_i) points[i].I = intensity[type] * intense_factor[type];
+				pointfilter[i].r = smooth_factor[type];
+				pointfilter[i].type = type;
+				pointfilter[i].active = active;
+				if(const_i) pointfilter[i].I = intensity[type] * intense_factor[type];
+			}
+
+			// If sampling, do sample, else memcpy into correct place
+			if(doSample)
+			{
+				int stride = (100/sample_factor);
+				for(int i = 0; i < pointfilter.size(); i += stride)
+					points.push_back(pointfilter[i]);
+				pointfilter.clear();				
+			}
+			else
+			{
+				int size = points.size(); 
+				points.resize(size+pointfilter.size());
+				memcpy(&points[size],&pointfilter[0],pointfilter.size()*sizeof(particle_sim));
 			}
 
 			// Clean up memory
 			if(fstorage) delete[] fstorage;
 			if(dstorage) delete[] dstorage;
 		}
-
-		//std::cout << "Read " << points.size() - originalSize << " particles." << std::endl;
 
 	}
 	
