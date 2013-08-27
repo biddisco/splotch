@@ -290,10 +290,16 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    int nlevelbox;
    int checking = 0;
 
-   int chunk_pe = int(nfiles/npes);
-   int istart_pe = mype*chunk_pe;
+   int respe=0;
+   int modfiles = int(nfiles%npes);
+   int modpe = int(modfiles/(mype+1));
+   if(modpe >= 1)respe=1;
+
+   int chunk_pe = int(nfiles/npes)+respe;
+   int istart_pe = mype*chunk_pe + modfiles;
+   if(respe == 1) istart_pe = mype*chunk_pe;
    int iend_pe   = istart_pe+chunk_pe;
-   if(mype == npes-1 && npes > 1)iend_pe=iend_pe+(int)nfiles%npes; 
+   //if(mype == npes-1 && npes > 1)iend_pe=iend_pe+(int)nfiles%npes; 
 
 #ifdef DEBUG
    printf("PE %d STARTS FROM %d END AT %d\n", mype, istart_pe, iend_pe);
@@ -306,7 +312,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
      {
  
         acont++; 
-        printf("Merging block %d\n",i);
+        //printf("Merging block %d\n",i);
         checking = 0;
 
         char buffer[100];
@@ -456,6 +462,8 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 
         total_size_old = total_size;
         total_size += sourcesize;
+
+        printf("-----> TOTAL SIZE for PE %d IS %ld\n",mype,total_size);
  
 
 // allocate memory for loading data
