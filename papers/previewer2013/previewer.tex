@@ -1,0 +1,153 @@
+\documentclass[smallextended]{svjour3} 
+
+\smartqed 
+
+\usepackage{amssymb,amsmath}
+\usepackage{graphicx} 
+
+\begin{document}
+
+\title{Real-Time Astrophysical Visualisation Using OpenGL Shaders}
+\author{me \and
+	   you \and
+	   him \and
+           ....
+}
+
+\institute
+{me  \at 
+place \\
+tel\\
+\email{me@blah.blah.blah} \and
+you  \at 
+place \\
+tel\\
+\email{you@blah.blah.blah} \and
+him  \at 
+place \\
+tel\\
+\email{him@blah.blah.blah}\\
+....
+}
+
+\date{Received: date / Accepted: date}
+\maketitle
+
+\begin{abstract}
+Splotch is a rendering algorithm for exploration and visual discovery in
+particle-based datasets coming from astronomical observations or
+numerical simulations. The strengths of the approach are production of
+high quality imagery and support for very large-scale datasets through an
+effective mix of the OpenMP and MPI parallel programming paradigms. This article reports our experiences in developing an interactive OpenGL application mimicking Splotch imagery. Our application is light. i.e. avoids dependencies on external libraries and allows exploitation of a wide range of hardware configurations ranging from low spec PCs to supercomputers. We describe a number of custom built renderers and present performance results and comparisons with standard Splotch imagery in the context of a number of use cases. Our application is useful in providing fast Splotch-like previews of astrophysical simulations thus allowing to quickly inspect large-scale datasets. We conclude by outlining future work developments including possibilities for further optimisations.
+
+\keywords{Scientific Visualisation \and Astrophysics \and OpenGL \and GPUs \and Shaders \and High-Performance Computing \and }
+\end{abstract}
+ 
+
+\section{Introduction}
+\label{sec:intro}
+{\it Splotch} \cite{2008NJPh...10l5006D} is an open-source ray-casting algorithm for effectively visualising large-scale, particle-based numerical simulations. Very high-quality visualisations can be generated for large-scale cosmological simulations, e.g.\ the Millennium trilogy~\cite{millennium}, the Horizon and MareNostrum runs~\cite{horizon} or the DEUS simulation~\cite{deus}. The underlying models in these simulations typically reproduce the evolution of a representative fraction of the universe by means of hundreds of billions of fluid elements (represented as particles), interacting through gravitational forces. The typical size of a time output (or {\it snapshot}) can range from several hundreds of GBs to tens of TBs, recording ID, position and velocity of particles together with additional properties, e.g.\ local smoothing length, density and velocity dispersion. Although developed for numerical simulations, Splotch has being successfully employed also in other contexts, e.g.\ for visualizations of observed galaxy systems~\cite{m83-vis} or mesh-based datasets such as ~\cite{??} .
+
+The original Splotch algorithm has been optimised in terms of memory usage and exploitation of standard HPC architectures, e.g.\ multi-core processors and multi-node supercomputing systems by adopting the MPI paradigm~\cite{jin:high-performance} and OpenMP ~\cite{??}. Recently a new version of Splotch was released ~\cite{??} using the CUDA paradigm~\cite{cudaurl} to fully exploit modern HPC infrastructures. A number of optimised solutions for rendering particles have been implemented, based on a novel data classification and organization strategy. Significantly improved performances were achieved without affecting the linear scalability on the number of particles of the original Splotch.  Nevertheless the focus of Splotch always remained on being “light and fast” code providing scientists with a handy tool for extracting scientific content from large-scale datasets, e.g. for identifying new features or patterns or even isolating small regions of interest within which to apply time-consuming algorithms.The code runs as an executable in a variety of modes, to handle a wide array of hardware setups, which are configured using a series of text files. These allow control not only over how the program runs but also over a number visualisation parameters.
+
+A number of needs for real-time visualisation tools are not met by the current implementations of Splotch as the usability of the approach is quite limited. Whilst the configuration files are self-explanatory, in most cases a broad understanding of the datasets under scrutiny is required before algorithm values can be suitably defined. If these values are to be changed the program must be restarted. Another issue is the speed of rendering - depending on the dataset sizes it can take very long times to produce a render. Our objective in this paper was thus to develop an alternative approach to mimic the feature set offered by Splotch while at the same time meeting the objective of producing interactive real-time visualisations. The method would be able to sacrifice some visual quality in order to increase performance, but the visualisation should still provide meaningful representations. This way we could quickly generate Splotch-like imagery from astrophysical datasets - effectively previewing the datasets -  to assist in configuring visualisation parameters before generating a full high-resolution image using the full Splotch. Our previewer was to exploit the capability of OpenGL which has already been shown to deliver good performances for visualisation (see Section~\ref{background}).
+
+The paper is organised as follows. Section~\ref{background} is a short description of Splotch and OpenGL shader technology. Our solutions for a number of interactive renderers mimicking Splotch are described in Sect.~\ref{sec:fastpreviews}. Section \ref{sec:hpcinfrastructures} elaborates on the issues faced in extending our application to HPC infrastructures. Section~\ref{sec:results} presents our reference datasets for benchmarking and discusses achieved performances and image quality in the context of a number of use cases. Finally Sect.~\ref{sec:conclusions} presents conclusions from our experiences and offers pointers to future developments.
+
+\section{Background}
+\label{background}
+
+\subsection{Splotch}
+\label{sec:splotch}
+Splotch renders particle datasets by accumulating contributions for individual particles along lines of sight originating from image pixels using a radiative transfer equation  \cite{1991par..book.....S}:
+\begin{equation}\label{rad}
+\frac{d{\bf I}{(\bf x})}{dr}=({\bf E}_p-{\bf A}_p{\bf I}({\bf x}))\rho_p({\bf x}),
+\end{equation}
+where ${\bf I}({\bf x})$ represents radiation intensity at position ${\bf x}$, $r$ is a coordinate along the line of sight,  ${\bf E}_p$ and ${\bf A}_p$ are the coefficients of radiation emission and absorption for particle $p$ respectively and $\rho_{0,p}$ is a physical quantity (e.g.\ mass density or temperature) transported by $p$ according to the Gaussian distribution:
+\begin{equation}\label{kernel}
+\rho_p({\bf x}) = \rho_{0,p}\exp(-{||{\bf x}-{\bf x}_p||}^2/\sigma_p^2),
+\end{equation}
+where ${\bf x}_p$ denotes particle coordinates. This distribution is clipped to zero at a given distance $\chi\cdot\sigma_p$, 
+where $\chi$ is a suitably-defined multiplicative factor and $\sigma_p$ is the particle's smoothing length. Any rays passing at distances larger than $\chi\cdot\sigma_p$ are unaffected by $\rho_p$. Typically ${\bf E}_p$ is chosen identical to ${\bf A}_p$ as this situation not only produces visually appealing renderings but it also allows a simplified parallel implementation of the algorithm (calculations are independent of the integration order of particles). Nevertheless for special applications independent emission and absorption coefficients can be used. These coefficients can vary between particles and can be defined as functions of their properties. 
+%${\bf E}_p = {\bf A}_p$ 
+\subsection{Shaders}
+\label{sec:shaders}
+Survey of articles on exploitation of GPU shaders for visualisation (especially as applied to particle-based datasets) to set the scene for the shader implementations described in Sect.~\ref{sec:fastpreviews}. Start from papers by Bailey as below (and references in them), relate to this paper's work (ref. applications and compute shaders).
+
+[Bailey2009], Using GPU shaders for Visualisation, IEEE Comp. Graphics and Applications, 29(5), 2009, pp. 96-100.
+
+[Bailey2011], Using GPU shaders for Visualisation Part 2, IEEE Comp. Graphics and Applications, 31(2), 2011, pp. 67-73.
+
+[Bailey2013], Using GPU shaders for Visualisation Part 3, IEEE Comp. Graphics and Applications, 33(3), 2013, pp. 5-11.
+
+\section{Fast Previews}
+\label{sec:fastpreviews}
+Nowadays GPU shaders can generate spectacular special effects and are used extensively in the computer games and film industries. Nevertheless as discussed in [Bailey2009] and [Bailey2011] they can be exploited effectively for scientific visualisation as their main strengths of high-quality imagery and interactivity can potentially aid significantly in gaining meaningful insights into modern large-scale datasets. GPU shaders can be deployed in a variety of visualisation contexts for rendering, e.g. point clouds, jitter clouds, cutting planes, contour planes, data probes, line integral convolutions and terrain bump-mappings. [Bailey2013] recently discussed compute shaders and Shader Storage Buffer Objects (SSBOs). A compute shader is a single-stage GLSL program (OpenGL Shading Language) playing no direct role in the graphics rendering pipeline as it simply resides outside the pipeline and manipulates data it finds in the OpenGL buffers. SSBOs make getting data into and out of compute shaders much easier. This means that using GPUs for data-parallel visualisation is intrinsic to OpenGL to greatly assist real-time visualisation techniques.
+
+This section describes an application for generating fast renderings mimicking Splotch. The basic requirement was that the application should be light, i.e. avoiding unnecessary dependencies upon external libraries, and that it should be able to run on a variety of hardware configurations ranging from low performance PCs (i.e. without support for programmable graphics pipelines) to High Performance Computing (HPC) devices, e.g. multi-core and multi-node systems which nowadays are increasingly populated with GPUs.  We implemented a number of renderers suitable for handling this wide range of hardware configurations.
+
+As described below a number of profiles have been devised to detail the level of OpenGL feature support that can be expected. Minimal hardware support assumes no programmable graphics pipelines and only limited memory capabilities on the underlying GPUs.The choice to support non-programmable pipelines means that the corresponding renderer can achieve very limited visual effects. The renderer consists purely of spheres drawn using the position of particles with some support for scaling, e.g. based on particle properties. A more sophisticated image could be obtained by using other geometric primitives (glyphs) e.g. pyramids, but that would result in increased rendering times thus decreasing (potentially significantly) the overall performance of the application.
+
+The following sections describe the developed GPU rendering techniques in detail focusing on the achieved performances on a number of reference datasets. We conclude by describing the use of a blurring algorithm to deliver improved visual quality. A Gaussian blur was used with linear sampling which improves rendering quality, i.e. closer mimicking of Splotch imagery at the expense of slowing down overall rendering performances. 
+
+\subsection{Fixed Function Graphics Pipelines}
+\label{sec:ffgraphicspipelines}
+\begin{itemize}
+\item
+{OpenGL specification: Vertex Buffer Objects.
+Support: minimal HW configurations.}
+\end{itemize}
+
+\subsection{Programmable Graphics Pipelines}
+\label{sec:pgraphicspipelines}
+
+\begin{itemize}
+\item
+{OpenGL specification: Vertex Buffer Objects / Geometry Shaders.Support: middle range HW configurations.}\\
+\item
+{OpenGL specification: Vertex Buffer Objects / Geometry Shaders / Frame Buffer Objects.Support: high-end HW configurations.}\\
+\item
+{OpenGL specification: Vertex Buffer Objects / Geometry Shaders / Frame Buffer Objects / Visual Quality Effects - Post Processing (Blurring).Support: high-end HW configurations.}
+\end{itemize}
+
+\section{HPC Infrastractures}
+\label{sec:hpcinfrastructures}
+
+\begin{itemize}
+\item
+{Adapting previewer to run on HPC systems;}\\
+\item
+{Frame synchronization;}\\
+\item
+{The previewer client application.}
+\end{itemize}
+
+\section{Results}
+\label{sec:results}
+
+An N-body-SPH simulation performed using Gadget \cite{gadgeturl} was used for the tests we discuss in this section. The simulation is based on about 400 million particles consisting of 200 million {\it dark matter} particles, 200 million baryonic matter particles (hereafter referred to as {\it gas}) and around 10 million {\it star} particles. Particles possess a number of physical quantities, e.g.\ vectors capturing spatial coordinates and velocities, or scalars representing smoothing length. Additionally gas particles are associated with {\it temperature} and {\it mass density}. Also, {\it spectral type} and {\it age} are properties of star particles. Such quantities can be exploited in highly-detailed renderings, e.g.\ by modulating colours and intensities appropriately. \\
+
+\begin{itemize}
+\item
+{PC performance results (low spec laptop/PC);}\\
+\item
+{HPC performance results;}\\
+\item
+{Use cases - focus on comparison with Splotch imagery, meaningfulness of renderings / interactivity (questionnaire of users?)}
+\end{itemize}
+
+\section{Conclusions and Future Work}
+\label{sec:conclusions}
+\begin{itemize}
+\item
+{OpenGL capability to be used in real-time scientific visualisation;}\\
+\item
+{Reflection on the previewer in relation to the problems in Splotch and against generic problems in scientific visualisation;}\\
+\item
+{Indication of future work to be done.}
+\end{itemize}
+
+\bibliographystyle{spmpsci}
+\bibliography{master}	
+
+\end{document}
