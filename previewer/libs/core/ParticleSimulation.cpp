@@ -74,10 +74,16 @@ namespace previewer
 		// Load particle data
 		particles.Load();
 
-		//Should choose which renderer to use based on capabilities test/user choice
-		//RENDER_MODE defined in makefile!
-		renderer = new (RENDER_MODE)();
-
+		// Create instance of appropriate renderer, as specified in the makefile
+#if defined RENDER_FF_VBO
+		renderer = new FF_VBO();
+#elif defined RENDER_PP_GEOM
+		renderer = new PP_GEOM();
+#elif defined RENDER_PP_FBO
+		renderer = new PP_FBO();
+#elif defined RENDER_PP_FBOF
+		renderer = new PP_FBOF();
+#endif
 		DebugPrint("Render reference has been created");
 
 		// Load renderer and pass particle data
@@ -257,8 +263,18 @@ namespace previewer
 	{
 
 		particles.ReloadColourData();
-		// Reload the renderer with new data (have to reload? o.O)
-		renderer = new (RENDER_MODE)();
+
+		// Reload instance of appropriate renderer, as specified in the makefile
+#if defined RENDER_FF_VBO
+		renderer = new FF_VBO();
+#elif defined RENDER_PP_GEOM
+		renderer = new PP_GEOM();
+#elif defined RENDER_PP_FBO
+		renderer = new PP_FBO();
+#elif defined RENDER_PP_FBOF
+		renderer = new PP_FBOF();
+#endif
+		
 		renderer->Load(particles);
 	}
 

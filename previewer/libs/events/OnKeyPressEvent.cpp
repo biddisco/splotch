@@ -52,7 +52,7 @@ namespace previewer
 	// Implement the Caller
 	void OnKeyPressEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnKeyPress Event Call");
+		//DebugPrint("OnKeyPress Event Call");
 
 		if(eventSubs)
 		{

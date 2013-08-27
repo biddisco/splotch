@@ -286,34 +286,34 @@ namespace previewer
 		// Movement * seconds per frame for uniform movement regardless of framerate 
 		// (* 100 / *0.1 to make scale similar for setters move and rotation)
 		if(ev.keyID == "w")
-				camera.MoveForward(ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetSPF());
+				camera.MoveForward(ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "a")
-				camera.MoveRight(-ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetSPF());
+				camera.MoveRight(-ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "s")
-				camera.MoveForward(-ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetSPF());
+				camera.MoveForward(-ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "d")
-				camera.MoveRight(ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetSPF());
+				camera.MoveRight(ParticleSimulation::GetMoveSpeed()*100*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "q")
-				camera.MoveUpward(ParticleSimulation::GetMoveSpeed()*50*WindowManager::GetSPF());
+				camera.MoveUpward(ParticleSimulation::GetMoveSpeed()*50*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "e")
-				camera.MoveUpward(-ParticleSimulation::GetMoveSpeed()*50*WindowManager::GetSPF());
+				camera.MoveUpward(-ParticleSimulation::GetMoveSpeed()*50*WindowManager::GetElapsedTime());
 
 		else if(ev.keyID == "i")
-				camera.RotateAroundTarget(dataBBox.centerPoint, 0.0,ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetSPF(),0.0);
+				camera.RotateAroundTarget(dataBBox.centerPoint, 0.0,ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetElapsedTime(),0.0);
 
 		else if(ev.keyID == "j")
-				camera.RotateAroundTarget(dataBBox.centerPoint, ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetSPF(),0.0,0.0);
+				camera.RotateAroundTarget(dataBBox.centerPoint, ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetElapsedTime(),0.0,0.0);
 
 		else if(ev.keyID == "k")
-				camera.RotateAroundTarget(dataBBox.centerPoint, 0.0,-ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetSPF(),0.0);
+				camera.RotateAroundTarget(dataBBox.centerPoint, 0.0,-ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetElapsedTime(),0.0);
 
 		else if(ev.keyID == "l")
-				camera.RotateAroundTarget(dataBBox.centerPoint, -ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetSPF(),0.0,0.0);
+				camera.RotateAroundTarget(dataBBox.centerPoint, -ParticleSimulation::GetRotationSpeed()*0.1*WindowManager::GetElapsedTime(),0.0,0.0);
 
 	}
 

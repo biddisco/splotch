@@ -52,7 +52,7 @@ namespace previewer
 	// Implement the Caller
 	void OnMotionEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnMotion Event Call");
+		//DebugPrint("OnMotion Event Call");
 
 		if(eventSubs)
 		{

@@ -65,6 +65,10 @@ namespace previewer
 		ParticleList dummySplotchParticleData;
 		std::vector<vec3> OriginalRGBData;
 
+		unsigned numTypes;
+		std::vector<float> brightness;
+		std::vector<bool> colour_is_vec;
+
 	};
 }
 

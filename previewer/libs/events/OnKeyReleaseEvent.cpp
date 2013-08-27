@@ -51,7 +51,7 @@ namespace previewer
 	// Implement the Caller
 	void OnKeyReleaseEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnKeyRelease Event Call");
+		//DebugPrint("OnKeyRelease Event Call");
 
 		if(eventSubs)
 		{

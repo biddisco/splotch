@@ -68,7 +68,7 @@ namespace previewer
 		// Set previewer settings relative to animation path current frame
 		vec3f newLookAt = vec3f(0.0,0.0,0.0);
 
-			for(uint i = 0; i < animationPaths.size() ; i++)
+			for(unsigned i = 0; i < animationPaths.size() ; i++)
 			{
 				if(animationPaths[i].GetComponent() == "camera")
 				{
@@ -188,7 +188,7 @@ namespace previewer
 		std::cout << "File successfully opened" << std::endl;
 
 		// Write list of parameters on first line
-		for(uint i = 0; i < animationPaths.size(); ++i)
+		for(unsigned i = 0; i < animationPaths.size(); ++i)
 		{
 			file << animationPaths[i].GetParameter() << " ";
 		}
@@ -206,7 +206,7 @@ namespace previewer
 		std::vector<DataPointList> dplVec; 
 
 
-		for(uint i = 0; i < animationPaths.size(); i++)
+		for(unsigned i = 0; i < animationPaths.size(); i++)
 		{
 			// Invert sky vector for splotch
 			// Check which path we are on
@@ -215,14 +215,14 @@ namespace previewer
 			// Get it's data point list
 			DataPointList dpl = animationPaths[i].GetInterpolatedDataPointList();
 
-			// Check if the path is path of the sky vector
+			// Check if the path is path of the sky vector's z component
 			if(parameter == "sky_x" || parameter == "sky_y" || parameter == "sky_z")
 			{
 				// If so, invert all the values in the path
-				for (uint j = 0; j < dpl.size(); j++)
+				for (unsigned j = 0; j < dpl.size(); j++)
 				{
-					float invert = (Utils::atof(dpl[i].value) * -1);
-					dpl[i].value = Utils::ToString(invert);
+					float invert = (Utils::atof(dpl[j].value) * -1);
+					dpl[j].value = Utils::ToString(invert);
 				}
 			}
 
@@ -230,14 +230,14 @@ namespace previewer
 			if(parameter == "lookat_x")
 			{
 				// Find corresponding camera path
-				for(uint j = 0; j < animationPaths.size(); j++)
+				for(unsigned j = 0; j < animationPaths.size(); j++)
 				{	
 					// Replace lookat with camera - lookat
 					std::string parameter2 = animationPaths[j].GetParameter();
 					if(parameter2 == "camera_x")
 					{
 						DataPointList cameraDpl = animationPaths[j].GetInterpolatedDataPointList();
-						for(uint k = 0; k < dpl.size(); k++)
+						for(unsigned k = 0; k < dpl.size(); k++)
 							dpl[k].value = Utils::ToString(Utils::atof(cameraDpl[k].value) - Utils::atof(dpl[k].value));
 					}
 				}			
@@ -246,14 +246,14 @@ namespace previewer
 			{
 
 				// Find corresponding camera path
-				for(uint j = 0; j < animationPaths.size(); j++)
+				for(unsigned j = 0; j < animationPaths.size(); j++)
 				{	
 					// Replace lookat with camera - lookat
 					std::string parameter2 = animationPaths[j].GetParameter();
 					if(parameter2 == "camera_y")
 					{
 						DataPointList cameraDpl = animationPaths[j].GetInterpolatedDataPointList();
-						for(uint k = 0; k < dpl.size(); k++)
+						for(unsigned k = 0; k < dpl.size(); k++)
 							dpl[k].value = Utils::ToString(Utils::atof(cameraDpl[k].value) - Utils::atof(dpl[k].value));
 					}				
 				}	
@@ -261,14 +261,14 @@ namespace previewer
 			else if(parameter == "lookat_z")
 			{
 				// Find corresponding camera path
-				for(uint j = 0; j < animationPaths.size(); j++)
+				for(unsigned j = 0; j < animationPaths.size(); j++)
 				{	
 					// Replace lookat with camera - lookat
 					std::string parameter2 = animationPaths[j].GetParameter();
 					if(parameter2 == "camera_z")
 					{
 						DataPointList cameraDpl = animationPaths[j].GetInterpolatedDataPointList();
-						for(uint k = 0; k < dpl.size(); k++)
+						for(unsigned k = 0; k < dpl.size(); k++)
 							dpl[k].value = Utils::ToString(Utils::atof(cameraDpl[k].value) - Utils::atof(dpl[k].value));
 					}				
 				}	
@@ -286,10 +286,10 @@ namespace previewer
 		double fidx = splotchParams->find<double>("fidx",0.0);
 
 		// Write list of values for every element in the vector
-		for(uint i = 0; i < dplVec[0].size(); i++)
+		for(unsigned i = 0; i < dplVec[0].size(); i++)
 		{
 			// For each member write a value for each path in the dplVec
-			for(uint j = 0; j < dplVec.size(); j++)
+			for(unsigned j = 0; j < dplVec.size(); j++)
 			{
 
 				file << "     " << dplVec[j][i].value;

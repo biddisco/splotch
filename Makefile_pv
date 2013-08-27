@@ -36,8 +36,8 @@ OPT += -DPREVIEWER
 #OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
-#SYSTYPE="mac"
+#SYSTYPE="generic"
+SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
@@ -88,7 +88,7 @@ endif
 
 ifeq ($(SYSTYPE),"mac")
 
-SUP_INCL += -I/usr/X11/include -include uint_typedef.h
+SUP_INCL += -I/usr/X11/include
 
 endif
 
@@ -314,26 +314,24 @@ ifeq (PREVIEWER,$(findstring PREVIEWER,$(OPT)))
 
 # Current build specific settings
 # Build specific objects are added to OBJS list, depending on renderer choice
-# The current include for the auto-generated CurrentRenderer header file will be specified
 # The render mode will be added to options to be passed on to the application
 # To add a renderer, copy the if clause below and replace the object file and include file with your own
-# The RENDER_MODE *must* be the exact, case dependant, name of your renderer class.
 # Then add a render_method choice above
+# Also add a preprocessor command in previewer/libs/renderers/CurrentRenderer.h to include your renderers headers if in use
+
 ifeq ($(RENDER_METHOD),FFSVBO)
 
 OBJS_BUILD_SPECIFIC = previewer/libs/renderers/FF_VBO.o 
-CURRENT_RENDERER_INCLUDE = \#include \"FF_VBO.h\"
 
-RENDER_METHOD = -DRENDER_MODE=FF_VBO
+RENDER_METHOD = -DRENDER_FF_VBO=1
 
 endif
 
 ifeq ($(RENDER_METHOD),PPGEOM)
 
 OBJS_BUILD_SPECIFIC = previewer/libs/renderers/PP_GEOM.o previewer/libs/materials/PP_ParticleMaterial.o previewer/libs/core/Shader.o
-CURRENT_RENDERER_INCLUDE = \#include \"PP_GEOM.h\"
 
-RENDER_METHOD = -DRENDER_MODE=PP_GEOM
+RENDER_METHOD = -DRENDER_PP_GEOM=1
 
 endif
 
@@ -341,9 +339,8 @@ ifeq ($(RENDER_METHOD),PPFBO)
 
 OBJS_BUILD_SPECIFIC = previewer/libs/renderers/PP_FBO.o previewer/libs/materials/PP_ParticleMaterial.o previewer/libs/core/Shader.o \
             previewer/libs/core/Fbo.o
-CURRENT_RENDERER_INCLUDE = \#include \"PP_FBO.h\"
 
-RENDER_METHOD = -DRENDER_MODE=PP_FBO
+RENDER_METHOD = -DRENDER_PP_FBO=1
 
 endif
 
@@ -351,9 +348,8 @@ ifeq ($(RENDER_METHOD),PPFBOF)
 
 OBJS_BUILD_SPECIFIC = previewer/libs/renderers/PP_FBOF.o previewer/libs/materials/PP_ParticleMaterial.o previewer/libs/core/Shader.o \
             previewer/libs/core/Fbo.o
-CURRENT_RENDERER_INCLUDE = \#include \"PP_FBOF.h\"
 
-RENDER_METHOD = -DRENDER_MODE=PP_FBOF
+RENDER_METHOD = -DRENDER_PP_FBOF=1
 
 endif
 
@@ -392,7 +388,6 @@ LIBS   = $(LIB_OPT) $(OMP)
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cpp.o:
-	@echo "$(CURRENT_RENDERER_INCLUDE)" > previewer/libs/renderers/CurrentRenderer.h
 	$(CC) -c $(CPPFLAGS) -o "$@" "$<"
 
 .cu.o:

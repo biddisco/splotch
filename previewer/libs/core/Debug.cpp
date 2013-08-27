@@ -36,6 +36,13 @@ void DebugPrint(std::string s, int i)
 	#endif
 }
 
+void DebugPrint(std::string s, unsigned i)
+{
+	#ifdef DEBUG_MODE
+		std::cout << "Debug Message: " << s << "  " << i << std::endl;
+	#endif
+}
+
 void DebugPrint(std::string s, float f)
 {
 	#ifdef DEBUG_MODE

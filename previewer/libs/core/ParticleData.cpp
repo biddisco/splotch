@@ -62,13 +62,11 @@ namespace previewer
 			std::cout << "Colour palette in param file is invalid" << std::endl;
 
 		// Get brightness (currently not being used) and color_is_vec
-		const int numTypes = splotchParams->find<int>("ptypes",1);
-		std::vector<float> brightness;
-		std::vector<bool> colour_is_vec;
+		numTypes = splotchParams->find<int>("ptypes",1);
 
-		for(int i = 0; i < numTypes; i++)
+		for(unsigned i = 0; i < numTypes; i++)
 		{
-			brightness.push_back(splotchParams->find<float>("brightness"+dataToString(i),1.f));
+			brightness.push_back((splotchParams->find<float>("brightness"+dataToString(i),1.f) * splotchParams->find<float>("pv_brightness_mod"+dataToString(i),1.f));
 			colour_is_vec.push_back(splotchParams->find<bool>("color_is_vector"+dataToString(i),0));
 		}
 		
@@ -76,13 +74,10 @@ namespace previewer
 		// Copy data into our own structure
 		OriginalRGBData.resize(particleList.size());
 
-		for(uint i = 0; i < particleList.size(); i++)
+		for(unsigned i = 0; i < particleList.size(); i++)
 		{
 		
-			//Hide unsightly large red particles and enlarge all others for smoother blending
-			if(particleList[i].type == 1)
-				particleList[i].r *= 0.25;
-			else particleList[i].r *= splotchParams->find<double>("preview_radial_mod",1);
+			particleList[i].r *= splotchParams->find<double>("pv_radial_mod",1.f);
 
 			// Store orginal colour, to use in regeneration of particle colour with new colourmap
 			OriginalRGBData[i].x = particleList[i].e.r;
@@ -92,7 +87,9 @@ namespace previewer
 
 			// Generate colour in same way splotch does (Add brightness here):
 			if(!colour_is_vec[particleList[i].type])
-				particleList[i].e = colourMaps[particleList[i].type].getVal_const(particleList[i].e.r) * particleList[i].I;
+				particleList[i].e = colourMaps[particleList[i].type].getVal_const(particleList[i].e.r) * particleList[i].I * brightness[particleList[i].type];
+			else
+				particleList[i].e *= particleList[i].I * brightness[particleList[i].type];
 		}
 
 		// Compute and store bounding box of data
@@ -124,13 +121,20 @@ namespace previewer
 		}
 
 		//Reload colour data with new palette
-		for(uint i = 0; i < particleList.size(); i++)
+		for(unsigned i = 0; i < particleList.size(); i++)
 		{
-			// Use original RGB data as particleList's colour data will have been overwritten
-			particleList[i].e = (colourMaps[particleList[i].type].getVal_const(OriginalRGBData[i].x) * particleList[i].I) ;
+			if(!colour_is_vec[particleList[i].type])
+				// Use original RGB data as particleList's colour data will have been overwritten
+				particleList[i].e = (colourMaps[particleList[i].type].getVal_const(OriginalRGBData[i].x) * particleList[i].I * brightness[particleList[i].type]) ;
 		}
 
-		DebugPrint("Loaded new colours");
+		for(unsigned i = 0; i < numTypes; i++)
+		{
+			if(!colour_is_vec[i])
+				DebugPrint("Loaded new colours for type: ", i);
+			else
+				DebugPrint("Colour is vector, so no new palette to load for type: ", i);
+		}
 
 	}
 

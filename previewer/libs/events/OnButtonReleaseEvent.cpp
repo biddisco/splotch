@@ -53,7 +53,7 @@ namespace previewer
 	// Implement the Caller
 	void OnButtonReleaseEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnButtonPress Event Call");
+		//DebugPrint("OnButtonPress Event Call");
 
 		if(eventSubs)
 		{

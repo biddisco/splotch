@@ -156,7 +156,7 @@ namespace previewer
 		// Convert generic data point list to float data point list
 		DataPointListF DPLF;
 		DPLF.resize(DPList.size());
-		for(uint i = 0; i < DPLF.size(); i++)
+		for(unsigned i = 0; i < DPLF.size(); i++)
 		{
 			DPLF[i].interpType = DPList[i].interpType;
 			DPLF[i].time = DPList[i].time;

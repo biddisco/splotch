@@ -53,7 +53,7 @@ namespace previewer
 		void Compute(const ParticleList& pData)
 		{
 			arr<Normalizer<float> > minmax(3);
-			for(uint i = 0; i < pData.size(); i++)
+			for(unsigned i = 0; i < pData.size(); i++)
 			{
 				minmax[0].collect(pData[i].x);
 				minmax[1].collect(pData[i].y);

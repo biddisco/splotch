@@ -53,7 +53,14 @@ namespace previewer
 		struct timeval t;
 	  	gettimeofday(&t, NULL);
 
+	  	previousFrameTime = currentTime;
 	 	currentTime = (t.tv_sec + (t.tv_usec*0.000001));
+
+	 	//Check for 0
+	 	if(!previousFrameTime)
+	 		previousFrameTime=currentTime;
+
+	 	realtElapsed = currentTime - previousFrameTime;
 	 	tElapsed = currentTime - lastRecordedTime;
 
 	 	frameCtr++;
@@ -82,6 +89,11 @@ namespace previewer
 		return spf;
 	}
 
+	double WindowManager::GetElapsedTime()
+	{
+		return realtElapsed;
+	}
+
 	// Static definitions - screen information
 	int WindowManager::simulationWidth;
 	int WindowManager::simulationHeight;
@@ -96,6 +108,9 @@ namespace previewer
 	double WindowManager::tElapsed = 0;
 	int WindowManager::frameCtr = 0;
 	double WindowManager::spf = 0;
+
+	double WindowManager::previousFrameTime = 0;
+	double WindowManager::realtElapsed = 0;
 
 	void WindowManager::SetSimulationSize(int x, int y)
 	{

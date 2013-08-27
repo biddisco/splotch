@@ -30,6 +30,7 @@
 
 void DebugPrint(std::string);
 void DebugPrint(std::string, int);
+void DebugPrint(std::string, unsigned);
 void DebugPrint(std::string, float);
 void DebugPrint(std::string, std::string);
 

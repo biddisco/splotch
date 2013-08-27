@@ -48,6 +48,7 @@ namespace previewer
 		static void UpdateFPS();
 		static double GetFPS();
 		static double GetSPF();
+		static double GetElapsedTime();
 
 	private:
 		// Screen information
@@ -64,6 +65,8 @@ namespace previewer
 		static double frames;
 		static double spf; //Seconds per frame
 		static int frameCtr;
+		static double previousFrameTime;
+		static double realtElapsed;
 
 	};
 }

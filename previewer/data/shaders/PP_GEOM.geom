@@ -1,6 +1,7 @@
 #version 120 
 #extension GL_EXT_geometry_shader4 : enable
 
+varying in vec3 normal[gl_VerticesIn];
 
 void main(void)
 {
@@ -10,9 +11,7 @@ void main(void)
 
         vec4 pos = gl_PositionIn[i]; 
 
-        // Quad size will be 2*k
-        // Multiply by 1000 to get around implementation defined point sprite size limit
-        float k = gl_PointSizeIn[i] * 1000; 
+        float k = normal[i].x*2; 
 
         // Set colour
         vec4  c = vec4( gl_FrontColorIn[i].x, gl_FrontColorIn[i].y,gl_FrontColorIn[i].z, gl_FrontColorIn[i].w);

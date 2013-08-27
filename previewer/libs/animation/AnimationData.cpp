@@ -29,7 +29,7 @@ namespace previewer
 	{
 		float max = 0;
 
-		for(uint i = 0; i < paths.size(); i++)
+		for(unsigned i = 0; i < paths.size(); i++)
 		{
 			max = (((paths[i].GetDataPointList()).back().time > max) ? (paths[i].GetDataPointList()).back().time : max);
 		}
@@ -44,7 +44,7 @@ namespace previewer
 
 	void AnimationData::InterpolatePaths()
 	{
-		for(uint i = 0; i < paths.size(); i++)
+		for(unsigned i = 0; i < paths.size(); i++)
 		{
 			paths[i].InterpolatePoints();
 		}
@@ -71,7 +71,7 @@ namespace previewer
 		// Check if a path of this type already exists, if so add datapoint
 		bool found = false;
 
-		for(uint i = 0; i < paths.size(); i++)
+		for(unsigned i = 0; i < paths.size(); i++)
 		{
 			if(paths[i].GetComponent() == component && paths[i].GetParameter() == parameter)
 			{
@@ -94,7 +94,7 @@ namespace previewer
 		// Check if a path of this type already exists, if so remove datapoint
 		bool found = false;
 
-		for(uint i = 0; i < paths.size(); i++)
+		for(unsigned i = 0; i < paths.size(); i++)
 		{
 			if(paths[i].GetComponent() == component && paths[i].GetParameter() == parameter)
 			{
@@ -369,13 +369,13 @@ namespace previewer
 			return;
 		}
 
-		for(uint i = 0; i < animationPaths.size(); ++i)
+		for(unsigned i = 0; i < animationPaths.size(); ++i)
 		{
 			file << "# " << i << "    " << animationPaths[i].GetComponent() << "    " << animationPaths[i].GetParameter() << std::endl;
 
 			DataPointList dpl = animationPaths[i].GetDataPointList();
 
-			for(uint j = 0; j < dpl.size(); j++)
+			for(unsigned j = 0; j < dpl.size(); j++)
 			{
 				file << dpl[j].time << "    " << dpl[j].value << "    " << dpl[j].interpType << std::endl;
 			}

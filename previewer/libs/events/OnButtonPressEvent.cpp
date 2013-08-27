@@ -52,8 +52,8 @@ namespace previewer
 	// Implement the Caller
 	void OnButtonPressEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnButtonPress Event Call");
-
+		//DebugPrint("OnButtonPress Event Call");
+ 
 		if(eventSubs)
 		{
 			for(std::list<OnButtonPressEvent*>::iterator it = eventSubs->begin(); it!= eventSubs->end(); ++it)

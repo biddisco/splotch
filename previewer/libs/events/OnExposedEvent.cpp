@@ -53,7 +53,7 @@ namespace previewer
 	// Implement the Caller
 	void OnExposedEvent::CallEvent(Event ev)
 	{
-		DebugPrint("OnExposed Event Call");
+		//DebugPrint("OnExposed Event Call");
 
 		if(eventSubs)
 		{
