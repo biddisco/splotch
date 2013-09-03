@@ -396,6 +396,26 @@ namespace previewer
 		particleSim.StopViewingImage();
 	}
 
+	void Previewer::SetRenderBrightness(int type, float b)
+	{
+		particleSim.SetRenderBrightness(type,b);
+	}
+
+	float Previewer::GetRenderBrightness(int type)
+	{
+		return particleSim.GetRenderBrightness(type);
+	}
+
+	void Previewer::SetSmoothingLength(int type, float sl)
+	{
+		particleSim.SetSmoothingLength(type,sl);
+	}
+
+	float Previewer::GetSmoothingLength(int type)
+	{
+		return particleSim.GetSmoothingLength(type);
+	}
+
 	void Previewer::SetParameter(std::string name, std::string value)
 	{
 		paramfile* param = parameterInfo.GetParamFileReference();

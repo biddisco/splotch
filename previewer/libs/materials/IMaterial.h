@@ -48,6 +48,12 @@ namespace previewer
 		virtual void Bind(const Matrix4&) = 0;
 		virtual void Unbind() = 0;
 
+		virtual GLuint GetShaderHandle() = 0;
+		virtual void SetShaderAttribute(std::string) = 0;
+		virtual GLint GetAttributeLocation(std::string) = 0;
+		virtual void SetShaderUniformf(std::string, int, GLfloat*) = 0;
+		virtual GLint GetUniformLocation(std::string) = 0;
+
 		void SetAlphaTest(bool _alphaTest)
 		{
 			alphaTest = _alphaTest;

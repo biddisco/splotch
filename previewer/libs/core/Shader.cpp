@@ -29,8 +29,9 @@ namespace previewer
 	void Shader::Load(std::string filename, bool withGeometryShader)
 	{
 		program = 0;
-
-		glProgramParameteri = (PFNGLPROGRAMPARAMETERIPROC)glXGetProcAddress((const GLubyte*)"glProgramParameteri");
+		glProgramParameteriEXT = (PFNGLPROGRAMPARAMETERIEXTPROC)glXGetProcAddress((const GLubyte*)"glProgramParameteriEXT");
+		glProgramUniform1fv = (PFNGLPROGRAMUNIFORM1FVEXTPROC)glXGetProcAddress((const GLubyte*)"glProgramUniform1fvEXT");
+		glProgramUniform1f = (PFNGLPROGRAMUNIFORM1FEXTPROC)glXGetProcAddress((const GLubyte*)"glProgramUniform1fEXT");
 
 		// Set paths to find shader files
 		std::string vsPath = "previewer/data/shaders/" + filename + ".vert";
@@ -55,8 +56,8 @@ namespace previewer
 			glAttachShader(program, g_shader);
 
 			// Set input and output parameters
-			glProgramParameteri(program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS);
-			glProgramParameteri(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
+			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS);
+			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 
 
 			// Setting output vertices to maximum possible caused large fps drop on linux AMD drivers (catalyst 12.6-4)
@@ -64,7 +65,7 @@ namespace previewer
 			
 			// GLint maxPossibleOutVerts;
 			// glGetIntegerv(GL_MAX_GEOMETRY_OUTPUT_VERTICES_EXT,&maxPossibleOutVerts);
-        	glProgramParameteri(program,GL_GEOMETRY_VERTICES_OUT_EXT, 4);
+        	glProgramParameteriEXT(program,GL_GEOMETRY_VERTICES_OUT_EXT, 4);
 
 		}	
 
@@ -97,7 +98,14 @@ namespace previewer
 		glUseProgram(program);
 
 		// Set uniforms
-		glUniformMatrix4fv(uniformMVP,   1, GL_FALSE, &mvp[0][0]);
+		glUniformMatrix4fv(uniformMVP, 1, GL_FALSE, &mvp[0][0]);
+
+		for(unsigned i = 0; i < scalarUniformfs.size(); i++)
+			glUniform1fv(scalarUniformfs[i].loc,scalarUniformfs[i].size, scalarUniformfs[i].ptr);
+
+		// Enable attributes
+		for(str_glint_it ii = attributes.begin(); ii != attributes.end(); ++ii)
+			glEnableVertexAttribArray(ii->second);
 	}
 
 	void Shader::Unbind()
@@ -117,6 +125,68 @@ namespace previewer
 
 		// Done with program for now
 		glUseProgram(0);		
+	}
+
+	void Shader::SetAttribute(std::string attrName)
+	{
+		glUseProgram(program);
+
+		GLint loc = glGetAttribLocation(program,attrName.c_str());
+		if(loc == -1)
+		{
+			std::cout << "Requested shader attribute "<<attrName<<" not found in shader (or name is prefixed with gl_  - dont do that...)\n";
+		}
+		else
+		{
+			attributes[attrName] = loc;
+		}
+		glUseProgram(0);
+	}
+
+	GLint Shader::GetAttributeLocation(std::string attrName)
+	{
+		return attributes.find(attrName)->second; 
+	}
+
+	void Shader::SetUniformf(std::string attrName, int size, GLfloat* ptr)
+	{
+		glUseProgram(program);
+
+		GLint loc = glGetUniformLocation(program,attrName.c_str());
+		if(loc == -1)
+		{
+			std::cout << "Requested shader uniform "<<attrName<<" not found in shader (or name is prefixed with gl_  - dont do that...)\n";
+		}
+		else
+		{
+			uniformf uf;
+			uf.name = attrName;
+			uf.size = size;
+			uf.loc = loc;
+			uf.ptr = ptr;
+			scalarUniformfs.push_back(uf);
+		}
+		glUseProgram(0);
+	}
+
+	GLint Shader::GetUniformLocation(std::string attrName)
+	{
+		// Check scalar float uniforms
+		for(unsigned i = 0; i < scalarUniformfs.size(); i++)
+			if(scalarUniformfs[i].name == attrName)
+				return scalarUniformfs[i].loc;
+
+		// Check other types of uniforms here if necessary - none currently used
+
+		// Inform user if not found
+		std::cout << "Uniform '"<<attrName<<"' not found in scalarUniformfs vector for shader.\n";
+		return -1;
+	}
+
+
+	GLuint Shader::GetProgHandle()
+	{
+		return program;
 	}
 
 	GLuint Shader::LoadShader(const std::string &filename, const int shaderType)

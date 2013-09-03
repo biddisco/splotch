@@ -45,32 +45,32 @@ void Fbo::Load(int width, int height)
 	 		
 
 	    //create framebuffer object 
-	    glGenFramebuffers(1, &FBOId);
-	    glBindFramebuffer(GL_FRAMEBUFFER, FBOId);
+	    glGenFramebuffersEXT(1, &FBOId);
+	    glBindFramebufferEXT(GL_FRAMEBUFFER, FBOId);
 
 
 	    //create render buffer object 
-	    glGenRenderbuffers(1, &RBOId);
-		glBindRenderbuffer(GL_RENDERBUFFER, RBOId);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	    glGenRenderbuffersEXT(1, &RBOId);
+		glBindRenderbufferEXT(GL_RENDERBUFFER, RBOId);
+		glRenderbufferStorageEXT(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+		glBindRenderbufferEXT(GL_RENDERBUFFER, 0);
 
 
 	    //attach a texture to FBO color attachment point
-	    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBOTexId, 0);
+	    glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBOTexId, 0);
 
 
 	    //attach a renderbuffer to FBO depth attachment point
-	    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBOId);
+	    glFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBOId);
 
 
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER);
 		if(status == GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "framebuffer creation complete" << std::endl;
 		else std::cout << "framebuffer error! " << status << std::endl;
 
 	    //unbind
-	    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	    glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
 }
 
 void Fbo::Update(int width, int height)
@@ -83,37 +83,37 @@ void Fbo::Update(int width, int height)
 	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_RGBA, GL_FLOAT, 0);
 	    glBindTexture(GL_TEXTURE_2D, 0);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, FBOId);
+		glBindFramebufferEXT(GL_FRAMEBUFFER, FBOId);
 
-		glBindRenderbuffer(GL_RENDERBUFFER, RBOId);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+		glBindRenderbufferEXT(GL_RENDERBUFFER, RBOId);
+		glRenderbufferStorageEXT(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+		glBindRenderbufferEXT(GL_RENDERBUFFER, 0);
 
 	    //attach a texture to FBO color attachment point
-	    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBOTexId, 0);
+	    glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, FBOTexId, 0);
 
 
 	    //attach a renderbuffer to FBO depth attachment point
-	    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBOId);
+	    glFramebufferRenderbufferEXT(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBOId);
 
 
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		GLenum status = glCheckFramebufferStatusEXT(GL_FRAMEBUFFER);
 		if(status == GL_FRAMEBUFFER_COMPLETE)
 			std::cout << "framebuffer update complete" << std::endl;
 		else std::cout << "framebuffer error! " << status << std::endl;
 
 	    //unbind
-	    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	    glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
 }
 
 void Fbo::Bind()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, FBOId);
+	glBindFramebufferEXT(GL_FRAMEBUFFER, FBOId);
 }
 
 void Fbo::Unbind()
 {
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
 }
 
 GLuint Fbo::GetTexID()

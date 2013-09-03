@@ -38,7 +38,7 @@
 #else
 #define MyIDType uint32
 #endif
-
+ 
 struct particle_sim
   {
   COLOUR e;

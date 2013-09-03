@@ -92,6 +92,7 @@ namespace previewer
 		DebugPrint("Renderer has Loaded Particle Data");
 
 		// Setup other renderer stuff here
+
 	}
 
 	void ParticleSimulation::Run()
@@ -357,5 +358,27 @@ namespace previewer
 		SetXRes(splotchParams->find<int>("xres"), false);
 		SetYRes(splotchParams->find<int>("yres"), false);
 	}
+
+	void ParticleSimulation::SetRenderBrightness(int type, float b)
+	{
+		renderer->SetRenderBrightness(type, b);
+	}
+
+	float ParticleSimulation::GetRenderBrightness(int type)
+	{
+		return renderer->GetRenderBrightness(type);
+	}
+
+	void ParticleSimulation::SetSmoothingLength(int type, float sl)
+	{
+		renderer->SetSmoothingLength(type, sl);
+	}
+
+	float ParticleSimulation::GetSmoothingLength(int type)
+	{
+		return renderer->GetSmoothingLength(type);
+	}
+
+
 
 }

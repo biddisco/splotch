@@ -105,6 +105,13 @@ namespace previewer
 		void ViewImage(std::string);
 		void StopViewingImage();
 
+		// Modify previewing brightness
+		void SetRenderBrightness(int, float);
+		float GetRenderBrightness(int);
+
+		void SetSmoothingLength(int, float);
+		float GetSmoothingLength(int);
+
 		void SetParameter(std::string, std::string);
 		// Note this getParameter function is only useful for displaying parameters. 
 		// They are not converted to their original format, they are kept as string

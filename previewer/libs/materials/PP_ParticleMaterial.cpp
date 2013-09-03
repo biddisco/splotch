@@ -125,4 +125,30 @@ namespace previewer
 		shader.Unbind();
 	}
 
+	GLuint PP_ParticleMaterial::GetShaderHandle()
+	{
+		return shader.GetProgHandle();
+	}
+
+	void PP_ParticleMaterial::SetShaderAttribute(std::string s)
+	{
+		shader.SetAttribute(s);
+	}
+	
+	GLint PP_ParticleMaterial::GetAttributeLocation(std::string s)
+	{
+		return shader.GetAttributeLocation(s);
+	}
+	
+	// Templatise uniforms...
+	void PP_ParticleMaterial::SetShaderUniformf(std::string s, int i, GLfloat* fp)
+	{
+		shader.SetUniformf(s, i, fp);
+	}
+
+	GLint PP_ParticleMaterial::GetUniformLocation(std::string s)
+	{
+		return shader.GetUniformLocation(s);
+	}
+
 }

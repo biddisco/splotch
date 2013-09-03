@@ -89,10 +89,17 @@ namespace previewer
 
 		Camera& GetCameraReference();
 
+		// View tga image
 		void ViewImage(std::string);
 		void StopViewingImage();
 
+		// Modify previewing brightness
+		void SetRenderBrightness(int, float);
+		float GetRenderBrightness(int);
 
+		void SetSmoothingLength(int, float);
+		float GetSmoothingLength(int);
+		
 	private:
 
 		static void Update(bool);

@@ -108,8 +108,6 @@ namespace previewer
 				cameraPosition.y = distanceFromBox;
 				cameraPosition.z = (box.maxZ + box.minZ)/2;
 
-				std::cout << cameraPosition.x << " " << cameraPosition.y << " " << cameraPosition.z << std::endl;
-
 				cameraUpVector = vec3f(0, 0, 1);
 				break;
 			}

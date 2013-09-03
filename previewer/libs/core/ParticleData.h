@@ -56,6 +56,10 @@ namespace previewer
 
 		ParticleList GetParticleList() const;
 
+		std::vector<float> GetParameterBrightness() const;
+		float GetRadialMod() const;
+		std::vector<float> GetParameterSmoothingLength() const;
+
 	private:
 		ParticleList particleList;
 		BoundingBox  BBox;
@@ -68,7 +72,8 @@ namespace previewer
 		unsigned numTypes;
 		std::vector<float> brightness;
 		std::vector<bool> colour_is_vec;
-
+		std::vector<float> smoothing_length;
+		float radial_mod;
 	};
 }
 

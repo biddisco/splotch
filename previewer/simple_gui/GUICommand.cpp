@@ -54,6 +54,10 @@ namespace previewer
 			confirmationsList.push_back("VIEWING IMAGE, TYPE STOP VIEWING TO RETURN TO PREVIEW");
 			confirmationsList.push_back("VIEWING STOPPED");
 			confirmationsList.push_back("PARAMETER SET");	
+			confirmationsList.push_back("BRIGHTNESS SET");
+			confirmationsList.push_back("BRIGHTNESS FOR TYPE");
+			confirmationsList.push_back("SMOOTHING SET");
+			confirmationsList.push_back("SMOOTHING FOR TYPE");
 		}
 
 		void GUICommand::Undo()
@@ -309,6 +313,43 @@ namespace previewer
 			{
 				pv.StopViewingImage();
 				currentCommandLine = "Viewing stopped";
+			}
+
+			// Set previewing brightness
+			if(DoesStringBegin(command, "SET BRIGHTNESS"))
+			{
+				std::string type = GetArgFromString(currentCommandLine, 3);
+				pv.SetRenderBrightness(atoi(type.c_str()), (float)atof(GetArgFromString(currentCommandLine, 4).c_str()));
+				currentCommandLine = "Brightness set for type "+type;
+			}
+
+			// Set previewing brightness
+			if(DoesStringBegin(command, "GET BRIGHTNESS"))
+			{
+				int b = atoi(GetArgFromString(currentCommandLine, 3).c_str());
+				std::stringstream sstream;
+				sstream << pv.GetRenderBrightness(b);
+				std::string str;
+				sstream >> str;
+				currentCommandLine = "Brightness for type "+GetArgFromString(currentCommandLine, 3)+": "+str;
+			}
+
+			if(DoesStringBegin(command, "SET SMOOTHING"))
+			{
+				std::string type = GetArgFromString(currentCommandLine, 3);
+				pv.SetSmoothingLength(atoi(type.c_str()), (float)atof(GetArgFromString(currentCommandLine, 4).c_str()));
+				currentCommandLine = "Smoothing set for type "+type;
+			}
+
+			// Set previewing brightness
+			if(DoesStringBegin(command, "GET SMOOTHING"))
+			{
+				int b = atoi(GetArgFromString(currentCommandLine, 3).c_str());
+				std::stringstream sstream;
+				sstream << pv.GetSmoothingLength(b);
+				std::string str;
+				sstream >> str;
+				currentCommandLine = "Smoothing for type "+GetArgFromString(currentCommandLine, 3)+": "+str;
 			}
 
 			// Set other parameters not already settable

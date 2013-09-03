@@ -38,6 +38,7 @@
 
 #include "GL/gl.h"
 
+
 namespace previewer
 {
 	// Provides the interface for access to renderers. Note all renderers
@@ -57,11 +58,6 @@ namespace previewer
 
 		virtual void OnKeyPress(Event) = 0;
 		virtual void OnMotion(Event) = 0;
-
-		// void SetAspectRatio(float newAR)
-		// {
-		// 	//aspectRatio = newAR;
-		// }
 
 		void Clear(float r, float g, float b, float a)
 		{	
@@ -119,11 +115,55 @@ namespace previewer
 			return imageHeight;
 		}
 
+		void SetRenderBrightness(unsigned type, float b)
+		{
+			// Check if brightness container has element for this type already
+			if(type > (brightness.size()-1))
+				brightness.resize(type+1, 1);
+
+			// Set the brightness
+			brightness[type] = b;
+		}
+
+		float GetRenderBrightness(int type)
+		{
+			return brightness[type];
+		}
+
+		void SetSmoothingLength(unsigned type, float sl)
+		{
+			// Check if brightness container has element for this type already
+			if(type > (smoothingLength.size()-1))
+				smoothingLength.resize(type+1, 1);
+
+			// Set the brightness
+			smoothingLength[type] = sl;
+		}
+
+		float GetSmoothingLength(int type)
+		{
+			return smoothingLength[type];
+		}
+
+		void SetRadialMod(float rm)
+		{
+			radial_mod = rm;
+		}
+
+		float GetRadialMod()
+		{
+			return radial_mod;
+		}
+
 	protected:
 		Camera camera;
 		ParticleList particleList;
 		IMaterial* material;
 		BoundingBox dataBBox;
+		std::vector<float> brightness;
+		std::vector<float> smoothingLength;
+		float radial_mod;
+		
 
 	private:
 		IMaterial* imageViewingMaterial;

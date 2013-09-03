@@ -30,21 +30,7 @@ namespace previewer
 		particleList = pData.GetParticleList();
 		dataBBox = pData.GetBoundingBox();
 
-		float maxI = 0;
-		float minI = 100;
-		float maxR = 0; 
-		float minR = 100;
-
-		// Check max/mins
-		for(unsigned int i = 0; i < particleList.size(); i++)
-		{
-			maxI = ((particleList[i].I > maxI) ? particleList[i].I : maxI);
-			minI = ((particleList[i].I < minI) ? particleList[i].I : minI);
-			maxR = ((particleList[i].r > maxR) ? particleList[i].r : maxR);
-			minR = ((particleList[i].r < minR) ? particleList[i].r : minR);
-		}
-		std::cout << "Min I: " << minI << " Max I: " << maxI << std::endl;
-		std::cout << "Min R: " << minR << " Max R: " << maxR << std::endl;
+		paramfile* splotchParams = Previewer::parameterInfo.GetParamFileReference();
 
 		// Create the VBO for particle drawing
 		genVBO();
@@ -55,7 +41,7 @@ namespace previewer
 		material = new PP_ParticleMaterial();
 
 		// Load shader program, with geometry shader
-		material->Load("PP_GEOM", true);
+		material->Load("PP_FBO", true);
 
 		// Set up rest of material
 		material->SetBlend(true);
@@ -63,11 +49,36 @@ namespace previewer
 		material->SetBlendDst(GL_ONE);
 		material->SetTexture(true);
 		material->LoadTexture("previewer/data/textures/particle.tga", GL_TEXTURE_2D);
-		// Load and position camera
+
+		// Set up brightness + smoothing length uniforms
+		brightness = pData.GetParameterBrightness();
+		// Ensure unused elements up to tenth are 1 (static size 10 array in shader)
+		if(brightness.size()<10)
+			brightness.resize(10,1);
+
+		material->SetShaderUniformf("inBrightness", 10, (float*)&brightness[0]);
+
+		radial_mod = pData.GetRadialMod();
+		material->SetShaderUniformf("inRadialMod", 1, (float*)&radial_mod);
+
+		smoothingLength = pData.GetParameterSmoothingLength();
+		if(smoothingLength.size()<10)
+			smoothingLength.resize(10,0);
+
+		material->SetShaderUniformf("inSmoothingLength",10,(float*)&smoothingLength[0]);
+
+		//brightmod = splotchParams->find<int>("ptypes",1);
+
+		// Set shader attribute arrays
+		material->SetShaderAttribute("inPosition");
+		material->SetShaderAttribute("inColor");
+		material->SetShaderAttribute("inRadius");
+		material->SetShaderAttribute("inType");
+
+		// Load and position camera_xa
 		camera.SetPerspectiveProjection(ParticleSimulation::GetFOV(), ParticleSimulation::GetAspectRatio(), 1, 200000);
 
 		// Check if recalculation is required
-		paramfile* splotchParams = Previewer::parameterInfo.GetParamFileReference();
 		bool recalc = splotchParams->find<bool>("recalc_preview_cam",true);
 		if(recalc)
 			camera.Create(dataBBox);
@@ -80,7 +91,6 @@ namespace previewer
 			camera.Create(campos,lookat,(sky*=-1));
 		}
 
-		DebugPrint("About to set main status");
 		camera.SetMainCameraStatus(true);
 
 		// Set up passthrough FBO
@@ -95,11 +105,9 @@ namespace previewer
 		GLuint fboPTTex = Fbo_Passthrough.GetTexID();
 
 		fboPTMaterial = new PP_ParticleMaterial();
-		fboPTMaterial->Load("PP_FBO", false);	
+		fboPTMaterial->Load("FBO_Passthrough", false);	
 		fboPTMaterial->SetTexture(true);
 		fboPTMaterial->LoadTexture(fboPTTex, GL_TEXTURE_2D);
-
-
 
 		// Set up ToneMapping FBO
 		DebugPrint("Before ToneMapping FBO Setup");
@@ -113,28 +121,29 @@ namespace previewer
 		 GLuint fboTMTex = Fbo_ToneMap.GetTexID();
 
 		 fboTMMaterial = new PP_ParticleMaterial();
-		 fboTMMaterial->Load("ToneMap", false);
+		 fboTMMaterial->Load("FBO_ToneMap", false);
 		 fboTMMaterial->SetTexture(true);
 		 fboTMMaterial->LoadTexture(fboTMTex, GL_TEXTURE_2D);
 
 		// Set identity matrix for drawin rtt quad to screen
 		ident.identity();
 
-		glEnable(GL_PROGRAM_POINT_SIZE);
+		glEnable(GL_PROGRAM_POINT_SIZE_EXT);
 
-		GLfloat* glf = new GLfloat;
-		glGetFloatv(GL_SMOOTH_POINT_SIZE_RANGE, glf);
-		std::cout << "point size range: " << glf[0] << " " << glf[1] << std::endl;
+		// GLfloat* glf = new GLfloat;
+		// glGetFloatv(GL_SMOOTH_POINT_SIZE_RANGE, glf);
+		// std::cout << "point size range: " << glf[0] << " " << glf[1] << std::endl;
 
-		GLint value;
-		glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &value);
-		std::cout << "Max recommended points for draw elements: " << value << std::endl;
+		// GLint value;
+		// glGetIntegerv(GL_MAX_ELEMENTS_VERTICES, &value);
+		// std::cout << "Max recommended points for draw elements: " << value << std::endl;
 
 		//std::cout << "point size granularity: " << glGetFloatv(GL_SMOOTH_POINT_SIZE_GRANULARITY) << std::endl;
 	}
 
 	void PP_FBO::Draw()
 	{
+
 		Clear(0.2,0.2,0.2,1.0);
 		// Draw scene into passthrough FBO
 		Fbo_Passthrough.Bind();
@@ -145,7 +154,6 @@ namespace previewer
 		DrawGeom();
 
 		Fbo_Passthrough.Unbind();
-
 
 		// Draw passthrough FBO into ToneMapping FBO
 		Fbo_ToneMap.Bind();
@@ -311,24 +319,14 @@ namespace previewer
 		// Bind VBO
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-		// Set vertex/colour pointers (using offsets for interleaved data)
-  		glVertexPointer( 3, GL_FLOAT, byteInterval, (void*)sizeof(particleList[0].e) );
- 		glColorPointer( 3, GL_FLOAT, byteInterval, 0);
- 		// Set normal pointer (used to pass extra particle data for use in shader)
- 		glNormalPointer(GL_FLOAT, byteInterval, (void*)(sizeof(particleList[0].e) +  sizeof(particleList[0].x)*3));
-
- 		// Enable client states
-	    glEnableClientState(GL_VERTEX_ARRAY);
-	    glEnableClientState(GL_COLOR_ARRAY);
-	    glEnableClientState(GL_NORMAL_ARRAY);
+		// Set pointers to vertex data, colour data, r+I data and type data
+    	glVertexAttribPointer(material->GetAttributeLocation("inPosition"), 3, GL_FLOAT, GL_TRUE, byteInterval, (void*)sizeof(particleList[0].e));
+    	glVertexAttribPointer(material->GetAttributeLocation("inColor"), 3, GL_FLOAT, GL_TRUE, byteInterval, (void*)0);
+    	glVertexAttribPointer(material->GetAttributeLocation("inRadius"), 1, GL_FLOAT, GL_TRUE, byteInterval, (void*)(sizeof(particleList[0].x)*6));
+    	glVertexAttribPointer(material->GetAttributeLocation("inType"), 1, GL_UNSIGNED_SHORT, GL_FALSE, byteInterval, (void*)(sizeof(particleList[0].x)*8));
 
 	   	// Draw
 	    glDrawArrays(GL_POINTS, 0, particleList.size());
-
-	    //Disable client states
-	    glDisableClientState(GL_VERTEX_ARRAY);
-	    glDisableClientState(GL_COLOR_ARRAY);
-	    glDisableClientState(GL_NORMAL_ARRAY);
 
 		// Unbind vbo
 		glBindBuffer(GL_ARRAY_BUFFER, 0);		

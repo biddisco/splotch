@@ -278,6 +278,8 @@ endif
 # PPFBO is recommended, but if your implementation does not support framebuffer objects try PPGEOM, if that is also not supported
 # use FFSVBO, this uses the fixed function pipeline and should be available on most if not all hardware setups that support opengl.
 #
+# PPFBOF uses some post processing effects but is still in experimental phase 
+#
 # Uncomment below to use Fixed Function software rendering with Vertex Buffer Objects (faster method if no hardware acceleration)
 #---------------------------------- 
 # RENDER_METHOD = FFSVBO
@@ -289,11 +291,13 @@ endif
 #---------------------------------- 
 #
 # Uncomment below to use Programmable Pipeline rendering using Vertex Buffer Objects and shaders + geometry shader + FBOs
+# MAC with discrete graphics card should be able to use this method
 #---------------------------------- 
-RENDER_METHOD = PPFBO
+ RENDER_METHOD = PPFBO
 #----------------------------------
 #
-# Uncomment below to use Programmable Pipeline rendering using Vertex Buffer Objects and shaders + geometry shader + FBOs + post processing filtering effects
+# Uncomment below to use Programmable Pipeline rendering using Vertex Buffer Objects and shaders + geometry shader + FBOs + post processing filtering effects 
+# This will not run on MAC due to needing GLSL > #120
 #---------------------------------- 
 #RENDER_METHOD = PPFBOF
 #----------------------------------

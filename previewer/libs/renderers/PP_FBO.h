@@ -56,7 +56,7 @@ namespace previewer
 	public:
 
 	private:
-		// Vertex Buffer Object
+		//Vertex Buffer Object
 		GLuint VBO;
 
 		// Keep track of mouse motion
@@ -74,6 +74,7 @@ namespace previewer
 		IMaterial* fboPTMaterial;
 		IMaterial* fboTMMaterial;
 		Matrix4 ident;
+		
 	};
 
 }

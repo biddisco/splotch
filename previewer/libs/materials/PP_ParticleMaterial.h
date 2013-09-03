@@ -39,6 +39,11 @@ namespace previewer
 		void Load(std::string, bool);
 		void Unload();
 
+		GLuint GetShaderHandle();
+		void SetShaderAttribute(std::string);
+		GLint GetAttributeLocation(std::string);
+		void SetShaderUniformf(std::string, int, GLfloat*);
+		GLint GetUniformLocation(std::string);
 	private:
 
 	public:

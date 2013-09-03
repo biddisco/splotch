@@ -1,7 +1,8 @@
 #version 120 
 #extension GL_EXT_geometry_shader4 : enable
 
-varying in vec3 normal[gl_VerticesIn];
+varying in float radius[gl_VerticesIn];
+uniform float brightness[10];
 
 void main(void)
 {
@@ -11,7 +12,7 @@ void main(void)
 
         vec4 pos = gl_PositionIn[i]; 
 
-        float k = normal[i].x*2; 
+        float k = radius[i];
 
         // Set colour
         vec4  c = vec4( gl_FrontColorIn[i].x, gl_FrontColorIn[i].y,gl_FrontColorIn[i].z, gl_FrontColorIn[i].w);

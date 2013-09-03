@@ -1,17 +1,41 @@
 #version 120
 
-uniform mat4 MVP; //ModelViewProjectionMatrix
-varying vec3 normal; 
+uniform mat4 MVP;
+uniform float inBrightness[10];
+uniform float inSmoothingLength[10];
+uniform float inRadialMod;
+
+attribute vec3 inPosition;
+attribute vec3 inColor;
+attribute float inRadius;
+attribute float inTensity;
+attribute float inType;
+
+varying float radius;
 
 void main()
 {	
+	
+	// Multiply color by type-dependant brightness
+	vec3 col = inColor;
+	float thisbrightness = inBrightness[int(inType)];
+	float thissmooth = inSmoothingLength[int(inType)];
 
-    //pass through colour and position after multiplying pos by matrices
-    gl_FrontColor = vec4(gl_Color.x, gl_Color.y, gl_Color.z, 1.0);
+	// Compress further due to lack of hdr 
+	col = inColor * thisbrightness * 0.075;
 
-	normal = gl_Normal;
+	// Pass through radius to geom shader
+	if(thissmooth==0)
+	{
+    	radius = inRadius * inRadialMod;
+    }
+    else
+    {
+    	radius = thissmooth * inRadialMod;
+    }
 
-    gl_Position = MVP * gl_Vertex;
+    gl_FrontColor = vec4(col, 1.00);
+    gl_Position = MVP * vec4(inPosition,1.0);
 }
 
 
