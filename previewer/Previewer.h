@@ -44,6 +44,9 @@
 #include "cxxsupport/paramfile.h"
 
 #include <string>
+#include <stdlib.h>
+#include <errno.h>
+#include <libproc.h>
 
 namespace previewer
 {

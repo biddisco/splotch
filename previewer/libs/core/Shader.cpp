@@ -34,8 +34,8 @@ namespace previewer
 		glProgramUniform1f = (PFNGLPROGRAMUNIFORM1FEXTPROC)glXGetProcAddress((const GLubyte*)"glProgramUniform1fEXT");
 
 		// Set paths to find shader files
-		std::string vsPath = "previewer/data/shaders/" + filename + ".vert";
-		std::string fsPath = "previewer/data/shaders/" + filename + ".frag";
+		std::string vsPath = filename + ".vert";
+		std::string fsPath = filename + ".frag";
 
 		// Load vertex/fragment shaders
 		v_shader = LoadShader(vsPath, GL_VERTEX_SHADER);
@@ -50,7 +50,7 @@ namespace previewer
 		// Check if we are using a geometry shader, if so, load and attach that too
 		if(withGeometryShader)
 		{
-			std::string gsPath = "previewer/data/shaders/" + filename + ".geom";
+			std::string gsPath = filename + ".geom";
 
 			g_shader = LoadShader(gsPath, GL_GEOMETRY_SHADER_ARB);
 			glAttachShader(program, g_shader);

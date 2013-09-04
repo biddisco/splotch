@@ -29,6 +29,7 @@
 #include <stdlib.h>
 
 #include "previewer/libs/animation/AnimationPath.h"
+#include "previewer/libs/core/ParticleSimulation.h"
 #include "previewer/libs/core/Utils.h"
 
 //Debug include

@@ -30,7 +30,7 @@ namespace previewer
 		particleList = pData.GetParticleList();
 		dataBBox = pData.GetBoundingBox();
 
-		DebugPrint("Generating VBO... bad_alloc likely means not enough memory, try reducing particle numbers...");
+		DebugPrint("Generating VBO...");
 		// Create the display list for particle drawing
 		genVBO();
 

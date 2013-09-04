@@ -44,7 +44,7 @@ namespace previewer
 	{
 	public:
 		// Load function
-		void Load();
+		void Load(std::string);
 		void Run();
 		void Unload();
 
@@ -70,6 +70,8 @@ namespace previewer
 		// Set animation fps
 		static void SetFPS(float);
 		static float GetFPS();
+
+		static std::string GetExePath();
 
 		// Set current time for animation point
 		void SetTime(int);
@@ -113,7 +115,7 @@ namespace previewer
 		int totalFrames;
 		static int timeValue;
 		static float fps;
-
+		static std::string exepath;
 		bool isActive;
 		bool demoPlaying;
 		bool fileReady;

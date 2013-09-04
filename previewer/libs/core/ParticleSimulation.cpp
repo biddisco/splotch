@@ -48,11 +48,15 @@ namespace previewer
 	bool ParticleSimulation::firstRun = true;
 	IRenderer* ParticleSimulation::renderer;
 	ParticleData ParticleSimulation::particles;
+	std::string ParticleSimulation::exepath = "";
 
 
-	void ParticleSimulation::Load()
+	void ParticleSimulation::Load(std::string _exepath)
 	{
 		DebugPrint("Particle Simulation being loaded with parameters");
+
+		// Store path of executable
+		exepath = _exepath;
 
 		// Initial setup
 		viewingImage = false;
@@ -382,6 +386,11 @@ namespace previewer
 	void ParticleSimulation::ResetCamera()
 	{
 		renderer->ResetCamera();
+	}
+
+	std::string ParticleSimulation::GetExePath()
+	{
+		return exepath;
 	}
 
 

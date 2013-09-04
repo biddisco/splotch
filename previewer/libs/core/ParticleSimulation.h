@@ -51,7 +51,7 @@ namespace previewer
 	class ParticleSimulation
 	{
 	public:
-		void Load(); // With data
+		void Load(std::string); // With data
 
 		void Run();
 
@@ -101,6 +101,7 @@ namespace previewer
 		float GetSmoothingLength(int);
 
 		void ResetCamera();
+		static std::string GetExePath();
 		
 	private:
 
@@ -135,6 +136,8 @@ namespace previewer
 		// Interaction with simulation render
 		static int moveSpeed;
 		static int rotationSpeed;
+
+		static std::string exepath;
 
 		// For image viewing mode
 		bool viewingImage;

@@ -27,6 +27,33 @@ namespace previewer
 
 	void Previewer::Load(std::string paramFilePath)
 	{
+		// Get path of executable
+		int ret;
+		pid_t pid; 
+		char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+		std::string exepath;
+		pid = getpid();
+		ret = proc_pidpath (pid, pathbuf, sizeof(pathbuf));
+		if ( ret <= 0 ) 
+		{
+			std::cout << "Could not get path of exe.\n";
+			std::cout << "PID: " << pid << std::endl;
+			exit(0);
+		} 
+		else 
+		{
+			// Remove executable name from path
+			int len = 0;
+			exepath = std::string(pathbuf);
+			for(unsigned i = exepath.length()-1; i > 0; i--)
+				if(exepath[i] == '/')
+				{
+					len = i;
+					break;
+				}
+			exepath = exepath.substr(0,len+1);
+		}
+
 		DebugPrint("Previewer Loaded with Parameter File");
 		DebugPrint("Parameter File:", paramFilePath);
 
@@ -40,10 +67,10 @@ namespace previewer
 		parameterInfo.Load(paramFilePath);
 
 		// Tell the particle simulation to load data
-		particleSim.Load();
+		particleSim.Load(exepath);
 
 		// Load the animation simulation system
-		animationSim.Load();
+		animationSim.Load(exepath);
 
 		return;
 	}

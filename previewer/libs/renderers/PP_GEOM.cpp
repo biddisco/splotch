@@ -41,14 +41,14 @@ namespace previewer
 		material = new PP_ParticleMaterial();
 
 		// Load shader program, with geometry shader
-		material->Load("PP_GEOM", true);
+		material->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/PP_GEOM", true);
 
 		// Set up rest of material
 		material->SetBlend(true);
 		material->SetBlendSrc(GL_SRC_ALPHA);
 		material->SetBlendDst(GL_ONE);
 		material->SetTexture(true);
-		material->LoadTexture("previewer/data/textures/particle.tga", GL_TEXTURE_2D);
+		material->LoadTexture(ParticleSimulation::GetExePath()+"previewer/data/textures/particle.tga", GL_TEXTURE_2D);
 
 
 		// Set up brightness + smoothing length uniforms

@@ -108,6 +108,136 @@ namespace previewer
 			std::cout << "No path found matching component: " << component << " and parameter: " << parameter << std::endl;	
 	}
 
+
+	bool AnimationData::LoadAnimDataFile(std::string filename)
+	{
+		// // Open file, check for errors
+		std::string filepath = ParticleSimulation::GetExePath()+"previewer/data/previewerAnimationPaths/"+filename;
+		std::ifstream file( filepath.c_str(), std::ifstream::in );
+
+		if(file.fail())
+		 {
+		  std::cout << "Animation file "+filename+" not found." << std::endl;
+		  return false;
+		}
+
+		//Clear paths
+		paths.erase(paths.begin(), paths.end());
+
+		while(!file.eof())
+		{
+			// Temp storage
+			AnimationPath newPath("","");
+			// Get line
+			std::string line;
+			bool pathFound = false;
+			while(getline(file,line))
+			{
+				// Check for '#' to indicate new path
+				if(line[0] == '#')
+				{
+					// If this is not the first path, store current path and clear to start new path
+					if(pathFound == true)
+					{
+						paths.push_back(newPath);
+						for(int i = 0; i < newPath.Size()+2; i++)
+							newPath.RemovePoint();
+					}
+					// Then get path info
+					pathFound = true;
+					int pathNum;
+					char scratch;
+					char component[20];
+					char parameter[20];
+
+					int ret = sscanf(line.c_str(), "%c %i %s %s", &scratch, &pathNum, component, parameter);
+					if(ret != 4)
+					{
+						std::cout << "Animation file path info invalid..." << std::endl;
+						return false;
+					}
+					std::string cmp(component);
+					std::string prm(parameter);
+					newPath.SetComponent(cmp);
+					newPath.SetParameter(prm);
+					std::cout << "Path number: " << pathNum << "component: " << newPath.GetComponent() << " parameter: " << newPath.GetParameter() << std::endl;
+				}
+				// If no initial valid path was found there was a problem with file...
+				else if(pathFound == false)
+				{
+					if(paths.size() < 1)
+					{
+						// If no initial path has been found the file is incorrect
+						std::cout << " Animation file is incorrect, please refer to previewer document for more info, or recreate path" << std::endl;
+						return false;
+					}
+					else
+						break;
+				}
+				else
+				{
+					// Read xyz data and add to current path
+					float t;
+					char v[10];
+					int iType;
+
+					int ret = sscanf(line.c_str(), "%f %s %i", &t, v, &iType);
+					if(ret != 3)
+					{
+						std::cout << "Animation file path data invalid..." << std::endl;
+						return false;
+					}
+					else
+					{	
+						std::string val(v);
+						DataPoint dp;
+						dp.time = t;
+						dp.value = v;
+						dp.interpType = iType;
+
+						newPath.AddPoint(dp);
+
+						std::cout << "Added point" << std::endl;				
+					}					
+				}
+			}
+		}
+		return true;
+	}
+
+	void AnimationData::WriteAnimDataFile(std::string filename, AnimationPathList& animationPaths)
+	{
+		std::cout << "Writing path file ..." << std::endl;
+
+		std::string filepath = ParticleSimulation::GetExePath()+"previewer/data/previewerAnimationPaths/"+filename;
+		std::ofstream file;
+		file.open( filepath.c_str(), std::ios::out | std::ios::trunc);	
+
+		if(file.fail()) 
+		{
+			std::cout << "Could not open path file for writing '"+filepath+"'." << std::endl;
+			return;
+		}
+
+		for(unsigned i = 0; i < animationPaths.size(); ++i)
+		{
+			file << "# " << i << "    " << animationPaths[i].GetComponent() << "    " << animationPaths[i].GetParameter() << std::endl;
+
+			DataPointList dpl = animationPaths[i].GetDataPointList();
+
+			for(unsigned j = 0; j < dpl.size(); j++)
+			{
+				file << dpl[j].time << "    " << dpl[j].value << "    " << dpl[j].interpType << std::endl;
+			}
+
+		}
+		std::cout << "Animation file '"+filepath+"' written." << std::endl;		
+	}
+
+}
+
+
+
 	// bool AnimationData::LoadAnimDataFile(std::string filename)
 	// {
 	// 	// // Open file, check for errors
@@ -258,130 +388,3 @@ namespace previewer
 	// 	}
 	// 	std::cout << "Animation file '"+filepath+"' written." << std::endl;
 	// }
-
-	bool AnimationData::LoadAnimDataFile(std::string filename)
-	{
-		// // Open file, check for errors
-		std::string filepath = "previewer/data/previewerAnimationPaths/"+filename;
-		std::ifstream file( filepath.c_str(), std::ifstream::in );
-
-		if(file.fail())
-		 {
-		  std::cout << "Animation file "+filename+" not found." << std::endl;
-		  return false;
-		}
-
-		//Clear paths
-		paths.erase(paths.begin(), paths.end());
-
-		while(!file.eof())
-		{
-			// Temp storage
-			AnimationPath newPath("","");
-			// Get line
-			std::string line;
-			bool pathFound = false;
-			while(getline(file,line))
-			{
-				// Check for '#' to indicate new path
-				if(line[0] == '#')
-				{
-					// If this is not the first path, store current path and clear to start new path
-					if(pathFound == true)
-					{
-						paths.push_back(newPath);
-						for(int i = 0; i < newPath.Size()+2; i++)
-							newPath.RemovePoint();
-					}
-					// Then get path info
-					pathFound = true;
-					int pathNum;
-					char scratch;
-					char component[20];
-					char parameter[20];
-
-					int ret = sscanf(line.c_str(), "%c %i %s %s", &scratch, &pathNum, component, parameter);
-					if(ret != 4)
-					{
-						std::cout << "Animation file path info invalid..." << std::endl;
-						return false;
-					}
-					std::string cmp(component);
-					std::string prm(parameter);
-					newPath.SetComponent(cmp);
-					newPath.SetParameter(prm);
-					std::cout << "Path number: " << pathNum << "component: " << newPath.GetComponent() << " parameter: " << newPath.GetParameter() << std::endl;
-				}
-				// If no initial valid path was found there was a problem with file...
-				else if(pathFound == false)
-				{
-					if(paths.size() < 1)
-					{
-						// If no initial path has been found the file is incorrect
-						std::cout << " Animation file is incorrect, please refer to previewer document for more info, or recreate path" << std::endl;
-						return false;
-					}
-					else
-						break;
-				}
-				else
-				{
-					// Read xyz data and add to current path
-					float t;
-					char v[10];
-					int iType;
-
-					int ret = sscanf(line.c_str(), "%f %s %i", &t, v, &iType);
-					if(ret != 3)
-					{
-						std::cout << "Animation file path data invalid..." << std::endl;
-						return false;
-					}
-					else
-					{	
-						std::string val(v);
-						DataPoint dp;
-						dp.time = t;
-						dp.value = v;
-						dp.interpType = iType;
-
-						newPath.AddPoint(dp);
-
-						std::cout << "Added point" << std::endl;				
-					}					
-				}
-			}
-		}
-		return true;
-	}
-
-	void AnimationData::WriteAnimDataFile(std::string filename, AnimationPathList& animationPaths)
-	{
-		std::cout << "Writing path file ..." << std::endl;
-
-		std::string filepath = "previewer/data/previewerAnimationPaths/"+filename;
-		std::ofstream file;
-		file.open( filepath.c_str(), std::ios::out | std::ios::trunc);	
-
-		if(file.fail()) 
-		{
-			std::cout << "Could not open path file for writing '"+filepath+"'." << std::endl;
-			return;
-		}
-
-		for(unsigned i = 0; i < animationPaths.size(); ++i)
-		{
-			file << "# " << i << "    " << animationPaths[i].GetComponent() << "    " << animationPaths[i].GetParameter() << std::endl;
-
-			DataPointList dpl = animationPaths[i].GetDataPointList();
-
-			for(unsigned j = 0; j < dpl.size(); j++)
-			{
-				file << dpl[j].time << "    " << dpl[j].value << "    " << dpl[j].interpType << std::endl;
-			}
-
-		}
-		std::cout << "Animation file '"+filepath+"' written." << std::endl;		
-	}
-
-}

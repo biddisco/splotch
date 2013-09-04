@@ -26,11 +26,13 @@ namespace previewer
 	// Static decls
 	float AnimationSimulation::fps = 30;
 	int AnimationSimulation::timeValue = 0;
+	std::string AnimationSimulation::exepath = "";
 
-	void AnimationSimulation::Load()
+	void AnimationSimulation::Load(std::string _exepath)
 	{
 		DebugPrint("Animation Simulation has been loaded");
 
+		exepath = _exepath;
 		// Reset frame and demo status
 		currentFrame = 0;
 		isActive = false;
@@ -174,7 +176,7 @@ namespace previewer
 		std::cout << "Writing splotch animation file ..." << std::endl;
 
 		// Create requested file
-		std::string filepath = "previewer/data/splotchAnimationPaths/"+filename+".txt";
+		std::string filepath = exepath+"previewer/data/splotchAnimationPaths/"+filename+".txt";
 		std::ofstream file;
 
 		// Open file for writing

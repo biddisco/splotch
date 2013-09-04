@@ -41,14 +41,14 @@ namespace previewer
 		material = new PP_ParticleMaterial();
 
 		// Load shader program, with geometry shader
-		material->Load("PP_FBO", true);
+		material->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/PP_FBO", true);
 
 		// Set up rest of material
 		material->SetBlend(true);
 		material->SetBlendSrc(GL_SRC_ALPHA);
 		material->SetBlendDst(GL_ONE);
 		material->SetTexture(true);
-		material->LoadTexture("previewer/data/textures/particle.tga", GL_TEXTURE_2D);
+		material->LoadTexture(ParticleSimulation::GetExePath()+"previewer/data/textures/particle.tga", GL_TEXTURE_2D);
 
 		// Set up brightness + smoothing length uniforms
 		brightness = pData.GetParameterBrightness();
@@ -105,7 +105,7 @@ namespace previewer
 		GLuint fboPTTex = Fbo_Passthrough.GetTexID();
 
 		fboPTMaterial = new PP_ParticleMaterial();
-		fboPTMaterial->Load("FBO_Passthrough", false);	
+		fboPTMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FBO_Passthrough", false);	
 		fboPTMaterial->SetTexture(true);
 		fboPTMaterial->LoadTexture(fboPTTex, GL_TEXTURE_2D);
 
@@ -121,7 +121,7 @@ namespace previewer
 		 GLuint fboTMTex = Fbo_ToneMap.GetTexID();
 
 		 fboTMMaterial = new PP_ParticleMaterial();
-		 fboTMMaterial->Load("FBO_ToneMap", false);
+		 fboTMMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FBO_ToneMap", false);
 		 fboTMMaterial->SetTexture(true);
 		 fboTMMaterial->LoadTexture(fboTMTex, GL_TEXTURE_2D);
 

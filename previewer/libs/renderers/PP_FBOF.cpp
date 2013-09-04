@@ -39,14 +39,14 @@ namespace previewer
 		material = new PP_ParticleMaterial();
 
 		// Load shader program, with geometry shader
-		material->Load("PP_GEOM", true);
+		material->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/PP_GEOM", true);
 
 		// Set up rest of material
 		material->SetBlend(true);
 		material->SetBlendSrc(GL_SRC_ALPHA);
 		material->SetBlendDst(GL_ONE);
 		material->SetTexture(true);
-		material->LoadTexture("previewer/data/textures/particle.tga", GL_TEXTURE_2D);
+		material->LoadTexture(ParticleSimulation::GetExePath()+"previewer/data/textures/particle.tga", GL_TEXTURE_2D);
 
 		// Set up brightness + smoothing length uniforms
 		brightness = pData.GetParameterBrightness();
@@ -105,7 +105,7 @@ namespace previewer
 		GLuint fboPTTex = Fbo_Passthrough.GetTexID();
 
 		fboPTMaterial = new PP_ParticleMaterial();
-		fboPTMaterial->Load("PP_FBO", false);	
+		fboPTMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FBO_Passthrough", false);	
 		fboPTMaterial->SetTexture(true);
 		fboPTMaterial->LoadTexture(fboPTTex, GL_TEXTURE_2D);
 
@@ -123,7 +123,7 @@ namespace previewer
 		GLuint fboTMTex = Fbo_ToneMap.GetTexID();
 
 		fboTMMaterial = new PP_ParticleMaterial();
-		fboTMMaterial->Load("ToneMap", false);
+		fboTMMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FBO_ToneMap", false);
 		fboTMMaterial->SetTexture(true);
 		fboTMMaterial->LoadTexture(fboTMTex, GL_TEXTURE_2D);
 
@@ -133,7 +133,7 @@ namespace previewer
 		GLuint fboHZTex = Fbo_horizontal.GetTexID();
 
 		fboHZMaterial = new PP_ParticleMaterial();
-		fboHZMaterial->Load("FilterHZ", false);
+		fboHZMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FilterHZ", false);
 		fboHZMaterial->SetTexture(true);
 		fboHZMaterial->LoadTexture(fboHZTex, GL_TEXTURE_2D);
 
@@ -142,7 +142,7 @@ namespace previewer
 		GLuint fboVTTex = Fbo_vertical.GetTexID();
 
 		fboVTMaterial = new PP_ParticleMaterial();
-		fboVTMaterial->Load("FilterVT", false);
+		fboVTMaterial->Load(ParticleSimulation::GetExePath()+"previewer/data/shaders/FilterVT", false);
 		fboVTMaterial->SetTexture(true);
 		fboVTMaterial->LoadTexture(fboVTTex, GL_TEXTURE_2D);
 
