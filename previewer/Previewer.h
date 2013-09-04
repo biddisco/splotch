@@ -117,6 +117,8 @@ namespace previewer
 		// They are not converted to their original format, they are kept as string
 		std::string GetParameter(std::string);
 
+		void ResetCamera();
+
 		static Parameter parameterInfo;
 
 	private:

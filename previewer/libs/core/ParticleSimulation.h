@@ -99,6 +99,8 @@ namespace previewer
 
 		void SetSmoothingLength(int, float);
 		float GetSmoothingLength(int);
+
+		void ResetCamera();
 		
 	private:
 

@@ -79,7 +79,7 @@ namespace previewer
 		camera.SetPerspectiveProjection(ParticleSimulation::GetFOV(), ParticleSimulation::GetAspectRatio(), 1, 200000);
 
 		// Check if recalculation is required
-		bool recalc = splotchParams->find<bool>("recalc_preview_cam",true);
+		bool recalc = splotchParams->find<bool>("pv_recalc_cam",true);
 		if(recalc)
 			camera.Create(dataBBox);
 		else

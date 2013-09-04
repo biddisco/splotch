@@ -38,6 +38,8 @@ namespace previewer
 		int atoi(std::string);
 		float atof(std::string);
 		std::string ToString(float);
+		std::string ToString(int);
+		std::string ToString(unsigned);
 	}
 }
 

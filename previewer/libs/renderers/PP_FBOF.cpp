@@ -78,7 +78,7 @@ namespace previewer
 
 		// Check if recalculation is required
 		paramfile* splotchParams = Previewer::parameterInfo.GetParamFileReference();
-		bool recalc = splotchParams->find<bool>("recalc_preview_cam",true);
+		bool recalc = splotchParams->find<bool>("pv_recalc_cam",true);
 		if(recalc)
 			camera.Create(dataBBox);
 		else

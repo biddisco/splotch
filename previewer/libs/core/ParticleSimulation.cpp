@@ -379,6 +379,10 @@ namespace previewer
 		return renderer->GetSmoothingLength(type);
 	}
 
+	void ParticleSimulation::ResetCamera()
+	{
+		renderer->ResetCamera();
+	}
 
 
 }

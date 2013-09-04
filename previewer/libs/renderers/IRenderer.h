@@ -155,6 +155,11 @@ namespace previewer
 			return radial_mod;
 		}
 
+		void ResetCamera()
+		{
+			camera.Create(dataBBox);
+		}
+
 	protected:
 		Camera camera;
 		ParticleList particleList;

@@ -54,5 +54,23 @@ namespace previewer
 			strstrm >> str;
 			return str;
 		}
+
+		std::string ToString(int intVal)
+		{
+			std::stringstream strstrm;
+			std::string str;
+			strstrm << intVal;
+			strstrm >> str;
+			return str;
+		}
+
+		std::string ToString(unsigned uintVal)
+		{
+			std::stringstream strstrm;
+			std::string str;
+			strstrm << uintVal;
+			strstrm >> str;
+			return str;
+		}
 	}
 }

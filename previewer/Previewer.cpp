@@ -284,6 +284,12 @@ namespace previewer
 		param->setParam<double>("sky_y",(camUp.y * -1));
 		param->setParam<double>("sky_z",(camUp.z * -1));
 
+		// Get render brightness values, for max 10 ptypes
+	 	for(unsigned i = 0; i < std::min(param->find<int>("ptypes", 1), 10); i++)
+	 	{
+	 		param->setParam<float>("brightness"+Utils::ToString(i), particleSim.GetRenderBrightness(i));
+	 		param->setParam<float>("size_fix"+Utils::ToString(i), particleSim.GetSmoothingLength(i));
+	 	}
 		// Get Parameter to write out the values
 		parameterInfo.WriteParameterFile(outpath);
 	}
@@ -429,6 +435,11 @@ namespace previewer
 	{
 		paramfile* param = parameterInfo.GetParamFileReference();
 		return param->find<std::string>(name);		
+	}
+
+	void Previewer::ResetCamera()
+	{
+		particleSim.ResetCamera();
 	}
 
 }

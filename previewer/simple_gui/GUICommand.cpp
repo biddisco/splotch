@@ -119,13 +119,13 @@ namespace previewer
 			}
 
 			// Write Parameter File
-			if(DoesStringBegin(command, "WRITE PARAM FILE"))
+			if(DoesStringBegin(command, "WRITE PARAMS"))
 			{
-				if(GetArgFromString(currentCommandLine, 4) != "ARG_NOT_FOUND")
+				if(GetArgFromString(currentCommandLine, 3) != "ARG_NOT_FOUND")
 				{
 					// Writing parameter file
-					pv.WriteParameterFile(GetArgFromString(currentCommandLine, 4));
-					currentCommandLine = "Parameter file written to " + GetArgFromString(currentCommandLine, 4);
+					pv.WriteParameterFile(GetArgFromString(currentCommandLine, 3));
+					currentCommandLine = "Parameter file written to " + GetArgFromString(currentCommandLine, 3);
 				}
 			}
 
@@ -138,11 +138,11 @@ namespace previewer
 			}
 
 			// Reload Colours
-			if(DoesStringBegin(command, "RELOAD COLOURS"))
+			if(DoesStringBegin(command, "RELOAD COLORS"))
 			{
 				// Reloading the colour data
 				pv.ReloadColourData();
-				currentCommandLine = "Colours reloaded";
+				currentCommandLine = "Colors reloaded";
 			}
 
 			// Get FPS
@@ -157,15 +157,15 @@ namespace previewer
 			}
 
 			// Set Animation Point
-			if(DoesStringBegin(command, "SET ANIMATION POINT"))
+			if(DoesStringBegin(command, "SET POINT"))
 			{
-				pv.SetAnimationPoint(atoi(GetArgFromString(currentCommandLine, 4).c_str()));
+				pv.SetAnimationPoint(atoi(GetArgFromString(currentCommandLine, 3).c_str()));
 				pv.UnloadAnimationFile();
-				currentCommandLine = "Animation point saved at time: " + GetArgFromString(currentCommandLine, 4);
+				currentCommandLine = "Animation point saved at time: " + GetArgFromString(currentCommandLine, 3);
 			}
 
 			// Remove Animation Point
-			if(DoesStringBegin(command, "REMOVE ANIMATION POINT"))
+			if(DoesStringBegin(command, "REMOVE POINT"))
 			{
 				pv.RemoveAnimationPoint();
 				currentCommandLine = "Last animation point removed";
@@ -179,14 +179,14 @@ namespace previewer
 			}
 
 			// Set Rotation Speed
-			if(DoesStringBegin(command, "SET ROTATION SPEED"))
+			if(DoesStringBegin(command, "SET ROTATE SPEED"))
 			{
 				pv.SetRotationSpeed(atoi(GetArgFromString(currentCommandLine, 4).c_str()));
 				currentCommandLine = "Rotation speed set to " + GetArgFromString(currentCommandLine, 4);
 			}
 
 			// Preview Animation
-			if(DoesStringBegin(command, "PREVIEW ANIMATION"))
+			if(DoesStringBegin(command, "PREVIEW"))
 			{
 				//pv.UnloadAnimationFile();
 				pv.Interpolate();
@@ -224,7 +224,7 @@ namespace previewer
 			}
 
 			// Set Resolution
-			if(DoesStringBegin(command, "SET RESOLUTION"))
+			if(DoesStringBegin(command, "SET RES"))
 			{
 				pv.SetXRes(atoi(GetArgFromString(currentCommandLine, 3).c_str()));
 				pv.SetYRes(atoi(GetArgFromString(currentCommandLine, 4).c_str()));
@@ -246,10 +246,10 @@ namespace previewer
 			}
 
 			// Write splotch "scene file"
-			if(DoesStringBegin(command, "WRITE SPLOTCH ANIMATION"))
+			if(DoesStringBegin(command, "WRITE SCENEFILE"))
 			{
 				pv.Interpolate();
-				pv.WriteSplotchAnimationFile(GetArgFromString(currentCommandLine, 4));
+				pv.WriteSplotchAnimationFile(GetArgFromString(currentCommandLine, 3));
 				currentCommandLine = "Written animation file - check cli for more details";
 			}
 
@@ -268,7 +268,7 @@ namespace previewer
 				}
 				else 
 				{
-					currentCommandLine = "Camera interpolation type set to: UNRECOGNISED";
+					currentCommandLine = "Camera interpolation type unrecognised (linear or cubic)";
 				}
 
 			}
@@ -288,28 +288,33 @@ namespace previewer
 				}
 				else 
 				{
-					currentCommandLine = "Lookat interpolation type set to: UNRECOGNISED";
+					currentCommandLine = "Lookat interpolation type unrecognised (linear or cubic)";
 				}
 
 			}
 
-			// Run splotch as a new process
+			// Pipe command to command line
 			if(DoesStringBegin(command, "RUN"))
 			{
-				std::string arg = "./"+GetArgFromString(currentCommandLine, 2)+" "+GetArgFromString(currentCommandLine, 3);
+				int i = 2;
+				std::string arg;
+
+				while(GetArgFromString(currentCommandLine, i) != "ARG_NOT_FOUND")
+					arg+=GetArgFromString(currentCommandLine, i)+" ";
+
 				system(arg.c_str());
-				currentCommandLine = "Program running, check cli for more details";
+				currentCommandLine = "Command sent to system, check cli for details";
 			}
 
 			// View splotch image
-			if(DoesStringBegin(command, "VIEW IMAGE"))
+			if(DoesStringBegin(command, "VIEW"))
 			{
-				pv.ViewImage(GetArgFromString(currentCommandLine, 3));
-				currentCommandLine = "Viewing image, type stop viewing to return to preview";
+				pv.ViewImage(GetArgFromString(currentCommandLine, 2));
+				currentCommandLine = "Viewing image, type stop to return to preview";
 			}
 
 			// Stop viewing splotch image
-			if(DoesStringBegin(command, "STOP VIEWING"))
+			if(DoesStringBegin(command, "STOP"))
 			{
 				pv.StopViewingImage();
 				currentCommandLine = "Viewing stopped";
@@ -369,7 +374,12 @@ namespace previewer
 				confirmationsList.push_back(confirm);	
 			}
 		
-
+			// Get other parameters not already gettable
+			if(DoesStringBegin(command, "RESET CAM"))
+			{
+				pv.ResetCamera();
+				currentCommandLine = "Camera reset";
+			}
 
 			// Handle response messages
 			for(std::list<std::string>::iterator it = confirmationsList.begin(); it != confirmationsList.end(); it++)
