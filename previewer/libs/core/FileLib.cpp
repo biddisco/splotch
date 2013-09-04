@@ -216,7 +216,7 @@ namespace previewer
 					std::ifstream infile (splotchParams->find<std::string>("palette"+dataToString(i)).c_str());
 					if(!infile)
 					{
-						std::cout << "Could not open palette file for " << "palette"+dataToString(i) << std::endl;
+						std::cout << "Could not open palette file "<< splotchParams->find<std::string>("palette"+dataToString(i)).c_str() << " for " << "palette"+dataToString(i) << std::endl;
 						return 0;
 					}
 

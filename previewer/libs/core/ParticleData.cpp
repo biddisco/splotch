@@ -131,7 +131,7 @@ namespace previewer
 		{
 			if(!colour_is_vec[particleList[i].type])
 				// Use original RGB data as particleList's colour data will have been overwritten
-				particleList[i].e = (colourMaps[particleList[i].type].getVal_const(OriginalRGBData[i].x) * particleList[i].I * brightness[particleList[i].type]) ;
+				particleList[i].e = colourMaps[particleList[i].type].getVal_const(OriginalRGBData[i].x)  ;
 		}
 
 		for(unsigned i = 0; i < numTypes; i++)

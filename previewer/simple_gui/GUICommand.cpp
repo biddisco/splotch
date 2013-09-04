@@ -32,8 +32,8 @@ namespace previewer
 
 			// Set up confirmation list
 			confirmationsList.push_back("PARAMETER FILE WRITTEN TO");
-			confirmationsList.push_back("PALETTE FILE LOADED FOR");
-			confirmationsList.push_back("COLOURS RELOADED");
+			confirmationsList.push_back("PALETTE PARAM SET");
+			confirmationsList.push_back("COLORS RELOADED");
 			confirmationsList.push_back("FPS");
 			confirmationsList.push_back("ANIMATION POINT SAVED AT");
 			confirmationsList.push_back("LAST ANIMATION POINT REMOVED");
@@ -133,8 +133,8 @@ namespace previewer
 			if(DoesStringBegin(command, "SET PALETTE"))
 			{
 				// Chaging the palette
-				pv.SetPalette(GetArgFromString(currentCommandLine, 3), atoi(GetArgFromString(currentCommandLine, 4).c_str()));
-				currentCommandLine = "Palette file loaded for particle type " + GetArgFromString(currentCommandLine, 4);
+				pv.SetPalette(GetArgFromString(currentCommandLine, 4), atoi(GetArgFromString(currentCommandLine, 3).c_str()));
+				currentCommandLine = "Palette param set for particle type " + GetArgFromString(currentCommandLine, 3);
 			}
 
 			// Reload Colours
