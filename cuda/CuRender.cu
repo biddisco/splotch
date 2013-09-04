@@ -129,7 +129,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 
   tstack_push("CUDA Rendering");
 
-  // C3 particles rendering on the device
+  // SMALL (point-like) particles rendering on the device
   if (nC3)
   {
     tstack_push("point-like particles rendering");
@@ -145,7 +145,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     tstack_pop("point-like particles rendering");
   }
 
-  // C2 particles rendering on the device
+  // MEDIUM particles rendering on the device
   // 1 block ----> loop on chunk of particles, 1 thread ----> 1 pixel of the particle
   // number of threads in each block = max number of pixels to be rendered for a particle
   int block_size = 4*width*width;
@@ -164,7 +164,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
 
-  // C2 particles rendering on the host 
+  // LARGE particles rendering on the host 
   if (nHostPart > 0)
   {
      cout << "Rank " << mpiMgr.rank() << " : Host rendering on " << nHostPart << " particles" << endl;
