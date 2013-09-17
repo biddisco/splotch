@@ -35,7 +35,8 @@
 
 using namespace std;
 
-void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose) const
+void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
+  const
   {
   // how many particle types are there
   int nt = params.find<int>("ptypes",1);

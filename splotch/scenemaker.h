@@ -56,7 +56,8 @@ class sceneMaker
 
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
 
-    // --- routines and variables for the MPI parallelization of the particle interpolation ---
+    // --- routines and variables for the MPI parallelization of the particle
+    //     interpolation ---
     // exchange particle IDs
     void MpiFetchRemoteParticles();
     // reset the data structures after rendering
@@ -68,7 +69,8 @@ class sceneMaker
     std::vector<MyIDType> id2Backup;
     std::vector<MyIDType> idx2Backup;
     std::vector<vec3f> vel2Backup;
-    // --- routines and variables necessary for the MPI parallelization of the interpolation ---/
+    // --- routines and variables necessary for the MPI parallelization of the
+    //     interpolation ---
 
   public:
   sceneMaker (paramfile &par);
