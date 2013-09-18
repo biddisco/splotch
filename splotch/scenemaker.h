@@ -8,6 +8,8 @@
 #include "cxxsupport/paramfile.h"
 #include "splotch/splotchutils.h"
 
+#define NEW_MPISTUFF
+
 class sceneMaker
   {
   private:
@@ -60,6 +62,7 @@ class sceneMaker
     //     interpolation ---
     // exchange particle IDs
     void MpiFetchRemoteParticles();
+#ifndef NEW_MPISTUFF
     // reset the data structures after rendering
     void MpiStripRemoteParticles();
     // save the number of particles which are initially in p2
@@ -71,6 +74,7 @@ class sceneMaker
     std::vector<vec3f> vel2Backup;
     // --- routines and variables necessary for the MPI parallelization of the
     //     interpolation ---
+#endif
 
   public:
   sceneMaker (paramfile &par);

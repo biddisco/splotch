@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2004-2011
+ * Copyright (c) 2004-2013
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -112,11 +112,11 @@ void sceneMaker::particle_normalize(std::vector<particle_sim> &p, bool verbose)
    	{
       if(inorm[t].minv > 0)
    	    inorm[t].minv = log10(inorm[t].minv);
-      
+
    	  if(inorm[t].maxv > 0)
         inorm[t].maxv = log10(inorm[t].maxv);
    	}
- 
+
     if (log_col[t])
     {
       if(cnorm[t].minv > 0)
@@ -597,7 +597,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
           {
 	    if (mpiMgr.master())
 	      cout << " old2 = new1!" << endl;
-
+#ifndef NEW_MPISTUFF
           if ((mpiMgr.num_ranks()>1) // <-- only makes sense with true MPI runs
               &&
               params.find<bool>("mpi_interpolation_reread_data",false)) // <-- saves some memory at the expense of re-reading the dataset p1 (formerly p2)
@@ -628,6 +628,13 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 	    tstack_replace("Fetch remote particles","Reading");
             time1 = time2;
             }
+#else
+            p1.swap(p2);
+            id1.swap(id2);
+            idx1.swap(idx2);
+            vel1.swap(vel2);
+            time1 = time2;
+#endif
           snr1_now = snr1;
           }
         if (snr1_now!=snr1)
@@ -809,7 +816,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
 
   // If we are using CUDA ranging is done on GPU
 #ifdef CUDA
-  
+
   // Check for maxes and mins in parameter file
   int nt = params.find<int>("ptypes",1);
   bool found = true;
@@ -849,7 +856,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   particle_normalize(particle_data, true);
   tstack_pop("Particle ranging");
 #endif
-  
+
   if (scenes[cur_scene].keep_particles) p_orig = particle_data;
 
 // boost initialization
@@ -949,6 +956,119 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
 /**
  * Routines for MPI parallel interpolation below.  Testing and optimization needed.  (Klaus Reuter, RZG)
  */
+
+#ifdef NEW_MPISTUFF
+
+// MpiFetchRemoteParticles() rearranges the *1 particles so that they match *2
+void sceneMaker::MpiFetchRemoteParticles ()
+  {
+  int ntasks = mpiMgr.num_ranks();
+  if (ntasks==1) return;
+  int mytask = mpiMgr.rank();
+
+  vector<MyIDType> lidx2(idx2.size());
+
+  for (tsize i=0; i<idx2.size(); ++i)
+    lidx2[i]=id2[idx2[i]];
+
+#if 0
+  // make sure that lidx2 and id1 are sorted (debugging only)
+  for (tsize i=1; i<lidx2.size(); ++i)
+    planck_assert(lidx2[i-1]<lidx2[i],"lidx2 not ordered");
+  for (tsize i=1; i<idx1.size(); ++i)
+    planck_assert(id1[idx1[i-1]]<id1[idx1[i]],"id1 not ordered");
+#endif
+
+  vector<vector<MyIDType> > sendIDs (ntasks);
+
+  int sendto=(mytask+1)%ntasks;
+  int getfrom=(mytask+ntasks-1)%ntasks;
+  for (int tc=0; tc<ntasks; ++tc) // circular data exchange
+    {
+    int orig=(mytask+ntasks-tc)%ntasks; // originating task
+// identify common particles and record them in sendIDs[orig]
+    tsize i1=0, i2=0, i2n=0;
+    while ((i1<idx1.size()) && (i2<lidx2.size()))
+      {
+      if (lidx2[i2]==id1[idx1[i1]]) // particle is present in both lists
+        {
+        sendIDs[orig].push_back(idx1[i1]);
+        i1++;
+        i2++;
+        }
+      else if (lidx2[i2]<id1[idx1[i1]]) // only in list 2
+        { lidx2[i2n++]=lidx2[i2++]; }
+      else // only in list 1
+        { i1++; }
+      }
+    lidx2.resize(i2n);
+    if (tc<(ntasks-1))
+      {
+// rotate lidx2 by 1 task
+      tsize sendsize=lidx2.size(), recvsize;
+      mpiMgr.sendrecv (sendsize, sendto, recvsize, getfrom);
+      vector<MyIDType> tvec(recvsize);
+      mpiMgr.sendrecv (lidx2, sendto, tvec, getfrom);
+      tvec.swap(lidx2);
+      }
+    }
+//  clear lidx2
+  releaseMemory(lidx2);
+
+// all2allv prep
+  tsize sendsize=0;
+  arr<int> sendcnt(ntasks), recvcnt;
+  for (tsize i=0; i<ntasks; ++i)
+    {
+    sendcnt[i]=sendIDs[i].size();
+    sendsize+=sendIDs[i].size();
+    }
+// all2allv(id)
+  {
+  vector<MyIDType> sendbuf(sendsize);
+  tsize ofs=0;
+  for (tsize i=0; i<ntasks; ++i)
+    for (tsize j=0; j<sendcnt[i]; ++j)
+      sendbuf[ofs++]=id1[sendIDs[i][j]];
+  releaseMemory(id1);
+  mpiMgr.all2allv_easy_char(sendbuf,sendcnt,id1,recvcnt);
+  }
+// all2allv(part)
+  {
+  vector<particle_sim> sendbuf(sendsize);
+  tsize ofs=0;
+  for (tsize i=0; i<ntasks; ++i)
+    for (tsize j=0; j<sendcnt[i]; ++j)
+      sendbuf[ofs++]=p1[sendIDs[i][j]];
+  releaseMemory(p1);
+  mpiMgr.all2allv_easy_char(sendbuf,sendcnt,p1,recvcnt);
+  }
+
+  if (interpol_mode>1)
+    {
+// all2allv(vel)
+    vector<vec3f> sendbuf(sendsize);
+    tsize ofs=0;
+    for (tsize i=0; i<ntasks; ++i)
+      for (tsize j=0; j<sendcnt[i]; ++j)
+        sendbuf[ofs++]=vel1[sendIDs[i][j]];
+    releaseMemory(vel1);
+    mpiMgr.all2allv_easy_char(sendbuf,sendcnt,vel1,recvcnt);
+    }
+// rebuild index for 1
+  releaseMemory(idx1);
+  buildIndex(id1.begin(), id1.end(), idx1);
+
+#if 0
+  // make sure that id1 and id2 are sorted (debugging only)
+  for (tsize i=1; i<idx1.size(); ++i)
+    planck_assert(id1[idx1[i-1]]<id1[idx1[i]],"id1 not ordered");
+  for (tsize i=1; i<idx2.size(); ++i)
+    planck_assert(id2[idx2[i-1]]<id2[idx2[i]],"id2 not ordered");
+#endif
+  }
+
+#else
 
 // MpiFetchRemoteParticles() adds particles from remote processes to p2
 void sceneMaker::MpiFetchRemoteParticles ()
@@ -1371,8 +1491,6 @@ void sceneMaker::MpiFetchRemoteParticles ()
   return;
 }
 
-
-
 // MpiStripRemoteParticles() removes particles from p2
 void sceneMaker::MpiStripRemoteParticles ()
 {
@@ -1425,3 +1543,5 @@ void sceneMaker::MpiStripRemoteParticles ()
 
   return;
 }
+
+#endif
