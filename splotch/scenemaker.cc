@@ -993,18 +993,16 @@ void sceneMaker::MpiFetchRemoteParticles ()
       if (lidx2[i2]==id1[idx1[i1]]) // particle is present in both lists
         {
         sendIDs[orig].push_back(idx1[i1]);
-        i1++;
-        i2++;
+        i1++; i2++;
         }
       else if (lidx2[i2]<id1[idx1[i1]]) // only in list 2
-        { lidx2[i2n++]=lidx2[i2++]; }
+        { lidx2[i2n++]=lidx2[i2++]; } // compress lidx2
       else // only in list 1
         { i1++; }
       }
-    lidx2.resize(i2n);
-    if (tc<(ntasks-1))
+    lidx2.resize(i2n); // shrink lidx2
+    if (tc<(ntasks-1)) // rotate lidx2 by 1 task
       {
-// rotate lidx2 by 1 task
       tsize sendsize=lidx2.size(), recvsize;
       mpiMgr.sendrecv (sendsize, sendto, recvsize, getfrom);
       vector<MyIDType> tvec(recvsize);
@@ -1012,50 +1010,47 @@ void sceneMaker::MpiFetchRemoteParticles ()
       tvec.swap(lidx2);
       }
     }
-//  clear lidx2
   releaseMemory(lidx2);
 
 // all2allv prep
   tsize sendsize=0;
   arr<int> sendcnt(ntasks), recvcnt;
-  for (tsize i=0; i<ntasks; ++i)
+  for (int i=0; i<ntasks; ++i)
     {
     sendcnt[i]=sendIDs[i].size();
     sendsize+=sendIDs[i].size();
     }
-// all2allv(id)
-  {
+
+  { // all2allv(id)
   vector<MyIDType> sendbuf(sendsize);
   tsize ofs=0;
-  for (tsize i=0; i<ntasks; ++i)
-    for (tsize j=0; j<sendcnt[i]; ++j)
+  for (int i=0; i<ntasks; ++i)
+    for (int j=0; j<sendcnt[i]; ++j)
       sendbuf[ofs++]=id1[sendIDs[i][j]];
   releaseMemory(id1);
   mpiMgr.all2allv_easy_char(sendbuf,sendcnt,id1,recvcnt);
   }
-// all2allv(part)
-  {
+  { // all2allv(part)
   vector<particle_sim> sendbuf(sendsize);
   tsize ofs=0;
-  for (tsize i=0; i<ntasks; ++i)
-    for (tsize j=0; j<sendcnt[i]; ++j)
+  for (int  i=0; i<ntasks; ++i)
+    for (int j=0; j<sendcnt[i]; ++j)
       sendbuf[ofs++]=p1[sendIDs[i][j]];
   releaseMemory(p1);
   mpiMgr.all2allv_easy_char(sendbuf,sendcnt,p1,recvcnt);
   }
 
-  if (interpol_mode>1)
+  if (interpol_mode>1) // all2allv(vel)
     {
-// all2allv(vel)
     vector<vec3f> sendbuf(sendsize);
     tsize ofs=0;
-    for (tsize i=0; i<ntasks; ++i)
-      for (tsize j=0; j<sendcnt[i]; ++j)
+    for (int i=0; i<ntasks; ++i)
+      for (int j=0; j<sendcnt[i]; ++j)
         sendbuf[ofs++]=vel1[sendIDs[i][j]];
     releaseMemory(vel1);
     mpiMgr.all2allv_easy_char(sendbuf,sendcnt,vel1,recvcnt);
     }
-// rebuild index for 1
+
   releaseMemory(idx1);
   buildIndex(id1.begin(), id1.end(), idx1);
 
