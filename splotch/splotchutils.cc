@@ -137,3 +137,9 @@ void hostTimeReport(wallTimerSet &Timers)
   cout << "Coloring Sub-Data (secs)   : " << Timers.acc("coloring") << endl;
   cout << "Rendering Sub-Data (secs)  : " << Timers.acc("render") << endl;
   }
+
+bool file_present(const string &name)
+  {
+  ifstream test(name.c_str());
+  return test;
+  }

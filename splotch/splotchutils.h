@@ -38,7 +38,7 @@
 #else
 #define MyIDType uint32
 #endif
- 
+
 struct particle_sim
   {
   COLOUR e;
@@ -188,5 +188,7 @@ void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap, VisIVOServ
 void get_colourmaps (paramfile &params, std::vector<COLOURMAP> &amap);
 #endif
 double my_asinh (double val);
+
+bool file_present(const std::string &name);
 
 #endif // SPLOTCHUTILS_H

@@ -20,9 +20,9 @@
  */
 #include <iostream>
 #include <cmath>
+#include <cstdio>
 #include <algorithm>
-#include <unistd.h>
- 
+
 #ifdef SPLVISIVO
 #include "optionssetter.h"
 #endif
@@ -57,38 +57,35 @@ int main (int argc, const char **argv)
   {
 
 #ifdef PREVIEWER
-  bool pvMode = false;
-  int paramFileArg = -1;
-  for(int i = 0; i < argc; i++)
-  {
+  bool pvMode=false;
+  int paramFileArg=-1;
+  for (int i=0; i<argc; i++)
+    {
     // Look for command line switch (-pv launches previewer)
-    if(std::string(argv[i]) == std::string("-pv"))
-    {
+    if (string(argv[i]) == string("-pv"))
       pvMode = true;
-    }
+
     // Look for the parameter file
-    if(previewer::FileLib::FileExists(argv[i]))
-    {
+    if (previewer::FileLib::FileExists(argv[i]))
       paramFileArg = i;
     }
-  }
   // Preview mode is enabled
-  if(pvMode)
-  {
-    // If param file exists launch app
-    if(paramFileArg > 0)
+  if (pvMode)
     {
+    // If param file exists launch app
+    if (paramFileArg>0)
+      {
       // Launch app with simple GUI
       previewer::simple_gui::SimpleGUI program;
-      program.Load(std::string(argv[paramFileArg]));
-    }
+      program.Load(string(argv[paramFileArg]));
+      }
     else
-    {
+      {
       // Output a message as input param file does not exist
-      std::cout << "Invalid input parameter file." << std::endl;
+      cout << "Invalid input parameter file." << endl;
       return 0;
-    } 
-  }
+      }
+    }
 #endif
 
   tstack_push("Splotch");
@@ -98,10 +95,7 @@ int main (int argc, const char **argv)
   // Prevent the rendering to quit if the "stop" file
   // has been forgotten before Splotch was started
   if (master)
-  {
-    if (fopen("stop", "r"))
-      unlink("stop");
-  }
+    if (file_present("stop")) remove("stop");
 
 #ifdef SPLVISIVO
   planck_assert(!opt.splotchpar.empty(),"usage: --splotch <parameter file>");
@@ -151,14 +145,14 @@ int main (int argc, const char **argv)
   int mydevID = -1;
   // We assume a geometry where processes use only one gpu if available
   if (nDevNode > 0 && nDevProc == 1)
-  {
+    {
     mydevID = myID%nCoreNode; //ID within the node
     if (mydevID>=nDevNode)
-    {
+      {
       cout << "There isn't a gpu available for process = " << myID << " computation will be performed on the host" << endl;
       mydevID = -1;
+      }
     }
-  }
 #ifdef OPENCL
   // b) or all processes use a number of GPUs > 1 and <= nDevNode
   else
@@ -167,8 +161,8 @@ int main (int argc, const char **argv)
       +dataToString(nDevProc));
 #endif
   bool gpu_info = params.find<bool>("gpu_info",true);
-  if (gpu_info) 
-	if (mydevID >= 0) print_device_info(myID, mydevID);
+  if (gpu_info)
+    if (mydevID>=0) print_device_info(myID, mydevID);
 #endif // CUDA
 
 #ifdef SPLVISIVO
@@ -193,7 +187,7 @@ int main (int argc, const char **argv)
       float(particle_data.size())/float(r_points.size()) : 1.0;
 
     if(particle_data.size()>0)
-    {
+      {
 #if (!defined(CUDA) && !defined(OPENCL))
       if(boost)
         host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
@@ -201,7 +195,7 @@ int main (int argc, const char **argv)
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
 #else
       if (mydevID >= 0)
-      {
+        {
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
         tstack_push("CUDA");
@@ -211,17 +205,17 @@ int main (int argc, const char **argv)
 #endif
 #ifdef OPENCL
         tstack_push("OPENCL");
- 	opencl_rendering(mydevID, particle_data, nDevProc, pic);
+        opencl_rendering(mydevID, particle_data, nDevProc, pic);
         tstack_pop("OPENCL");
 #endif
-      }
+        }
       else
-      {
-        if(boost) host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);  
-        else host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness); 
-      }
+        {
+        if(boost) host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
+        else host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
+        }
 #endif
-    }
+      }
 
     tstack_push("Post-processing");
     mpiMgr.allreduceRaw
@@ -283,19 +277,14 @@ int main (int argc, const char **argv)
 
   // Also meant to happen when using CUDA - unimplemented.
   #if (defined(OPENCL))
-     cuda_timeReport();
+    cuda_timeReport();
   #endif
     timeReport();
 
     mpiMgr.barrier();
     // Abandon ship if a file named "stop" is found in the working directory.
     // ==>  Allows to stop rendering conveniently using a simple "touch stop".
-    if (fopen("stop", "r"))
-    {
-      mpiMgr.~MPI_Manager();
-      break;
-    }
-
+    planck_assert (!file_present("stop"),"stop file found");
     }
 
 #ifdef VS

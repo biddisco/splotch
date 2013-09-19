@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011
+ * Copyright (c) 2004-2013
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  */
+
 #include <iostream>
 #include <cmath>
 #include <fstream>
@@ -158,53 +159,6 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
     p[m].active = true;
     }
 }
-// this is to check the .r distribution:
-  float mymin=1e15;
-  float mymax=-1e15;
-  for (long m1=0; m1<npart; ++m1)
-    {
-	mymin = min(mymin,p[m1].x);
-        mymax = max(mymax,p[m1].x);
-    } 
-  if (mpiMgr.master())
-    cout << "MYMIN, MYMAX: " << mymin << " " << mymax << endl;
-  long countsmall=0;
-  long countinter1=0;
-  long countinter2=0;
-  long countinter3=0;
-  long countinter4=0;
-  long countlarge=0;
-  long countactive=0;
-  float r_th = params.find<float>("rth",0.0);
-  if(r_th != 0.0)
-    {	
-    for (long m=0; m<npart; ++m)
-      {
-        if(p[m].active == true)
-        {
-	  if(p[m].r < 1.0)countsmall++;
-          if(p[m].r >= 1.0 && p[m].r < r_th)countinter1++;
-          if(p[m].r >= 1.0 && p[m].r < 2*r_th)countinter2++;
-          if(p[m].r >= 1.0 && p[m].r < 4*r_th)countinter3++;
-          if(p[m].r >= 1.0 && p[m].r < 8*r_th)countinter4++;
-          if(p[m].r >= 8*r_th)countlarge++;
-          countactive++;
-        }
-      }
-    if (mpiMgr.master())
-      {
-	cout << "NUMBER OF ACTIVE PARTICLES = " << countactive << endl;
-	cout << "PARTICLES WITH r < 1 = " << countsmall << endl;
-	cout << "PARTICLES WITH 1 <= r < " << r_th << " = " << countinter1 << endl;
-	cout << "PARTICLES WITH 1 <= r < " << 2*r_th << " = " << countinter2 << endl;
-	cout << "PARTICLES WITH 1 <= r < " << 4*r_th << " = " << countinter3 << endl;
-	cout << "PARTICLES WITH 1 <= r < " << 8*r_th << " = " << countinter4 << endl;
-	cout << "PARTICLES WITH r >= " << 8*r_th << " = " << countlarge << endl;
-      }
-    }
-
-
-
   }
 
 void particle_colorize(paramfile &params, vector<particle_sim> &p,
@@ -395,9 +349,9 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
         float32 stp = -1.f/(sigma*sigma);
 
         COLOUR a(-pp.e.r,-pp.e.g,-pp.e.b);
-  #ifdef __SSE2__
+#ifdef __SSE2__
         V4sf va(a.r,a.g,a.b,0.f);
-  #endif
+#endif
 
         for (int y=miny; y<maxy; ++y)
           pre1[y]=xexp(stp*(y-posy)*(y-posy));
@@ -414,13 +368,13 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
             for (int y=miny2; y<maxy2; ++y)
               {
               float32 att = pre1[y]*pre2;
-  #ifdef __SSE2__
+#ifdef __SSE2__
               lpic[x][y]+=va*att;
-  #else
+#else
               lpic[x][y].r += att*a.r;
               lpic[x][y].g += att*a.g;
               lpic[x][y].b += att*a.b;
-  #endif
+#endif
               }
             }
           }
@@ -429,10 +383,10 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
           COLOUR q(pp.e.r/(pp.e.r+grayabsorb),
                   pp.e.g/(pp.e.g+grayabsorb),
                   pp.e.b/(pp.e.b+grayabsorb));
-  #ifdef __SSE2__
+#ifdef __SSE2__
           float32 maxa=max(abs(a.r),max(abs(a.g),abs(a.b)));
           V4sf vq(q.r,q.g,q.b,0.f);
-  #endif
+#endif
 
           for (int x=minx; x<maxx; ++x)
             {
@@ -444,7 +398,7 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
             for (int y=miny2; y<maxy2; ++y)
               {
               float32 att = pre1[y]*pre2;
-  #ifdef __SSE2__
+#ifdef __SSE2__
               if ((maxa*att)<taylorlimit)
                 lpic[x][y]+=(lpic[x][y]-vq)*va*att;
               else
@@ -456,11 +410,11 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
                 tmp.d[2] += xexp.expm1(att*a.b)*(tmp.d[2]-q.b);
                 lpic[x][y]=tmp.v;
                 }
-  #else
+#else
               lpic[x][y].r += xexp.expm1(att*a.r)*(lpic[x][y].r-q.r);
               lpic[x][y].g += xexp.expm1(att*a.g)*(lpic[x][y].g-q.g);
               lpic[x][y].b += xexp.expm1(att*a.b)*(lpic[x][y].b-q.b);
-  #endif
+#endif
               }
             }
           }
