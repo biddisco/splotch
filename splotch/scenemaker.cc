@@ -951,13 +951,31 @@ bool sceneMaker::getNextScene (vector<particle_sim> &particle_data, vector<parti
   return true;
 }
 
-
-
-/**
- * Routines for MPI parallel interpolation below.  Testing and optimization needed.  (Klaus Reuter, RZG)
- */
-
 #ifdef NEW_MPISTUFF
+
+namespace {
+
+template<typename T> void comm_helper
+  (const vector<vector<MyIDType> > &idx_send, vector<T> &buf)
+  {
+  tsize sendsize=0, ntasks=mpiMgr.num_ranks();
+  arr<int> sendcnt(ntasks), recvcnt;
+  for (tsize i=0; i<ntasks; ++i)
+    {
+    sendcnt[i]=idx_send[i].size();
+    sendsize+=idx_send[i].size();
+    }
+
+  vector<T> sendbuf(sendsize);
+  tsize ofs=0;
+  for (tsize i=0; i<ntasks; ++i)
+    for (int j=0; j<sendcnt[i]; ++j)
+      sendbuf[ofs++]=buf[idx_send[i][j]];
+  releaseMemory(buf);
+  mpiMgr.all2allv_easy_typeless(sendbuf,sendcnt,buf,recvcnt);
+  }
+
+} // unnamed namespace
 
 // MpiFetchRemoteParticles() rearranges the *1 particles so that they match *2
 void sceneMaker::MpiFetchRemoteParticles ()
@@ -966,90 +984,47 @@ void sceneMaker::MpiFetchRemoteParticles ()
   if (ntasks==1) return;
   int mytask = mpiMgr.rank();
 
-  vector<MyIDType> lidx2(idx2.size());
+  vector<MyIDType> id_needed(idx2.size()); // IDs needed on task t_req
 
   for (tsize i=0; i<idx2.size(); ++i)
-    lidx2[i]=id2[idx2[i]];
+    id_needed[i]=id2[idx2[i]];
 
 #if 0
-  // make sure that lidx2 and id1 are sorted (debugging only)
-  for (tsize i=1; i<lidx2.size(); ++i)
-    planck_assert(lidx2[i-1]<lidx2[i],"lidx2 not ordered");
+  // make sure that id_needed and id1 are sorted (debugging only)
+  for (tsize i=1; i<id_needed.size(); ++i)
+    planck_assert(id_needed[i-1]<id_needed[i],"id_needed not ordered");
   for (tsize i=1; i<idx1.size(); ++i)
     planck_assert(id1[idx1[i-1]]<id1[idx1[i]],"id1 not ordered");
 #endif
 
-  vector<vector<MyIDType> > sendIDs (ntasks);
+  vector<vector<MyIDType> > idx_send (ntasks); // what gets sent where
 
-  int sendto=(mytask+1)%ntasks;
-  int getfrom=(mytask+ntasks-1)%ntasks;
   for (int tc=0; tc<ntasks; ++tc) // circular data exchange
     {
-    int orig=(mytask+ntasks-tc)%ntasks; // originating task
-// identify common particles and record them in sendIDs[orig]
+    int t_req=(mytask+ntasks-tc)%ntasks; // task requesting particles
     tsize i1=0, i2=0, i2n=0;
-    while ((i1<idx1.size()) && (i2<lidx2.size()))
+    while ((i1<idx1.size()) && (i2<id_needed.size()))
       {
-      if (lidx2[i2]==id1[idx1[i1]]) // particle is present in both lists
+      if (id_needed[i2]==id1[idx1[i1]]) // needed and available
         {
-        sendIDs[orig].push_back(idx1[i1]);
+        idx_send[t_req].push_back(idx1[i1]);
         i1++; i2++;
         }
-      else if (lidx2[i2]<id1[idx1[i1]]) // only in list 2
-        { lidx2[i2n++]=lidx2[i2++]; } // compress lidx2
-      else // only in list 1
+      else if (id_needed[i2]<id1[idx1[i1]]) // needed but not available
+        { id_needed[i2n++]=id_needed[i2++]; } // compress id_needed
+      else // available but not needed
         { i1++; }
       }
-    lidx2.resize(i2n); // shrink lidx2
-    if (tc<(ntasks-1)) // rotate lidx2 by 1 task
-      {
-      tsize sendsize=lidx2.size(), recvsize;
-      mpiMgr.sendrecv (sendsize, sendto, recvsize, getfrom);
-      vector<MyIDType> tvec(recvsize);
-      mpiMgr.sendrecv (lidx2, sendto, tvec, getfrom);
-      tvec.swap(lidx2);
-      }
+    id_needed.resize(i2n); // shrink id_needed, reduces communication volume
+    if (tc<(ntasks-1)) // rotate id_needed by 1 task
+      mpiMgr.sendrecv_realloc(id_needed,
+        (mytask+1)%ntasks,(mytask+ntasks-1)%ntasks);
     }
-  releaseMemory(lidx2);
+  releaseMemory(id_needed);
 
-// all2allv prep
-  tsize sendsize=0;
-  arr<int> sendcnt(ntasks), recvcnt;
-  for (int i=0; i<ntasks; ++i)
-    {
-    sendcnt[i]=sendIDs[i].size();
-    sendsize+=sendIDs[i].size();
-    }
-
-  { // all2allv(id)
-  vector<MyIDType> sendbuf(sendsize);
-  tsize ofs=0;
-  for (int i=0; i<ntasks; ++i)
-    for (int j=0; j<sendcnt[i]; ++j)
-      sendbuf[ofs++]=id1[sendIDs[i][j]];
-  releaseMemory(id1);
-  mpiMgr.all2allv_easy_char(sendbuf,sendcnt,id1,recvcnt);
-  }
-  { // all2allv(part)
-  vector<particle_sim> sendbuf(sendsize);
-  tsize ofs=0;
-  for (int  i=0; i<ntasks; ++i)
-    for (int j=0; j<sendcnt[i]; ++j)
-      sendbuf[ofs++]=p1[sendIDs[i][j]];
-  releaseMemory(p1);
-  mpiMgr.all2allv_easy_char(sendbuf,sendcnt,p1,recvcnt);
-  }
-
-  if (interpol_mode>1) // all2allv(vel)
-    {
-    vector<vec3f> sendbuf(sendsize);
-    tsize ofs=0;
-    for (int i=0; i<ntasks; ++i)
-      for (int j=0; j<sendcnt[i]; ++j)
-        sendbuf[ofs++]=vel1[sendIDs[i][j]];
-    releaseMemory(vel1);
-    mpiMgr.all2allv_easy_char(sendbuf,sendcnt,vel1,recvcnt);
-    }
+  comm_helper(idx_send,id1);
+  comm_helper(idx_send,p1);
+  if (interpol_mode>1) comm_helper(idx_send,vel1);
 
   releaseMemory(idx1);
   buildIndex(id1.begin(), id1.end(), idx1);
@@ -1058,12 +1033,14 @@ void sceneMaker::MpiFetchRemoteParticles ()
   // make sure that id1 and id2 are sorted (debugging only)
   for (tsize i=1; i<idx1.size(); ++i)
     planck_assert(id1[idx1[i-1]]<id1[idx1[i]],"id1 not ordered");
-  for (tsize i=1; i<idx2.size(); ++i)
-    planck_assert(id2[idx2[i-1]]<id2[idx2[i]],"id2 not ordered");
 #endif
   }
 
 #else
+
+/**
+ * Routines for MPI parallel interpolation below.  Testing and optimization needed.  (Klaus Reuter, RZG)
+ */
 
 // MpiFetchRemoteParticles() adds particles from remote processes to p2
 void sceneMaker::MpiFetchRemoteParticles ()

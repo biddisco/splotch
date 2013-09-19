@@ -130,6 +130,16 @@ class MPI_Manager
       T &recvval, tsize src) const
       { sendrecvRaw(&sendval, 1, dest, &recvval, 1, src); }
 
+    template<typename T> void sendrecv_realloc (std::vector<T> &buf,
+      tsize dest, tsize src) const
+      {
+      tsize sendsize=buf.size(), recvsize;
+      sendrecv (sendsize, dest, recvsize, src);
+      std::vector<T> buf2(recvsize);
+      sendrecv (buf, dest, buf2, src);
+      buf.swap(buf2);
+      }
+
     template<typename T> void sendrecv_replaceRaw (T *data, tsize num,
       tsize dest, tsize src) const
       { sendrecv_replaceRawVoid(data, nativeType<T>(), num, dest, src); }
@@ -344,7 +354,7 @@ class MPI_Manager
       all2allvRawVoid (&in[0], &numin[0], &disin[0], &out[0], &numout[0],
         &disout[0], nativeType<T>());
       }
-    template<typename T> void all2allv_easy_char (const std::vector<T> &in,
+    template<typename T> void all2allv_easy_typeless (const std::vector<T> &in,
       const arr<int> &numin, std::vector<T> &out, arr<int> &numout) const
       {
       arr<int> disin,disout,numin2(numin.size());
