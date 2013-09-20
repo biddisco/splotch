@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <string>
-#include <fstream>
 
 #include "cxxsupport/paramfile.h"
 #include "splotch/splotchutils.h"
