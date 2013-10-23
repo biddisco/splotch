@@ -13,9 +13,9 @@ ENDFOR
 GENERAL NOTES:
 
 1. coordinate systems:
-  -- no physical models: [-1 : 1] centered on the galaxy
-  -- TIRIFIC model: arcsec, centered on the galaxy
-  -- TIRIFIC + DICE models: arcsec, centered on the galaxy
+  -- [-minval : maxval] centered on the galaxy, depends on the model:
+  ---- TIRIFIC model: arcsec, centered on the galaxy
+  ---- TIRIFIC + DICE models: arcsec, centered on the galaxy
 
 2. generated particle types, GADGET format (output file)
   0 = gas
@@ -64,9 +64,12 @@ ReadImages.cxx
 GaussRFunc.cxx
 
 OPTION 1: creates an ellipsoid
-  <float>("Sigmax"+ComponentName,0); x axis (gaussian points distribution) [0-1]
+  <float>("Sigmax"+ComponentName,0); x axis (gaussian points distribution) [0-realnumber]
   <float>("Sigmay"+ComponentName,0); y axis
   <float>("Sigmaz"+ComponentName,0); z axis
+  <int>("Rotate"+ComponentName,0); 0 axes parallel to cartesian axes; 1 follows TIRIFIC model
+  <float>("ParsecToTirific"+ComponentName,1.0); conversion from sigma unit to arcsec
+  <string>("TirificModel"+ComponentName); TIRIFIC model file name
 
 OPTION 2: not implemented
 

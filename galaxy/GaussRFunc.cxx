@@ -71,7 +71,7 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
-  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  planck_assert (infile,"could not open TIRIFIC file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
   string dummy;
   int nModel;
   infile >> nModel;
@@ -568,7 +568,7 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
-  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  planck_assert (infile,"could not open TIRIFIC file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
   string dummy;
   int nModel;
   infile >> nModel;
@@ -742,7 +742,7 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
-  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  planck_assert (infile,"could not open TIRIFIC file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
   string dummy;
   int nModel;
   infile >> nModel;
