@@ -3,6 +3,28 @@
 #include"kernel/colourmap.h"
 #include"cxxsupport/vec3.h"
 
+/*
+These functions allow to model the 3D distribution of points for a single componenent 
+galaxy. Basic rules and assumpitons are:
+
+1. particle distribution is centered on the center of the galaxy at (0,0)
+3. final points coordinates depends on the function adopted (see below) always in the
+   range [-leftvalue : +rightvalue]
+
+Different functions are using different models. Model is set by the DoComponentName parameter.
+In particular:
+DoComp = 
+1 creates a regular ellipsoid [arcsec] 
+2 not implemented
+3 creates a clumpy disk of stars (face-on disk galaxies)
+4 gas distribution 
+5 stars in an irregular galaxy (diffuse component + clumps)
+6 Tirific model [arcsec]
+7 DICE points distribution + Tirific model [arcsec] 
+8 DICE halo [arcsec]
+
+*/
+
 float box_muller(float m, float s);
 float box_uniform(float m, float s);
 float pi=3.141592654;
@@ -11,6 +33,9 @@ float pi=3.141592654;
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, 
 		 float * coordx, float * coordy, float * coordz) 
 {
+// This part is dimensionless. Points distributions are generated as spheroids 
+// with given sigma, but sigma can in any range.
+
   float sigma[3];
 	
   srand(time(NULL));
@@ -18,6 +43,7 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
   sigma[0] = params.find<float>("Sigmax"+ComponentName,0);
   sigma[1] = params.find<float>("Sigmay"+ComponentName,0);
   sigma[2] = params.find<float>("Sigmaz"+ComponentName,0);
+  int rotate = params.find<int>("Rotate"+ComponentName,0);
 
   printf("    spheroid component with sigma_[x,y,z] = %f,%f,%f\n", sigma[0],sigma[1],sigma[2]);
 
@@ -30,6 +56,95 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
       coordz[i] = box_muller(0.0, sigma[2]);
     }
 
+// if we don't need to rotate, function ends here:
+  if(!rotate)return number_of_points;
+
+// in order to rotate, we need to go through the TIRIFIC stuff
+// Now physical dimension comes into play: this is set by sigma
+// if sigma is in arcsec then parsectotirific = 1.0
+// if sigma is in kpc then parsectotirific must be properly set
+//
+// Read Tirific file (only radius Inclination and Position Angle actually needed)
+
+  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+  float pi = 3.141592654;
+  COLOURMAP model;
+
+  ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
+  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  string dummy;
+  int nModel;
+  infile >> nModel;
+  infile >> dummy >> dummy >> dummy >> dummy >> dummy;
+  cout << "      loading " << nModel << " entries of tirific model table " << endl;
+  float rrr,vvv,zzz,iii,ppp;
+  for (int i=0; i<nModel; i++)
+    {
+      infile >> rrr >> vvv >> zzz >> iii >> ppp;
+      model.addVal(rrr,COLOUR(zzz,iii,ppp));
+    }
+   infile.close();
+
+// Rotate particles
+
+  long icount = 0;
+  float r0 = 0.0;
+
+  float xmax=-1e20;
+  float xmin=1e20;
+  float xcoord[3];
+  long index;
+  long ntrial = number_of_points;
+  for (long i=0; i<ntrial; i++)    // loop over all possible particles
+    {
+      index = i;
+      xcoord[0] = coordx[index];
+      xcoord[1] = coordy[index];
+      xcoord[2] = coordz[index];
+      r0 = sqrt(xcoord[0]*xcoord[0] + xcoord[1]*xcoord[1]);
+
+      double dphi = asin(double(xcoord[1]/r0));
+      if(xcoord[1] >= 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
+      if(xcoord[1] < 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
+      if(xcoord[1] < 0.0 && xcoord[0] >= 0.0)dphi = 2.0*pi + dphi;
+      float phi = float(dphi);
+
+      float r1m = r0;     // radius associated to the particle
+// Interpolate the tirific model to this radial distance
+      COLOUR ring = model.getVal(r1m * parsectotirific);
+      float thick = ring.r;
+      float pa = (ring.b + 180) / 180 * M_PI;
+      float inc = ring.g / 180 * M_PI;
+
+      // Calculate the normalized normal vector of the ring from the tirific model
+      vec3 nn(0,0,1);
+      vec3 m1_1(1,0,0),m1_2(0,cos(inc),-sin(inc)),m1_3(0,sin(inc),cos(inc));
+      vec3 m2_1(cos(pa),-sin(pa),0),m2_2(sin(pa),cos(pa),0),m2_3(0,0,1);
+      vec3 n1(dotprod(m1_1,nn),dotprod(m1_2,nn),dotprod(m1_3,nn));
+      vec3 n(dotprod(m2_1,n1),dotprod(m2_2,n1),dotprod(m2_3,n1));
+      n.Normalize();
+
+      // Find the radius vector within the x/y plane
+      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
+      float y0 = -(n.x/n.y)*x0;
+      vec3 rr(x0,y0,0);
+
+      // Rotate the radius vector arround the normal vector by phi
+      float sp = sin(phi);
+      float cp = cos(phi);
+      vec3 m3_1(n.x*n.x*(1-cp)+cp    ,n.x*n.y*(1-cp)-n.z*sp,n.x*n.z*(1-cp)+n.y*sp);
+      vec3 m3_2(n.y*n.x*(1-cp)+n.z*sp,n.y*n.y*(1-cp)+cp    ,n.y*n.z*(1-cp)-n.x*sp);
+      vec3 m3_3(n.z*n.x*(1-cp)-n.y*sp,n.z*n.y*(1-cp)+n.x*sp,n.z*n.z*(1-cp)+cp);
+      vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
+
+      float height = xcoord[2];
+      vec3 xxx = xx + n * height;
+
+      coordx[index] = xxx.x*parsectotirific;
+      coordy[index] = xxx.y*parsectotirific;
+      coordz[index] = xxx.z*parsectotirific;
+
+    }
   return number_of_points;
 
 }
@@ -48,7 +163,7 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 
   float sigma_z = params.find<float>("Sigmaz"+ComponentName,0.01);
   float sigma_g = params.find<float>("Sigmag"+ComponentName,0.001);
-  long n_per_pixel = params.find<float>("NperPixel"+ComponentName,1);
+  long n_per_pixel = params.find<float>("NperGroup"+ComponentName,1);
 
   printf("      disk with sigma_z = %f, %d particles per pixel\n", sigma_z, n_per_pixel);
 
@@ -84,7 +199,7 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 	}
 
       ///for(long k=1; k<n_per_pixel; k++)
-      for(long k=0; k<3*n_per_pixel; k++)
+      for(long k=0; k<n_per_pixel; k++)
 	{
 	  coordx[count] = box_uniform(x0, pixsizex);
 	  coordy[count] = box_uniform(y0, pixsizey);
@@ -135,7 +250,7 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
   srand(time(NULL));
 
   float sigma = params.find<float>("Sigmaz"+ComponentName,0);
-  float sigma_fixed = params.find<float>("Sigmazfixed"+ComponentName,0.1);
+  float sigma_fixed = params.find<float>("Sigmag"+ComponentName,0.1);
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
   long rx = params.find<long>("Scaledxres"+ComponentName,1);
   long ry = params.find<long>("Scaledyres"+ComponentName,1);
@@ -263,8 +378,8 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
   float sigma_z = params.find<float>("Sigmaz"+ComponentName,0.8);
   long npergroup = params.find<long>("NperGroup"+ComponentName,0);
   float ndiffuse_factor = params.find<float>("NdiffuseFactor"+ComponentName,0);
-  float sigma_fixed = params.find<float>("Sigmazfixed"+ComponentName,0.1);
-  float sigma_g = params.find<float>("Sigmag"+ComponentName,1);
+  float sigma_fixed = params.find<float>("Sigmag"+ComponentName,0.1);
+  float sigma_g = params.find<float>("Sigmad"+ComponentName,1);
 
 
   float norm = 0.5*(float)nx;
@@ -445,9 +560,11 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
   float pixeltotirific = params.find<float>("PixelToTirific"+ComponentName,1.0);
   float npartfix = params.find<float>("TirificPartReduce"+ComponentName,0.75);
   float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
-  float rmax = params.find<float>("RmaxMask"+ComponentName,nx/2.);
+// rmax in arcsec
+  float rmax = params.find<float>("RmaxMask"+ComponentName,200.0);
   long n_per_pixel = params.find<float>("NperPixel"+ComponentName,1);
   float sigma = params.find<float>("Sigmaz"+ComponentName,0);
+  //float size = params.find<float>("Size"+ComponentName,1.0);
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
@@ -482,10 +599,12 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
   float r0 = 0.0;
 
   cout << "NTRIAL " << ntrial << endl;
+      float xmax=-1e20;
+      float xmin=1e20;
   for (long i=0; i<ntrial; i++)    // loop over all possible particles
     {
       //if(!(i%1000))cout << "R0 = " << r0 << endl;
-      float Rnorm = r0/rmax;
+      float Rnorm = r0*pixeltotirific/rmax;
       float r1m = sqrt( particlesize / 2 / M_PI + r0 * r0);     // radius associated to the particle 
       float phi = box_uniform(1.0, 2.0) * M_PI;                 // random phase of particle
   
@@ -540,20 +659,26 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
       vec3 xxx = xx + n * height;
 
       // Convert coordinates into ranges [-1,1] ...
-      vec3 xxxx(2*xxx.x/nx,2*xxx.y/ny,2*xxx.z/(0.5*(nx+ny)));
+      //vec3 xxxx(2*size*xxx.x/nx,2*size*xxx.y/ny,2*size*xxx.z/(0.5*(nx+ny)));
+      vec3 xxxx_aux(2*xxx.x/nx,2*xxx.y/ny,2*xxx.z/(0.5*(nx+ny)));
+      vec3 xxxx(xxx.x*pixeltotirific,xxx.y*pixeltotirific,xxx.z*pixeltotirific);
 
       // Find index in image
-      long ix = 0.5 * (xxxx.x + 1.0) * nx;
-      long iy = 0.5 * (xxxx.y + 1.0) * ny;
+      long ix = 0.5 * (xxxx_aux.x + 1.0) * nx;
+      long iy = 0.5 * (xxxx_aux.y + 1.0) * ny;
       long index = ix + iy * nx;
 
+      float cutoff = params.find<float>("Cutoff"+ComponentName,0.0);
       if (index < nx * ny)
-	if(III[index] > 0.0)
+        //cout << III[index] << endl;
+	if(III[index] > cutoff)
 	  //	if(r1m < 100)
 	  {
 	    coordx[icount] = xxxx.x;
 	    coordy[icount] = xxxx.y;
 	    coordz[icount] = xxxx.z;
+            xmax = max(xmax,coordz[icount]);
+            xmin = min(xmin,coordz[icount]);
 	    icount++;
 	    if(icount >= ntot-1)
 	      {
@@ -582,11 +707,255 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
 
       // Update covered radii
       r0 = sqrt( particlesize / M_PI + r0 * r0);
-      if(r0 > rmax){
-        cout << "FINAL RADIUS" << r0 << endl; 
+      if(r0 * pixeltotirific > rmax){
+        cout << "FINAL RADIUS " << r0 << endl; 
 	break;
-      }
+      } 
     }
+  return icount;
+
+}
+
+
+//This is used for the gas for DICE generated points distributions: OPTION 7
+/* 
+MAIN PARAMETERS:
+TirificModel      = file containg parameters of the TiRiFiC model
+PixelToTirific    = Conversion factor between pixel size and TiRiFiC (radial) units
+*/
+
+long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_of_pixels, long ntot, 
+		 float * coordx, float * coordy, float * coordz,
+                 float * III, long nx, long ny) 
+{
+  srand(time(NULL));
+
+// TIRIFIC STUFF
+
+  float pixeltotirific = params.find<float>("PixelToTirific"+ComponentName,1.0);
+  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+  float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
+// rmax in arcsec
+  float rmax = params.find<float>("RmaxMask"+ComponentName,200.0);
+
+  float pi = 3.141592654;
+  COLOURMAP model;
+
+  ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
+  planck_assert (infile,"could not open palette file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
+  string dummy;
+  int nModel;
+  infile >> nModel;
+  infile >> dummy >> dummy >> dummy >> dummy >> dummy;
+  cout << "      loading " << nModel << " entries of tirific model table " << endl;
+  float rrr,vvv,zzz,iii,ppp;
+  for (int i=0; i<nModel; i++)
+    {
+      infile >> rrr >> vvv >> zzz >> iii >> ppp;
+      model.addVal(rrr,COLOUR(zzz,iii,ppp));
+    }
+   infile.close();
+
+// DICE STUFF
+
+   FILE * dicefile;
+   dicefile = fopen(params.find<string>("DiceModel"+ComponentName).c_str(), "r");
+   int dice_comp = params.find<int>("DiceComponent"+ComponentName);
+   int npartindex[6];
+   for(int i=0; i<6; i++)fread(&npartindex[i],1,sizeof(npartindex[i]),dicefile);
+   for(int i=0; i<6; i++)cout << "npart " << i << " " << npartindex[i] << endl;
+   long ntrial = npartindex[dice_comp];
+
+   long dicestride = 6*sizeof(npartindex[0]);
+   for(int i=0; i<dice_comp; i++)dicestride += npartindex[i]*3*sizeof(float);
+
+   long arraysize = 3*ntrial*sizeof(npartindex[0]);
+   float * positions;
+   positions = new float [arraysize];
+   
+   fseek(dicefile, dicestride, SEEK_SET);   
+   fread(positions, 1, arraysize, dicefile);
+
+   fclose(dicefile);
+
+
+// END OF DATA LOAD
+// START PARTICLES PROCESSING
+
+  long icount = 0;
+  float r0 = 0.0;
+
+  float xmax=-1e20;
+  float xmin=1e20;
+  float xcoord[3];
+  long index;
+  for (long i=0; i<ntrial; i++)    // loop over all possible particles
+    {
+      index = 3*i;
+      xcoord[0] = positions[index];
+      xcoord[1] = positions[index+1];
+      xcoord[2] = positions[index+2];
+      r0 = sqrt(xcoord[0]*xcoord[0] + xcoord[1]*xcoord[1]);
+
+      double dphi = asin(double(xcoord[1]/r0));
+      if(xcoord[1] >= 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
+      if(xcoord[1] < 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
+      if(xcoord[1] < 0.0 && xcoord[0] >= 0.0)dphi = 2.0*pi + dphi;
+      float phi = float(dphi);
+/*
+      float Rnorm = r0*pixeltotirific/rmax;
+      float phi = box_uniform(1.0, 2.0) * M_PI;                 // random phase of particle
+*/
+  
+      float r1m = r0;     // radius associated to the particle 
+      // Interpolate the tirific model to this radial distance
+      COLOUR ring = model.getVal(r1m * parsectotirific);
+      float thick = ring.r;
+      float pa = (ring.b + 180) / 180 * M_PI;
+      float inc = ring.g / 180 * M_PI;
+
+      // Calculate the normalized normal vector of the ring from the tirific model
+      vec3 nn(0,0,1);
+      vec3 m1_1(1,0,0),m1_2(0,cos(inc),-sin(inc)),m1_3(0,sin(inc),cos(inc));
+      vec3 m2_1(cos(pa),-sin(pa),0),m2_2(sin(pa),cos(pa),0),m2_3(0,0,1);
+      vec3 n1(dotprod(m1_1,nn),dotprod(m1_2,nn),dotprod(m1_3,nn));
+      vec3 n(dotprod(m2_1,n1),dotprod(m2_2,n1),dotprod(m2_3,n1));
+      n.Normalize();
+
+      // Find the radius vector within the x/y plane
+      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
+      float y0 = -(n.x/n.y)*x0;
+      vec3 rr(x0,y0,0);
+
+      // Rotate the radius vector arround the normal vector by phi
+      float sp = sin(phi);
+      float cp = cos(phi);
+      vec3 m3_1(n.x*n.x*(1-cp)+cp    ,n.x*n.y*(1-cp)-n.z*sp,n.x*n.z*(1-cp)+n.y*sp);
+      vec3 m3_2(n.y*n.x*(1-cp)+n.z*sp,n.y*n.y*(1-cp)+cp    ,n.y*n.z*(1-cp)-n.x*sp);
+      vec3 m3_3(n.z*n.x*(1-cp)-n.y*sp,n.z*n.y*(1-cp)+n.x*sp,n.z*n.z*(1-cp)+cp);
+      vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
+
+      float height = xcoord[2];
+      vec3 xxx = xx + n * height;
+
+      // Convert coordinates into ranges [-1,1] ...
+      //vec3 xxxx(2*size*xxx.x/nx,2*size*xxx.y/ny,2*size*xxx.z/(0.5*(nx+ny)));
+      ///vec3 xxxx_aux(2*xxx.x/nx,2*xxx.y/ny,2*xxx.z/(0.5*(nx+ny)));
+      ///vec3 xxxx(xxx.x*pixeltotirific,xxx.y*pixeltotirific,xxx.z*pixeltotirific);
+      ////vec3 xxxx_aux((0.5*float(nx)+xxx.x/parsectopixel),
+      ////              (0.5*float(ny)+xxx.y/parsectopixel),
+      ////              (0.5*float(nx)+xxx.z/parsectopixel));
+
+// CONVERSION TO ARCSEC      
+      vec3 xxxx(xxx.x*parsectotirific,xxx.y*parsectotirific,xxx.z*parsectotirific);
+// FIND PIXELS
+      vec3 xxxx_aux((0.5*float(nx)+xxx.x/pixeltotirific),
+                    (0.5*float(ny)+xxx.y/pixeltotirific),
+                    (0.5*float(nx)+xxx.z/pixeltotirific));
+
+      // Find index in image
+      long ix = int(xxxx_aux.x);
+      long iy = int(xxxx_aux.y);
+      long index = ix + iy * nx;
+      //if(ix>nx || iy>ny)cout << ix << " " << iy << endl;
+
+      float cutoff = params.find<float>("Cutoff"+ComponentName,0.0);
+      if (index < nx * ny)
+	if(III[index] > cutoff)
+	  {
+	    coordx[icount] = xxxx.x;
+	    coordy[icount] = xxxx.y;
+	    coordz[icount] = xxxx.z;
+            //if(icount < 100)cout << coordx[icount] << "  " << coordy[icount] << " " << coordz[icount] << endl;
+            xmax = max(xmax,coordz[icount]);
+            xmin = min(xmin,coordz[icount]);
+	    icount++;
+	    if(icount >= ntot-1)
+	      {
+		cout << "More particles produced than intended, have to stop !!" << endl;
+		exit(0);
+	      }
+	  }
+/*
+      if(r0 * pixeltotirific > rmax){
+        cout << "FINAL RADIUS " << r0 << endl; 
+	break;
+      } 
+*/
+    }
+
+  
+  delete [] positions;
+  return icount;
+
+}
+
+//This is used for the gas for DICE generated Halo: OPTION 8
+/* 
+MAIN PARAMETERS:
+
+*/
+
+long RHalo (paramfile &params, string ComponentName, long number_of_pixels, long ntot, 
+		 float * coordx, float * coordy, float * coordz,
+                 float * III, long nx, long ny) 
+{
+  srand(time(NULL));
+
+// TIRIFIC STUFF
+
+  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+
+// DICE STUFF
+
+   FILE * dicefile;
+   dicefile = fopen(params.find<string>("DiceModel"+ComponentName).c_str(), "r");
+   int dice_comp = params.find<int>("DiceComponent"+ComponentName);
+   int npartindex[6];
+   for(int i=0; i<6; i++)fread(&npartindex[i],1,sizeof(npartindex[i]),dicefile);
+   for(int i=0; i<6; i++)cout << "npart " << i << " " << npartindex[i] << endl;
+   long ntrial = npartindex[dice_comp];
+
+   long dicestride = 6*sizeof(npartindex[0]);
+   for(int i=0; i<dice_comp; i++)dicestride += npartindex[i]*3*sizeof(float);
+
+   long arraysize = 3*ntrial*sizeof(npartindex[0]);
+   float * positions;
+   positions = new float [arraysize];
+   
+   fseek(dicefile, dicestride, SEEK_SET);   
+   fread(positions, 1, arraysize, dicefile);
+
+   fclose(dicefile);
+
+// END OF DATA LOAD
+// START PARTICLES PROCESSING
+
+  long icount = 0;
+  float r0 = 0.0;
+
+  float xmax=-1e20;
+  float xmin=1e20;
+  float xcoord[3];
+  long index;
+  for (long i=0; i<ntrial; i++)    // loop over all possible particles
+    {
+      index = 3*i;
+      xcoord[0] = positions[index];
+      xcoord[1] = positions[index+1];
+      xcoord[2] = positions[index+2];
+
+// CONVERSION TO ARCSEC      
+      coordx[icount] = xcoord[0]*parsectotirific;
+      coordy[icount] = xcoord[1]*parsectotirific;
+      coordz[icount] = xcoord[2]*parsectotirific;
+      //if(icount < 100)cout << coordx[icount] << "  " << coordy[icount] << " " << coordz[icount] << endl;
+      xmax = max(xmax,coordz[icount]);
+      xmin = min(xmin,coordz[icount]);
+      icount++;
+    }
+  
+  delete [] positions;
   return icount;
 
 }

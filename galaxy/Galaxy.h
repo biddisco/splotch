@@ -6,6 +6,7 @@
 # include <iostream>
 # include "cxxsupport/paramfile.h"
 #include "cxxsupport/bstream.h"
+#include "splotch/splotchutils.h"
 #ifdef HDF5
 # include "hdf5.h"
 #endif
@@ -16,6 +17,12 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
                  float * coordy, float * coordz, float * II, long nnx, long nny);
 
 long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz, float * II, long nnx, long nny);
+
+long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
+                 float * coordy, float * coordz, float * II, long nnx, long nny);
+
+long RHalo (paramfile &params, string ComponentName, long number_of_points, long tot, float * coordx,
                  float * coordy, float * coordz, float * II, long nnx, long nny);
 
 long GaussRFunc (paramfile &params, string ComponentName, long number_of_points, float * coordx,
@@ -38,6 +45,8 @@ long GlobularCluster (paramfile &params, string ComponentName, long number_of_po
 
 long ReadImages (paramfile &params, string infile_rgb, string infile_mask, long numx, long numy, float * RRR,
                  float * GGG, float * BBB, float * III, float * xx, float * yy, long nwant);
+
+float rescale_coords(paramfile &params, string ComponentName, float * xcomp, float * ycomp, float * zcomp, long npart);
 
 const int NUM_OF_FIELDS = 11;
 

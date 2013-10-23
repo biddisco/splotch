@@ -7,7 +7,7 @@ long GlobularCluster (paramfile &params, string ComponentName, long number_of_po
 {
   srand(time(NULL));
 
-  float gsigma = params.find<float>("Sigma"+ComponentName,0);
+  float gsigma = params.find<float>("Sigmag"+ComponentName,0);
   float sigma[3];
   sigma[0] = params.find<float>("Sigmax"+ComponentName,0);
   sigma[1] = params.find<float>("Sigmay"+ComponentName,0);

@@ -1,5 +1,6 @@
 # include "Galaxy.h"
 #define MAX(a,b) ((a < b) ?  (b) : (a))
+#define MIN(a,b) ((a > b) ?  (b) : (a))
 
 float box_muller(float m, float s);
 
@@ -22,15 +23,34 @@ void CalculateColours (paramfile &params, string ComponentsName,long npart,
 	brightness = brightness_fact*pow(brightness, 0.3333333f);
 	cout << "--> Coloring " << ComponentsName.c_str() << " with brightness " << brightness << endl;
 
+        float pixeltotirific = params.find<float>("PixelToTirific"+ComponentsName,-1.0);
+        float nxarcsec = float(nx)*pixeltotirific;
+        float nyarcsec = float(ny)*pixeltotirific;
+
         float iiimax=-1.0;
+        float cextrema[6];
+        cextrema[0]=1e20;
+        cextrema[2]=1e20;
+        cextrema[4]=1e20;
+        cextrema[1]=-1e20;
+        cextrema[3]=-1e20;
+        cextrema[5]=-1e20;
 
 	for (long particlei=0; particlei<npart; particlei++)
 	{
 
-	   xaux = (0.5*(xcoord[particlei]+1.0)); 
-	   yaux = (0.5*(ycoord[particlei]+1.0)); 
-	   ii = (int) (xaux*nx);
-	   jj = (int) (yaux*ny);
+           if(pixeltotirific == -1.0)
+           {
+	     xaux = (0.5*(xcoord[particlei]+1.0)); 
+	     yaux = (0.5*(ycoord[particlei]+1.0)); 
+	     ii = (int) (xaux*nx);
+	     jj = (int) (yaux*ny);
+           } else {
+             xaux = xcoord[particlei]+nxarcsec*0.5;
+             yaux = ycoord[particlei]+nyarcsec*0.5;
+             ii = (int) ((xaux/nxarcsec)*nx);
+             jj = (int) ((yaux/nxarcsec)*ny);
+           }
 
 	   if(ii >= nx || ii < 0 || jj >=ny || jj < 0)
 	   {
@@ -54,8 +74,17 @@ void CalculateColours (paramfile &params, string ComponentsName,long npart,
 	   }
 	
            iiimax = MAX(iiimax, ciii[particlei]);
+           cextrema[0]=MIN(cextrema[0],cred[particlei]);
+           cextrema[2]=MIN(cextrema[2],cgreen[particlei]);
+           cextrema[4]=MIN(cextrema[4],cblue[particlei]);
+           cextrema[1]=MAX(cextrema[1],cred[particlei]);
+           cextrema[3]=MAX(cextrema[3],cgreen[particlei]);
+           cextrema[5]=MAX(cextrema[5],cblue[particlei]);
 
 	}
         cout << "Maximum Brightness = " << iiimax << endl;
+        cout << "Red color range = " << cextrema[0] << " , " << cextrema[1] << endl;
+        cout << "Green color range = " << cextrema[2] << " , " << cextrema[3] << endl;
+        cout << "Blue color range = " << cextrema[4] << " , " << cextrema[5] << endl;
 	//for (long particlei=0; particlei<npart; particlei++)ciii[particlei] /= iiimax;
 }

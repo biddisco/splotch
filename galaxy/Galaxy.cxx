@@ -2,6 +2,9 @@
 
 #define N_COMP 6
 #define MAXSTARSPERGLOBE 10000
+#define MAX(a,b) ((a < b) ?  (b) : (a))
+#define MIN(a,b) ((a > b) ?  (b) : (a))
+
 
 int main (int argc, const char **argv)
 {
@@ -83,7 +86,7 @@ int main (int argc, const char **argv)
 		ycomp = new float [nwant];
 		zcomp = new float [nwant];
 
-		if(component_type == 3 || component_type == 4 || component_type == 5 || component_type == 6)
+		if(component_type == 3 || component_type == 4 || component_type == 5 || component_type == 6 || component_type == 7)
 		  {
 		    printf("  Reading color & mask images\n");
 
@@ -148,8 +151,16 @@ int main (int argc, const char **argv)
 			//for(int iii=0;iii<nfinal;iii++)cout << xcomp[iii]<< " " << ycomp[iii] << " " << zcomp[iii]  << endl;
 		    break;
 		  case 6:
-		    printf("    Generating Gas distribution from TiRiFiC model\n");
+		    printf("    Generating distribution from TiRiFiC model\n");
 		    nfinal=RDiscFuncTirific (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
+		    break;
+		  case 7:
+		    printf("    Generating distribution from TiRiFiC + DICE models\n");
+		    nfinal=RDiscFuncTirificDice (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
+		    break;
+		  case 8:
+		    printf("    Generating distribution from DICE Halo model\n");
+		    nfinal=RHalo (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
 		    break;
 		  }
 
@@ -186,7 +197,6 @@ int main (int argc, const char **argv)
 			printf("    Assigning color from image file\n");
 			CalculateColours(params, ComponentsName[itype], npart[itype], 
 			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
-			
 			break;
 		      case 4:
 			printf("    Assigning color from image file\n");
@@ -204,18 +214,58 @@ int main (int argc, const char **argv)
 			CalculateColours(params, ComponentsName[itype], npart[itype], 
 			cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
 			break;
+                      case 7:
+                        printf("    Assigning color from image file\n");
+                        CalculateColours(params, ComponentsName[itype], npart[itype],
+                        cred, cgreen, cblue, ciii, Red, Green, Blue, III, xcomp, ycomp, nx, ny);
+                        break;
+		      case 8:
+			printf("    Assigning red color\n");
+			for (long i=0; i<npart[itype]; i++)
+                         {
+                          float brightness_fact = params.find<float>("Brightness"+ComponentsName[itype],1.0);
+			  cred[i] = 1.0;
+                          ciii[i] = brightness_fact;
+                          cgreen[i] = cblue[i] = 0.0;
+                         }
+			break;
 		      }
+		    //printf("    Rescaling coordinates\n");
+                    //float rescale = rescale_coords(params, ComponentsName[itype], xcomp, ycomp, zcomp, npart[itype]);
 
-		    printf("    Assigning fixed hsml\n");
+		    printf("    Assigning hsml\n");
 		    float set_hsml = params.find<float>("hsml"+ComponentsName[itype],0.001); 
+                    float hsmlfact = params.find<float>("Adaptivehsml"+ComponentsName[itype],0.0);
+                    float hmax = 0.0;
+                    float hmin = 1e20;
 
+                    float Imax = 0.0;
+                    float Imin = 1e20;
+		    for (long i=0; i<npart[itype]; i++)
+                      {
+                        Imax = MAX(Imax,ciii[i]);
+                        Imin = MIN(Imin,ciii[i]);
+                      }
+
+                    float I_eff;
 		    for (long i=0; i<npart[itype]; i++)
 		      {
 			xyz.push_back(xcomp[i]);
 			xyz.push_back(ycomp[i]);
 			xyz.push_back(zcomp[i]);
-
-			hsml.push_back(set_hsml);
+   
+                        if(Imax != Imin)
+                        {
+                          I_eff = (ciii[i]-Imin)/(Imax-Imin);
+                        } else {
+                          I_eff = 0.0;
+                        }
+                        float hsml_eff = set_hsml/(1.0+hsmlfact*I_eff);
+			hsml.push_back(hsml_eff);
+                        hmax = MAX(hmax,hsml_eff);
+                        hmin = MIN(hmin,hsml_eff);
+                        //hmax = MAX(hmax,I_eff);
+                        //hmin = MIN(hmin,I_eff);
 
 			intensity.push_back(ciii[i]);
 
@@ -223,6 +273,7 @@ int main (int argc, const char **argv)
 			color.push_back(cgreen[i]);
 			color.push_back(cblue[i]);
 		      }
+                    cout << "HMIN, HMAX ------> " << hmin << " " << hmax << endl;
 
 #ifdef HDF5
 
@@ -269,7 +320,7 @@ int main (int argc, const char **argv)
 		    delete [] ciii;
 		  }
 
-		if(component_type == 3 || component_type == 4 || component_type == 6)
+		if(component_type == 3 || component_type == 4 || component_type == 6 || component_type == 7)
 		  {
 		    delete [] F_starx;
 		    delete [] F_stary;
@@ -420,7 +471,7 @@ int main (int argc, const char **argv)
           long iaux=0;
 	  cout << "WRITING " << xyz.size()/3 << " DATA\n";
           //for(long ii=0; ii<xyz.size()/3; ii=ii+int(xyz.size()/3/100000))
-          for(long ii=0; ii<xyz.size()/3; ii=ii+30)
+          for(long ii=0; ii<xyz.size()/3; ii=ii+1)
 	  {
              iaux=ii*3; 
 	     fprintf(pFile, "%f %f %f\n", xyz[iaux],xyz[iaux+1],xyz[iaux+2]);
