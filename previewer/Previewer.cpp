@@ -30,8 +30,25 @@ namespace previewer
 		// Get path of executable
 		int ret;
 		pid_t pid; 
-		char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
+		char pathbuf[512];
 		std::string exepath;
+
+		#ifndef SPLOTCHMAC
+		
+		readlink("/proc/self/exe", pathbuf, 512);
+		// Remove executable name from path
+		int len = 0;
+		exepath = std::string(pathbuf);
+		for(unsigned i = exepath.length()-1; i > 0; i--)
+			if(exepath[i] == '/')
+			{
+				len = i;
+				break;
+			}
+		exepath = exepath.substr(0,len+1);
+
+		#else
+
 		pid = getpid();
 		ret = proc_pidpath (pid, pathbuf, sizeof(pathbuf));
 		if ( ret <= 0 ) 
@@ -53,6 +70,9 @@ namespace previewer
 				}
 			exepath = exepath.substr(0,len+1);
 		}
+		
+		#endif
+
 
 		DebugPrint("Previewer Loaded with Parameter File");
 		DebugPrint("Parameter File:", paramFilePath);

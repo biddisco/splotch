@@ -36,8 +36,8 @@ OPT += -DPREVIEWER
 #OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
-#SYSTYPE="generic"
-SYSTYPE="mac"
+SYSTYPE="generic"
+#SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
@@ -89,6 +89,7 @@ endif
 ifeq ($(SYSTYPE),"mac")
 
 SUP_INCL += -I/usr/X11/include
+OPT += -DSPLOTCHMAC
 
 endif
 

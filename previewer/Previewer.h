@@ -46,8 +46,12 @@
 #include <string>
 #include <stdlib.h>
 #include <errno.h>
-#include <libproc.h>
+#include <unistd.h>
 
+#ifdef SPLOTCHMAC
+#include <libproc.h>
+#endif
+ 
 namespace previewer
 {
 	// Provides the main entry point to the application from splotch. Also acts as
