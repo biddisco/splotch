@@ -36,8 +36,8 @@ OPT += -DPREVIEWER
 #OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
-#SYSTYPE="mac"
+#SYSTYPE="generic"
+SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
 #SYSTYPE="PLX"
@@ -88,7 +88,7 @@ endif
 
 ifeq ($(SYSTYPE),"mac")
 
-SUP_INCL += -I/usr/X11/include
+SUP_INCL += -I/usr/X11/include -I/opt/X11/include
 OPT += -DSPLOTCHMAC
 
 endif
@@ -312,7 +312,7 @@ ifeq (PREVIEWER,$(findstring PREVIEWER,$(OPT)))
 # Link libs
 
 #ifeq ($SYSTYPE,"mac")
- LIB_OPT += -L/usr/X11R6/lib -lXext -lX11 -lGL
+ LIB_OPT += -L/usr/X11R6/lib -L/opt/X11/lib -lXext -lX11 -lGL
 #else
 # LIB_OPT += -lGL -lXext -lX11
 #endif
