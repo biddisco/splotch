@@ -30,12 +30,11 @@ namespace previewer
 		// Get path of executable
 		int ret;
 		pid_t pid; 
-		char pathbuf[512];
 		std::string exepath;
 
 		#ifndef SPLOTCHMAC
-		
-		readlink("/proc/self/exe", pathbuf, 512);
+		char pathbuf[1024];
+		readlink("/proc/self/exe", pathbuf, 1024);
 		// Remove executable name from path
 		int len = 0;
 		exepath = std::string(pathbuf);
@@ -48,7 +47,7 @@ namespace previewer
 		exepath = exepath.substr(0,len+1);
 
 		#else
-
+		char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
 		pid = getpid();
 		ret = proc_pidpath (pid, pathbuf, sizeof(pathbuf));
 		if ( ret <= 0 ) 
