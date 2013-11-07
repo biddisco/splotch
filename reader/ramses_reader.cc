@@ -87,21 +87,26 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	// Sampling
 	// Sample factor is read in as percentage then converted to factor
 	bool doSample = params.find<bool>("sampler",false);
-	float sample_factor = params.find<float>("sample_factor",100);;
-	if(sample_factor < 0 || sample_factor > 100)
+	float sample_factor = params.find<float>("sample_factor",100);
+	if(doSample)
 	{
-		if(mpiMgr.master())
-			std::cout << "Invalid sample factor: " << sample_factor << "\n Use a percentage to sample, ie sample_factor=50\n";
-		exit(0);
-	}
-	else
-	{
-		if(mpiMgr.master())
+		if(sample_factor < 0 || sample_factor > 100)
 		{
-			std::cout << "Sampler: Chosen sample percentage: " << sample_factor << "%\n";
-			std::cout << "Sampling nearest available fraction of data: 1/" << (100/sample_factor)<< std::endl; 
+			if(mpiMgr.master())
+				std::cout << "Invalid sample factor: " << sample_factor << "\n Use a percentage to sample, ie sample_factor=50\n";
+			exit(0);
+		}
+		else
+		{
+			if(mpiMgr.master())
+			{
+				std::cout << "Sampler: Chosen sample percentage: " << sample_factor << "%\n";
+				std::cout << "Sampling nearest available fraction of data: 1/" << (100/sample_factor)<< std::endl; 
+			}
 		}
 	}
+
+	// Storage for sampled points
 	std::vector<particle_sim> pointfilter;
 
 	if(mode == 0 || mode == 2)
@@ -222,15 +227,31 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			amr_file amr(repo, icpu+1);
 			amr.file.SkipRecords(13);
 			nlevelmax = amr.meta.nlevelmax; 
+			
+			// Allocated for gridboundarys if necessary
+			F90_Arr2D<unsigned> ngridbound;
+			if(amr.meta.nboundary>0)
+				ngridbound.resize(amr.meta.nboundary,amr.meta.nlevelmax);
 
 			// Read grid numbers
-			// Do not account for boundarys. Refer to io_ramses.f90 for boundary support
 			F90_Arr2D<unsigned> ngridfile;
-			ngridfile.resize(amr.meta.ncpu,amr.meta.nlevelmax);
-			amr.file.Read2DArray(ngridfile);
+			ngridfile.resize(amr.meta.ncpu + amr.meta.nboundary,amr.meta.nlevelmax);
+			F90_Arr2D<unsigned> ngridfile_noboundary;
+			ngridfile_noboundary.resize(amr.meta.ncpu,amr.meta.nlevelmax);
+			amr.file.Read2DArray(ngridfile_noboundary);
+			memcpy( (void*)&ngridfile(0,0),(const void*)&ngridfile_noboundary(0,0), (ngridfile_noboundary.xdim*ngridfile_noboundary.ydim*sizeof(unsigned)) );
+			ngridfile_noboundary.Delete();
 
-			// Reminder: this line will be different if boundary>0
-			amr.file.SkipRecords(3);
+			amr.file.SkipRecord();
+
+			if(amr.meta.nboundary>0)
+			{
+				amr.file.SkipRecords(2);
+				amr.file.Read2DArray(ngridbound);
+				memcpy( (void*)&ngridfile(amr.meta.ncpu,0),(const void*)&ngridbound(0,0), (ngridbound.xdim*ngridbound.ydim*sizeof(unsigned)) );
+			}
+
+			amr.file.SkipRecords(2);
 
 			if(info.ordering == "bisection")
 				amr.file.SkipRecords(5);
@@ -254,7 +275,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			for(unsigned ilevel = 0; ilevel < amr.meta.nlevelmax; ilevel++)
 			{
 				// Loop over domains within level (this would be ncpu+nboundary if nboundary>0)
-				for(unsigned idomain = 0; idomain < amr.meta.ncpu; idomain++)
+				for(unsigned idomain = 0; idomain < amr.meta.ncpu+amr.meta.nboundary; idomain++)
 				{
 
 					// Check there are grids for this domain, process dependant on parallel read mode

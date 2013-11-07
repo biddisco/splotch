@@ -87,10 +87,7 @@ private:
 		file.ReadScalar(meta.nboundary);
 		file.ReadScalar(meta.ngridcurrent);
 		file.ReadScalar(meta.boxlen);
-
-		if(meta.nboundary > 0)
-			std::cout << "Warning: nboundary > 0 detected, this is unsupported" << std::endl;
-
+		
 		meta.twotondim = pow(2,meta.ndim);
 		meta.xbound[0] = double(meta.nx[0])/2;
 		meta.xbound[1] = double(meta.nx[1])/2;
