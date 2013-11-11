@@ -326,16 +326,22 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
   vector<pair<MyIDType,MyIDType> > v;
   v.reserve(min(p1.size(),p2.size()));
     {
-    tsize i1=0,i2=0;
+    MyIDType i1=0,i2=0;
     while(i1<p1.size() && i2<p2.size())
       {
       if (id1[idx1[i1]]==id2[idx2[i2]])
         //  if(p1[idx1[i1]].type==p2[idx2[i2]].type)
         v.push_back(pair<MyIDType,MyIDType>(idx1[i1++],idx2[i2++]));
       else if (id1[idx1[i1]]<id2[idx2[i2]])
-        i1++;
+	{
+	  v.push_back(pair<MyIDType,MyIDType>(idx1[i1],MyMaxID));
+	  i1++;
+	}
       else if (id1[idx1[i1]]>id2[idx2[i2]])
-        i2++;
+	{
+	  v.push_back(pair<MyIDType,MyIDType>(MyMaxID,idx2[i2]));
+	  i2++;
+	}
       }
     }
 
@@ -351,12 +357,16 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 #pragma omp for schedule(guided,1000)
   for (i=0; i<int(npart); ++i)
     {
-    tsize i1=v[i].first, i2=v[i].second;
+    MyIDType i1=v[i].first, i2=v[i].second;
     /*
     planck_assert (p1[i1].type==p2[i2].type,
       "interpolate: cannot interpolate between different particle types!");
     */
-    vec3 x1(p1[i1].x,p1[i1].y,p1[i1].z), x2(p2[i2].x,p2[i2].y,p2[i2].z);
+    particle_sim part1,part2;
+    if(i1 < MyMaxID) part1=p1[i1]; else part1=p2[i2];
+    if(i2 < MyMaxID) part2=p2[i2]; else part2=p1[i1];
+
+    vec3f x1(part1.x,part1.y,part1.z), x2(part2.x,part2.y,part2.z);
     if (periodic)
       {
       if (abs(x2.x-x1.x) > boxhalf)
@@ -366,22 +376,51 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
       if (abs(x2.z-x1.z) > boxhalf)
          (x2.z>x1.z) ? x2.z -= boxsize : x2.z += boxsize;
       }
-    vec3 pos;
+    vec3f pos;
     if (interpol_mode>1)
       {
-      vec3 v1(vel1[i1]), v2(vel2[i2]);
-      vec3 vda = (x2-x1)*2. - (v1*v_unit1 + v2*v_unit2);
-      pos = x1 + v1*(v_unit1*frac)
+	vec3f v1,v2;
+        if (i1 < MyMaxID && i2 < MyMaxID) 
+	  {
+	    v1 = vel1[i1]; 
+	    v2 = vel2[i2];
+	  }
+	if (i1 == MyMaxID)
+	  {
+	    v1 = v2 = vel2[i2];
+	    x1 = x2 - v1 / (0.5 * (v_unit1 + v_unit2));
+	  }
+	if (i2 == MyMaxID)
+	  {
+	    v1 = v2 = vel1[i1];
+	    x2 = x1 + v1 / (0.5 * (v_unit1 + v_unit2));
+	  }
+	vec3f vda = (x2-x1)*2. - (v1*v_unit1 + v2*v_unit2);
+	pos = x1 + v1*(v_unit1*frac)
           + (v2*v_unit2 - v1*v_unit1 + vda)*(frac*frac*0.5);
       }
     else
       pos = x1*(1.-frac) + x2*frac;
 
-    p[i]=particle_sim(p1[i1].e*(1.-frac)+p2[i2].e*frac,
-            pos.x,pos.y,pos.z,
-            (1-frac) * p1[i1].r  + frac*p2[i2].r,
-            (1-frac) * p1[i1].I  + frac*p2[i2].I,
-            p1[i1].type,p1[i1].active);
+
+    if (i1 < MyMaxID && i2 < MyMaxID) 
+      p[i]=particle_sim(p1[i1].e*(1.-frac)+p2[i2].e*frac,
+			pos.x,pos.y,pos.z,
+			(1-frac) * p1[i1].r  + frac*p2[i2].r,
+			(1-frac) * p1[i1].I  + frac*p2[i2].I,
+			p1[i1].type,p1[i1].active);
+    if (i1 == MyMaxID)
+      p[i]=particle_sim(p2[i2].e,
+			pos.x,pos.y,pos.z,
+			p2[i2].r,
+			frac*p2[i2].I,
+			p2[i2].type,p2[i2].active);
+    if (i2 == MyMaxID)
+      p[i]=particle_sim(p1[i1].e,
+			pos.x,pos.y,pos.z,
+			p1[i1].r,
+			(1-frac)*p1[i1].I,
+			p1[i1].type,p1[i1].active);
     }
 }
 

@@ -33,10 +33,14 @@
 #include "luteditor.h"
 #endif
 
+#include<limits.h>
+
 #ifdef LONGIDS
 #define MyIDType uint64
+#define MyMaxID ULLONG_MAX
 #else
 #define MyIDType uint32
+#define MyMaxID ULONG_MAX
 #endif
 
 struct particle_sim
