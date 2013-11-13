@@ -57,6 +57,10 @@ Galaxy.cxx
   <float>("Brightness"+ComponentsName[itype],1.0); increase particle intensity of a given multiplicative factor
   <float>("hsml"+ComponentsName[itype],0.001); hsml value (constant for each component)
   <float>("Adaptivehsml"+ComponentsName[itype],0.0); if not 0.0, assign hsml as: hsml/(1.0+Adaptivehsml*I);
+  <float>("Red"+ComponentsName[itype],1.0); constant color of a component
+  <float>("Green"+ComponentsName[itype],1.0);
+  <float>("Blue"+ComponentsName[itype],1.0);
+
 
 ReadImages.cxx
   <long>("Nskip",1); keeps one pixel every nskip
