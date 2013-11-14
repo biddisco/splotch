@@ -65,6 +65,8 @@ MPI_Datatype ndt2mpi (NDT type)
     case NAT_ULONGLONG: return MPI_UNSIGNED_LONG_LONG;
     case NAT_FLOAT: return MPI_FLOAT;
     case NAT_DOUBLE: return MPI_DOUBLE;
+    case NAT_FCMPLX: return MPI_COMPLEX;
+    case NAT_DCMPLX: return MPI_DOUBLE_COMPLEX;
     case NAT_LONGDOUBLE: return MPI_LONG_DOUBLE;
     default: planck_fail ("Unsupported type");
     }
@@ -93,11 +95,11 @@ void MPI_Manager::gatherv_helper1_m (int nval_loc, arr<int> &nval,
   gather_m (nval_loc, nval);
   nval_tot=0;
   for (tsize i=0; i<nval.size(); ++i)
-    nval_tot+=nval[i];
+    nval_tot+=Int(Ts(nval_tot)+Ts(nval[i]));
   offset.alloc(num_ranks_);
   offset[0]=0;
   for (tsize i=1; i<offset.size(); ++i)
-    offset[i]=offset[i-1]+nval[i-1];
+    offset[i]=Int(Ts(offset[i-1])+Ts(nval[i-1]));
   }
 
 void MPI_Manager::all2allv_easy_prep (tsize insz, const arr<int> &numin,
@@ -110,8 +112,8 @@ void MPI_Manager::all2allv_easy_prep (tsize insz, const arr<int> &numin,
   disin[0]=disout[0]=0;
   for (tsize i=1; i<n; ++i)
     {
-    disin [i]=disin [i-1]+numin [i-1];
-    disout[i]=disout[i-1]+numout[i-1];
+    disin [i]=Int(Ts(disin [i-1])+Ts(numin [i-1]));
+    disout[i]=Int(Ts(disout[i-1])+Ts(numout[i-1]));
     }
   planck_assert(insz==tsize(disin[n-1]+numin[n-1]), "incorrect array size");
   }
@@ -266,6 +268,20 @@ void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
     const_cast<int *>(disout), tp, LS_COMM);
   }
 
+void MPI_Manager::all2allvRawVoidBlob (const void *in, const int *numin,
+  const int *disin, void *out, const int *numout, const int *disout, int sz)
+  const
+  {
+  assert_unequal(in,out);
+  MPI_Datatype tp;
+  MPI_Type_contiguous (sz,MPI_CHAR,&tp);
+  MPI_Type_commit(&tp);
+  MPI_Alltoallv (const_cast<void *>(in), const_cast<int *>(numin),
+    const_cast<int *>(disin), tp, out, const_cast<int *>(numout),
+    const_cast<int *>(disout), tp, LS_COMM);
+  MPI_Type_free(&tp);
+  }
+
 #else
 
 void MPI_Manager::sendRawVoid (const void *, NDT, tsize, tsize) const
@@ -324,6 +340,16 @@ void MPI_Manager::all2allvRawVoid (const void *in, const int *numin,
   char *out2 = static_cast<char *>(out);
   tsize st=ndt2size(type);
   memcpy (out2+disout[0]*st,in2+disin[0]*st,numin[0]*st);
+  }
+void MPI_Manager::all2allvRawVoidBlob (const void *in, const int *numin,
+  const int *disin, void *out, const int *numout, const int *disout, int sz)
+  const
+  {
+  assert_unequal(in,out);
+  planck_assert (numin[0]==numout[0],"message size mismatch");
+  const char *in2 = static_cast<const char *>(in);
+  char *out2 = static_cast<char *>(out);
+  memcpy (out2+disout[0]*sz,in2+disin[0]*sz,numin[0]*sz);
   }
 
 #endif

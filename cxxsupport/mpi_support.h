@@ -34,6 +34,7 @@
 #include "datatypes.h"
 #include "arr.h"
 #include "share_utils.h"
+#include "safe_cast.h"
 
 /* This code assumes a homogeneous parallel environment, i.e. all tasks must
    run on systems that have identical data type sizes, alignment requirements,
@@ -45,6 +46,10 @@ class MPI_Manager
     enum redOp { Sum, Min, Max, Prod };
 
   private:
+    template<typename T> static int Int(T s) { return safe_cast<int>(s); }
+    template<typename T> static tsize Ts (T s) { return safe_cast<tsize>(s); }
+
+
     void gatherv_helper1_m (int nval_loc, arr<int> &nval, arr<int> &offset,
       int &nval_tot) const;
     void gatherRawVoid (const void *in, tsize num, void *out, NDT type,
@@ -88,6 +93,9 @@ class MPI_Manager
     void all2allRawVoid (const void *in, void *out, NDT type, tsize num) const;
     void all2allvRawVoid (const void *in, const int *numin, const int *disin,
       void *out, const int *numout, const int *disout, NDT type) const;
+    void all2allvRawVoidBlob (const void *in, const int *numin,
+      const int *disin, void *out, const int *numout, const int *disout, int sz)
+      const;
 
     template<typename T> void sendRaw (const T *data, tsize num, tsize dest)
       const
@@ -170,7 +178,7 @@ class MPI_Manager
 
     template<typename T> void gatherv_m (const arr<T> &in, arr<T> &out) const
       {
-      int nval_loc = in.size(), nval_tot;
+      int nval_loc = Int(in.size()), nval_tot;
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc,nval,offset,nval_tot);
       out.alloc(nval_tot);
@@ -180,7 +188,7 @@ class MPI_Manager
     template<typename T> void gatherv_m (const std::vector<T> &in,
       std::vector<T> &out) const
       {
-      int nval_loc = in.size(), nval_tot;
+      int nval_loc = Int(in.size()), nval_tot;
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc,nval,offset,nval_tot);
       out.resize(nval_tot);
@@ -189,13 +197,13 @@ class MPI_Manager
       }
     template<typename T> void gatherv_s (const arr<T> &in) const
       {
-      int nval_loc = in.size();
+      int nval_loc = Int(in.size());
       gather_s (nval_loc);
       gathervRawVoid (&in[0],nval_loc,0,0,0,nativeType<T>());
       }
     template<typename T> void gatherv_s (const std::vector<T> &in) const
       {
-      int nval_loc = in.size();
+      int nval_loc = Int(in.size());
       gather_s (nval_loc);
       gathervRawVoid (&in[0],nval_loc,0,0,0,nativeType<T>());
       }
@@ -208,7 +216,7 @@ class MPI_Manager
 
     template<typename T> void gatherv_m (const arr2<T> &in, arr2<T> &out) const
       {
-      int nval_loc = in.size(), nval_tot;
+      int nval_loc = Int(in.size()), nval_tot;
       arr<int> nval, offset;
       gatherv_helper1_m (nval_loc, nval, offset, nval_tot);
       out.alloc(nval_tot/in.size2(),in.size2());
@@ -218,7 +226,7 @@ class MPI_Manager
 
     template<typename T> void gatherv_s (const arr2<T> &in) const
       {
-      int nval_loc = in.size();
+      int nval_loc = Int(in.size());
       gather_s (nval_loc);
       gathervRawVoid (&in[0][0],nval_loc,0,0,0,nativeType<T>());
       }
@@ -357,15 +365,11 @@ class MPI_Manager
     template<typename T> void all2allv_easy_typeless (const std::vector<T> &in,
       const arr<int> &numin, std::vector<T> &out, arr<int> &numout) const
       {
-      arr<int> disin,disout,numin2(numin.size());
-      for (tsize i=0; i<numin.size(); ++i)
-        numin2[i]=numin[i]*sizeof(T);
-      all2allv_easy_prep (in.size()*sizeof(T),numin2,disin,numout,disout);
-      out.resize((disout[num_ranks_-1]+numout[num_ranks_-1])/sizeof(T));
-      all2allvRawVoid (&in[0], &numin2[0], &disin[0], &out[0], &numout[0],
-        &disout[0], NAT_CHAR);
-      for (tsize i=0; i<numout.size(); ++i)
-        numout[i]/=sizeof(T);
+      arr<int> disin,disout;
+      all2allv_easy_prep (in.size(),numin,disin,numout,disout);
+      out.resize((disout[num_ranks_-1]+numout[num_ranks_-1]));
+      all2allvRawVoidBlob (&in[0], &numin[0], &disin[0], &out[0], &numout[0],
+        &disout[0], sizeof(T));
       }
   };
 
