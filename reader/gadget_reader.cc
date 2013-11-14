@@ -59,7 +59,7 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
 }
 
-int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params, int sample_factor)
+int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params, float sample_factor)
 {
   bool doSample = params.find<bool>("sampler",false);
   double h,O,L;
@@ -106,11 +106,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
   // Sampling, this cannot be done while interpolating...
   // Sample factor is read in as percentage then converted to factor
   bool doSample = params.find<bool>("sampler",false);
-  int sample_factor = 1;
+  float sample_factor = 1;
   if(doSample && !interpol_mode)
   { 
     // If no factor, use 100% sampling ie no sample.
-    sample_factor = params.find<int>("sample_factor",100);
+    sample_factor = params.find<float>("sample_factor",100);
     if((sample_factor > 0) && (sample_factor <= 100))
     {
       sample_factor = 100/sample_factor;
