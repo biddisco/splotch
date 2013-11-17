@@ -144,18 +144,21 @@ However, also visualization tools require high performance computing (hereafter 
 fulfil the requirements posed both from data size and from the need of having
 fast (if not real-time) rendering.
 
-This paper will show how the Splotch software (REF), our ray-casting algorithm for
+The Splotch software (REF), our ray-casting algorithm for
 effectively visualizing large-scale, particle-based datasets, addresses these issues, 
-providing high quality graphic outputs, processing data of, ideally, any size, 
-efficiently exploiting a broad variety of HPC systems. 
-In particular, we will describe the work accomplished to enable Splotch to 
-run on the Intel PHI (REF) architecture, taking advantage of the Many Integrated Core (hereafter MIC) accelerator,
+providing high quality graphic outputs, processing data of, ideally, any size, already
+efficiently exploiting a broad variety of HPC systems: multi-core processors and multi-node supercomputing systems (REF: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF1: Astronomical Society of the Pacific Conference Series, 475 (ADASS XXII) pp.103-106, 2013; REF2: in preparation). 
+This paper will describe the work accomplished to enable Splotch to 
+run on the new Intel PHI (REF) architecture, taking advantage of the Many Integrated Core (hereafter MIC) accelerator,
+%%%%% MARZIA
+% what is the difference between PHI and MIC? To me they are the same thing.....
+%%%%%%
 which is expected to provide, on suitable classes of algorithms, outstanding performance 
 with power consumption being comparable to standard CPUs. 
 We will present the MIC implementation and optimisations, performance tuning,
 benchmarks carried out, and the resulting performance measurements, comparing that of an OpenMP
-based implementation running on multiple cores of a single CPU. A brief overview of this implementation
-will also be given, referring to [REF] for further details.
+based implementation running on multiple cores of a single CPU. 
+A brief overview of this implementation will also be given, referring to [REF] for further details.
 
 \section{Splotch Overview}
 \label{sect:overview}
@@ -186,8 +189,8 @@ Contents:
 \section{Splotch on the MIC}
 \label{sect:micsplotch}
 
-The MIC based implementation of Splotch exploits both OpenMP and MPI in order to fully exploit the many core 
-programming paradigm necessary to take advantage this architecture. This section gives a brief overview of the 
+The MIC based implementation of Splotch uses both OpenMP and MPI in order to fully exploit the many core 
+programming paradigm necessary to take advantage of this architecture. This section gives a brief overview of the 
 Xeon Phi, and the steps taken to modify and optimise Splotch to make effective use of this hardware.
 
 \subsection{Overview of the MIC Architecture}
@@ -195,7 +198,7 @@ Xeon Phi, and the steps taken to modify and optimise Splotch to make effective u
 
 The core ideal behind the MIC micro-architecture is obtaining a massive level of parallelism for high throughput 
 performance in power restricted cluster environments. To this end Intel's flagship MIC product, the Xeon Phi, 
-contains roughly 60 cores on a single chip – dependant on the model. Each core has access to a 512 KB private 
+contains roughly 60 cores on a single chip, dependent on the model. Each core has access to a 512 KB private 
 fully coherent L2 cache, memory controllers and the PCIe client logic provide access to up to 8 GB of GDDR5 
 memory, and a bi-directional ring interconnect brings these components together. The cores are in-order, however 
 up to 4 hardware threads are supported to mitigate the latencies inherent with in-order execution. The Vector 
@@ -210,7 +213,7 @@ to log into the node, transfer a program over and run natively, or to use the co
 the Xeon. The ability to partition subgroups of processors allows the Phi to run multiple MPI processes at the same 
 time, a technique exploited in [insert subsection number]. In addition, a heterogenous approach is possible, using 
 the coprocessor to accelerate a standard CPU based algorithm by offloading sections of computation to the device using 
-a small series of extensions available to both C++ and Fortran. 
+a small series of directives available to both C++ and Fortran. 
 
 An advantageous factor of programming for the Xeon Phi, as opposed to other accelerators commonly used in HPC 
 environments such as GPUs, is the similarity of techniques used to exploit parallelism on both the Xeon Phi and 
