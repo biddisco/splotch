@@ -10,12 +10,16 @@ simtype (integer):
 
     0: tabular binary file
     1: block binary file
-    2: Gadget2
+    2: Gadget2 binary
     3: Enzo
     4: Gadget Millenium
     5: plain binary file MPI2
     6: Mesh
     7: HDF5
+    8: Gadget HDF5 
+   10: Visivo
+   11: Tipsy
+   13: Ramses
 
 if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 
@@ -74,7 +78,7 @@ if (simtype==2 or simtype==4) (i.e. only for Gadget files)
 
 endif
 
-swap_endian (bool, defaul=false):
+ swap_endian (bool, defaul=false):
   if true, values read from binary input files are byte-swapped directly
   after reading
 
@@ -86,21 +90,21 @@ if (simtype==0,1,5) (i.e. only for binary files)
   num_blocks (integer):
     number of blocks  (case simtype = 0/5, i.e. blocks)
 
-## number of column/block containing the following particle property:
-## (-1 means that this property is missing in the input file or it is not to be read)
+ number of column/block containing the following particle property:
+ (-1 means that this property is missing in the input file or it is not to be read)
     x (integer): index of the x-coordinate
     y (integer): index of the y-coordinate
     z (integer): index of the z-coordinate
     r (integer): index of the smoothing length
     I (integer): index of the intensity
-## if color_is_vector, the following properties correspond to RGB color of the particle
+ if color_is_vector, the following properties correspond to RGB color of the particle
     C1 (integer): index of the R component
     C2 (integer): index of the G component
     C3 (integer): index of the B component
-##else
+ else
     C1 (integer): index of the quantity to use in a color lookup table
 
-endif
+ endif
 
 
 ##------------------
@@ -142,7 +146,7 @@ fov (double, default=45):
 EyeSeparation (double, default=0):
   horizontal eye separation in degrees. If set, turns on stereo mode
 
-## define z-coordinate range of particles to be visualized
+# define z-coordinate range of particles to be visualized
 zmin (double, default=0):
   near cutoff distance
 zmax (double, default=1e23):
@@ -204,20 +208,27 @@ xres (integer, default=800):
 yres (integer, default=xres):
   number of image pixels in y direction
 
+boost (bool, default=false)
+  enable booster: random subsample of the dataset  
+
 ##-----------
-## CUDA SETUP
+## CUDA Setup
 ##-----------
-max_region =     ## the maximum pixels used to visualize a particle (default: 1024), if the particle
-                    occupies a larger region then split (split strategy optimization for access
-                    of the device memory)
-gpu_info =       ## if true, print detailed information about GPUs (default: false)
+gpu_info    (bool, default=true)
+  if true, print detailed information about GPUs
 
-gpu_number =     ## number of GPUs to use (Windows only)  (default: 1)
+gpu_number  (int, default=1)
+  number of GPUs to use per MPI task
+cores_number (int, optional)
+  number of cores per node
 
-use_host_as_thread =   ## enable host (cpu) as a cuda thread: true/false (default: false)
-host_load =            ## percentage of load for host (default 0) if it is enabled as a thread
+particle_mem_factor  (int, default=3)
+  factor applied to particle sizes to allocate global memory
 
-test_load_balancing =  ## enable gpu load balancing: true/false
-                          (default: false, i.e. all gpus manage the same number of particles)
-gpu_load<g> =          ## if test_load_balancing is true, this parameter gives the percentage
-                          of particles to manage for the gpu number <g>  (default: 0)
+# Rendering tile scheme   parameters
+tile_boundary_width    (int, default=8)
+   width of the boundary around the image tile  
+tile_x-side            (int, default=8)
+tile_y-side            (int, default=tile_x_side)
+   x and y side dimension of the image tile, in terms of pixels
+
