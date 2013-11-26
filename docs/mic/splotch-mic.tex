@@ -149,10 +149,7 @@ effectively visualizing large-scale, particle-based datasets, addresses these is
 providing high quality graphic outputs, processing data of, ideally, any size, already
 efficiently exploiting a broad variety of HPC systems: multi-core processors and multi-node supercomputing systems (REF: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF1: Astronomical Society of the Pacific Conference Series, 475 (ADASS XXII) pp.103-106, 2013; REF2: in preparation). 
 This paper will describe the work accomplished to enable Splotch to 
-run on the new Intel PHI (REF) architecture, taking advantage of the Many Integrated Core (hereafter MIC) accelerator,
-%%%%% MARZIA
-% what is the difference between PHI and MIC? To me they are the same thing.....
-%%%%%%
+run on the new Intel PHI (REF) accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture,
 which is expected to provide, on suitable classes of algorithms, outstanding performance 
 with power consumption being comparable to standard CPUs. 
 We will present the MIC implementation and optimisations, performance tuning,
@@ -284,31 +281,36 @@ rendering process, the next chunk of data is processed until all particles have 
 then copied back to the host to be written to file. 
 %\medskip
 %\noindent
-%- Broken into sections: Initialisation/preprep, rototranslate/color, prerender, actual render, image accumulation 
 
 
 
 \subsubsection{Optimisation}
 \label{sect:micoptimisation}
 
-\noindent
-Contents:
+In order to appropriately exploit the MIC architecture and attain high performance gains, various optimisation methods 
+were employed. Some more generic methods are applicable to other architectures, such as Intel 64 and IA-32 [REF], while 
+others are specific to the Xeon Phi. For example, cost of dynamic memory allocation on the Phi is relatively high [REF1], 
+in order to minimise unnecessary allocations buffers are created at the beginning of the program cycle and reused 
+throughout. This is not such a large concern in a standard Intel 64 environment where frequent memory allocations, 
+such as might be invoked by repetitive resizing of dynamic arrays, carry little comparative cost.
 
-\noindent
-- Description of various optimisation methods
+Often scientific datasets being visualized are very large, it is inevitable that there may at times be more data than 
+available device memory. This raises the issue of waiting for data transfer from main memory which, while reaching 
+roughly 6 GB/s over the 16 channel PCIe 2.0 connection, is an additional overhead to be considered. The possibility 
+of data transferral and computation being carried out asynchronously has allowed for a double buffered method to 
+overlap these stages, minimising the overhead. In addition, the MIC\_USE\_2MB\_BUFFERS environment variable is set 
+to 64K, forcing buffers larger than this value to be allocated in 2MB pages, which improves data allocation rate, 
+transfer rate and can benefit performance by potentially reducing page faults and TLB (translation look-aside buffer) 
+misses. [REF2] [add timings to show improvment this environment variable provides in allocation/transfer?]
 
-\noindent
-- Cost of memory allocations, avoiding this
+The large 512 bit width SIMD capability of the MIC architecture is addressed through vectorization carried out both 
+automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) [REF3] . Firstly the 
+core data structure used in Splotch rendering was re-examined, and converted from an array of structures (AoS) to 
+a structure of arrays (SoA). The AoS method stores a large array of structures, each containing all of the 
+information pertaining to a single particle. While this is useful for encapsulation, it is unsuitable for SIMD 
+processing. [REF4] [Run test with aos vs soa and show results?]
 
-\noindent
-- AoS vs SoA
-
-\noindent
-- Double buffered computation
-
-\noindent
-- Vectorization: automatic and manual
-
+\medskip
 \noindent
 - Use of MPI to partition Phi's cores into sections
 
