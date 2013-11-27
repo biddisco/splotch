@@ -1,5 +1,3 @@
-FLOWCHART
-
 FOR EACH COMPONENT
   - allocate x,y,z (and other) arrays with maximum size read from param file
   - read binary images with colors and intensity using ReadImages function
