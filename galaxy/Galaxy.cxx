@@ -177,6 +177,9 @@ int main (int argc, const char **argv)
 		    cgreen = new float [npart[itype]]; 	
 		    cblue  = new float [npart[itype]]; 	
 		    ciii   = new float [npart[itype]];
+                    float xred = params.find<float>("Red"+ComponentsName[itype],1.0);
+                    float xgreen = params.find<float>("Green"+ComponentsName[itype],1.0);
+                    float xblue = params.find<float>("Blue"+ComponentsName[itype],1.0);
 
 		    switch(component_type)
 		      {
@@ -184,9 +187,14 @@ int main (int argc, const char **argv)
 			printf("    Nothing to do\n");
 			break;
 		      case 1:
-			printf("    Assigning white color\n");
+			printf("    Color read from parameter file (default=white)\n");
 			for (long i=0; i<npart[itype]; i++)
-			  cred[i] = cgreen[i] = cblue[i] = ciii[i] = 1.0;
+                          {
+			    cred[i] = xred;
+                            cgreen[i] = xgreen;
+                            cblue[i] = xblue;
+                            ciii[i] = 1.0;
+                          }
 			break;
 		      case 2:
 			printf("    Assigning white color\n");

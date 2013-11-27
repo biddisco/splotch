@@ -64,87 +64,8 @@ long GaussRFunc (paramfile &params, string ComponentName, long number_of_points,
 // if sigma is in arcsec then parsectotirific = 1.0
 // if sigma is in kpc then parsectotirific must be properly set
 //
-// Read Tirific file (only radius Inclination and Position Angle actually needed)
 
-  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
-  float pi = 3.141592654;
-  COLOURMAP model;
-
-  ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
-  planck_assert (infile,"could not open TIRIFIC file  <" + params.find<string>("TirificModel"+ComponentName) + ">");
-  string dummy;
-  int nModel;
-  infile >> nModel;
-  infile >> dummy >> dummy >> dummy >> dummy >> dummy;
-  cout << "      loading " << nModel << " entries of tirific model table " << endl;
-  float rrr,vvv,zzz,iii,ppp;
-  for (int i=0; i<nModel; i++)
-    {
-      infile >> rrr >> vvv >> zzz >> iii >> ppp;
-      model.addVal(rrr,COLOUR(zzz,iii,ppp));
-    }
-   infile.close();
-
-// Rotate particles
-
-  long icount = 0;
-  float r0 = 0.0;
-
-  float xmax=-1e20;
-  float xmin=1e20;
-  float xcoord[3];
-  long index;
-  long ntrial = number_of_points;
-  for (long i=0; i<ntrial; i++)    // loop over all possible particles
-    {
-      index = i;
-      xcoord[0] = coordx[index];
-      xcoord[1] = coordy[index];
-      xcoord[2] = coordz[index];
-      r0 = sqrt(xcoord[0]*xcoord[0] + xcoord[1]*xcoord[1]);
-
-      double dphi = asin(double(xcoord[1]/r0));
-      if(xcoord[1] >= 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
-      if(xcoord[1] < 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
-      if(xcoord[1] < 0.0 && xcoord[0] >= 0.0)dphi = 2.0*pi + dphi;
-      float phi = float(dphi);
-
-      float r1m = r0;     // radius associated to the particle
-// Interpolate the tirific model to this radial distance
-      COLOUR ring = model.getVal(r1m * parsectotirific);
-      float thick = ring.r;
-      float pa = (ring.b + 180) / 180 * M_PI;
-      float inc = ring.g / 180 * M_PI;
-
-      // Calculate the normalized normal vector of the ring from the tirific model
-      vec3 nn(0,0,1);
-      vec3 m1_1(1,0,0),m1_2(0,cos(inc),-sin(inc)),m1_3(0,sin(inc),cos(inc));
-      vec3 m2_1(cos(pa),-sin(pa),0),m2_2(sin(pa),cos(pa),0),m2_3(0,0,1);
-      vec3 n1(dotprod(m1_1,nn),dotprod(m1_2,nn),dotprod(m1_3,nn));
-      vec3 n(dotprod(m2_1,n1),dotprod(m2_2,n1),dotprod(m2_3,n1));
-      n.Normalize();
-
-      // Find the radius vector within the x/y plane
-      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
-      float y0 = -(n.x/n.y)*x0;
-      vec3 rr(x0,y0,0);
-
-      // Rotate the radius vector arround the normal vector by phi
-      float sp = sin(phi);
-      float cp = cos(phi);
-      vec3 m3_1(n.x*n.x*(1-cp)+cp    ,n.x*n.y*(1-cp)-n.z*sp,n.x*n.z*(1-cp)+n.y*sp);
-      vec3 m3_2(n.y*n.x*(1-cp)+n.z*sp,n.y*n.y*(1-cp)+cp    ,n.y*n.z*(1-cp)-n.x*sp);
-      vec3 m3_3(n.z*n.x*(1-cp)-n.y*sp,n.z*n.y*(1-cp)+n.x*sp,n.z*n.z*(1-cp)+cp);
-      vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
-
-      float height = xcoord[2];
-      vec3 xxx = xx + n * height;
-
-      coordx[index] = xxx.x*parsectotirific;
-      coordy[index] = xxx.y*parsectotirific;
-      coordz[index] = xxx.z*parsectotirific;
-
-    }
+  number_of_points = TirificWarp (params, ComponentName, number_of_points, coordx, coordy, coordz);
   return number_of_points;
 
 }
@@ -775,83 +696,35 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
    
    fseek(dicefile, dicestride, SEEK_SET);   
    fread(positions, 1, arraysize, dicefile);
-
    fclose(dicefile);
 
+   coordx = new float [ntrial];
+   coordy = new float [ntrial];
+   coordz = new float [ntrial];
+
+   long index;
+   for (long i=0; i<ntrial; i++) 
+     {
+       index = 3*i;
+       coordx[i] = positions[index];
+       coordy[i] = positions[index+1];
+       coordz[i] = positions[index+2];
+     }
 
 // END OF DATA LOAD
-// START PARTICLES PROCESSING
+// TIRIFIC WARP
+ 
+   long number_of_points = TirificWarp (params, ComponentName, ntrial, coordx, coordy, coordz);
 
-  long icount = 0;
-  float r0 = 0.0;
-
-  float xmax=-1e20;
-  float xmin=1e20;
-  float xcoord[3];
-  long index;
-  for (long i=0; i<ntrial; i++)    // loop over all possible particles
-    {
-      index = 3*i;
-      xcoord[0] = positions[index];
-      xcoord[1] = positions[index+1];
-      xcoord[2] = positions[index+2];
-      r0 = sqrt(xcoord[0]*xcoord[0] + xcoord[1]*xcoord[1]);
-
-      double dphi = asin(double(xcoord[1]/r0));
-      if(xcoord[1] >= 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
-      if(xcoord[1] < 0.0 && xcoord[0] < 0.0)dphi = pi - dphi;
-      if(xcoord[1] < 0.0 && xcoord[0] >= 0.0)dphi = 2.0*pi + dphi;
-      float phi = float(dphi);
-/*
-      float Rnorm = r0*pixeltotirific/rmax;
-      float phi = box_uniform(1.0, 2.0) * M_PI;                 // random phase of particle
-*/
-  
-      float r1m = r0;     // radius associated to the particle 
-      // Interpolate the tirific model to this radial distance
-      COLOUR ring = model.getVal(r1m * parsectotirific);
-      float thick = ring.r;
-      float pa = (ring.b + 180) / 180 * M_PI;
-      float inc = ring.g / 180 * M_PI;
-
-      // Calculate the normalized normal vector of the ring from the tirific model
-      vec3 nn(0,0,1);
-      vec3 m1_1(1,0,0),m1_2(0,cos(inc),-sin(inc)),m1_3(0,sin(inc),cos(inc));
-      vec3 m2_1(cos(pa),-sin(pa),0),m2_2(sin(pa),cos(pa),0),m2_3(0,0,1);
-      vec3 n1(dotprod(m1_1,nn),dotprod(m1_2,nn),dotprod(m1_3,nn));
-      vec3 n(dotprod(m2_1,n1),dotprod(m2_2,n1),dotprod(m2_3,n1));
-      n.Normalize();
-
-      // Find the radius vector within the x/y plane
-      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
-      float y0 = -(n.x/n.y)*x0;
-      vec3 rr(x0,y0,0);
-
-      // Rotate the radius vector arround the normal vector by phi
-      float sp = sin(phi);
-      float cp = cos(phi);
-      vec3 m3_1(n.x*n.x*(1-cp)+cp    ,n.x*n.y*(1-cp)-n.z*sp,n.x*n.z*(1-cp)+n.y*sp);
-      vec3 m3_2(n.y*n.x*(1-cp)+n.z*sp,n.y*n.y*(1-cp)+cp    ,n.y*n.z*(1-cp)-n.x*sp);
-      vec3 m3_3(n.z*n.x*(1-cp)-n.y*sp,n.z*n.y*(1-cp)+n.x*sp,n.z*n.z*(1-cp)+cp);
-      vec3 xx(dotprod(m3_1,rr),dotprod(m3_2,rr),dotprod(m3_3,rr));
-
-      float height = xcoord[2];
-      vec3 xxx = xx + n * height;
-
-      // Convert coordinates into ranges [-1,1] ...
-      //vec3 xxxx(2*size*xxx.x/nx,2*size*xxx.y/ny,2*size*xxx.z/(0.5*(nx+ny)));
-      ///vec3 xxxx_aux(2*xxx.x/nx,2*xxx.y/ny,2*xxx.z/(0.5*(nx+ny)));
-      ///vec3 xxxx(xxx.x*pixeltotirific,xxx.y*pixeltotirific,xxx.z*pixeltotirific);
-      ////vec3 xxxx_aux((0.5*float(nx)+xxx.x/parsectopixel),
-      ////              (0.5*float(ny)+xxx.y/parsectopixel),
-      ////              (0.5*float(nx)+xxx.z/parsectopixel));
-
-// CONVERSION TO ARCSEC      
-      vec3 xxxx(xxx.x*parsectotirific,xxx.y*parsectotirific,xxx.z*parsectotirific);
 // FIND PIXELS
-      vec3 xxxx_aux((0.5*float(nx)+xxx.x/pixeltotirific),
-                    (0.5*float(ny)+xxx.y/pixeltotirific),
-                    (0.5*float(nx)+xxx.z/pixeltotirific));
+   float xmax=-1e20;
+   float xmin=1e20;
+   long icount = 0;
+   for (long i=0; i<number_of_points; i++)
+     {
+      vec3 xxxx_aux((0.5*float(nx)+coordx[i]/pixeltotirific),
+                    (0.5*float(ny)+coordy[i]/pixeltotirific),
+                    (0.5*float(nx)+coordz[i]/pixeltotirific));
 
       // Find index in image
       long ix = int(xxxx_aux.x);
@@ -863,9 +736,9 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
       if (index < nx * ny)
 	if(III[index] > cutoff)
 	  {
-	    coordx[icount] = xxxx.x;
-	    coordy[icount] = xxxx.y;
-	    coordz[icount] = xxxx.z;
+	    coordx[icount] = coordx[i];
+	    coordy[icount] = coordy[i];
+	    coordz[icount] = coordz[i];
             //if(icount < 100)cout << coordx[icount] << "  " << coordy[icount] << " " << coordz[icount] << endl;
             xmax = max(xmax,coordz[icount]);
             xmin = min(xmin,coordz[icount]);
@@ -876,12 +749,6 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
 		exit(0);
 	      }
 	  }
-/*
-      if(r0 * pixeltotirific > rmax){
-        cout << "FINAL RADIUS " << r0 << endl; 
-	break;
-      } 
-*/
     }
 
   

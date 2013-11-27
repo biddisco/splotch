@@ -48,5 +48,8 @@ long ReadImages (paramfile &params, string infile_rgb, string infile_mask, long 
 
 float rescale_coords(paramfile &params, string ComponentName, float * xcomp, float * ycomp, float * zcomp, long npart);
 
+long TirificWarp (paramfile &params, string ComponentName, long number_of_points,
+                  float * coordx, float * coordy, float * coordz);
+
 const int NUM_OF_FIELDS = 11;
 
