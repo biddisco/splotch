@@ -1,0 +1,147 @@
+\relax 
+\emailauthor{Marzia.Rivi@astro.ox.ac.uk}{M.~Rivi\corref {cor1}}
+\emailauthor{cgheller@cscs.ch}{C.~Gheller}
+\emailauthor{mel.krokos@port.ac.uk}{T.~Dykes, M.~Krokos}
+\Newlabel{cor1}{1}
+\Newlabel{cor1}{1}
+\citation{DataTsunami}
+\citation{DataAnalysisVisualization}
+\citation{2012ASPC..461...45H}
+\citation{askap}
+\citation{ska}
+\citation{Fraedrich:2009:TMV}
+\citation{millennium}
+\citation{2012arXiv1208.3206K}
+\citation{2012arXiv1208.3206K}
+\citation{visit}
+\citation{paraview}
+\citation{paraviewgrid}
+\citation{vtk}
+\citation{in-situ}
+\citation{2011ApJS..195...11W}
+\citation{visivo}
+\citation{VisIVOGateway}
+\citation{tipsyurl}
+\citation{splash}
+\citation{glnemo}
+\citation{partiview}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{3}}
+\newlabel{sec:intro}{{1}{3}}
+\citation{2008NJPh...10l5006D}
+\citation{millennium}
+\citation{horizon}
+\citation{deus}
+\citation{m83-vis}
+\citation{jin:high-performance}
+\citation{cudaurl}
+\citation{jin:high-performance}
+\citation{thrusturl}
+\citation{2008NJPh...10l5006D}
+\citation{hdf5}
+\citation{1991par..book.....S}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Splotch Overview}{5}}
+\newlabel{sec:overview}{{2}{5}}
+\newlabel{rad}{{1}{5}}
+\citation{jin:high-performance}
+\citation{cudaurl}
+\newlabel{kernel}{{2}{6}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}GPU Considerations}{6}}
+\newlabel{sec:gpu-code}{{3}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}CUDA Paradigm}{6}}
+\newlabel{sec:cuda}{{3.1}{6}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Performance Model}{7}}
+\newlabel{sec:model}{{3.2}{7}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Data Transfers}{7}}
+\newlabel{pci}{{3}{8}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}GPU Computation}{8}}
+\newlabel{ops}{{6}{8}}
+\newlabel{radius}{{7}{8}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Two particles with different radius influencing common screen pixels.}}{9}}
+\newlabel{fig:particles}{{1}{9}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}Accessing Memory}{9}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}CUDA Implementation}{9}}
+\newlabel{sec:implementation}{{4}{9}}
+\citation{thrusturl}
+\citation{RadixSort}
+\newlabel{tiles}{{8}{10}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces A scene with five particles from two different points of view. Square tiles are represented with different colors and boundary width is $r_0=3$ pixels. {\em  Left}: All particles contribute to the image (inside the field of view), particles 1, 3 and 5 are medium, particle 4 is small. Particle\nobreakspace  {}2, is classified as large since its radius exceeds the boundary width. {\em  Right}: The camera has now moved towards particle\nobreakspace  {}1. The relevant particle radii change due to the new point of view. Classification of particles 4 and 5 does not change, while particle\nobreakspace  {}3 becomes inactive (completely falling outside the field of view). Note that although particle\nobreakspace  {}2 is outside the field of view it is designated as active as it still affects pixels. Particle\nobreakspace  {}1 becomes large. }}{11}}
+\newlabel{fig:fov}{{2}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Small Particles}{11}}
+\newlabel{sec:smallparticles}{{4.1}{11}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Medium Particles}{12}}
+\newlabel{sec:mediumparticles}{{4.2}{12}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Large Particles}{12}}
+\newlabel{sec:largeparticles}{{4.3}{12}}
+\citation{gadgeturl}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Remarks}{13}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results}{13}}
+\newlabel{sec:results}{{5}{13}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}Tuning}{13}}
+\newlabel{sec:gpuperf}{{5.1}{13}}
+\newlabel{tab:tuning}{{5.1}{14}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces The occupancy and rendering times obtained for different values of $n_p$ (number of particles stored in the shared memory) and $t_x$ (tile sizes). Square tiles with boundary width 8 are considered while the resolution of Splotch rendered images is $1024^{2}.$}}{14}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Scalability of Splotch kernels on the GPU in relation to dataset sizes. The lines are colored as follows: a) black (diamonds) showing total computing times, b) blue (crosses) showing rendering times, c) red (squares) representing overhead times and finally d) green (triangles) illustrating rasterization times.}}{15}}
+\newlabel{fig:scalability}{{3}{15}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}Scalability}{15}}
+\newlabel{sec:scalability}{{5.2}{15}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Splotch's scalability on the GPU in relation to image side $N_{pix}$ (camera settings are fixed).}}{16}}
+\newlabel{fig:pixels}{{4}{16}}
+\newlabel{tab:radius}{{5.3}{16}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Illustration of average particle radius (column 2) together with number of active particles (column\nobreakspace  {}3) and computing times (column\nobreakspace  {}4) for each test performed (test ID is displayed in column\nobreakspace  {}1).}}{16}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}Speed-up}{16}}
+\newlabel{sec:speed-up}{{5.3}{16}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Our reference particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation. Starting from very far (top-left, Test 1) and reaching progressively very close to the center of the simulation (bottom-left, Test 6 - the image of Test 7 is omitted). The mass distribution of gas particles is shown.}}{17}}
+\newlabel{fig:panorama}{{5}{17}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Normalised percentage distribution of the particles radii in the seven tests (dark blue line refers to Test\nobreakspace  {}1, light blue to Test\nobreakspace  {}7). Radius bins in the x-axis corresponds to: $r\le 2$ (bin\nobreakspace  {}1), $2<r\le 4$ (bin\nobreakspace  {}2), $4<r\le 8$ (bin\nobreakspace  {}3), $8<r\le 16$ (bin\nobreakspace  {}4), $r>16$ (bin\nobreakspace  {}5). }}{17}}
+\newlabel{fig:radii}{{6}{17}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}Overheads}{18}}
+\newlabel{sec:overhead}{{5.4}{18}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces GPU and CPU comparison in relation to the particles' radius. The black curve represents GPU computing times. Blue curves are CPU times ranging from 8 cores (light blue, OMP8) to 1 core (dark blue, OMP1).}}{19}}
+\newlabel{fig:gpucpu}{{7}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces  Observed speed-ups for rendering (red curve, squares) and rasterization (black curve, diamonds) kernels defined as ratios among computing times required for execution by the GPU and CPU respectively. }}{19}}
+\newlabel{fig:speedup}{{8}{19}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Overhead of the various components implemented for the Splotch's GPU refactoring. The ratio between the time spent in each component and the total processing time is illustrated. The black line (diamonds) shows total overhead, the green line (triangles) shows the Select time overhead, while the red line (squares) represents the OffLoad time, and finally the blue line (crosses) shows the Sort time.}}{20}}
+\newlabel{fig:over}{{9}{20}}
+\citation{GK110}
+\citation{GPUTech}
+\citation{mic}
+\citation{mic-splotch}
+\bibstyle{model2-names}
+\bibdata{master}
+\bibcite{DataAnalysisVisualization}{{1}{2011}{{{Ahrens} et~al.}}{{{Ahrens}, {Rogers} and {Springmeyer}}}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusions and Future Work}{21}}
+\newlabel{sec:conclusions}{{6}{21}}
+\bibcite{DataTsunami}{{2}{2011}{{{Berriman} and {Groom}}}{{}}}
+\bibcite{deus}{{3}{accessed on 25/03/2013}{{http://www.deus consortium.org/}}{{}}}
+\bibcite{2008NJPh...10l5006D}{{4}{2008}{{{Dolag} et~al.}}{{{Dolag}, {Reinecke}, {Gheller} and {Imboden}}}}
+\bibcite{GPUTech}{{5}{2013}{{{Dykes} et~al.}}{{{Dykes}, {Rivi}, {Gheller}, {Krokos}, {Dolag} and {Reinecke}}}}
+\bibcite{Fraedrich:2009:TMV}{{6}{2009}{{{Fraedrich} et~al.}}{{{Fraedrich}, {Schneider} and {Westermann}}}}
+\bibcite{gadgeturl}{{7}{accessed on 25/03/2013}{{http://www.mpa garching.mpg.de/gadget/}}{{}}}
+\bibcite{millennium}{{8}{accessed on 25/03/2013}{{http://www.mpa garching.mpg.de/galform/virgo/millennium/}}{{}}}
+\bibcite{mic-splotch}{{9}{2014}{{{Gheller} et~al.}}{{{Gheller}, T.{Dykes}, {Krokos}, {Rivi} and {Gheller}}}}
+\bibcite{2012ASPC..461...45H}{{10}{2012}{{{Hassan} et~al.}}{{{Hassan}, {Fluke} and {Barnes}}}}
+\bibcite{horizon}{{11}{accessed on 25/03/2013}{{http://www.projet horizon.fr/}}{{}}}
+\bibcite{cudaurl}{{12}{accessed on 25/03/2013}{{http://developer.nvidia.com/cuda/}}{{}}}
+\bibcite{mic}{{13}{accessed on 25/11/2013}{{http://intel.com/xeonphi}}{{}}}
+\bibcite{visit}{{14}{accessed on 25/03/2013}{{https://wci.llnl.gov/codes/visit/}}{{}}}
+\bibcite{thrusturl}{{15}{accessed on 25/03/2013}{{http://thrust.github.com/}}{{}}}
+\bibcite{splash}{{16}{accessed on 25/03/2013}{{http://users.monash.edu.au/dprice/splash/}}{{}}}
+\bibcite{partiview}{{17}{accessed on 25/03/2013}{{http://virdir.ncsa.illinois.edu/partiview/}}{{}}}
+\bibcite{visivo}{{18}{accessed on 25/03/2013}{{http://visivo.oact.inaf.it:8080/}}{{}}}
+\bibcite{askap}{{19}{accessed on 25/03/2013}{{http://www.atnf.csiro.au/projects/askap/}}{{}}}
+\bibcite{hdf5}{{20}{accessed on 25/03/2013}{{http://www.hdfgroup.org/HDF5/}}{{}}}
+\bibcite{tipsyurl}{{21}{accessed on 25/03/2013}{{http://www.hpcc.astro.washington.edu/tools/tipsy/tipsy.html/}}{{}}}
+\bibcite{glnemo}{{22}{accessed on 25/03/2013}{{http://www.oamp.fr/dynamique/jcl/glnemo/}}{{}}}
+\bibcite{paraview}{{23}{accessed on 25/03/2013}{{http://www.paraview.org/}}{{}}}
+\bibcite{ska}{{24}{accessed on 25/03/2013}{{http://www.skatelescope.org/}}{{}}}
+\bibcite{vtk}{{25}{accessed on 25/03/2013}{{http://www.vtk.org/}}{{}}}
+\bibcite{jin:high-performance}{{26}{2010}{{{Jin} et~al.}}{{{Jin}, {Krokos}, {Rivi}, {Gheller}, {Dolag} and {Reinecke}}}}
+\bibcite{2012arXiv1208.3206K}{{27}{2012}{{{Kaehler} et~al.}}{{{Kaehler}, {Hahn} and {Abel}}}}
+\bibcite{GK110}{{28}{accessed on 25/03/2013}{{http://www.nvidia.co.uk/content/PDF/kepler/NVIDIA Kepler-GK110-Architecture-Whitepaper.pdf}}{{}}}
+\bibcite{m83-vis}{{29}{accessed on 25/03/2013}{{{Koribalsky} et~al.}}{{{Koribalsky}, {Gheller} and {Dolag}}}}
+\bibcite{RadixSort}{{30}{2010}{{{Merrill} and {Grimshaw}}}{{}}}
+\bibcite{in-situ}{{31}{accessed on 25/03/2013}{{Rivi et~al.}}{{Rivi, Calori, Muscianisi and Slavnic}}}
+\bibcite{VisIVOGateway}{{32}{2011}{{{Sciacca} et~al.}}{{{Sciacca}, {Vitello}, {Becciani}, {Costa}, {Massimino}, {Bandieramonte}, {Krokos}, {Petta}, {Pistagna}, {Riggi} and {Vitello}}}}
+\bibcite{1991par..book.....S}{{33}{1991}{{Shu}}{{}}}
+\bibcite{paraviewgrid}{{34}{2006}{{{Song} et~al.}}{{{Song}, {Zheng} and {Shen}}}}
+\bibcite{2011ApJS..195...11W}{{35}{2011}{{{Woodring} et~al.}}{{{Woodring}, {Heitmann}, {Ahrens}, {Fasel}, {Hsu}, {Habib} and {Pope}}}}

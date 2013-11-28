@@ -1,0 +1,47 @@
+This is BibTeX, Version 0.99d (TeX Live 2012)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: Splotch-CUDA.aux
+The style file: model2-names.bst
+Database file #1: master.bib
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+You've used 35 entries,
+            2990 wiz_defined-function locations,
+            872 strings with 10378 characters,
+and the built_in function-call counts, 18042 in all, are:
+= -- 1280
+> -- 750
+< -- 22
++ -- 292
+- -- 255
+* -- 1689
+:= -- 2816
+add.period$ -- 66
+call.type$ -- 35
+change.case$ -- 240
+chr.to.int$ -- 35
+cite$ -- 35
+duplicate$ -- 1444
+empty$ -- 1343
+format.name$ -- 324
+if$ -- 3296
+int.to.chr$ -- 1
+int.to.str$ -- 1
+missing$ -- 255
+newline$ -- 151
+num.names$ -- 140
+pop$ -- 750
+preamble$ -- 1
+purify$ -- 225
+quote$ -- 0
+skip$ -- 445
+stack$ -- 0
+substring$ -- 531
+swap$ -- 798
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 312
+warning$ -- 0
+while$ -- 111
+width$ -- 0
+write$ -- 399

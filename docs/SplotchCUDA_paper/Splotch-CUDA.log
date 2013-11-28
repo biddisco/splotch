@@ -1,0 +1,522 @@
+This is pdfTeX, Version 3.1415926-2.4-1.40.13 (TeX Live 2012) (format=pdflatex 2012.10.28)  28 NOV 2013 18:55
+entering extended mode
+ \write18 enabled.
+ %&-line parsing enabled.
+**Splotch-CUDA.tex
+(./Splotch-CUDA.tex
+LaTeX2e <2011/06/27>
+Babel <v3.8m> and hyphenation patterns for english, dumylang, nohyphenation, ge
+rman-x-2012-05-30, ngerman-x-2012-05-30, afrikaans, ancientgreek, ibycus, arabi
+c, armenian, basque, bulgarian, catalan, pinyin, coptic, croatian, czech, danis
+h, dutch, ukenglish, usenglishmax, esperanto, estonian, ethiopic, farsi, finnis
+h, french, friulan, galician, german, ngerman, swissgerman, monogreek, greek, h
+ungarian, icelandic, assamese, bengali, gujarati, hindi, kannada, malayalam, ma
+rathi, oriya, panjabi, tamil, telugu, indonesian, interlingua, irish, italian, 
+kurmanji, latin, latvian, lithuanian, mongolian, mongolianlmc, bokmal, nynorsk,
+ polish, portuguese, romanian, romansh, russian, sanskrit, serbian, serbianc, s
+lovak, slovenian, spanish, swedish, turkish, turkmen, ukrainian, uppersorbian, 
+welsh, loaded.
+(./elsarticle.cls
+Document Class: elsarticle 2009/09/17, 1.20b: Elsevier Ltd
+\@bls=\dimen102
+(/usr/local/texlive/2012/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2007/10/19 v1.4h Standard LaTeX document class
+(/usr/local/texlive/2012/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2007/10/19 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@section=\count80
+\c@subsection=\count81
+\c@subsubsection=\count82
+\c@paragraph=\count83
+\c@subparagraph=\count84
+\c@figure=\count85
+\c@table=\count86
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen103
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2009/02/05 v1.0o Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/latexconfig/graphics.cfg
+File: graphics.cfg 2010/04/23 v1.9 graphics configuration of TeX Live
+)
+Package graphics Info: Driver file: pdftex.def on input line 91.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/pdftex-def/pdftex.def
+File: pdftex.def 2011/05/27 v0.06d Graphics/color for pdfTeX
+
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/infwarerr.sty
+Package: infwarerr 2010/04/08 v1.3 Providing info/warning/error messages (HO)
+)
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ltxcmds.sty
+Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
+)
+\Gread@gobject=\count87
+))
+\Gin@req@height=\dimen104
+\Gin@req@width=\dimen105
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/pifont.sty
+Package: pifont 2005/04/12 PSNFSS-v9.2a Pi font support (SPQR) 
+LaTeX Font Info:    Try loading font information for U+pzd on input line 63.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/upzd.fd
+File: upzd.fd 2001/06/04 font definitions for U/pzd.
+)
+LaTeX Font Info:    Try loading font information for U+psy on input line 64.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/psnfss/upsy.fd
+File: upsy.fd 2001/06/04 font definitions for U/psy.
+))
+\c@tnote=\count88
+\c@fnote=\count89
+\c@cnote=\count90
+\c@ead=\count91
+\c@author=\count92
+\@eadauthor=\toks15
+\c@affn=\count93
+\absbox=\box26
+\keybox=\box27
+\Columnwidth=\dimen106
+\space@left=\dimen107
+\els@boxa=\box28
+\els@boxb=\box29
+\leftMargin=\dimen108
+\@enLab=\toks16
+\@sep=\skip43
+\@@sep=\skip44
+
+(./Splotch-CUDA.spl)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/natbib/natbib.sty
+Package: natbib 2010/09/13 8.31b (PWD, AO)
+\bibhang=\skip45
+\bibsep=\skip46
+LaTeX Info: Redefining \cite on input line 694.
+\c@NAT@ctr=\count94
+)
+\splwrite=\write3
+\openout3 = `Splotch-CUDA.spl'.
+
+\appnamewidth=\dimen109
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2009/06/22 v3.00
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2009/06/22 v3.00 Basic AMSFonts support
+\@emptytoks=\toks17
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 96.
+))
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip47
+
+For additional information on amsmath, use the `?' option.
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks18
+\ex@=\dimen110
+))
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen111
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count95
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count96
+\leftroot@=\count97
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count98
+\DOTSCASE@=\count99
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box30
+\strutbox@=\box31
+\big@size=\dimen112
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count100
+\c@MaxMatrixCols=\count101
+\dotsspace@=\muskip10
+\c@parentequation=\count102
+\dspbrk@lvl=\count103
+\tag@help=\toks19
+\row@=\count104
+\column@=\count105
+\maxfields@=\count106
+\andhelp@=\toks20
+\eqnshift@=\dimen113
+\alignsep@=\dimen114
+\tagshift@=\dimen115
+\tagwidth@=\dimen116
+\totwidth@=\dimen117
+\lineht@=\dimen118
+\@envbody=\toks21
+\multlinegap=\skip48
+\multlinetaggap=\skip49
+\mathdisplay@stack=\toks22
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+)
+
+LaTeX Warning: Unused global option(s):
+    [5pt].
+
+(./Splotch-CUDA.aux)
+\openout1 = `Splotch-CUDA.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+
+(/usr/local/texlive/2012/texmf-dist/tex/context/base/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count107
+\scratchdimen=\dimen119
+\scratchbox=\box32
+\nofMPsegments=\count108
+\nofMParguments=\count109
+\everyMPshowfont=\toks23
+\MPscratchCnt=\count110
+\MPscratchDim=\dimen120
+\MPnumerator=\count111
+\makeMPintoPDFobject=\count112
+\everyMPtoPDFconversion=\toks24
+) (/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/pdftexcmds.sty
+Package: pdftexcmds 2011/11/29 v0.20 Utility functions of pdfTeX for LuaTeX (HO
+)
+
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ifluatex.sty
+Package: ifluatex 2010/03/01 v1.3 Provides the ifluatex switch (HO)
+Package ifluatex Info: LuaTeX not detected.
+)
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/ifpdf.sty
+Package: ifpdf 2011/01/30 v2.3 Provides the ifpdf switch (HO)
+Package ifpdf Info: pdfTeX in PDF mode is detected.
+)
+Package pdftexcmds Info: LuaTeX not detected.
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+)
+(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
+Package: epstopdf-base 2010/02/09 v2.5 Base part for package epstopdf
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/grfext.sty
+Package: grfext 2010/08/19 v1.1 Manage graphics extensions (HO)
+
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/kvdefinekeys.sty
+Package: kvdefinekeys 2011/04/07 v1.3 Define keys (HO)
+))
+(/usr/local/texlive/2012/texmf-dist/tex/latex/oberdiek/kvoptions.sty
+Package: kvoptions 2011/06/30 v3.11 Key value format for package options (HO)
+
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/kvsetkeys.sty
+Package: kvsetkeys 2012/04/25 v1.16 Key value parser (HO)
+
+(/usr/local/texlive/2012/texmf-dist/tex/generic/oberdiek/etexcmds.sty
+Package: etexcmds 2011/02/16 v1.5 Avoid name clashes with e-TeX commands (HO)
+Package etexcmds Info: Could not find \expanded.
+(etexcmds)             That can mean that you are not using pdfTeX 1.50 or
+(etexcmds)             that some package has redefined \expanded.
+(etexcmds)             In the latter case, load this package earlier.
+)))
+Package grfext Info: Graphics extension search list:
+(grfext)             [.png,.pdf,.jpg,.mps,.jpeg,.jbig2,.jb2,.PNG,.PDF,.JPG,.JPE
+G,.JBIG2,.JB2,.eps]
+(grfext)             \AppendGraphicsExtensions on input line 452.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+LaTeX Font Info:    Try loading font information for U+msa on input line 34.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2009/06/22 v3.00 AMS symbols A
+)
+LaTeX Font Info:    Try loading font information for U+msb on input line 34.
+
+(/usr/local/texlive/2012/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2009/06/22 v3.00 AMS symbols B
+) [1
+
+
+{/usr/local/texlive/2012/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2
+
+] [3]
+Overfull \hbox (11.30626pt too wide) in paragraph at lines 75--77
+\OT1/cmr/m/n/10 cos-mo-log-i-cal sim-u-la-tions, e.g. the Mil-len-nium tril-ogy
+ [[]], the Hori-zon and MareNos-
+ []
+
+[4]
+Overfull \hbox (0.90804pt too wide) in paragraph at lines 87--91
+\OT1/cmr/m/n/10 proach, de-scribed in de-tail in [[]]. The im-ple-men-ta-tion o
+f Splotch is self-contained
+ []
+
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 92.
+(/usr/local/texlive/2012/texmf-dist/tex/latex/base/omscmr.fd
+File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <10> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 92.
+ [5] [6]
+
+Package amsmath Warning: Foreign command \over;
+(amsmath)                \frac or \genfrac should be used instead
+(amsmath)                 on input line 153.
+
+[7]
+Package epstopdf Info: Source file: <particles.eps>
+(epstopdf)                    date: 2013-03-15 10:35:53
+(epstopdf)                    size: 340723 bytes
+(epstopdf)             Output file: <particles-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-04-03 17:05:26
+(epstopdf)                    size: 73063 bytes
+(epstopdf)             Command: <epstopdf --outfile=particles-eps-converted-to.
+pdf particles.eps>
+(epstopdf)             \includegraphics on input line 195.
+Package epstopdf Info: Output file is already uptodate.
+ <particles-eps-converted-to.pdf, id=38, 1287.81125pt x 1022.82124pt>
+File: particles-eps-converted-to.pdf Graphic file (type pdf)
+
+<use particles-eps-converted-to.pdf>
+Package pdftex.def Info: particles-eps-converted-to.pdf used on input line 195.
+
+(pdftex.def)             Requested size: 128.78867pt x 102.28812pt.
+ [8] [9 <./particles-eps-converted-to.pdf>] [10]
+Package epstopdf Info: Source file: <fov.eps>
+(epstopdf)                    date: 2013-03-15 10:35:53
+(epstopdf)                    size: 1695866 bytes
+(epstopdf)             Output file: <fov-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-04-03 17:05:28
+(epstopdf)                    size: 307148 bytes
+(epstopdf)             Command: <epstopdf --outfile=fov-eps-converted-to.pdf fo
+v.eps>
+(epstopdf)             \includegraphics on input line 275.
+Package epstopdf Info: Output file is already uptodate.
+ <fov-eps-converted-to.pdf, id=52, 2413.015pt x 1285.80376pt>
+File: fov-eps-converted-to.pdf Graphic file (type pdf)
+
+<use fov-eps-converted-to.pdf>
+Package pdftex.def Info: fov-eps-converted-to.pdf used on input line 275.
+(pdftex.def)             Requested size: 337.8198pt x 180.01129pt.
+ [11 <./fov-eps-converted-to.pdf>] [12] [13]
+[14]
+Package epstopdf Info: Source file: <scala-fig3K20.eps>
+(epstopdf)                    date: 2013-11-21 16:37:44
+(epstopdf)                    size: 8431 bytes
+(epstopdf)             Output file: <scala-fig3K20-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-11-21 19:14:19
+(epstopdf)                    size: 8106 bytes
+(epstopdf)             Command: <epstopdf --outfile=scala-fig3K20-eps-converted
+-to.pdf scala-fig3K20.eps>
+(epstopdf)             \includegraphics on input line 381.
+Package epstopdf Info: Output file is already uptodate.
+ <scala-fig3K20-eps-converted-to.pdf, id=71, 505.89pt x 361.35pt>
+File: scala-fig3K20-eps-converted-to.pdf Graphic file (type pdf)
+
+<use scala-fig3K20-eps-converted-to.pdf>
+Package pdftex.def Info: scala-fig3K20-eps-converted-to.pdf used on input line 
+381.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+Package epstopdf Info: Source file: <pixelsK20-fig4.eps>
+(epstopdf)                    date: 2013-11-22 12:07:23
+(epstopdf)                    size: 8851 bytes
+(epstopdf)             Output file: <pixelsK20-fig4-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-11-22 12:12:43
+(epstopdf)                    size: 7804 bytes
+(epstopdf)             Command: <epstopdf --outfile=pixelsK20-fig4-eps-converte
+d-to.pdf pixelsK20-fig4.eps>
+(epstopdf)             \includegraphics on input line 389.
+Package epstopdf Info: Output file is already uptodate.
+
+<pixelsK20-fig4-eps-converted-to.pdf, id=72, 505.89pt x 361.35pt>
+File: pixelsK20-fig4-eps-converted-to.pdf Graphic file (type pdf)
+
+<use pixelsK20-fig4-eps-converted-to.pdf>
+Package pdftex.def Info: pixelsK20-fig4-eps-converted-to.pdf used on input line
+ 389.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+Package epstopdf Info: Source file: <panorama.eps>
+(epstopdf)                    date: 2013-03-27 10:41:20
+(epstopdf)                    size: 5535901 bytes
+(epstopdf)             Output file: <panorama-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-04-03 17:05:30
+(epstopdf)                    size: 794147 bytes
+(epstopdf)             Command: <epstopdf --outfile=panorama-eps-converted-to.p
+df panorama.eps>
+(epstopdf)             \includegraphics on input line 401.
+Package epstopdf Info: Output file is already uptodate.
+
+<panorama-eps-converted-to.pdf, id=73, 1592.95125pt x 1060.96375pt>
+File: panorama-eps-converted-to.pdf Graphic file (type pdf)
+
+<use panorama-eps-converted-to.pdf>
+Package pdftex.def Info: panorama-eps-converted-to.pdf used on input line 401.
+(pdftex.def)             Requested size: 318.58461pt x 212.18898pt.
+ [15 <./scala-fig3K20-eps-converted-to.pdf>]
+Package epstopdf Info: Source file: <radii.eps>
+(epstopdf)                    date: 2013-03-15 10:35:53
+(epstopdf)                    size: 8835 bytes
+(epstopdf)             Output file: <radii-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-04-03 17:05:31
+(epstopdf)                    size: 7647 bytes
+(epstopdf)             Command: <epstopdf --outfile=radii-eps-converted-to.pdf 
+radii.eps>
+(epstopdf)             \includegraphics on input line 416.
+Package epstopdf Info: Output file is already uptodate.
+<radii-eps-converted-to.pdf, id=83, 505.89pt x 361.35pt>
+File: radii-eps-converted-to.pdf Graphic file (type pdf)
+
+<use radii-eps-converted-to.pdf>
+Package pdftex.def Info: radii-eps-converted-to.pdf used on input line 416.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+ [16 <./pixelsK20-fig4-eps-converted-to.pdf>]
+[17 <./panorama-eps-converted-to.pdf> <./radii-eps-converted-to.pdf>]
+Package epstopdf Info: Source file: <scalaompK20-fig7.eps>
+(epstopdf)                    date: 2013-11-22 10:33:27
+(epstopdf)                    size: 7020 bytes
+(epstopdf)             Output file: <scalaompK20-fig7-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-11-22 10:36:00
+(epstopdf)                    size: 7045 bytes
+(epstopdf)             Command: <epstopdf --outfile=scalaompK20-fig7-eps-conver
+ted-to.pdf scalaompK20-fig7.eps>
+(epstopdf)             \includegraphics on input line 457.
+Package epstopdf Info: Output file is already uptodate.
+
+<scalaompK20-fig7-eps-converted-to.pdf, id=104, 505.89pt x 361.35pt>
+File: scalaompK20-fig7-eps-converted-to.pdf Graphic file (type pdf)
+
+<use scalaompK20-fig7-eps-converted-to.pdf>
+Package pdftex.def Info: scalaompK20-fig7-eps-converted-to.pdf used on input li
+ne 457.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+Package epstopdf Info: Source file: <speedupK20-fig8.eps>
+(epstopdf)                    date: 2013-11-22 10:32:43
+(epstopdf)                    size: 4999 bytes
+(epstopdf)             Output file: <speedupK20-fig8-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-11-22 10:36:01
+(epstopdf)                    size: 5603 bytes
+(epstopdf)             Command: <epstopdf --outfile=speedupK20-fig8-eps-convert
+ed-to.pdf speedupK20-fig8.eps>
+(epstopdf)             \includegraphics on input line 464.
+Package epstopdf Info: Output file is already uptodate.
+
+<speedupK20-fig8-eps-converted-to.pdf, id=105, 505.89pt x 361.35pt>
+File: speedupK20-fig8-eps-converted-to.pdf Graphic file (type pdf)
+
+<use speedupK20-fig8-eps-converted-to.pdf>
+Package pdftex.def Info: speedupK20-fig8-eps-converted-to.pdf used on input lin
+e 464.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+ [18] [19 <./scalaompK20-fig7-eps-converted-to.pdf> <./speedupK20-fig8-eps-conv
+erted-to.pdf>]
+Package epstopdf Info: Source file: <overheadsK20-fig9.eps>
+(epstopdf)                    date: 2013-11-22 10:33:56
+(epstopdf)                    size: 8020 bytes
+(epstopdf)             Output file: <overheadsK20-fig9-eps-converted-to.pdf>
+(epstopdf)                    date: 2013-11-22 10:36:01
+(epstopdf)                    size: 7411 bytes
+(epstopdf)             Command: <epstopdf --outfile=overheadsK20-fig9-eps-conve
+rted-to.pdf overheadsK20-fig9.eps>
+(epstopdf)             \includegraphics on input line 494.
+Package epstopdf Info: Output file is already uptodate.
+
+<overheadsK20-fig9-eps-converted-to.pdf, id=124, 505.89pt x 361.35pt>
+File: overheadsK20-fig9-eps-converted-to.pdf Graphic file (type pdf)
+
+<use overheadsK20-fig9-eps-converted-to.pdf>
+Package pdftex.def Info: overheadsK20-fig9-eps-converted-to.pdf used on input l
+ine 494.
+(pdftex.def)             Requested size: 252.94437pt x 180.67456pt.
+ [20 <./overheadsK20-fig9-eps-converted-to.pdf>] (./Splotch-CUDA.bbl [21]
+Underfull \hbox (badness 1242) in paragraph at lines 69--73
+[]\OT1/cmr/m/n/10 http://www.mpa garch-ing.mpg.de/galform/virgo/millennium/, ac
+-cessed
+ []
+
+
+Underfull \hbox (badness 1496) in paragraph at lines 137--141
+[]\OT1/cmr/m/n/10 http://www.hpcc.astro.washington.edu/tools/tipsy/tipsy.html/,
+ ac-cessed
+ []
+
+[22]
+Underfull \hbox (badness 10000) in paragraph at lines 179--183
+[]\OT1/cmr/m/n/10 http://www.nvidia.co.uk/content/PDF/kepler/NVIDIA Kepler-GK11
+0-
+ []
+
+
+Underfull \hbox (badness 2556) in paragraph at lines 184--189
+[]\OT1/cmr/m/n/10 Koribalsky, B., Gheller, C., Dolag, K., ac-cessed on 25/03/20
+13.
+ []
+
+) [23] (./Splotch-CUDA.aux) ) 
+Here is how much of TeX's memory you used:
+ 3184 strings out of 493488
+ 42125 string characters out of 3141325
+ 106000 words of memory out of 3000000
+ 6423 multiletter control sequences out of 15000+200000
+ 11841 words of font info for 45 fonts, out of 3000000 for 9000
+ 957 hyphenation exceptions out of 8191
+ 38i,9n,30p,2122b,259s stack positions out of 5000i,500n,10000p,200000b,50000s
+</usr/local/texlive/2012/texmf-dist/fonts/type1/pu
+blic/amsfonts/cm/cmbx10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/publ
+ic/amsfonts/cm/cmmi6.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public
+/amsfonts/cm/cmmi7.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/a
+msfonts/cm/cmmi8.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/ams
+fonts/cm/cmr10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmr12.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfont
+s/cm/cmr6.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmr7.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/c
+mr8.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
+10.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6
+.pfb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.p
+fb></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb
+></usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
+</usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmti8.pfb></
+usr/local/texlive/2012/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb>
+Output written on Splotch-CUDA.pdf (23 pages, 1456615 bytes).
+PDF statistics:
+ 197 PDF objects out of 1000 (max. 8388607)
+ 135 compressed objects within 2 object streams
+ 0 named destinations out of 1000 (max. 500000)
+ 46 words of extra memory for PDF output out of 10000 (max. 10000000)
+
