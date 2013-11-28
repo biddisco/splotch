@@ -160,28 +160,70 @@ A brief overview of this implementation will also be given, referring to [REF] f
 \section{Splotch Overview}
 \label{sect:overview}
 
-\noindent
-Contents:
+This section gives a brief overview to the Splotch algorithm, along with a description of the MPI and OpenMP related 
+functionality for reference as these are key to the development of the MIC implementation.
 
-\noindent
-- Standard brief overview of Splotch workflow 
+Splotch is a pure C++ algorithm for generating 2 dimensional images from particle based datasets. It has no reliance 
+on external libraries, minus those required for parallelism or particular file formats e.g. HDF5 [ref], and can be 
+compiled from a downloadable self-contained tar-ball with a suitable makefile, use of preprocessor definitions and 
+makefile switches allows compilation for a variety of hardware environments. The main stages of the Splotch workflow 
+can be summarised as:
 
+\begin{quote} %quote for indent
+\begin{description}
+  \item[Data Load] \hfill \\
+  Source data is read using an appropriate reader and stored in the Splotch particle structure, various readers are 
+  implemented for data types such as HDF5, RAMSES, and GADGET. [ref]
+  \item[Processing and Rasterization] \hfill \\
+   Data is preprocessed as per user requirements, performing tasks such as ranging, normalization, and applying 
+   logarithms to particle attributes, amongst others. Particles are roto-translated with reference to supplied 
+   camera and look-at positions along with an up-vector. Active particles, those within the view frustum, are 
+   identified and assigned an RGB color value dependant on particle properties and an external colour map, 
+   particles outside of the frustum are labelled inactive and not  considered further.  
+  \item[Rendering] \hfill \\
+  For each pixel of the image, a ray is cast along the line of sight, and contributions of all encountered particles 
+  are additively accumulated. The contribution a particle may have to a particular pixel color is determined by solving 
+  the radiative transfer equation:
 
-\subsection{MPI and
- OpenMP Implementations}
+  [Insert radiative transfer equation]
+
+  [Description of equations components and how they affect rendering]
+\end{description}
+\end{quote}
+
+\subsection{Parallel Implementations}
 \label{sect:mpiopenmp}
 
-\noindent
-Contents:
+The OpenMP additions to Splotch [ref?] that provide the foundation of the MIC algorithm are outlined in this section. 
+Following this is a brief description of the MPI features of Splotch, for reference in section [MPI 
+offload sect].
 
-\noindent
-- Describing how OpenMP implementation works for reference when building upon this for the MIC implementation.
+\subsubsection{OpenMP}
+\label{sect:ompsplotch}
 
-\noindent
-- Describing how MPI implementation works for reference when discussing how MPI is used to increase MIC performance.
+OpenMP is employed to parallise core sections of Splotch algorithm if working in an OpenMP enabled environment. 
+The rototranslation and coloring stages consist of applying a 3D transform to the particle coordinates and assigning 
+an RGB value from a color lookup table. Each thread is simply assigned a portion of the particles with which to 
+perform these stages.
 
-\noindent
-- Mention GPU implementation with reference, no need for details
+The rendering is slightly more complex, due to the inevitability that multiple particles will fall on the same pixels. 
+Threads cannot simply draw all assigned particles anywhere in the image without the possibility of race conditions 
+where multiple threads attempt to draw to a pixel at the same time. To solve this, the image is split into 100x100 pixel 
+tiles. The entire particle array is preprocessed in parallel to generate a list of particle indices per tile per thread, 
+which is then condensed down to a single list of particle indices per tile. Each thread is then assigned a tile, on a 
+first come first serve basis, and renders all particles in the tiles designated index list. To render a particle, the 
+portion of the tile that is affected is calculated, and then processed in columns of pixels. Each pixel additively 
+accumulates a contribution from all particles affecting it, the contribution a particle will have on the pixel is defined 
+by the equation given in section [previous section rendering]
+
+\subsubsection{MPI}
+\label{sect:mpisplotch}
+
+MPI is incorporated into both the file readers and the core algorithm for exploiting a distributed memory system. Each 
+process simply loads a subsection of the dataset, and the serial or OpenMP method is used to render to a partial image, 
+which is then accumulated to a final image by the root processor. [do we actually do openmp+mpi anywhere other than 
+the mic algorithm?]
+
 
 \section{Splotch on the MIC}
 \label{sect:micsplotch}
@@ -248,20 +290,19 @@ parameters such as those used in the 3d transformation, which will be static thr
 parameters are copied to the device, which subsequently begins rendering while the next chunk of data is transferred.
 
 The first stage of rendering is a highly parallel 3D transform and colorize performed on a per-particle basis using 
-four OpenMP threads per available core, equating to roughly 240 threads assuming the current process has access to the 
-whole device. [expand on this]
+four OpenMP threads per available core, to match the available hardware threads, equating to roughly 240 threads. This 
+stage is amenable to fast processing and requires only a small amount of tuning for MIC suitability.
 
-The second stage is not so simply parallelised, leading to more complex solution. A problem inherent in parallel 
-rendering is the appearance of race conditions arising from multiple threads attempting to render to the same pixel. 
-In a scene with potentially billions of particles, it is inevitable that multiple particles, potentially a vast number, 
-will overlap and need to be rendered to the same pixel. [discuss this somewhere else?]
+The multistep OpenMP solution to the full rendering stage discussed in section [omp section] is modified to account for 
+the larger number of threads available. Simply splitting the image into smaller tiles to allow for more threads results 
+in particles affecting more tiles than previously, requiring more memory to store particle index lists per tile. To 
+account for this, the following approach is adopted. 
 
 The number of available OpenMP threads are split into groups, allocating an image buffer per group large enough to hold 
-the entire resulting image. Each group is assigned a subsection of the particles where 
-n\_particles\_per\_group = total\_particles / n\_groups. [Latex up this equation including remainder compensation]. At this 
-point each thread group acts independently, drawing the allocated subsection of particles to the allocated image, finally 
+the entire resulting image. Each group is assigned a subsection of particles such that the entire array is evenly distributed. 
+At this point each thread group acts independently, drawing the allocated subsection of particles to the allocated image, finally 
 reducing all images into a single buffer when all particles of the current data chunk have been processed, a system 
-conceptually similar to the MPI Splotch implementation discussed in section 2.1. The number of groups to create and 
+conceptually similar to the MPI Splotch implementation discussed in section [mpi section]. The number of groups to create and 
 number of threads per group can be passed in as a runtime parameter, and the chosen values should reflect consideration 
 of the available number of threads and thread:core ratio. This is discussed further in section 4.1.
 
@@ -278,42 +319,74 @@ threads and concurrent accesses are avoided.
 
 Following the accumulation of each group-specific image into a single buffer, which is retained throughout the entire 
 rendering process, the next chunk of data is processed until all particles have been rendered. This constant buffer is 
-then copied back to the host to be written to file. 
+then copied back to the host for output. 
 %\medskip
 %\noindent
 
 
 
-\subsubsection{Optimisation}
+\subsection{Optimisation}
 \label{sect:micoptimisation}
 
 In order to appropriately exploit the MIC architecture and attain high performance gains, various optimisation methods 
-were employed. Some more generic methods are applicable to other architectures, such as Intel 64 and IA-32 [REF], while 
-others are specific to the Xeon Phi. For example, cost of dynamic memory allocation on the Phi is relatively high [REF1], 
-in order to minimise unnecessary allocations buffers are created at the beginning of the program cycle and reused 
-throughout. This is not such a large concern in a standard Intel 64 environment where frequent memory allocations, 
-such as might be invoked by repetitive resizing of dynamic arrays, carry little comparative cost.
+were explored. Some more generic methods are applicable to other similar architectures, such as Intel 64 and IA-32 [REF], while 
+others are specific to the Xeon Phi. 
 
-Often scientific datasets being visualized are very large, it is inevitable that there may at times be more data than 
-available device memory. This raises the issue of waiting for data transfer from main memory which, while reaching 
-roughly 6 GB/s over the 16 channel PCIe 2.0 connection, is an additional overhead to be considered. The possibility 
-of data transferral and computation being carried out asynchronously has allowed for a double buffered method to 
-overlap these stages, minimising the overhead. In addition, the MIC\_USE\_2MB\_BUFFERS environment variable is set 
-to 64K, forcing buffers larger than this value to be allocated in 2MB pages, which improves data allocation rate, 
-transfer rate and can benefit performance by potentially reducing page faults and TLB (translation look-aside buffer) 
-misses. [REF2] [add timings to show improvment this environment variable provides in allocation/transfer?]
+\subsubsection{Memory Usage}
+\label{sect:memusage}
+
+Often scientific datasets being visualized are very large, it is inevitable that there will at times be more data than 
+available device memory. This raises the issue of allocating and waiting for data transfer from main memory which, 
+while reaching roughly 6 GB/s over the 16 channel PCIe 2.0 connection, is an additional overhead to be considered.
+This is not such a large concern in a standard Intel 64 environment where frequent memory allocations, such as might be 
+invoked by repetitive resizing of dynamic arrays, have little comparative impact.
+
+Cost of dynamic memory allocation on the Phi is relatively high [REF1], in order to minimise unnecessary allocations 
+buffers are created at the beginning of the program cycle and reused throughout. A single process offloading to the Phi 
+and reserving large buffers could allocate at a speed of roughly 800MB/s, plus the smaller overhead of 6GB/s for data 
+transferral. Use of the offload syntax for asynchronous computation [REF?] allows to engage a double buffered approach, 
+processing the data in smaller chunks and overlapping computation and data transfer to minimise this overhead.
+
+Furthermore, use of the MIC\_USE\_2MB\_BUFFERS environment variable forces any buffers over a particular size to be 
+allocated with 2MB rather than the default 4KB pages, which improves data allocation rate, transfer rate and can benefit 
+performance by potentially reducing page faults and TLB (translation look-aside buffer) misses. [REF2] [Add times to show 
+memory allocation/transfer improvement with this variable]
+
+\subsubsection{Vectorization}
+\label{sect:vectorization}
 
 The large 512 bit width SIMD capability of the MIC architecture is addressed through vectorization carried out both 
 automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) [REF3] . Firstly the 
 core data structure used in Splotch rendering was re-examined, and converted from an array of structures (AoS) to 
 a structure of arrays (SoA). The AoS method stores a large array of structures, each containing all of the 
 information pertaining to a single particle. While this is useful for encapsulation, it is unsuitable for SIMD 
-processing. [REF4] [Run test with aos vs soa and show results?]
+processing. [REF4] [Run test with aos vs soa and show results?] This aids the compiler in automatic vectorization, 
+amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized 
+as described in Intels Vectorization guide [REF 5] which, while providing examples for SSE [ref?], is applicable 
+to IMCI as well. 
 
-\medskip
-\noindent
-- Use of MPI to partition Phi's cores into sections
+Other areas are not so simply vectorized, and must be manually optimised through use of the Intel intrinsics, 
+which map directly to IMCIs. During rendering, each thread draws all particles affecting a particular subsection 
+of the final image. Particles are processed by drawing columns of affected pixels, from left to right, until all 
+affected pixels have been updated, illustrated in section [insert section or figure]. Drawing consists of additively 
+combining a pixels current value with the RGB contribution from the current particle, which is calculated by 
+multiplying the particle colour by a contribution value. In order to expedite this process up to five single 
+precision particle RGB values and five contribution values are packed into two respective 512 bit vector containers. 
+A third container contains 5 affected pixels, which are written simultaneously using a fused multiply add vector 
+intrinsic, masked in order not to affect the final unused float value in the 16-float capable containers. A 
+complex optimisation such as this is not likely to automatically occur during compiler optimisation, however 
+provides a useful performance increase. [add actual performance increase result] [clarify this explanation].
 
+\subsubsection{MPI offload}
+\label{sect:mpioffload}
+The overheads in dynamic allocation and data transfer incur a significant penalty when running a single host process 
+offloading to the device. Data heavy algorithms such as Splotch require a lot of transfers, and ideally would use 
+as much of the device memory at a time as possible. One such solution to this problem is to run multiple host MPI 
+processes, each being awarded a subsection of the device to offload to and work with. This allows each process to 
+allocate a share of the memory, transfer subsections of data, compute and render the results asynchronously, thereby 
+utilising as much device memory as possible while minimising overheads. This provides a noticeable performance increase 
+discussed further in section [performance analysis sect], although must be implemented through a fairly unwieldy script 
+to distribute hardware threads amongst processes. [final sentence too opinionated?]
 
 
 \section{Performance Analysis}
@@ -345,6 +418,7 @@ processing. [REF4] [Run test with aos vs soa and show results?]
 \label{sect:conclusions}
 
 ...
+[Discuss knights landing]
 
 \subsection{Acknowledgments}
 \label{sect:acks}
