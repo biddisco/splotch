@@ -24,7 +24,7 @@ void CalculateColours (paramfile &params, string ComponentsName,long npart,
 	///brightness = brightness_fact*sqrt(brightness);
 	cout << "--> Coloring " << ComponentsName.c_str() << " with brightness " << brightness << endl;
 
-        float pixeltotirific = params.find<float>("PixelToTirific"+ComponentsName,-1.0);
+        float pixeltotirific = params.find<float>("PixelToArcsec"+ComponentsName,-1.0);
         float nxarcsec = float(nx)*pixeltotirific;
         float nyarcsec = float(ny)*pixeltotirific;
 

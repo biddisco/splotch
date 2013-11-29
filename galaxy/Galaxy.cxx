@@ -157,6 +157,7 @@ int main (int argc, const char **argv)
 		  case 7:
 		    printf("    Generating distribution from TiRiFiC + DICE models\n");
 		    nfinal=RDiscFuncTirificDice (params, ComponentsName[itype], numberofparticles, nwant, xcomp, ycomp, zcomp, III, nx, ny);
+                    //for (int ii=1; ii<nwant; ii++)cout << xcomp[ii] << " " << ycomp[ii] << " " << zcomp[ii] << endl;
 		    break;
 		  case 8:
 		    printf("    Generating distribution from DICE Halo model\n");

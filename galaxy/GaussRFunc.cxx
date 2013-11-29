@@ -147,6 +147,20 @@ long GaussRDiscFunc (paramfile &params, string ComponentName, long number_of_poi
 	}
     }
 
+  int rotate = params.find<int>("Rotate"+ComponentName,0);
+
+// if we don't need to rotate, function ends here:
+  if(!rotate)return count;
+
+// in order to rotate, we need to go through the TIRIFIC stuff
+// Now physical dimension comes into play: this is set by sigma
+// if sigma is in arcsec then parsectotirific = 1.0
+// if sigma is in kpc then parsectotirific must be properly set
+//
+
+  count = TirificWarp (params, ComponentName, count, coordx, coordy, coordz);
+
+
   delete [] coordx_save;
   delete [] coordy_save;
 
@@ -274,6 +288,18 @@ long RDiscFunc (paramfile &params, string ComponentName, long number_of_points, 
       ii++;
     }
 
+  int rotate = params.find<int>("Rotate"+ComponentName,0);
+
+// if we don't need to rotate, function ends here:
+  if(!rotate)return abscounter;
+
+// in order to rotate, we need to go through the TIRIFIC stuff
+// Now physical dimension comes into play: this is set by sigma
+// if sigma is in arcsec then parsectotirific = 1.0
+// if sigma is in kpc then parsectotirific must be properly set
+//
+
+  abscounter = TirificWarp (params, ComponentName, abscounter, coordx, coordy, coordz);
   return abscounter;
 
 }
@@ -445,6 +471,18 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
                 coordz[ii] = zz[ii]/norm;
            }
 
+  int rotate = params.find<int>("Rotate"+ComponentName,0);
+// if we don't need to rotate, function ends here:
+  if(!rotate)return pcounter;
+
+// in order to rotate, we need to go through the TIRIFIC stuff
+// Now physical dimension comes into play: this is set by sigma
+// if sigma is in arcsec then parsectotirific = 1.0
+// if sigma is in kpc then parsectotirific must be properly set
+//
+
+  pcounter = TirificWarp (params, ComponentName, pcounter, coordx, coordy, coordz);
+
 
 // write data
 /*
@@ -456,10 +494,10 @@ long GaussRGlobFunc (paramfile &params, string ComponentName, long number_of_poi
          fclose(pFile);
 */
 
-         delete [] xx;
-         delete [] yy;
-         delete [] zz;
-         return pcounter;
+  delete [] xx;
+  delete [] yy;
+  delete [] zz;
+  return pcounter;
 }
 
 //This is used for the gas for any tilted galaxy: OPTION 6
@@ -478,7 +516,7 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
 {
   srand(time(NULL));
 
-  float pixeltotirific = params.find<float>("PixelToTirific"+ComponentName,1.0);
+  float pixeltotirific = params.find<float>("PixelToArcsec"+ComponentName,1.0);
   float npartfix = params.find<float>("TirificPartReduce"+ComponentName,0.75);
   float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
 // rmax in arcsec
@@ -653,8 +691,8 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
 
 // TIRIFIC STUFF
 
-  float pixeltotirific = params.find<float>("PixelToTirific"+ComponentName,1.0);
-  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+  float pixeltotirific = params.find<float>("PixelToArcsec"+ComponentName,1.0);
+  float parsectotirific = params.find<float>("InternToArcsec"+ComponentName,1.0);
   float extenddisk = params.find<float>("TirificExtendDisk"+ComponentName,1.0);
 // rmax in arcsec
   float rmax = params.find<float>("RmaxMask"+ComponentName,200.0);
@@ -698,10 +736,6 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
    fread(positions, 1, arraysize, dicefile);
    fclose(dicefile);
 
-   coordx = new float [ntrial];
-   coordy = new float [ntrial];
-   coordz = new float [ntrial];
-
    long index;
    for (long i=0; i<ntrial; i++) 
      {
@@ -720,6 +754,7 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
    float xmax=-1e20;
    float xmin=1e20;
    long icount = 0;
+   float cutoff = params.find<float>("Cutoff"+ComponentName,0.0);
    for (long i=0; i<number_of_points; i++)
      {
       vec3 xxxx_aux((0.5*float(nx)+coordx[i]/pixeltotirific),
@@ -732,8 +767,8 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
       long index = ix + iy * nx;
       //if(ix>nx || iy>ny)cout << ix << " " << iy << endl;
 
-      float cutoff = params.find<float>("Cutoff"+ComponentName,0.0);
-      if (index < nx * ny)
+      if (ix >= 0 && ix <= nx-1 && iy >=0 && iy <=ny-1)
+      //if (index < nx * ny)
 	if(III[index] > cutoff)
 	  {
 	    coordx[icount] = coordx[i];
@@ -742,6 +777,7 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
             //if(icount < 100)cout << coordx[icount] << "  " << coordy[icount] << " " << coordz[icount] << endl;
             xmax = max(xmax,coordz[icount]);
             xmin = min(xmin,coordz[icount]);
+            //cout << i<< " " << icount << " " << III[index] << " " << coordx[icount] << "  " << coordy[icount] << " " << coordz[icount] << endl; 
 	    icount++;
 	    if(icount >= ntot-1)
 	      {
@@ -750,7 +786,6 @@ long RDiscFuncTirificDice (paramfile &params, string ComponentName, long number_
 	      }
 	  }
     }
-
   
   delete [] positions;
   return icount;
@@ -771,7 +806,7 @@ long RHalo (paramfile &params, string ComponentName, long number_of_pixels, long
 
 // TIRIFIC STUFF
 
-  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+  float parsectotirific = params.find<float>("InternToArcsec"+ComponentName,1.0);
 
 // DICE STUFF
 

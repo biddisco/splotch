@@ -25,7 +25,7 @@ long TirificWarp (paramfile &params, string ComponentName, long number_of_points
 // Read Tirific file (only radius Inclination and Position Angle actually needed)
 
   float pi=3.141592654;
-  float parsectotirific = params.find<float>("ParsecToTirific"+ComponentName,1.0);
+  float parsectotirific = params.find<float>("InternToArcsec"+ComponentName,1.0);
   COLOURMAP model;
 
   ifstream infile (params.find<string>("TirificModel"+ComponentName).c_str());
