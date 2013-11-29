@@ -133,7 +133,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    fieldsnames[3] = "/x-velocity";
    fieldsnames[4] = "/y-velocity";
    fieldsnames[5] = "/z-velocity";
-   fieldsnames[6] = "/Gas_Energy";
+   fieldsnames[6] = "/GasEnergy";
    fieldsnames[7] = "/Total_Energy";
    int number_of_fields2read;
 
@@ -563,7 +563,8 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
                CASEMACRO__(0,e.r,1.0,1.0)
                CASEMACRO__(1,e.g,0,1.0)
                CASEMACRO__(2,e.b,0,1.0)
-               CASEMACRO__(3,I,dxxx[0]*dxxx[0]*dxxx[0],1.0)
+               CASEMACRO__(3,I,1.0,1.0)
+               //CASEMACRO__(3,I,dxxx[0]*dxxx[0]*dxxx[0],1.0)
              }
 
 // end of loop over fields 
@@ -586,6 +587,9 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 
    fclose (pFile);
 
+   for(long ir=0; ir<total_size; ir++)points[ir].I = points[ir].I*(points[ir].r/minradius);
+   //for(long ir=0; ir<total_size; ir++)points[ir].r = points[ir].r*sqrt(points[ir].r/minradius);
+
    //*maxr=maxradius;
    //*minr=minradius;
    cout << "RETURNING FROM ENZO" << endl;
@@ -597,6 +601,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 #ifdef DEBUG
    printf("PE %d MANAGE %ld POINTS\n", mype, total_size);
 #endif
+
 
    return total_size;
 
