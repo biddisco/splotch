@@ -242,11 +242,11 @@ OBJS  =	kernel/transform.o cxxsupport/error_handling.o \
 	      splotch/splotchutils.o splotch/splotch.o \
 	      splotch/scenemaker.o splotch/splotch_host.o cxxsupport/walltimer.o c_utils/walltime_c.o \
 	      booster/mesh_creator.o booster/randomizer.o booster/p_selector.o booster/m_rotation.o \
-	      reader/ramses_reader.o 
+	      reader/ramses_reader.o reader/enzo_reader.o
 
 OBJS1 = galaxy/Galaxy.o galaxy/GaussRFunc.o galaxy/Box_Muller.o galaxy/ReadBMP.o \
 	galaxy/CalculateDensity.o galaxy/CalculateColours.o galaxy/GlobularCluster.o \
-	galaxy/ReadImages.o
+	galaxy/ReadImages.o galaxy/TirificWarp.o
 
 OBJSC = cxxsupport/paramfile.o cxxsupport/error_handling.o cxxsupport/mpi_support.o \
 	c_utils/walltime_c.o cxxsupport/string_utils.o \
