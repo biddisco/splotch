@@ -173,14 +173,21 @@ int main (int argc, const char **argv)
 		    vector<float32> color;
 		    vector<float32> intensity;
 		    vector<float32> hsml;
+                    float bnorm = 1.0/float(npart[itype]);
 
 		    cred   = new float [npart[itype]]; 	
 		    cgreen = new float [npart[itype]]; 	
 		    cblue  = new float [npart[itype]]; 	
 		    ciii   = new float [npart[itype]];
-                    float xred = params.find<float>("Red"+ComponentsName[itype],1.0);
-                    float xgreen = params.find<float>("Green"+ComponentsName[itype],1.0);
-                    float xblue = params.find<float>("Blue"+ComponentsName[itype],1.0);
+                    float brightness_fact = params.find<float>("Brightness"+ComponentsName[itype],1.0);
+                    float color_fact      = params.find<float>("ColorScale"+ComponentsName[itype],1.0);
+                    float color_red       = params.find<float>("ColorR"+ComponentsName[itype],255.0);
+                    float color_green     = params.find<float>("ColorG"+ComponentsName[itype],255.0);
+                    float color_blue      = params.find<float>("ColorB"+ComponentsName[itype],255.0);
+
+                    ////float xred = params.find<float>("Red"+ComponentsName[itype],1.0);
+                    ////float xgreen = params.find<float>("Green"+ComponentsName[itype],1.0);
+                    ////float xblue = params.find<float>("Blue"+ComponentsName[itype],1.0);
 
 		    switch(component_type)
 		      {
@@ -189,12 +196,25 @@ int main (int argc, const char **argv)
 			break;
 		      case 1:
 			printf("    Color read from parameter file (default=white)\n");
+/* Claudio's original version
 			for (long i=0; i<npart[itype]; i++)
                           {
 			    cred[i] = xred;
                             cgreen[i] = xgreen;
                             cblue[i] = xblue;
                             ciii[i] = 1.0;
+                          }
+*/
+			printf("    Assigning brightness (%g)\n", brightness_fact);
+			printf("    Assigning RGB colors (%g,%g,%g)\n", color_red, color_green, color_blue);
+			for (long i=0; i<npart[itype]; i++)
+                          {
+			     cred[i] = (color_red + color_fact*bnorm*i);
+			     cgreen[i] = (color_green + color_fact*bnorm*i);
+			     cblue[i] = (color_blue + color_fact*bnorm*i);
+                             //colors vary slightly: factor 0.00001 approx 1/nfinal
+                             //most colors should be white = (255,255,255)
+                             ciii[i] = brightness_fact;
                           }
 			break;
 		      case 2:
@@ -232,8 +252,7 @@ int main (int argc, const char **argv)
 			printf("    Assigning red color\n");
 			for (long i=0; i<npart[itype]; i++)
                          {
-                          float brightness_fact = params.find<float>("Brightness"+ComponentsName[itype],1.0);
-			  cred[i] = 1.0;
+			  cred[i] = color_red;
                           ciii[i] = brightness_fact;
                           cgreen[i] = cblue[i] = 0.0;
                          }
