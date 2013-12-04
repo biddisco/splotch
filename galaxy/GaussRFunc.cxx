@@ -572,6 +572,11 @@ long RDiscFuncTirific (paramfile &params, string ComponentName, long number_of_p
       float thick = ring.r;
       float pa = (ring.b + 180) / 180 * M_PI;
       float inc = ring.g / 180 * M_PI;
+      if(inc == 0.0)
+      {
+         cout << "0 inclination model not supported yet" << endl;
+         exit(100);
+      }
 
             //cout << i << " " << r1m << " " << thick << " " << pa << " " << inc << " " << phi << endl;
 
