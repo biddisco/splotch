@@ -83,8 +83,16 @@ long TirificWarp (paramfile &params, string ComponentName, long number_of_points
       n.Normalize();
 
       // Find the radius vector within the x/y plane
-      float x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
-      float y0 = -(n.x/n.y)*x0;
+      float x0;
+      float y0;
+      if (inc == 0.0)
+      {
+         x0=xcoord[0];
+         y0=xcoord[1];
+      } else {
+         x0 = sqrt(r1m*r1m/(1+(n.x/n.y)*(n.x/n.y)));
+         y0 = -(n.x/n.y)*x0;
+      }
       vec3 rr(x0,y0,0);
 
       // Rotate the radius vector arround the normal vector by phi
@@ -101,6 +109,7 @@ long TirificWarp (paramfile &params, string ComponentName, long number_of_points
       coordx[index] = xxx.x*parsectotirific;
       coordy[index] = xxx.y*parsectotirific;
       coordz[index] = xxx.z*parsectotirific;
+      if(index < 10)cout << coordx[index] << " " << coordy[index] << " " << coordz[index] << endl;
 
     }
   return number_of_points;
