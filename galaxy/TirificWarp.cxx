@@ -109,7 +109,6 @@ long TirificWarp (paramfile &params, string ComponentName, long number_of_points
       coordx[index] = xxx.x*parsectotirific;
       coordy[index] = xxx.y*parsectotirific;
       coordz[index] = xxx.z*parsectotirific;
-      if(index < 10)cout << coordx[index] << " " << coordy[index] << " " << coordz[index] << endl;
 
     }
   return number_of_points;
