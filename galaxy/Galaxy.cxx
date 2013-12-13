@@ -261,6 +261,7 @@ int main (int argc, const char **argv)
 		    //printf("    Rescaling coordinates\n");
                     //float rescale = rescale_coords(params, ComponentsName[itype], xcomp, ycomp, zcomp, npart[itype]);
 
+                    float parsectotirific = params.find<float>("InternToArcsec"+ComponentName,1.0);
 		    printf("    Assigning hsml\n");
 		    float set_hsml = params.find<float>("hsml"+ComponentsName[itype],0.001); 
                     float hsmlfact = params.find<float>("Adaptivehsml"+ComponentsName[itype],0.0);
@@ -288,7 +289,7 @@ int main (int argc, const char **argv)
                         } else {
                           I_eff = 0.0;
                         }
-                        float hsml_eff = set_hsml/(1.0+hsmlfact*I_eff);
+                        float hsml_eff = parsectotirific*set_hsml/(1.0+hsmlfact*I_eff);
 			hsml.push_back(hsml_eff);
                         hmax = MAX(hmax,hsml_eff);
                         hmin = MIN(hmin,hsml_eff);
