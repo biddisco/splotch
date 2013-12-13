@@ -20,11 +20,12 @@
 \address{ETH-CSCS, via Trevano 131, 6900 Lugano, Switzerland}
   
 \author{T.~Dykes, M.~Krokos}
-\ead{mel.krokos@port.ac.uk}
+\ead{tim.dykes@port.ac.uk mel.krokos@port.ac.uk}
 \address{School of Creative Technologies, University of Portsmouth, PO1 2DJ, United Kingdom}
 
 \author{K.~Dolag}
 \address{University Observatory Munich, Scheinerstrasse 1, D-81679 Munich, Germany}
+\ead{kdolag@MPA-Garching.MPG.DE}
 
 %\author{M.~Reinecke}
 %\address{Max-Planck-Institut for Astrophysics, Karl-Schwarzschild Strasse 1, Garching, Munich, Germany}
@@ -45,14 +46,14 @@ performance model is introduced to guide our re-factoring of Splotch.  A number 
 parallelization issues are discussed, in particular relating to race
 conditions and workload balancing, towards achieving optimal
 performances. Our implementation was accomplished by using the CUDA
-programming paradigm. Our strategy is founded on novel schemes achieving optimized data organisation and classification of particles. We deploy a reference cosmological simulation to present
+programming paradigm. Our strategy is founded on novel schemes achieving optimised data organisation and classification of particles. We deploy a reference cosmological simulation to present
 performance results on acceleration gains and scalability. We finally
 outline our vision for future work developments including possibilities
-for further optimisations and exploitation of emerging technologies.
+for further optimisations and exploitation of hybrid systems and emerging accelerators.
 \end{abstract}
 
 \begin{keyword}
-Scientific Visualization \sep Astrophysics \sep High-Performance  Computing \sep CUDA 
+Scientific Visualization \sep Astrophysics \sep CUDA \sep High-Performance  Computing 
 \end{keyword}
 
 \end{frontmatter}
@@ -233,7 +234,7 @@ data coalesced access should be guaranteed (i.e.\ data are accessed by warps in 
 \section{CUDA Implementation}
 \label{sec:implementation}
 
-Once particles are loaded into the GPU's global memory, the {\it Rasterization} kernel starts processing them. We follow an efficient {\it one-thread-per-particle} approach, so that the entire computation on individual particles (e.g.~data normalisation\footnote{Minimum and maximum values are pre-computed on the host, but usually this computation is performed only during the testing phase. In real data production they are provided by the user through the input parameter file.}, geometric transformation and coloring) is carried out by single threads - no interaction with any other processes is necessary. 
+Once particles are loaded into the GPU's global memory, the {\it Rasterization} kernel starts processing them. We follow an efficient {\it one-thread-per-particle} approach, so that the entire computation on individual particles (e.g.~data normalisation\footnote{Tipically min/max normalisation values are specified by the user, otherwise they are pre-computed on the host.}, geometric transformation and coloring) is carried out by single threads - no interaction with any other processes is necessary. 
 Subsequently the {\it Rendering} kernel takes over. As explained previously (see Sect.~\ref{sec:model}) we cannot adopt a {\it one-thread-per-particle} approach and memory usage must be managed carefully. To handle particles in an efficient way we observe that depending upon their radius ($r(p)$) as defined by equation \eqref{radius} the rendering process can be performed differently.
 
 Considering particles with a small radius, these typically influence single pixels on the rendered images, so we can process them again by deploying a {\it one-thread-per-particle} approach, but carefully managing possible race conditions (see Sect.~\ref{sec:smallparticles}). On the other hand, particles with very large radius affect sizeable areas of the rendered images, so these are not suitable for efficient GPU processing (see Sect.~\ref{sec:largeparticles}). Finally, particles with radius within a suitably defined range influence only small fractions of the rendered images, so we process these by using an efficient tiling strategy (see Sect.~\ref{sec:mediumparticles}). We classify particles based on the size of their radius as follows:
@@ -278,7 +279,7 @@ represented with different colors and boundary width is $r_0=3$ pixels. {\em Lef
 are medium, particle 4 is small. Particle~2, is classified as large since its radius exceeds the boundary width. {\em Right}: The camera has now moved towards particle~1. The relevant particle radii change due to the new point
 of view. Classification of particles 4 and 5 does not change, while particle~3
 becomes inactive (completely falling outside the field of view). Note that although particle~2 is outside the field of view it is designated as active as it still affects pixels.
-Particle~1 becomes large.
+Finally particle~1 becomes large.
 }
 \label{fig:fov}
 \end{figure}
@@ -412,15 +413,21 @@ A few other camera positions have also been set so as to reach closer and closer
 centre of the simulation (Tests~3 to~7). Figure~\ref{fig:panorama} illustrates rendered images generated for the different camera positions.
 
 \begin{figure}
-%\centering
+%\centring
 \includegraphics[scale=0.5]{radii.eps}
 \caption{Normalised percentage distribution of the particles radii in the seven tests (dark blue line refers to Test~1, light blue to Test~7). Radius bins in the x-axis corresponds to: $r\le 2$ (bin~1), $2<r\le 4$ (bin~2), $4<r\le 8$ (bin~3), $8<r\le 16$ (bin~4), $r>16$ (bin~5). 
 }
 \label{fig:radii}
 \end{figure}
 
+We observe that approaching the center of the simulation results in larger radii 
+as expressed by the average $R_0=<r(p)>$ radius and illustrated by Fig.~\ref{fig:radii}. 
+Table~\ref{tab:bin} presents the estimated values of $R_0$, together with the number of active particles and computing times. As we approach the centre of the simulation fewer particles are active, an increasingly larger number being outside the scene - this leads to a reduction in computing times. At the same time, however, particles are closer to the camera and their radius increases contributing to a progressively larger number of screen pixels,
+thus increasing computing times with the square of their radius. 
+These trends tend to compensate maintaining on average~9 to~11 seconds overall computing times.
+
 \begin{table}
-\label{tab:radius}
+\label{tab:bin}
 %\begin{center}
 \begin{tabular}{lrrr}
 \hline\noalign{\smallskip}
@@ -438,15 +445,6 @@ Test 7  & 13.66  & 4,222,214    & 9.07 \\
 %\end{center}
 \caption{Illustration of average particle radius (column 2) together with number of active particles (column~3) and computing times (column~4) for each test performed (test ID is displayed in column~1).}
 \end{table}
-
-We observe that approaching the center of the simulation results in larger radii 
-as expressed by the average $R_0=<r(p)>$ radius and illustrated by Fig.~\ref{fig:radii}. 
-Table~\ref{tab:radius} presents the estimated values of $R_0$, together with the number of active particles and computing times. As we approach the centre of the simulation fewer particles are active, an increasingly larger 
-number being outside the scene - this leads to a reduction in computing times. At the same
-time, however, particles are closer to the camera and their radius increases contributing to 
-a progressively larger number of screen pixels,
-thus increasing computing times with the square of their radius. 
-These trends tend to compensate maintaining on average~9 to~11 seconds overall computing times.
 
 CPU Splotch timings were obtained adopting the OpenMP paradigm on 1, 2, 4 and 8 cores respectively. OpenMP was used in order to exploit the shared memory capability of the computing node. It provides a slightly better intra-node parallel performance with respect to MPI. The results are illustrated in Fig.~\ref{fig:gpucpu} as a function of computing times per particle, since the number of processed particles depends on camera settings.
 
@@ -503,15 +501,14 @@ time is illustrated. The black line (diamonds) shows total overhead, the green l
 \label{sec:conclusions}
 The CUDA implementation of Splotch exploits GPUs in modern HPC infrastructures for visualizing large data volumes such as those produced by experiments/observations and by computer simulations. Current trends in HPC envisage the widespread adoption of accelerators in the coming years to substantially increase computing performance while maintaining power consumption reasonably low. However, accelerators, and in particular GPUs, demand a certain effort to be efficiently exploited, as they support new programming models typically requiring entire codes, or part of them, to be redesigned and reimplemented.
 
-Splotch proved to be a challenging algorithm to adapt for GPU execution. The main computational kernel poses serious difficulties to the GPU's programming model which strongly favours highly parallelised approaches. We redesigned Splotch by introducing a number of specific kernels which may involve overheads of up to~45\% of overall computing times. Nevertheless the original sequential 
+Splotch proved to be a challenging algorithm to adapt for GPU execution. The main computational kernel poses serious difficulties to the GPU's programming model which strongly favours highly parallelised approaches. We re-designed Splotch by introducing a number of specific kernels which may involve overheads of up to~45\% of overall computing times. Nevertheless the original sequential 
 version on Intel Sandy Bridge processor is outperformed on Kepler architecture by a factor of~5, giving performance comparable up to 8 CPU cores when the OpenMP multithread parallelised version is considered for comparison. An important aspect is retaining linear scalability on the number of particles processed.
 
 Further optimizations could be obtained by adopting CUDA streams, overlapping computations and data transfers. However this is currently prevented by the rendering of large particles on the CPU and the Thrust library which provides no support for such operational scenarios.
 
 The achieved performance gains allow exploitation of hybrid computing nodes nowadays increasingly common in HPC infrastructures. However to fully exploit such architectures further work is required towards concurrent usage of multiple GPUs, multiple cores and multiple nodes, and exploitation of the OpenMP and MPI Splotch capability. This work is expected to be challenging especially in the context of finding an optimal balance in the workload of individual system components. Additionally novel solutions provided by Kepler architecture~\cite{GK110}, such as dynamic parallelism and Hyper-Q usage of multicore systems, should be explored. This last feature is particularly relevant for our purposes since it enables multiple CPU cores to simultaneously utilise CUDA cores on a single GPU. We envisage this to be particularly effective when off-loaded data can be split in small chunks and progressively copied by different MPI tasks to the GPU memory (see~\cite{GPUTech}). 
 
-The vision is to further develop Splotch as an effective approach for large data visualization and discovery, capable of optimally exploiting any underlying HPC devices irrespectively of their specific architectures. In this respect, we are also experimenting the novel INTEL Xeon Phi
-architecture~\cite{mic}, which represents a further interesting solution based on accelerators. Results will be presented in~\cite{mic-splotch}.
+The vision is to further develop Splotch as an effective approach for large data visualization and discovery, capable of optimally exploiting any underlying HPC devices irrespectively of their specific architectures. In this respect, we are also experimenting with the novel INTEL Xeon Phi~\cite{mic}, which represents a further interesting solution based on accelerators. Results will be presented in a forthcoming article~\cite{mic-splotch}.
 Furthermore, we are also developing specialised utilities such as a lightweight interactive rendering engine mimicking Splotch's imagery for rapid inspections of large-scale astrophysical datasets.
 
 \bibliographystyle{model2-names}
