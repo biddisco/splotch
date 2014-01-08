@@ -147,7 +147,9 @@ fast (if not real-time) rendering.
 The Splotch software (REF), our ray-casting algorithm for
 effectively visualizing large-scale, particle-based datasets, addresses these issues, 
 providing high quality graphic outputs, processing data of, ideally, any size, already
-efficiently exploiting a broad variety of HPC systems: multi-core processors and multi-node supercomputing systems (REF: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF1: Astronomical Society of the Pacific Conference Series, 475 (ADASS XXII) pp.103-106, 2013; REF2: in preparation). 
+efficiently exploiting a broad variety of HPC systems: multi-core processors and multi-node supercomputing systems 
+(REF: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF1: Astronomical Society of the Pacific Conference 
+Series, 475 (ADASS XXII) pp.103-106, 2013; REF2: in preparation). 
 This paper will describe the work accomplished to enable Splotch to 
 run on the new Intel PHI (REF) accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture,
 which is expected to provide, on suitable classes of algorithms, outstanding performance 
@@ -291,7 +293,7 @@ parameters are copied to the device, which subsequently begins rendering while t
 
 The first stage of rendering is a highly parallel 3D transform and colorize performed on a per-particle basis using 
 four OpenMP threads per available core, to match the available hardware threads, equating to roughly 240 threads. This 
-stage is amenable to fast processing and requires only a small amount of tuning for MIC suitability.
+stage is amenable to fast parallel processing and requires only a small amount of tuning for MIC suitability.
 
 The multistep OpenMP solution to the full rendering stage discussed in section [omp section] is modified to account for 
 the larger number of threads available. Simply splitting the image into smaller tiles to allow for more threads results 
@@ -342,15 +344,16 @@ This is not such a large concern in a standard Intel 64 environment where freque
 invoked by repetitive resizing of dynamic arrays, have little comparative impact.
 
 Cost of dynamic memory allocation on the Phi is relatively high [REF1], in order to minimise unnecessary allocations 
-buffers are created at the beginning of the program cycle and reused throughout. A single process offloading to the Phi 
-and reserving large buffers could allocate at a speed of roughly 800MB/s, plus the smaller overhead of 6GB/s for data 
-transferral. Use of the offload syntax for asynchronous computation [REF?] allows to engage a double buffered approach, 
-processing the data in smaller chunks and overlapping computation and data transfer to minimise this overhead.
+buffers are created at the beginning of the program cycle and reused throughout. Use of the MIC\_USE\_2MB\_BUFFERS 
+environment variable forces any buffers over a particular size to be allocated with 2MB rather than the default 4KB 
+pages, which improves data allocation rate, transfer rate and can benefit performance by potentially reducing page 
+faults and TLB (translation look-aside buffer) misses [REF2]. In isolated tests using offload clauses for compiler 
+managed memory allocation on the device, a single process offloading to the device and reserving large buffers 
+initially allocated at approximately 4 to 4.5s per GB (with speed increasing marginally with increased allocation size). 
+Setting MIC\_USE\_2MB\_BUFFERS to 64K reduced this allocation overhead to approximately 2s per GB. [are approximations okay?]
 
-Furthermore, use of the MIC\_USE\_2MB\_BUFFERS environment variable forces any buffers over a particular size to be 
-allocated with 2MB rather than the default 4KB pages, which improves data allocation rate, transfer rate and can benefit 
-performance by potentially reducing page faults and TLB (translation look-aside buffer) misses. [REF2] [Add times to show 
-memory allocation/transfer improvement with this variable]
+Use of the offload syntax for asynchronous computation [REF?] allows to engage a double buffered approach, 
+processing the data in smaller chunks and overlapping computation and data transfer to minimise this overhead.
 
 \subsubsection{Vectorization}
 \label{sect:vectorization}
@@ -375,7 +378,7 @@ precision particle RGB values and five contribution values are packed into two r
 A third container contains 5 affected pixels, which are written simultaneously using a fused multiply add vector 
 intrinsic, masked in order not to affect the final unused float value in the 16-float capable containers. A 
 complex optimisation such as this is not likely to automatically occur during compiler optimisation, however 
-provides a useful performance increase. [add actual performance increase result] [clarify this explanation].
+provides a performance increase for the rendering phase of up to 22\%.
 
 \subsubsection{MPI offload}
 \label{sect:mpioffload}
@@ -392,21 +395,49 @@ to distribute hardware threads amongst processes. [final sentence too opinionate
 \section{Performance Analysis}
 \label{sect:performance}
 
-\noindent
-- Contents:
+Performance analysis consists of running a variety of tests on the available hardware, the “Dommic” facility at the 
+Swiss National Supercomputing Centre, Lugano. Each node is based upon  a dual socket eight-core Intel Xeon 2670 
+processor architecture running at 2.6 GHz with 32 GB of main system memory. Two Xeon Phi 5110 MIC coprocessors are 
+available per node. 
 
-\noindent
-- Performance analysis methods, test hardware etc
+Tests are carried out using an N-Body simulation performed using Gadget [REF], consisting of roughly 400 million 
+particles;  ~200 million dark matter particles, ~200 million baryonic matter particles and ~10 million star particles. 
+The double buffered approach to data transfer and processing discussed in section [memory usage 3.3.1] allows to 
+process large sets such as this where the device memory is not sufficient to hold the entire dataset at one time. In 
+addition for smaller tests a filtering system in the file reader module allows just a subset of the data to be loaded.
+
 
 
 \subsection{Tuning}
 \label{sect:tuning}
 
-\noindent
-- Necessary overhead (mic initilisation, omp thread initialisation - check thread stack size allocations effect on this?)
+Some necessary overheads should be considered which impact the efficacy of offloading to the device for smaller datasets, 
+i.e. those taking just a few seconds to process. Initialisation of the device itself can take roughly one second, this 
+occurs when the first offload clause is encountered. The impact of this can be minimised by placing an empty clause near 
+to the beginning of the program, in order to initialise the device while other host activity is occurring (in this case, 
+while the host is reading from file). Alternatively the environment variable OFFLOAD\_INIT can be set to on\_start to 
+pre-initialise all available MIC devices before the program main begins execution [ref]. 
 
-\noindent
-- Thread grouping, tile size, number of mpi processes used, results
+Initialising the large number of OpenMP threads used on the device also carries a small overhead, roughly 0.3 seconds. 
+This can potentially be hidden though an empty parallel block, placed within an asynchronous offload section at the 
+beginning of the program. These two overheads are relatively small and may have little effect on a long running program, 
+however in a program expected to take only a few seconds to run they can outweigh any performance increase gained by 
+offloading to the device. It should be noted for a small program running many times over, as is the case when creating 
+a Splotch animation with a relatively small dataset, these overhead costs are paid only once during the first execution 
+as for repeat run-throughs Splotch execution is not actually stopped.
+
+Various parameters of the algorithm can be tuned to find best performance. Rendering parameters such as the number of 
+thread groups, and tile size (refer to section [X]), are set to optimal defaults for the test hardware based on results 
+of scripted tests iterating through sets of incremental potential values however can be modified via a parameter file 
+passed in at runtime.
+
+The performance increase provided by running multiple MPI processes all offloading to subsections of the device is 
+notable. When offloading to the entire device with a single process, one of the debilitating factors was filling up 
+the device memory without wasting a large amount of time transferring this data. Building upon the pre-implemented MPI 
+Splotch functionality [ref to sect or ref], each process is allocated a subsection of the device via arguments to the 
+mpirun command, this  allows each process to independently allocate and transfer data to the device in parallel and 
+fill the device in a fraction of the time. The optimal number of processes for the test hardware was identified to be 
+eight, most likely due to the host socket for each device having eight-cores. [is this speculation bad?] 
 
 \subsection{Scalability}
 \label{sect:scalability}
@@ -417,8 +448,17 @@ to distribute hardware threads amongst processes. [final sentence too opinionate
 \section{Discussion and Conclusions}
 \label{sect:conclusions}
 
-...
-[Discuss knights landing]
+[Discussion of results and conclusion of work]
+
+Intel released details of their second generation Xeon Phi product, codenamed “Knights Landing”,  at the International 
+Supercomputing Conference 2013 [ref]. One important factor to note is the potential to use this as a standalone CPU 
+rather than a co-processor. This is worthy of further investigation as it invites the dismissal of complex and time 
+consuming data transferral methods between a host and coprocessor, amongst other problems, however also risks 
+introducing new issues. One of the benefits of an offloading model is that work particularly suited to a highly 
+parallelised processing model can be offloaded while unsuitable work can be handled by the more powerful Xeon host 
+cores, disposal of the host would remove this advantage and beg the question of how to handle work that may be 
+inherently unsuitable for a many-core architecture.
+ 
 
 \subsection{Acknowledgments}
 \label{sect:acks}
