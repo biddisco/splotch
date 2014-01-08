@@ -141,17 +141,20 @@ int main (int argc, const char **argv)
 #else
   int nDevProc = params.find<int>("gpu_number",1);
 #endif
-  int nCoreNode = params.find<int>("cores_number",12); //number of cores per node
+  int nTasksNode = params.find<int>("tasks_per_node",1); //number of processes per node
   int mydevID = -1;
   // We assume a geometry where processes use only one gpu if available
   if (nDevNode > 0 && nDevProc == 1)
     {
-    mydevID = myID%nCoreNode; //ID within the node
-    if (mydevID>=nDevNode)
+    mydevID = myID%nTasksNode; //ID within the node
+#if (defined(CUDA) && !defined(HYPERQ)) 
+  // if not enabled the HyperQ feature, only the first nDevNode processes of the node will use a GPU, each exclusively.
+   if (mydevID>=nDevNode)
       {
       cout << "There isn't a gpu available for process = " << myID << " computation will be performed on the host" << endl;
       mydevID = -1;
       }
+#endif
     }
 #ifdef OPENCL
   // b) or all processes use a number of GPUs > 1 and <= nDevNode
@@ -199,8 +202,8 @@ int main (int argc, const char **argv)
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
         tstack_push("CUDA");
-        if(boost) cuda_rendering(mydevID, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
-        else cuda_rendering(mydevID, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
+        if(boost) cuda_rendering(mydevID, nTasksNode, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
+        else cuda_rendering(mydevID, nTasksNode, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
         tstack_pop("CUDA");
 #endif
 #ifdef OPENCL
