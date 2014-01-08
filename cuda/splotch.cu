@@ -331,14 +331,14 @@ void cu_end(cu_gpu_vars* pgv)
   cudaThreadExit();
   }
 
-long int cu_get_chunk_particle_count(CuPolicy* policy, size_t psize, int ntiles, float pfactor)
+long int cu_get_chunk_particle_count(CuPolicy* policy, int nTasksNode, size_t psize, int ntiles, float pfactor)
   {
    size_t gMemSize = policy->GetGMemSize();
    size_t ImSize = policy->GetImageSize();
    size_t tiles = ntiles*sizeof(int);
 
    size_t spareMem = 20*(1<<20);
-   long int arrayParticleSize = gMemSize - 4*ImSize - 2*tiles - spareMem;
+   long int arrayParticleSize = gMemSize/nTasksNode - 4*ImSize - 2*tiles - spareMem;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
    long int maxlen = (long int)policy->GetMaxGridSize() * (long int)policy->GetBlockSize();
    if (len > maxlen) len = maxlen;

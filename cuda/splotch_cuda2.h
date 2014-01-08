@@ -18,7 +18,7 @@
 int check_device(int rank);
 void print_device_info(int rank, int dev);
 
-void cuda_rendering(int mydevID, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, std::vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params);
+void cuda_rendering(int mydevID, int nTasksNode, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, std::vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params);
 void setup_colormap(int ptypes, std::vector<COLOURMAP> &amap, cu_gpu_vars* gv);
 
 #endif

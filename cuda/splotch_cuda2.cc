@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
+void cuda_rendering(int mydevID, int nTasksNode, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
 {
   tstack_push("CUDA");
   tstack_push("Device setup");
@@ -15,7 +15,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
   int yres = pic.size2();
-  cout << "resolution = " << xres << " x " << yres << endl;
+ // cout << "resolution = " << xres << " x " << yres << endl;
   arr2<COLOUR> Pic_host(xres,yres);
   int ptypes = g_params.find<int>("ptypes",1);
 
@@ -25,8 +25,7 @@ void cuda_rendering(int mydevID, arr2<COLOUR> &pic, vector<particle_sim> &partic
 
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 3);
-  long int len = cu_get_chunk_particle_count(policy, sizeof(cu_particle_sim), ntiles, factor);
-
+  long int len = cu_get_chunk_particle_count(policy, nTasksNode, sizeof(cu_particle_sim), ntiles, factor);
   if (len <= 0)
     {
     cout << "Graphics memory setting error" << endl;
