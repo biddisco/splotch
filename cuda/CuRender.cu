@@ -152,15 +152,15 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   int dimGrid = new_ntiles;    // number of blocks = number of tiles
   cout << "number of tiles = " << new_ntiles << endl;
 
-  cudaEvent_t start, stop;
+//  cudaEvent_t start, stop;
   if (new_ntiles > 0)
   {
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventRecord(start,0);
+//    cudaEventCreate(&start);
+//    cudaEventCreate(&stop);
+//    cudaEventRecord(start,0);
     cu_render1(newParticle, dimGrid, block_size, a_eq_e, (float) grayabsorb, gv, tile_sidex, tile_sidey, width, nytiles);
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;
-    cudaEventRecord(stop,0);
+//    cudaEventRecord(stop,0);
     cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
 
@@ -173,13 +173,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 
   if (new_ntiles > 0)
   {
-    cudaEventSynchronize(stop);
+//    cudaEventSynchronize(stop);
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;
-    float elapsedTime;
-    cudaEventElapsedTime(&elapsedTime, start, stop);
-    cout << "Device Rendering Time = " << elapsedTime/1000.0 << endl;
-    cudaEventDestroy(start);
-    cudaEventDestroy(stop);
+//    float elapsedTime;
+//    cudaEventElapsedTime(&elapsedTime, start, stop);
+//    cout << "Device Rendering Time = " << elapsedTime/1000.0 << endl;
+//    cudaEventDestroy(start);
+//    cudaEventDestroy(stop);
 
     cudaThreadSynchronize();
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;

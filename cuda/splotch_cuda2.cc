@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void cuda_rendering(int mydevID, int nTasksNode, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
+void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
 {
   tstack_push("CUDA");
   tstack_push("Device setup");
@@ -25,7 +25,7 @@ void cuda_rendering(int mydevID, int nTasksNode, arr2<COLOUR> &pic, vector<parti
 
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 3);
-  long int len = cu_get_chunk_particle_count(policy, nTasksNode, sizeof(cu_particle_sim), ntiles, factor);
+  long int len = cu_get_chunk_particle_count(policy, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
   if (len <= 0)
     {
     cout << "Graphics memory setting error" << endl;
