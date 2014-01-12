@@ -9,7 +9,7 @@
 #OPT += -DLONGIDS
 
 #--------------------------------------- Switch on MPI
-#OPT += -DUSE_MPI
+OPT += -DUSE_MPI
 #OPT += -DUSE_MPIIO
 
 #--------------------------------------- Switch on HDF5
@@ -21,11 +21,10 @@
 #OPT += -DVS
 
 #--------------------------------------- CUDA options
-
-#OPT += -DCUDA
+OPT += -DCUDA
+OPT += -DHYPERQ
 
 #--------------------------------------- OpenCL options
-
 #OPT += -DOPENCL
 #OPT += -DNO_WIN_THREAD
 
@@ -36,7 +35,7 @@
 #OPT += -DNO_I_NORM
 
 #--------------------------------------- Select target Computer
-SYSTYPE="generic"
+#SYSTYPE="generic"
 #SYSTYPE="mac"
 #SYSTYPE="SP6"
 #SYSTYPE="GP"
@@ -44,7 +43,7 @@ SYSTYPE="generic"
 #SYSTYPE="BGP"
 #SYSTYPE="VIZ"
 #SYSTYPE="EIGER"
-#SYSTYPE="TODI"
+SYSTYPE="TODI"
 ### visualization cluster at the Garching computing center (RZG):
 #SYSTYPE="RZG-SLES11-VIZ"
 ### generic SLES11 Linux machines at the Garching computing center (RZG):
@@ -68,7 +67,7 @@ ifeq ($(SYSTYPE),"generic")
 
 # Generic 64bit cuda setup
 ifeq (CUDA,$(findstring CUDA,$(OPT)))
-NVCC       =  nvcc -g
+NVCC       =  nvcc -g 
 CUDA_HOME  =  /opt/cuda
 LIB_OPT  += -L$(CUDA_HOME)/lib64 -lcudart
 SUP_INCL += -I$(CUDA_HOME)/include
@@ -77,7 +76,7 @@ endif
 endif
 
 # OpenMP compiler switch
-OMP      = -fopenmp
+#OMP      = -fopenmp
 
 SUP_INCL = -I. -Icxxsupport -Ic_utils
 
@@ -119,10 +118,16 @@ ifeq ($(SYSTYPE),"TODI")
  ifeq (USE_MPI,$(findstring USE_MPI,$(OPT)))
    CC       = CC 
  else
-   CC       = g++
+   CC       = g++ -DDEVS_PER_NODE=1
+   #CC       = CC -DDEVS_PER_NODE=1 -DTODI
  endif
+ifeq (CUDA,$(findstring CUDA,$(OPT)))
+NVCC       =  nvcc -g -arch sm_35 -use_fast_math
+LIB_OPT  += -L$(CUDATOOLKIT_HOME)/lib64 -lcudart
+SUP_INCL += -I$(CUDATOOLKIT_HOME)/include
+endif
  OPTIMIZE = -O3
- OMP      = 
+# OMP      = -fopenmp
 endif
 
 # Configuration for SLES11 Linux clusters at the Garching computing centre (RZG):
