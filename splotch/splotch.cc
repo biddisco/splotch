@@ -134,34 +134,42 @@ int main (int argc, const char **argv)
 #endif
 #if (defined(CUDA) || defined(OPENCL))
   int myID = mpiMgr.rank();
-  int nDevNode = check_device(myID);     // number of GPUs available per node
-#ifdef CUDA
-  int nDevProc = 1;   // number of GPU required per process
-  cout << "Configuration supported is 1 gpu for each mpi process" << endl;
-#else
-  int nDevProc = params.find<int>("gpu_number",1);
-#endif
   int nTasksNode = params.find<int>("tasks_per_node",1); //number of processes per node
+  int nDevNode = check_device(myID);     // number of GPUs available per node
   int mydevID = -1;
+  int nTasksDev;     // number of processes using the same GPU
+#ifdef CUDA
   // We assume a geometry where processes use only one gpu if available
-  if (nDevNode > 0 && nDevProc == 1)
+  int nDevProc = 1;   // number of GPU required per process
+  if (nDevNode > 0)
     {
+#ifdef HYPERQ
+    // all processes in the same node share one GPU
+    mydevID = 0;
+    nTasksDev = nTasksNode;
+    cout << "HyperQ enabled" << endl;
+#else 
+    // only the first nDevNode processes of the node will use a GPU, each exclusively.
     mydevID = myID%nTasksNode; //ID within the node
-#if (defined(CUDA) && !defined(HYPERQ)) 
-  // if not enabled the HyperQ feature, only the first nDevNode processes of the node will use a GPU, each exclusively.
-   if (mydevID>=nDevNode)
+    nTasksDev = 1;
+    cout << "Configuration supported is 1 gpu for each mpi process" << endl; 
+    if (mydevID>=nDevNode)
       {
       cout << "There isn't a gpu available for process = " << myID << " computation will be performed on the host" << endl;
       mydevID = -1;
       }
 #endif
     }
+   else planck_fail("No GPUs are available");
+#endif
 #ifdef OPENCL
-  // b) or all processes use a number of GPUs > 1 and <= nDevNode
-  else
-    planck_assert(nDevNode>=nDevProc, string("Number of GPUs available = ")
-      +dataToString(nDevNode) + " is lower than the number of GPUs required = "
-      +dataToString(nDevProc));
+  // all processes use a number of GPUs >= 1 and <= nDevNode
+  int nDevProc = params.find<int>("gpu_number",1);
+  if (nDevProc > nDevNode)
+  {
+    cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required " << nDevProc << endl;
+    cout << "Only " << nDevNode << " GPUs will be used per process" << endl;
+  }
 #endif
   bool gpu_info = params.find<bool>("gpu_info",true);
   if (gpu_info)
@@ -202,8 +210,8 @@ int main (int argc, const char **argv)
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
         tstack_push("CUDA");
-        if(boost) cuda_rendering(mydevID, nTasksNode, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
-        else cuda_rendering(mydevID, nTasksNode, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
+        if(boost) cuda_rendering(mydevID, nTasksDev, pic, r_points, campos, lookat, sky, amap, b_brightness, params);
+        else cuda_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, b_brightness, params);
         tstack_pop("CUDA");
 #endif
 #ifdef OPENCL
