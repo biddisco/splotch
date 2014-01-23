@@ -148,12 +148,13 @@ int main (int argc, const char **argv)
     mydevID = 0;
     nTasksNode = params.find<int>("tasks_per_node",1); //number of processes per node
     nTasksDev = nTasksNode;
-    cout << "HyperQ enabled" << endl;
+    if (master) cout << "HyperQ enabled" << endl;
 #else 
     // only the first nDevNode processes of the node will use a GPU, each exclusively.
     mydevID = myID%nTasksNode; //ID within the node
     nTasksDev = 1;
-    cout << "Configuration supported is 1 gpu for each mpi process" << endl; 
+    if (master) 
+       cout << "Configuration supported is 1 gpu for each mpi process" << endl; 
     if (mydevID>=nDevNode)
       {
       cout << "There isn't a gpu available for process = " << myID << " computation will be performed on the host" << endl;
@@ -168,8 +169,11 @@ int main (int argc, const char **argv)
   int nDevProc = params.find<int>("gpu_number",1);
   if (nDevProc > nDevNode)
   {
-    cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required " << nDevProc << endl;
-    cout << "Only " << nDevNode << " GPUs will be used per process" << endl;
+    if (master)
+    {
+      cout << "Number of GPUs available = " << nDevNode << " is lower than the number of GPUs required " << nDevProc << endl;
+      cout << "Only " << nDevNode << " GPUs will be used per process" << endl;
+    }
   }
 #endif
   bool gpu_info = params.find<bool>("gpu_info",true);
