@@ -134,18 +134,19 @@ int main (int argc, const char **argv)
 #endif
 #if (defined(CUDA) || defined(OPENCL))
   int myID = mpiMgr.rank();
-  int nTasksNode = params.find<int>("tasks_per_node",1); //number of processes per node
   int nDevNode = check_device(myID);     // number of GPUs available per node
   int mydevID = -1;
   int nTasksDev;     // number of processes using the same GPU
 #ifdef CUDA
   // We assume a geometry where processes use only one gpu if available
   int nDevProc = 1;   // number of GPU required per process
+  int nTasksNode = 1 ; //number of processes per node (=1 default configuration)
   if (nDevNode > 0)
     {
 #ifdef HYPERQ
     // all processes in the same node share one GPU
     mydevID = 0;
+    nTasksNode = params.find<int>("tasks_per_node",1); //number of processes per node
     nTasksDev = nTasksNode;
     cout << "HyperQ enabled" << endl;
 #else 
@@ -191,21 +192,25 @@ int main (int argc, const char **argv)
     int xres = params.find<int>("xres",800),
         yres = params.find<int>("yres",xres);
     arr2<COLOUR> pic(xres,yres);
+    tsize npart = particle_data.size();
 
 // calculate boost factor for brightness
     bool boost = params.find<bool>("boost",false);
     float b_brightness = boost ?
-      float(particle_data.size())/float(r_points.size()) : 1.0;
+      float(npart)/float(r_points.size()) : 1.0;
 
-    if(particle_data.size()>0)
-      {
+    if(npart>0)
+    {
+       tsize npart_all = npart;
+       mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
 #if (!defined(CUDA) && !defined(OPENCL))
       if(boost)
-        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
+        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, npart_all);
       else
-        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
+        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, npart_all);
 #else
-      if (mydevID >= 0)
+     cout << "rank= " << myID << " mydevID= " << mydevID << endl; 
+     if (mydevID >= 0)
         {
 #ifdef CUDA
         if (!a_eq_e) planck_fail("CUDA only supported for A==E so far");
@@ -222,8 +227,8 @@ int main (int argc, const char **argv)
         }
       else
         {
-        if(boost) host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness);
-        else host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness);
+        if(boost) host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, npart_all);
+        else host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, npart_all);
         }
 #endif
       }

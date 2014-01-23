@@ -435,19 +435,18 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
 
   tstack_pop("Host Rendering proper");
   }
-
 }
 
 using namespace host_funct;
 
 void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
-  vector<COLOURMAP> &amap, float b_brightness)
+  vector<COLOURMAP> &amap, float b_brightness, tsize npart_all)
   {
-  bool master = mpiMgr.master();
-  tsize npart = particles.size();
-  tsize npart_all = npart;
-  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+    bool master = mpiMgr.master();
+    tsize npart = particles.size();
+  //tsize npart_all = npart;
+  //mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
 
 // -------------------------------------
 // ----------- Transforming ------------
