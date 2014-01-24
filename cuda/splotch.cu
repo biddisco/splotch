@@ -331,16 +331,17 @@ void cu_end(cu_gpu_vars* pgv)
   cudaThreadExit();
   }
 
-long int cu_get_chunk_particle_count(CuPolicy* policy, int nTasksDev, size_t psize, int ntiles, float pfactor)
+long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor)
   {
-   size_t gMemSize = policy->GetGMemSize();
-   size_t ImSize = policy->GetImageSize();
-   size_t tiles = ntiles*sizeof(int);
+   size_t gMemSize = pgv->policy->GetGMemSize();
+   size_t ImSize = pgv->policy->GetImageSize();
+   size_t tiles = (ntiles+1)*sizeof(int);
+   size_t colormap_size = pgv->colormap_size*sizeof(cu_color_map_entry)+pgv->colormap_ptypes*sizeof(int);
 
    size_t spareMem = 20*(1<<20);
-   long int arrayParticleSize = gMemSize/nTasksDev - 4*ImSize - 2*tiles - spareMem;
+   long int arrayParticleSize = gMemSize/nTasksDev - 4*ImSize - 2*tiles - spareMem - colormap_size;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
-   long int maxlen = (long int)policy->GetMaxGridSize() * (long int)policy->GetBlockSize();
+   long int maxlen = (long int)pgv->policy->GetMaxGridSize() * (long int)pgv->policy->GetBlockSize();
    if (len > maxlen) len = maxlen;
    return len;
   }

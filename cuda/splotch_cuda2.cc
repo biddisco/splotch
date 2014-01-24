@@ -19,23 +19,25 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
   arr2<COLOUR> Pic_host(xres,yres);
   int ptypes = g_params.find<int>("ptypes",1);
 
+  // CUDA Init
   // Initialize policy class
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
   int ntiles = policy->GetNumTiles();
 
+  cu_gpu_vars gv;
+  memset(&gv, 0, sizeof(cu_gpu_vars));
+  gv.policy = policy;
+  setup_colormap(ptypes, amap, &gv);
+
   // num particles to manage at once
-  float factor = g_params.find<float>("particle_mem_factor", 3);
-  long int len = cu_get_chunk_particle_count(policy, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
+  float factor = g_params.find<float>("particle_mem_factor", 4);
+  long int len = cu_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
   if (len <= 0)
     {
     cout << "Graphics memory setting error" << endl;
     mpiMgr.abort();
     }
 
-  //CUDA Init
-  cu_gpu_vars gv; 
-  memset(&gv, 0, sizeof(cu_gpu_vars));
-  gv.policy = policy;
   // enable device and allocate arrays
   bool doLogs = true;
   int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
@@ -43,7 +45,6 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
   if (!error)
   {
     //a new linear pic object that will carry the result
-    setup_colormap(ptypes, amap, &gv); 
     float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
     bool a_eq_e = g_params.find<bool>("a_eq_e",true);
  

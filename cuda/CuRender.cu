@@ -105,7 +105,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    new_ntiles = end_tiles.second.get() - dev_ptr_nT.get();
 
    if (dev_ptr_tileID[new_ntiles-1] == nxtiles*nytiles) nC3 = dev_ptr_nT[new_ntiles-1];
-   cout << nC3 << " of them are point-like particles" << endl;
+//   cout << nC3 << " of them are point-like particles" << endl;
 
    thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
    tstack_pop("Particle Distribution");
@@ -182,12 +182,11 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 //    cudaEventDestroy(stop);
 
     cudaThreadSynchronize();
-    //cout << cudaGetErrorString(cudaGetLastError()) << endl;
+  //  cout << "Rank " << mpiMgr.rank() << cudaGetErrorString(cudaGetLastError()) << endl;
   }
 
   tstack_push("point-like particles rendering");
-  cu_addC3(newParticle, nC3, xres * yres, gv);
-  cudaThreadSynchronize();
+
   tstack_pop("point-like particles rendering");
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
 
@@ -202,6 +201,7 @@ int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres
   int res = xres*yres;
   // add images on the device: pic+pic1+pic2+pic3
   cu_add_images(res, gv);
+  // cout << "Rank " << mpiMgr.rank() << cudaGetErrorString(cudaGetLastError()) << endl;
 
   COLOUR *Pic = new COLOUR [res];
   // copy back the image
@@ -209,7 +209,7 @@ int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres
   cudaError_t error = cudaMemcpy(Pic, gv->d_pic, res * sizeof(cu_color), cudaMemcpyDeviceToHost);
   if (error != cudaSuccess) 
   {
-    cout << "Device Memcpy error!" << endl;
+    cout << "Rank " << mpiMgr.rank() << " Image copy: Device Memcpy error!" << endl;
     return 0;
   }
   tstack_pop("Data copy");
