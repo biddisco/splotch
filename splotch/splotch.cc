@@ -213,7 +213,6 @@ int main (int argc, const char **argv)
       else
         host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, npart_all);
 #else
-     cout << "rank= " << myID << " mydevID= " << mydevID << endl; 
      if (mydevID >= 0)
         {
 #ifdef CUDA
