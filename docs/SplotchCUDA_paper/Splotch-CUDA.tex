@@ -271,11 +271,11 @@ $i(p) = -1$, {\it large} particles.
 
 Subsequent to classification we transfer asynchronously all large particles back to the host and remove them from the device memory (at the same time all inactive particles are also removed). At this point, the remaining particles have to be sorted by the $i(p)$ key and the number of particles with the same index has to be calculated.
 This sorting operation is important as it allows to manage a particles array on the device and it is  
-necessary for the efficient execution of subsequent operations, e.g.\ reduction by key and prefix sums.
-As sorting is intrinsically an expensive operation, we use an efficient implementation provided by the Thrust library \cite{thrusturl}. Thrust is a C++ template library for CUDA which mimics the Standard Template Library and provides optimised functions for managing very large data arrays. For our purposes, Thrust implements a highly optimised Radix Sort algorithm for primitive types (e.g.\ chars, ints, floats, and doubles). Also, functions are provided for reduction by key and prefix sums for which their performance increases as the input data arrays become larger. As these functions scale linearly with data sizes (sorting scales by $kN_{part}$, where $k$ is the number of significant key bits \cite{RadixSort}), our GPU implementation preserves the original Splotch linear dependency on the number of particles. The sections below describe rendering details for individual classes of particles.
+necessary for the efficient execution of subsequent operations, e.g. reduction by key and prefix sums.
+As sorting is intrinsically an expensive operation, we use an efficient implementation provided by the Thrust library \cite{thrusturl}. Thrust is a C++ template library for CUDA which mimics the Standard Template Library and provides optimised functions for managing very large data arrays. For our purposes, Thrust implements a highly optimised Radix Sort algorithm for primitive types (e.g.\ chars, ints, floats, and doubles). Also, functions are provided for reduction by key and prefix sums for which their performance increases as the input data arrays become larger. As these functions scale linearly with data sizes (sorting scales by $kN_{part}$, where $k$ is the number of significant key bits \cite{RadixSort}), our GPU implementation preserves the original Splotch linear dependency on the number of particles. The sections below describe rendering details for individual classes of particles and Fig.~\ref{fig:pseudo-code} contains a description of the code structure.
 
 \begin{figure}
-%\centering
+\centering
 \includegraphics[scale=0.14]{fov.eps}
 \caption{A scene with five particles from two different points of view. Square tiles are
 represented with different colors and boundary width is $r_0=3$ pixels. {\em Left}: All particles contribute to the image (inside the field of view), particles 1, 3 and 5
@@ -285,6 +285,14 @@ becomes inactive (completely falling outside the field of view). Note that altho
 Finally particle~1 becomes large.
 }
 \label{fig:fov}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.6]{sketch.eps}
+\caption{Pseudo-code.
+}
+\label{fig:pseudo-code}
 \end{figure}
 
 \subsection{Small Particles}
