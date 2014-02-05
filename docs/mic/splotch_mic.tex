@@ -155,20 +155,29 @@ preprocessor definitions and makefile switches allows compilation for a variety 
 of the Splotch workflow can be summarised as:
 
 % \begin{quote} %quote for indent
-\begin{description}
-  \item[Data Load] \hfill \\
+%\begin{description}
+%  \item[Data Load] \hfill \\
+\vskip 1pc
+\noindent
+\textbf{Data Load}
   Source data is read using an appropriate reader and stored in the Splotch particle structure, various readers are 
   implemented for data types such as HDF5, RAMSES, and GADGET. [ref]
-  \item[Processing and Rasterization] \hfill \\
+  
+\vskip 1pc
+\noindent
+\textbf{Processing and Rasterization} 
    Data is preprocessed, performing tasks such as ranging, normalization, and applying logarithms to particle attributes, 
    amongst others. Particles are roto-translated with reference to supplied camera and look-at positions. Active particles, 
    those within the view frustum, are identified and assigned an RGB color value dependant on particle properties and an 
    external colour map.  
-  \item[Rendering] \hfill \\
+
+\vskip 1pc
+\noindent
+\textbf{Rendering}
   For each pixel of the image, a ray is cast along the line of sight, and contributions of all encountered particles 
   are additively accumulated. The contribution a particle may have to a particular pixel color is determined by solving 
   the radiative transfer equation (REF EQUATION) (REF CUDA PAPER FOR EXPLANATION)
-\end{description}
+%\end{description}
 % \end{quote}
 
 % \subsection{Parallel Implementations}
@@ -263,7 +272,7 @@ floating point operations per cycle.
 % advantage of the wide SIMD capability of the Phi.
 
 
-\subsubsection{Offload model}
+%\subsubsection{Offload model}
 \label{sect:offloadmodel}
 
 The rendering algorithm can be broken down into a series of phases illustrated by the execution model shown in [figure x]. 
