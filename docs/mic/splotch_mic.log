@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/MacPorts 2013_3) (format=pdflatex 2013.11.12)  7 FEB 2014 17:54
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/MacPorts 2013_3) (format=pdflatex 2013.11.12)  7 FEB 2014 23:50
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -265,82 +265,76 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1
 
 
-{/opt/local/var/db/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-Overfull \hbox (0.59927pt too wide) in paragraph at lines 157--161
-\OT1/cmr/m/n/10 Splotch par-ti-cle struc-ture, var-i-ous read-ers are im-ple-me
-nted for spe-cific datatypes. 
- []
-
-[2]
+{/opt/local/var/db/texmf/fonts/map/pdftex/updmap/pdftex.map}] [2]
 Package epstopdf Info: Source file: <exmodel.eps>
 (epstopdf)                    date: 2014-02-05 14:29:29
 (epstopdf)                    size: 26255 bytes
 (epstopdf)             Output file: <exmodel-eps-converted-to.pdf>
-(epstopdf)                    date: 2014-02-05 14:29:29
+(epstopdf)                    date: 2014-02-07 23:50:38
 (epstopdf)                    size: 6528 bytes
 (epstopdf)             Command: <repstopdf --outfile=exmodel-eps-converted-to.p
 df exmodel.eps>
 (epstopdf)             \includegraphics on input line 280.
 Package epstopdf Info: Output file is already uptodate.
- <exmodel-eps-converted-to.pdf, id=18, 446.66875pt x 306.14375pt>
+
+<exmodel-eps-converted-to.pdf, id=18, 446.66875pt x 306.14375pt>
 File: exmodel-eps-converted-to.pdf Graphic file (type pdf)
 
 <use exmodel-eps-converted-to.pdf>
 Package pdftex.def Info: exmodel-eps-converted-to.pdf used on input line 280.
 (pdftex.def)             Requested size: 207.5625pt x 142.26378pt.
  [3] [4 <./exmodel-eps-converted-to.pdf>]
+[5]
 Missing character: There is no ‚ in font cmr10!
 Missing character: There is no Ä in font cmr10!
 Missing character: There is no ú in font cmr10!
 Missing character: There is no ‚ in font cmr10!
 Missing character: There is no Ä in font cmr10!
 Missing character: There is no ù in font cmr10!
-
-[5]
 Package epstopdf Info: Source file: <TotalTime.eps>
 (epstopdf)                    date: 2014-02-06 22:58:37
 (epstopdf)                    size: 19399 bytes
 (epstopdf)             Output file: <TotalTime-eps-converted-to.pdf>
-(epstopdf)                    date: 2014-02-06 22:59:02
+(epstopdf)                    date: 2014-02-07 23:50:39
 (epstopdf)                    size: 5509 bytes
 (epstopdf)             Command: <repstopdf --outfile=TotalTime-eps-converted-to
 .pdf TotalTime.eps>
-(epstopdf)             \includegraphics on input line 484.
+(epstopdf)             \includegraphics on input line 485.
 Package epstopdf Info: Output file is already uptodate.
  <TotalTime-eps-converted-to.pdf, id=31, 361.35pt x 252.945pt>
 File: TotalTime-eps-converted-to.pdf Graphic file (type pdf)
 
 <use TotalTime-eps-converted-to.pdf>
-Package pdftex.def Info: TotalTime-eps-converted-to.pdf used on input line 484.
+Package pdftex.def Info: TotalTime-eps-converted-to.pdf used on input line 485.
 
 (pdftex.def)             Requested size: 203.23682pt x 142.26378pt.
 Package epstopdf Info: Source file: <Rotocol.eps>
 (epstopdf)                    date: 2014-02-06 22:58:33
 (epstopdf)                    size: 19546 bytes
 (epstopdf)             Output file: <Rotocol-eps-converted-to.pdf>
-(epstopdf)                    date: 2014-02-06 22:59:03
+(epstopdf)                    date: 2014-02-07 23:50:39
 (epstopdf)                    size: 5546 bytes
 (epstopdf)             Command: <repstopdf --outfile=Rotocol-eps-converted-to.p
 df Rotocol.eps>
-(epstopdf)             \includegraphics on input line 498.
+(epstopdf)             \includegraphics on input line 499.
 Package epstopdf Info: Output file is already uptodate.
 
 <Rotocol-eps-converted-to.pdf, id=32, 361.35pt x 252.945pt>
 File: Rotocol-eps-converted-to.pdf Graphic file (type pdf)
 
 <use Rotocol-eps-converted-to.pdf>
-Package pdftex.def Info: Rotocol-eps-converted-to.pdf used on input line 498.
+Package pdftex.def Info: Rotocol-eps-converted-to.pdf used on input line 499.
 (pdftex.def)             Requested size: 203.23682pt x 142.26378pt.
  [6 <./TotalTime-eps-converted-to.pdf>]
 Package epstopdf Info: Source file: <MPIFrameTimes.eps>
 (epstopdf)                    date: 2014-02-06 22:56:32
 (epstopdf)                    size: 20455 bytes
 (epstopdf)             Output file: <MPIFrameTimes-eps-converted-to.pdf>
-(epstopdf)                    date: 2014-02-06 22:56:54
+(epstopdf)                    date: 2014-02-07 23:50:40
 (epstopdf)                    size: 5856 bytes
 (epstopdf)             Command: <repstopdf --outfile=MPIFrameTimes-eps-converte
 d-to.pdf MPIFrameTimes.eps>
-(epstopdf)             \includegraphics on input line 510.
+(epstopdf)             \includegraphics on input line 511.
 Package epstopdf Info: Output file is already uptodate.
 
 <MPIFrameTimes-eps-converted-to.pdf, id=41, 361.35pt x 252.945pt>
@@ -348,11 +342,8 @@ File: MPIFrameTimes-eps-converted-to.pdf Graphic file (type pdf)
 
 <use MPIFrameTimes-eps-converted-to.pdf>
 Package pdftex.def Info: MPIFrameTimes-eps-converted-to.pdf used on input line 
-510.
+511.
 (pdftex.def)             Requested size: 203.23682pt x 142.26378pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
  [7 <./Rotocol-eps-converted-to.pdf> <./MPIFrameTimes-eps-converted-to.pdf>]
 Missing character: There is no ‚ in font cmr10!
 Missing character: There is no Ä in font cmr10!
@@ -360,8 +351,7 @@ Missing character: There is no ú in font cmr10!
 Missing character: There is no ‚ in font cmr10!
 Missing character: There is no Ä in font cmr10!
 Missing character: There is no ù in font cmr10!
- [8]
-(./splotch_mic.aux) ) 
+ [8] (./splotch_mic.aux) ) 
 Here is how much of TeX's memory you used:
  2321 strings out of 494227
  31247 string characters out of 6157703
@@ -370,17 +360,17 @@ Here is how much of TeX's memory you used:
  11125 words of font info for 43 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
  37i,6n,26p,239b,347s stack positions out of 5000i,500n,10000p,200000b,80000s
-</opt/local/share/texmf-texlive/fonts/type1/public/amsfont
-s/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/
-cmbx12.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmbx9
-.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.pfb><
-/opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr6.pfb></opt/lo
-cal/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/local/sha
-re/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr9.pfb></opt/local/share/texm
-f-texlive/fonts/type1/public/amsfonts/cm/cmti10.pfb></opt/local/share/texmf-tex
-live/fonts/type1/public/amsfonts/cm/cmti9.pfb></opt/local/share/texmf-texlive/f
-onts/type1/public/amsfonts/cm/cmtt9.pfb>
-Output written on splotch_mic.pdf (8 pages, 169133 bytes).
+</opt/local/share/texmf-texlive/fonts/type1/public/am
+sfonts/cm/cmbx10.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfont
+s/cm/cmbx12.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/
+cmbx9.pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr10.
+pfb></opt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr6.pfb></o
+pt/local/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/loca
+l/share/texmf-texlive/fonts/type1/public/amsfonts/cm/cmr9.pfb></opt/local/share
+/texmf-texlive/fonts/type1/public/amsfonts/cm/cmti10.pfb></opt/local/share/texm
+f-texlive/fonts/type1/public/amsfonts/cm/cmti9.pfb></opt/local/share/texmf-texl
+ive/fonts/type1/public/amsfonts/cm/cmtt9.pfb>
+Output written on splotch_mic.pdf (8 pages, 169292 bytes).
 PDF statistics:
  93 PDF objects out of 1000 (max. 8388607)
  64 compressed objects within 1 object stream

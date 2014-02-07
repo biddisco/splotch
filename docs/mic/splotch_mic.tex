@@ -156,8 +156,8 @@ The main stages of the Splotch workflow can be summarised as:
 \vskip 1pc
 \noindent
 \textbf{Data Load}
-  Source data is read using an appropriate reader and stored in the Splotch particle structure, various readers are 
-  implemented for specific datatypes.
+  Data is read using an appropriate reader and stored in the Splotch particle structure, various readers are 
+  implemented for different datatypes.
   
 \vskip 1pc
 \noindent
@@ -389,7 +389,8 @@ a structure of arrays (SoA). The AoS method stores a large array of structures, 
 information pertaining to a single particle. This aids the compiler in automatic vectorization, 
 amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized 
 as described in Intels Vectorization guide \cite{vectorguide} which, while providing examples for SSE, is applicable 
-to IMCI as well. 
+to IMCI as well. Reformatting the data storage method led to a 10\% performance increase in the rototranslation and 
+coloring phase, while the rendering phase was essentially unaffected, leading to a 3\% performance increase overall.
 
 The rendering section of the algorithm is complex and unsuitable for automatic vectorization, this is manually 
 optimised through use of the Intel intrinsics, which map directly to IMCIs. Drawing consists of additively 
