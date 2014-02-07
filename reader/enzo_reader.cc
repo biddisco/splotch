@@ -44,7 +44,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    int nleft[nrank];
    int nright[nrank];
    int nsize[nrank];
-   const int numberoffields = 8;
+   const int numberoffields = 11;
    int gridid;
    char groupid[100];
    long gcounter=0;
@@ -135,13 +135,16 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    fieldsnames[5] = "/z-velocity";
    fieldsnames[6] = "/GasEnergy";
    fieldsnames[7] = "/Total_Energy";
+   fieldsnames[8] = "/Bx";
+   fieldsnames[9] = "/By";
+   fieldsnames[10] = "/Bz";
    int number_of_fields2read;
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // WARNING X and Z are swapped!!!!!!!!!!!
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-#ifdef USEMPI-OLD
+#ifdef USEMPIOLD
    MPI_Bcast(&number_of_fields2read, 1, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(sf, number_of_fields2read, MPI_INT, 0, MPI_COMM_WORLD);
    MPI_Bcast(&hierarchyname[0], 1000, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -593,7 +596,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    //*maxr=maxradius;
    //*minr=minradius;
    cout << "RETURNING FROM ENZO" << endl;
-#ifdef USEMPI-OLD
+#ifdef USEMPIOLD
    MPI_Allreduce(&maxradius, maxr, 1, MPI_FLOAT, MPI_MAX, MPI_COMM_WORLD);
    MPI_Allreduce(&minradius, minr, 1, MPI_FLOAT, MPI_MIN, MPI_COMM_WORLD);
 #endif
