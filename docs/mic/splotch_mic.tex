@@ -128,15 +128,15 @@ or in identifying unexpected behaviours or even errors. However, visualization t
 (hereafter HPC) resources, in order to overcome the issues of rendering big, complex datasets and doing so in an 
 acceptable timeframe.
 
-Splotch (REF), our ray-casting algorithm for visualizing large-scale, particle-based datasets, addresses these issues, 
+Splotch \cite{splotch}, our ray-casting algorithm for visualizing large-scale, particle-based datasets, addresses these issues, 
 providing high quality graphic outputs, processing data of, ideally, any size, already efficiently exploiting a broad 
-variety of HPC systems: multi-core processors and multi-node supercomputing systems [REF7], and GPUs [REF8]. It is 
-essential to be able to utilise all devices that may be available within a HPC system, in order to exploit the full 
+variety of HPC systems: multi-core processors and multi-node supercomputing systems \cite{splotchmulti}, and GPUs \cite{splotchgpu}. 
+It is essential to be able to utilise all devices that may be available within a HPC system, in order to exploit the full 
 potential of the environment for maximum performance. Single images can be generated, or sequences of frames from 
 different points of view to compose into an animated film of the simulation.
 
-To this end, this paper will describe the work accomplished to enable Splotch to exploit on the new Intel PHI (REF) 
-accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture (REF), which is expected to provide, 
+To this end, this paper will describe the work accomplished to enable Splotch to exploit on the new Intel PHI \cite{xeonphi} 
+accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture \cite{mic}, which is expected to provide, 
 on suitable classes of algorithms, outstanding performance with power consumption being comparable to standard CPUs. 
 We will present the MIC implementation and optimisations, performance tuning, benchmarks carried out, and the resulting 
 performance measurements, comparing that of an OpenMP based implementation running on multiple cores of a single CPU. 
@@ -172,7 +172,7 @@ The main stages of the Splotch workflow can be summarised as:
 \textbf{Rendering}
   For each pixel of the image, a ray is cast along the line of sight, and contributions of all encountered particles 
   are additively accumulated. The contribution a particle may have to a particular pixel color is determined by solving 
-  the radiative transfer equation (REF CUDA PAPER FOR EXPLANATION)
+  the radiative transfer equation \cite{splotchgpu}
 
 % \subsection{Parallel Implementations}
 % \label{sect:mpiopenmp}
@@ -227,7 +227,7 @@ Xeon host. Alternatively users can offload data and portions of code to the copr
 based extensions available in C++ or FORTRAN.
 
 A brief technical description of the Xeon Phi is provided here, more detailed information can be found in the 
-Xeon Phi whitepaper [REF]. Each core has access to a 512 KB private fully coherent L2 cache, memory controllers 
+Xeon Phi whitepaper \cite{xeonphi}. Each core has access to a 512 KB private fully coherent L2 cache, memory controllers 
 and the PCIe client logic provide access to up to 8 GB of GDDR5 memory, and a bi-directional ring interconnect 
 brings these components together. The cores are in-order, however up to 4 hardware threads are supported to mitigate 
 the latencies inherent with in-order execution. The Vector Processor Unit (hereafter VPU) is worthy of note due to 
@@ -277,7 +277,7 @@ for processing, and to facilitate the rendering of datasets potentially much lar
 
 \begin{figure}
 \centering
-\includegraphics[height=6.2cm]{exmodel}
+\includegraphics[height=5.0cm]{exmodel}
 \caption{Model illustrating execution pattern of the new implementation}
 \label{fig:exmodel}
 \end{figure}
@@ -343,11 +343,11 @@ chunks of data have been processed and accumulated, the resultant device image i
 \subsubsection{Memory Usage and Data Transfer}
 \label{sect:memusage}
 
-Cost of dynamic memory allocation on the Phi is relatively high [REF1], in order to minimise unnecessary allocations 
+Cost of dynamic memory allocation on the Phi is relatively high \cite{mem_alloc}, in order to minimise unnecessary allocations 
 buffers are created at the beginning of the program cycle and reused throughout. Use of the MIC\_USE\_2MB\_BUFFERS 
 environment variable forces buffers over a particular size to be allocated with 2MB pages rather than the default 4KB, 
 which improves data allocation rate, transfer rate and can benefit performance by potentially reducing page 
-faults and TLB (translation look-aside buffer) misses [REF2]. In tests using offload clauses for compiler 
+faults and TLB (translation look-aside buffer) misses \cite{env_var_buf}. In tests using offload clauses for compiler 
 managed memory allocation on the device, a single process offloading to the device and reserving large buffers allocated 
 memory roughly 2-2.5x faster having set this environment variable to 64K. The inability to asynchonously allocate offload 
 memory means overheads incurred allocating these buffers cannot be mitigated by overlapping allocation with host activity.
@@ -383,12 +383,12 @@ given in sect. \ref{sect:results}.
 \label{sect:vectorization}
 
 The large 512 bit width SIMD capability of the MIC architecture is exploited through vectorization carried out both 
-automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) [REF3]. Firstly the 
+automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) \cite{imci}. Firstly the 
 core data structure used in Splotch rendering was re-examined, and converted from an array of structures (AoS) to 
 a structure of arrays (SoA). The AoS method stores a large array of structures, each containing all of the 
 information pertaining to a single particle. This aids the compiler in automatic vectorization, 
 amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized 
-as described in Intels Vectorization guide [REF 5] which, while providing examples for SSE, is applicable 
+as described in Intels Vectorization guide \cite{vectorguide} which, while providing examples for SSE, is applicable 
 to IMCI as well. 
 
 The rendering section of the algorithm is complex and unsuitable for automatic vectorization, this is manually 
@@ -463,7 +463,7 @@ Swiss National Supercomputing Centre, Lugano. Each node is based upon a dual soc
 processor architecture running at 2.6 GHz with 32 GB of main system memory. Two Xeon Phi 5110 MIC coprocessors are 
 available per node. 
 
-Tests are carried out using an N-Body simulation performed using Gadget [REF], consisting of roughly 21 million 
+Tests are carried out using an N-Body simulation performed using Gadget \cite{gadget}, consisting of roughly 21 million 
 particles;  ~10 million dark matter particles, ~10 million baryonic matter particles and ~1 million star particles. 
 A 100 frame animation orbiting the dataset is used to measure per-frame timings.
 
@@ -481,7 +481,7 @@ distribution for this hardware.
 
 \begin{figure}
 \centering
-\includegraphics[height=6.2cm]{TotalTime}
+\includegraphics[height=5.0cm]{TotalTime}
 \caption{Per-Frame rendering time using host with 1-16 cores vs host offloading to single and dual Xeon Phi devices}
 \label{fig:totaltimes}
 \end{figure}
@@ -495,17 +495,19 @@ performance boost as the roto-translation and coloring.
 
 \begin{figure}
 \centering
-\includegraphics[height=6.2cm]{Rotocol}
+\includegraphics[height=5.0cm]{Rotocol}
 \caption{Per-Frame time to rototranslate and colorize test dataset using host with 1-16 cores vs single and dual Xeon Phi devices}
 \label{fig:rotocol}
 \end{figure}
 
-Fig. \ref{fig:mpitimes} shows comparison of per-frame render times using varying numbers of MPI processes on the host, offloading to both a single and dual devices, 
-shows best performance with 8 MPI processes per device, likely correspondant to the dual socket 8 core host CPU. 
+Fig. \ref{fig:mpitimes} shows comparison of per-frame render times using varying numbers of MPI processes on the host, offloading to 
+both a single and dual devices. Subdividing the available device threads amongst host MPI processes allows to transfer data and allocate 
+memory in parallel while also more effectively spreading the workload across the device to ensure all threads are working equally. 
+These tests show best performance with 8 MPI processes per device, likely correspondant to the dual socket 8 core host CPU. 
 
 \begin{figure}
 \centering
-\includegraphics[height=6.2cm]{MPIFrameTimes}
+\includegraphics[height=5.0cm]{MPIFrameTimes}
 \caption{Per-Frame rendering time comparing 1-16 host MPI processes (per device) offloading to 1 and 2 Xeon Phi devices}
 \label{fig:mpitimes}
 \end{figure}
@@ -527,7 +529,7 @@ Features provided in the new OpenMP 4.0 specification such as the \textit{teams}
 threadgrouping as opposed to the manual method implemented here, if these constructs become supported by the Intel compiler in the future. 
 
 Intel released details of their second generation Xeon Phi product, codenamed “Knights Landing”,  at the International Supercomputing 
-Conference 2013 [ref]. One important factor to note is the potential to use this as a standalone CPU rather than a co-processor. 
+Conference 2013 \cite{knightlanding}. One important factor to note is the potential to use this as a standalone CPU rather than a co-processor. 
 This is worthy of further investigation as it invites the dismissal of complex and time consuming data transferral methods between 
 a host and coprocessor, while retaining the ability to run directly on the host rather than copying executables to an external device.
 %  One of the benefits of an offloading model is that work particularly suited to a highly 
@@ -536,9 +538,9 @@ a host and coprocessor, while retaining the ability to run directly on the host 
 % inherently unsuitable for a many-core architecture.
  
 
-\subsubsection{Acknowledgments.}
+% \subsubsection{Acknowledgments.}
 
-Acknowledge people and things here
+% Acknowledge people and things here
 
 %The following section shows a sample reference list with entries for
 %journal articles \cite{jour}, an LNCS chapter \cite{lncschap}, a book
@@ -549,27 +551,50 @@ Acknowledge people and things here
 
 \begin{thebibliography}{4}
 
-\bibitem{jour} Smith, T.F., Waterman, M.S.: Identification of Common Molecular
-Subsequences. J. Mol. Biol. 147, 195--197 (1981)
+\bibitem{splotch} Splotch original reference
 
-\bibitem{lncschap} May, P., Ehrlich, H.C., Steinke, T.: ZIB Structure Prediction Pipeline:
-Composing a Complex Biological Workflow through Web Services. In: Nagel,
-W.E., Walter, W.V., Lehner, W. (eds.) Euro-Par 2006. LNCS, vol. 4128,
-pp. 1148--1158. Springer, Heidelberg (2006)
+\bibitem{splotchmulti} Multinode multicore reference
 
-\bibitem{book} Foster, I., Kesselman, C.: The Grid: Blueprint for a New Computing
-Infrastructure. Morgan Kaufmann, San Francisco (1999)
+\bibitem{splotchgpu} Cuda paper reference
 
-\bibitem{proceeding1} Czajkowski, K., Fitzgerald, S., Foster, I., Kesselman, C.: Grid
-Information Services for Distributed Resource Sharing. In: 10th IEEE
-International Symposium on High Performance Distributed Computing, pp.
-181--184. IEEE Press, New York (2001)
+\bibitem{xeonphi} Xeon Phi whitepaper reference
 
-\bibitem{proceeding2} Foster, I., Kesselman, C., Nick, J., Tuecke, S.: The Physiology of the
-Grid: an Open Grid Services Architecture for Distributed Systems
-Integration. Technical report, Global Grid Forum (2002)
+\bibitem{mic} MIC architecture whitepaper reference 
 
-\bibitem{url} National Center for Biotechnology Information, \url{http://www.ncbi.nlm.nih.gov}
+\bibitem{mem_alloc} High cost of dynamic memory allocations reference
+
+\bibitem{env_var_buf} Benefit of 2MB buffers reference 
+
+\bibitem{imci} Manycore instruction set reference
+
+\bibitem{vectorguide} Vectorization guide reference
+
+\bibitem{gadget} Gadget Reference
+
+\bibitem{knightlanding} ISC2013 knights landing release reference
+
+
+% \bibitem{jour} Smith, T.F., Waterman, M.S.: Identification of Common Molecular
+% Subsequences. J. Mol. Biol. 147, 195--197 (1981)
+
+% \bibitem{lncschap} May, P., Ehrlich, H.C., Steinke, T.: ZIB Structure Prediction Pipeline:
+% Composing a Complex Biological Workflow through Web Services. In: Nagel,
+% W.E., Walter, W.V., Lehner, W. (eds.) Euro-Par 2006. LNCS, vol. 4128,
+% pp. 1148--1158. Springer, Heidelberg (2006)
+
+% \bibitem{book} Foster, I., Kesselman, C.: The Grid: Blueprint for a New Computing
+% Infrastructure. Morgan Kaufmann, San Francisco (1999)
+
+% \bibitem{proceeding1} Czajkowski, K., Fitzgerald, S., Foster, I., Kesselman, C.: Grid
+% Information Services for Distributed Resource Sharing. In: 10th IEEE
+% International Symposium on High Performance Distributed Computing, pp.
+% 181--184. IEEE Press, New York (2001)
+
+% \bibitem{proceeding2} Foster, I., Kesselman, C., Nick, J., Tuecke, S.: The Physiology of the
+% Grid: an Open Grid Services Architecture for Distributed Systems
+% Integration. Technical report, Global Grid Forum (2002)
+
+% \bibitem{url} National Center for Biotechnology Information, \url{http://www.ncbi.nlm.nih.gov}
 
 \end{thebibliography}
 
