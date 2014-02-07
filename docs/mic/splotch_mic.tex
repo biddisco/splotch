@@ -100,8 +100,8 @@ uniquely wide vector capabilities of the device, with accompanying performance r
 \label{sect:introduction}
 
 In recent years, the volume of scientific data produced by experiments, observations and numerical simulations 
-has been increasing exponentially. This is true for many scientific domains, such as ... or ... [ref], but in 
-particular for astrophysics [ref]. 
+has been increasing exponentially. This is true for many scientific domains, such as evironmental or life sciences, 
+but in particular for astrophysics. 
 
 % \comm{Next generations of telescopes and antennas are expected to produce
 % enormous amount of data. The Square Kilometer Array project (REF), for instance, will 
@@ -110,12 +110,11 @@ particular for astrophysics [ref].
 % produces. At the same time, computer simulations represent an invaluable instrument for 
 % astrophysicists to validate theories and compare to observations through numerical experiments.}
 
-Some of the largest cosmological simulations (REF), performed using sophisticated N-body codes (REF), 
-can describe the details of the evolution of the universe up to the present time, following the behaviour of 
-gravitating matter represented by a hundred billion particles. Running these simulations produces output files 
-whose size is of the order of tens of terabytes each. The fast technological progress of supercomputing systems 
-will soon lead to simulations producing outputs with size much greater than this as we head into the exascale 
-era. [REF] 
+Some of the largest cosmological simulations, performed using sophisticated N-body codes, can describe the details 
+of the evolution of the universe up to the present time, following the behaviour of gravitating matter represented 
+by a hundred billion particles. Running these simulations produces output files whose size is of the order of tens 
+of terabytes each. The fast technological progress of supercomputing systems will soon lead to simulations producing 
+outputs with size much greater than this as we head into the exascale era.
 
 Size does not represent the only challenge posed by scientific data. Is also essential to effectively extract 
 all the information from the often complex data files. Software for data mining and analysis is often highly 
@@ -131,10 +130,10 @@ acceptable timeframe.
 
 Splotch (REF), our ray-casting algorithm for visualizing large-scale, particle-based datasets, addresses these issues, 
 providing high quality graphic outputs, processing data of, ideally, any size, already efficiently exploiting a broad 
-variety of HPC systems: multi-core processors and multi-node supercomputing systems [REF7]. It is essential to be able 
-to utilise all devices that may be available within a HPC system, in order to exploit the full potential of the 
-environment for maximum performance. Single images can be generated, or sequences of frames from different points of 
-view to compose into an animated film of the simulation.
+variety of HPC systems: multi-core processors and multi-node supercomputing systems [REF7], and GPUs [REF8]. It is 
+essential to be able to utilise all devices that may be available within a HPC system, in order to exploit the full 
+potential of the environment for maximum performance. Single images can be generated, or sequences of frames from 
+different points of view to compose into an animated film of the simulation.
 
 To this end, this paper will describe the work accomplished to enable Splotch to exploit on the new Intel PHI (REF) 
 accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture (REF), which is expected to provide, 
@@ -149,19 +148,16 @@ performance measurements, comparing that of an OpenMP based implementation runni
 % functionality for reference as these are key to the development of the MIC implementation.
 
 Splotch is visualization algorithm written in pure C++ for generating 2 dimensional images from particle based datasets. 
-It has no reliance on external libraries, minus those required for parallelism or particular file formats 
-e.g. HDF5 [ref], and can be compiled from a downloadable self-contained tar-ball with a suitable makefile, use of 
-preprocessor definitions and makefile switches allows compilation for a variety of hardware environments. The main stages 
-of the Splotch workflow can be summarised as:
+% It has no reliance on external libraries, minus those required for parallelism or particular file formats 
+% e.g. HDF5 [ref], and can be compiled from a downloadable self-contained tar-ball with a suitable makefile, use of 
+% preprocessor definitions and makefile switches allows compilation for a variety of hardware environments. 
+The main stages of the Splotch workflow can be summarised as:
 
-% \begin{quote} %quote for indent
-%\begin{description}
-%  \item[Data Load] \hfill \\
 \vskip 1pc
 \noindent
 \textbf{Data Load}
   Source data is read using an appropriate reader and stored in the Splotch particle structure, various readers are 
-  implemented for data types such as HDF5, RAMSES, and GADGET. [ref]
+  implemented for specific datatypes.
   
 \vskip 1pc
 \noindent
@@ -169,16 +165,14 @@ of the Splotch workflow can be summarised as:
    Data is preprocessed, performing tasks such as ranging, normalization, and applying logarithms to particle attributes, 
    amongst others. Particles are roto-translated with reference to supplied camera and look-at positions. Active particles, 
    those within the view frustum, are identified and assigned an RGB color value dependant on particle properties and an 
-   external colour map.  
+   external color map.  
 
 \vskip 1pc
 \noindent
 \textbf{Rendering}
   For each pixel of the image, a ray is cast along the line of sight, and contributions of all encountered particles 
   are additively accumulated. The contribution a particle may have to a particular pixel color is determined by solving 
-  the radiative transfer equation (REF EQUATION) (REF CUDA PAPER FOR EXPLANATION)
-%\end{description}
-% \end{quote}
+  the radiative transfer equation (REF CUDA PAPER FOR EXPLANATION)
 
 % \subsection{Parallel Implementations}
 % \label{sect:mpiopenmp}
@@ -224,11 +218,11 @@ of the Splotch workflow can be summarised as:
 \subsection{Overview of the MIC Architecture}
 \label{sect:mic}
 
-The core ideal behind the MIC micro-architecture is obtaining a massive level of parallelism for high throughput 
+The core ideal behind the MIC micro-architecture is obtaining a massive level of parallelism for increasing throughput 
 performance in power restricted cluster environments. To this end Intel's flagship MIC product, the Xeon Phi, 
 contains roughly 60 cores on a single chip, dependent on the model. The Xeon Phi acts as a coprocessor for a s
 tandard Intel Xeon processor. A user can execute a program natively by logging into the device itself, which hosts 
-a Linux micro-OS (REF), or using the device as one or more MPI processes amongst further processes running on the 
+a Linux micro-OS, or using the device as one or more MPI processes amongst further processes running on the 
 Xeon host. Alternatively users can offload data and portions of code to the coprocessor via series of pragma 
 based extensions available in C++ or FORTRAN.
 
@@ -273,9 +267,10 @@ floating point operations per cycle.
 
 
 %\subsubsection{Offload model}
-\label{sect:offloadmodel}
+% \label{sect:offloadmodel}
 
-The rendering algorithm can be broken down into a series of phases illustrated by the execution model shown in [figure x]. 
+The rendering algorithm can be broken down into a series of phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
+While the executable runs on the Xeon host, data and processing is offloaded to the device via Intel offload clauses.
 A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of signal 
 and wait clauses provided by the Intel extensions. This allows to minimise overhead due to transferring data to the device 
 for processing, and to facilitate the rendering of datasets potentially much larger than the memory capacity available.
@@ -284,7 +279,7 @@ for processing, and to facilitate the rendering of datasets potentially much lar
 \centering
 \includegraphics[height=6.2cm]{exmodel}
 \caption{Model illustrating execution pattern of the new implementation}
-\label{fig:executionmodel}
+\label{fig:exmodel}
 \end{figure}
 
 % A necessary overhead is incurred from the outset performing various initialisations discussed further in section 4.1. In 
@@ -294,26 +289,28 @@ for processing, and to facilitate the rendering of datasets potentially much lar
 % parameters are copied to the device, which subsequently begins rendering while the next chunk of data is transferred.
 
 The first stage of rendering is a highly parallel 3D transform and colorize performed on a per-particle basis using 
-four OpenMP threads per available core, to match the four available hardware threads, equating to roughly 240 threads. This 
-stage is amenable to fast parallel processing and requires only a small amount of tuning for MIC suitability.
+four OpenMP threads per available core, to match the four available hardware threads, equating to roughly 240 threads. 
+Transform parameters are precomputed, as they are the same for each particle, and computation is distributed amongst 
+threads via an OpenMP parralel for loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler 
+providing a large performance boost for this section.
+% This stage is amenable to fast parallel processing and requires only a small amount of tuning for MIC suitability.
 
 % The multistep OpenMP solution to the full rendering stage discussed in section [omp section] is modified to account for 
 % the larger number of threads available. Simply splitting the image into smaller tiles to allow for more threads results 
 % in particles affecting more tiles than previously, requiring more memory to store particle index lists per tile. To 
 % account for this, the following approach is adopted. 
 
-The number of available OpenMP threads are split into groups, allocating a buffer per group for the resulting image. 
-The dataset is evenly distributed amongst the groups, each rendering to the assigned buffers which are finally 
-accumulated serially to a single image. The number of thread groups is passed in as a runtime parameter, discussed further 
-in section [SECTION].
+During a pre-render stage the number of available OpenMP threads are split into groups, the number of which is dependant on 
+a runtime parameter, allocating a buffer per group for the resulting image. The dataset is evenly distributed amongst the 
+groups, each rendering to the assigned buffers which are finally accumulated serially to a single image. 
 
 Each group image is split into a two dimensional grid of tiles which are distributed amongst threads to avoid race 
-conditions where multiple threads attempt to draw to a single pixel simultaneously. A pre render phase determines the 
-number of tiles through a user provided tile size parameter and the image size, and for each tile a list is 
-generated containing the indices of all particles affecting the tile.
+conditions where multiple threads attempt to draw to a single pixel simultaneously. The number of tiles is determined 
+through a user provided tile size parameter and the image size, and for each tile a list is generated containing the 
+indices of all particles affecting the tile.
 
-During the following full render phase each thread processes a set number of tiles, rendering the list of particles 
-for each tile. In this way pixels are not shared between threads and concurrent accesses are avoided. Finally when all 
+For the full render stage each thread processes a set number of tiles, rendering the list of particles for each tile. 
+In this way pixels are not shared between threads and concurrent accesses are avoided. Finally when all 
 chunks of data have been processed and accumulated, the resultant device image is copied back to the host for output. 
 
 
@@ -350,18 +347,19 @@ Cost of dynamic memory allocation on the Phi is relatively high [REF1], in order
 buffers are created at the beginning of the program cycle and reused throughout. Use of the MIC\_USE\_2MB\_BUFFERS 
 environment variable forces buffers over a particular size to be allocated with 2MB pages rather than the default 4KB, 
 which improves data allocation rate, transfer rate and can benefit performance by potentially reducing page 
-faults and TLB (translation look-aside buffer) misses [REF2]. In isolated tests using offload clauses for compiler 
+faults and TLB (translation look-aside buffer) misses [REF2]. In tests using offload clauses for compiler 
 managed memory allocation on the device, a single process offloading to the device and reserving large buffers allocated 
-memory roughly 2-2.5x faster having set this environment variable to 64k.
+memory roughly 2-2.5x faster having set this environment variable to 64K. The inability to asynchonously allocate offload 
+memory means overheads incurred allocating these buffers cannot be mitigated by overlapping allocation with host activity.
 
 % initially allocated at approximately 4 to 4.5s per GB (with speed increasing marginally with increased allocation size). 
 % Setting MIC\_USE\_2MB\_BUFFERS to 64K reduced this allocation overhead to approximately 2s per GB. [are approximations okay?]
 
-Additionally, overheads in dynamic allocation and data transfer incur a significant penalty when running a single host process 
+Additionally, overheads in dynamic allocation and data transfer incur a penalty when running a single host process 
 offloading to the device. In order to minimise these penalties, multiple MPI processes on the host are each allocated 
-a subset of the device threads to exploit. This allows for processes to allocate memory and transfer data in parallel 
-providing a noticeable performance increase. [add a test result? number of processes? expand MPI]
-
+a subset of the device threads to exploit. In this way, the device is subdivided amongst the host MPI processes allowing 
+for memory and data transfer to occur in parallel providing a noticeable performance increase, further details of which are 
+given in sect. \ref{sect:results}.
 
 % Often scientific datasets being visualized are very large, it is inevitable that there will at times be more data than 
 % available device memory. This raises the issue of allocating and waiting for data transfer from main memory which, 
@@ -385,19 +383,18 @@ providing a noticeable performance increase. [add a test result? number of proce
 \label{sect:vectorization}
 
 The large 512 bit width SIMD capability of the MIC architecture is exploited through vectorization carried out both 
-automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) [REF3] . Firstly the 
+automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) [REF3]. Firstly the 
 core data structure used in Splotch rendering was re-examined, and converted from an array of structures (AoS) to 
 a structure of arrays (SoA). The AoS method stores a large array of structures, each containing all of the 
-information pertaining to a single particle. While this is useful for encapsulation, it is unsuitable for SIMD 
-processing. [REF4] [Run test with aos vs soa and show results?] This aids the compiler in automatic vectorization, 
+information pertaining to a single particle. This aids the compiler in automatic vectorization, 
 amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized 
-as described in Intels Vectorization guide [REF 5] which, while providing examples for SSE [ref?], is applicable 
-to IMCI as well [ref?]. 
+as described in Intels Vectorization guide [REF 5] which, while providing examples for SSE, is applicable 
+to IMCI as well. 
 
 The rendering section of the algorithm is complex and unsuitable for automatic vectorization, this is manually 
 optimised through use of the Intel intrinsics, which map directly to IMCIs. Drawing consists of additively 
 combining a pixels current set of RGB values with the contribution from the current particle, which is calculated by 
-multiplying the particle colour by a scalar contribution value. In order to expedite this process up to five single 
+multiplying the particle color by a scalar contribution value. In order to expedite this process, up to five single 
 precision particle RGB values (totalling 480 bits) and five contribution values are packed into two respective 
 512 bit vector containers. A third container contains 5 affected pixels, which are written simultaneously using a 
 fused multiply add vector intrinsic, masked in order not to affect the final unused float value in the 16-float 
@@ -407,7 +404,7 @@ capable containers.
 % of the final image. Particles are processed by drawing columns of affected pixels, from left to right, until all 
 % affected pixels have been updated, illustrated in section [insert section or figure]. Drawing consists of additively 
 % combining a pixels current set of RGB values with the RGB contribution from the current particle, which is calculated by 
-% multiplying the particle colour by a contribution value. In order to expedite this process up to five single 
+% multiplying the particle color by a contribution value. In order to expedite this process up to five single 
 % precision particle RGB values and five contribution values are packed into two respective 512 bit vector containers. 
 % A third container contains 5 affected pixels, which are written simultaneously using a fused multiply add vector 
 % intrinsic, masked in order not to affect the final unused float value in the 16-float capable containers. A 
@@ -429,12 +426,12 @@ capable containers.
 \subsubsection{Tuning}
 \label{sect:tuning}
 
-Some necessary overheads should be considered which impact the efficacy of offloading to the device for smaller datasets, 
-i.e. those taking just a few seconds to process. Initialisation of the device itself can take roughly one second, this 
-occurs when the first offload clause is encountered. The impact of this can be minimised by placing an empty clause near 
-to the beginning of the program, in order to initialise the device while other host activity is occurring (in this case, 
-while the host is reading from file). Alternatively the environment variable OFFLOAD\_INIT can be set to on\_start to 
-pre-initialise all available MIC devices before the program main begins execution [ref]. 
+For smaller datasets where processing time is low, overheads regarding initialisation become no longer negligible. 
+Initialisation of the device itself and OpenMP threads can cause a noticeable overhead. The impact of this can be 
+minimised by placing an empty clause with empty OpenMP parallel section near to the beginning of the program, in order 
+to overlap this overhead while other host activity is occurring, in this case while reading from file. Alternatively the 
+environment variable OFFLOAD\_INIT can be set to on\_start to pre-initialise all available MIC devices before the program 
+main begins execution. 
 
 % Initialising the large number of OpenMP threads used on the device also carries a small overhead, roughly 0.3 seconds. 
 % This can potentially be hidden though an empty parallel block, placed within an asynchronous offload section at the 
@@ -445,9 +442,9 @@ pre-initialise all available MIC devices before the program main begins executio
 % as for repeat run-throughs Splotch execution is not actually stopped.
 
 Various parameters of the algorithm can be tuned to find best performance. Rendering parameters such as the number of 
-thread groups, and tile size (refer to section [X]), are set to optimal defaults for the test hardware based on results 
-of scripted tests iterating through sets of incremental potential values. These can be modified via a parameter file 
-passed in at runtime for differing hardware.
+thread groups and tile size are set to optimal defaults for the test hardware based on results of scripted tests iterating 
+through sets of incremental potential values. These can be modified via a parameter file passed in at runtime for differing 
+hardware.
 
 % The performance increase provided by running multiple MPI processes all offloading to subsections of the device is 
 % notable. When offloading to the entire device with a single process, one of the debilitating factors was filling up 
@@ -462,19 +459,22 @@ passed in at runtime for differing hardware.
 \label{sect:performance}
 
 Performance analysis consists of running a variety of tests on the available hardware, the “Dommic” facility at the 
-Swiss National Supercomputing Centre, Lugano. Each node is based upon  a dual socket eight-core Intel Xeon 2670 
+Swiss National Supercomputing Centre, Lugano. Each node is based upon a dual socket eight-core Intel Xeon 2670 
 processor architecture running at 2.6 GHz with 32 GB of main system memory. Two Xeon Phi 5110 MIC coprocessors are 
 available per node. 
 
 Tests are carried out using an N-Body simulation performed using Gadget [REF], consisting of roughly 21 million 
 particles;  ~10 million dark matter particles, ~10 million baryonic matter particles and ~1 million star particles. 
 A 100 frame animation orbiting the dataset is used to measure per-frame timings.
+
+Both the host and device code use a tile size parameter of 100 pixels, while the device code has default parameters of 
+8 host MPI processes, with 2 device threadgroups of 15 threads each, which has been shown in tests to be the optimal 
+distribution for this hardware.
+
 % The double buffered approach to data transfer and processing discussed in section [memory usage 3.3.1] allows to 
 % process large sets such as this where the device memory is not sufficient to hold the entire dataset at one time. In 
 % addition for smaller tests a filtering system in the file reader module allows just a subset of the data to be loaded.
 % [update this with actual dataset size]
-
-
 
 \subsection{Results}
 \label{sect:results}
@@ -482,16 +482,16 @@ A 100 frame animation orbiting the dataset is used to measure per-frame timings.
 \begin{figure}
 \centering
 \includegraphics[height=6.2cm]{TotalTime}
-\caption{Per-Frame time to create animation sequence using host with 1-16 cores vs single and dual Xeon Phi devices}
+\caption{Per-Frame rendering time using host with 1-16 cores vs host offloading to single and dual Xeon Phi devices}
 \label{fig:totaltimes}
 \end{figure}
 
-Fig [x] shows use of a single device provides comparable results to 4 cores on the host, while two devices outperform 16 cores by 
-roughly [percentage]. The additional use of a second device provides a 2x performance improvement for the MIC algorithm. 
-Fig [y] shows the strongest area of improvement, the rototranslation and coloring phase, with a single device outperforming 16 
-cores roughly 2.5x, with roughly 3x improvement provided by using dual devices. The differing performances betweeen 
-fig [x] and fig [y] are due to the rendering phase, which through necessity performs various dynamic allocations causing a loss 
-of performance. 
+Fig. \ref{fig:totaltimes} shows use of a single device provides comparable results to 4 cores on the host, while two devices outperform 
+16 cores by 20\%. The additional use of a second device provides a 2x performance improvement for the MIC algorithm. 
+Fig. \ref{fig:rotocol} shows the strongest area of improvement, the rototranslation and coloring phase, with a single device 
+outperforming 16 cores roughly 2.5x, with roughly 3x improvement provided by using dual devices. The differing performances betweeen 
+fig. \ref{fig:totaltimes} and fig. \ref{fig:rotocol} are due to the rendering phase, which does not gain as significant a 
+performance boost as the roto-translation and coloring. 
 
 \begin{figure}
 \centering
@@ -500,19 +500,31 @@ of performance.
 \label{fig:rotocol}
 \end{figure}
 
-\section{Discussion and Conclusions}
+Fig. \ref{fig:mpitimes} shows comparison of per-frame render times using varying numbers of MPI processes on the host, offloading to both a single and dual devices, 
+shows best performance with 8 MPI processes per device, likely correspondant to the dual socket 8 core host CPU. 
+
+\begin{figure}
+\centering
+\includegraphics[height=6.2cm]{MPIFrameTimes}
+\caption{Per-Frame rendering time comparing 1-16 host MPI processes (per device) offloading to 1 and 2 Xeon Phi devices}
+\label{fig:mpitimes}
+\end{figure}
+
+
+
+\section{Conclusions}
 \label{sect:conclusions}
 
 It can be seen from the results gathered so far that in some sections of code the MIC architecture excels well beyond the host, 
-although in others a fair amount of modification is necessary to gain acceptable performance levels. The time taken to perform 
-dynamic allocations is a fairly considerable factor in the effort to gain a performance boost through use of a Xeon Phi in codes 
-that cannot avoid these. 
+although in others a fair amount of modification is necessary to gain acceptable performance levels. The use of MPI on the host, 
+despite implementation through an unwieldy execution script, provides a considerable performance increase especially for data heavy 
+codes. 
 
-[further discussion, conclusion]
-
-Further work is planned to enable the code to run on multiple hosts utilising all available devices, with further optimisation and 
-testing to be done in order to perfect the double buffered data transfer and processing approach and visualise much larger datasets.
-The ability to use multiple devices across multiple nodes will allow further testing of the scalability of the approach.
+Further work is planned to enable the code to run on multiple host nodess utilising all available devices, with further optimisation and 
+testing to be done in order to perfect the double buffered data transfer and processing approach to effectively visualise much larger 
+datasets. The ability to use multiple devices across multiple nodes will allow further testing of the scalability of the approach. 
+Features provided in the new OpenMP 4.0 specification such as the \textit{teams} construct will enable a OpenMP based approach to 
+threadgrouping as opposed to the manual method implemented here, if these constructs become supported by the Intel compiler in the future. 
 
 Intel released details of their second generation Xeon Phi product, codenamed “Knights Landing”,  at the International Supercomputing 
 Conference 2013 [ref]. One important factor to note is the potential to use this as a standalone CPU rather than a co-processor. 
@@ -561,7 +573,7 @@ Integration. Technical report, Global Grid Forum (2002)
 
 \end{thebibliography}
 
-%(REF7: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF1: Astronomical Society of the Pacific Conference 
+%(REF7: Procedia Computer Science, 1(1) pp.1775-1784, 2010), and GPUs (REF8: Astronomical Society of the Pacific Conference 
 %Series, 475 (ADASS XXII) pp.103-106, 2013; REF2: in preparation). 
 %
 
