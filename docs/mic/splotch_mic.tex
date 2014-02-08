@@ -99,47 +99,74 @@ uniquely wide vector capabilities of the device, with accompanying performance r
 \section{Introduction}
 \label{sect:introduction}
 
-In recent years, the volume of scientific data produced by experiments, observations and numerical simulations 
-has been increasing exponentially. This is true for many scientific domains, such as evironmental or life sciences, 
-but in particular for astrophysics. 
+Nowadays dealing with big data effectively is a mandatory activity for a rapidly increasing number of scientific communities, 
+e.g. in environmental, life and health sciences, and in particular in astrophysics. Some of the largest cosmological N-body 
+simulations can describe the evolution of our universe up to present times by following the behaviour of gravitating matter 
+represented by hundreds of billions of particles. Performing such simulations often produces time snapshots in the order of tens
+of terabytes. This situation can only be exacerbated as supercomputing advances are opening possibilities for simulations 
+producing snapshots of sizes in the order of petabytes, or even exabytes towards the exascale era.
 
-% \comm{Next generations of telescopes and antennas are expected to produce
-% enormous amount of data. The Square Kilometer Array project (REF), for instance, will 
-% generate an exabyte of data every day, twice the information currently exchanged on 
-% the internet on a daily basis and 100 times more information then the CERN LHC (REF) experiment
-% produces. At the same time, computer simulations represent an invaluable instrument for 
-% astrophysicists to validate theories and compare to observations through numerical experiments.}
+Size is not the only challenge posed, it is also essential to effectively extract information from the typically complex big 
+datasets. Algorithms for data mining and analysis are often computationally demanding and in practice unusable on big datasets 
+due to time constraints and power limitations. Exploration and discovery through visualisation can then be an outstanding aid, 
+e.g. by providing scientists with prompt and intuitive insights enabling them to identify interesting characteristics and thus 
+define regions of interest within which to apply further time-consuming methods. Additionally, they can be a very effective 
+way in discovering and understanding correlations, associations and data patterns, or in identifying unexpected behaviours or 
+even errors. However, visualisation algorithms typically require High Performance Computing (HPC) resources to overcome issues 
+related to rendering big, complex datasets within acceptable timeframes.
 
-Some of the largest cosmological simulations, performed using sophisticated N-body codes, can describe the details 
-of the evolution of the universe up to the present time, following the behaviour of gravitating matter represented 
-by a hundred billion particles. Running these simulations produces output files whose size is of the order of tens 
-of terabytes each. The fast technological progress of supercomputing systems will soon lead to simulations producing 
-outputs with size much greater than this as we head into the exascale era.
+Splotch \cite{splotch} is an algorithm for visualising big particle-based datasets, providing high quality imagery while exploiting 
+a broad variety of HPC systems such as multi-core processors and multi-node supercomputing systems \cite{splotchmulti}, and 
+GPUs \cite{splotchgpu}. The ability to exploit all devices that may be available within a modern HPC system is of paramount 
+importance towards achieving optimal overall performances. This paper reports on recent developments enabling Splotch to 
+exploit the capability of the Intel PHI \cite{xeonphi} accelerator, taking advantage of the Many Integrated Core (MIC) 
+architecture \cite{mic}, which is envisaged to provide, on suitable classes of algorithms, outstanding performance with power 
+consumption being comparable to standard CPUs. We describe our MIC implementation (Sect. \ref{sect:micsplotch}) focusing on 
+optimisation issues related to memory usage and data transfers and vectorisation. We then discuss the performance details 
+(Sect. \ref{sect:results}) of our implementation using a benchmark dataset from a Gadget \cite{gadget} N-Body simulation. Finally we 
+summarise our experiences and present pointers to future developments.
 
-Size does not represent the only challenge posed by scientific data. Is also essential to effectively extract 
-all the information from the often complex data files. Software for data mining and analysis is often highly 
-computationally demanding and essentially unusable on large datasets due to time constraints and power limitations.   
+% In recent years, the volume of scientific data produced by experiments, observations and numerical simulations 
+% has been increasing exponentially. This is true for many scientific domains, such as evironmental or life sciences, 
+% but in particular for astrophysics. 
 
-Exploration and discovery through visualization represents an outstanding aid to big data processing, e.g. by providing 
-scientists with prompt and intuitive insights enabling them to identify interesting characteristics 
-and thus define regions of interest within which to apply further time-consuming methods. Additionally, 
-they can be a very effective way in discovering and understanding correlations, associations and data patterns, 
-or in identifying unexpected behaviours or even errors. However, visualization tools require high performance computing 
-(hereafter HPC) resources, in order to overcome the issues of rendering big, complex datasets and doing so in an 
-acceptable timeframe.
+% % \comm{Next generations of telescopes and antennas are expected to produce
+% % enormous amount of data. The Square Kilometer Array project (REF), for instance, will 
+% % generate an exabyte of data every day, twice the information currently exchanged on 
+% % the internet on a daily basis and 100 times more information then the CERN LHC (REF) experiment
+% % produces. At the same time, computer simulations represent an invaluable instrument for 
+% % astrophysicists to validate theories and compare to observations through numerical experiments.}
 
-Splotch \cite{splotch}, our ray-casting algorithm for visualizing large-scale, particle-based datasets, addresses these issues, 
-providing high quality graphic outputs, processing data of, ideally, any size, already efficiently exploiting a broad 
-variety of HPC systems: multi-core processors and multi-node supercomputing systems \cite{splotchmulti}, and GPUs \cite{splotchgpu}. 
-It is essential to be able to utilise all devices that may be available within a HPC system, in order to exploit the full 
-potential of the environment for maximum performance. Single images can be generated, or sequences of frames from 
-different points of view to compose into an animated film of the simulation.
+% Some of the largest cosmological simulations, performed using sophisticated N-body codes, can describe the details 
+% of the evolution of the universe up to the present time, following the behaviour of gravitating matter represented 
+% by a hundred billion particles. Running these simulations produces output files whose size is of the order of tens 
+% of terabytes each. The fast technological progress of supercomputing systems will soon lead to simulations producing 
+% outputs with size much greater than this as we head into the exascale era.
 
-To this end, this paper will describe the work accomplished to enable Splotch to exploit on the new Intel PHI \cite{xeonphi} 
-accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture \cite{mic}, which is expected to provide, 
-on suitable classes of algorithms, outstanding performance with power consumption being comparable to standard CPUs. 
-We will present the MIC implementation and optimisations, performance tuning, benchmarks carried out, and the resulting 
-performance measurements, comparing that of an OpenMP based implementation running on multiple cores of a single CPU. 
+% Size does not represent the only challenge posed by scientific data. Is also essential to effectively extract 
+% all the information from the often complex data files. Software for data mining and analysis is often highly 
+% computationally demanding and essentially unusable on large datasets due to time constraints and power limitations.   
+
+% Exploration and discovery through visualization represents an outstanding aid to big data processing, e.g. by providing 
+% scientists with prompt and intuitive insights enabling them to identify interesting characteristics 
+% and thus define regions of interest within which to apply further time-consuming methods. Additionally, 
+% they can be a very effective way in discovering and understanding correlations, associations and data patterns, 
+% or in identifying unexpected behaviours or even errors. However, visualization tools require high performance computing 
+% (hereafter HPC) resources, in order to overcome the issues of visualizing big, complex datasets and doing so in an 
+% acceptable timeframe.
+
+% Splotch \cite{splotch}, our ray-casting algorithm for visualizing large-scale, particle-based datasets, addresses these issues, 
+% providing high quality graphic outputs, processing data of, ideally, any size, already efficiently exploiting a broad 
+% variety of HPC systems: multi-core processors and multi-node supercomputing systems \cite{splotchmulti}, and GPUs \cite{splotchgpu}. 
+% It is essential to be able to utilise all devices that may be available within a HPC system, in order to exploit the full 
+% potential of the environment for maximum performance. Single images can be generated, or sequences of frames from 
+% different points of view to compose into an animated film of the simulation.
+
+% To this end, this paper will describe the work accomplished to enable Splotch to exploit on the new Intel PHI \cite{xeonphi} 
+% accelerator, taking advantage of the Many Integrated Core (hereafter MIC) architecture \cite{mic}, which is expected to provide, 
+% on suitable classes of algorithms, outstanding performance with power consumption being comparable to standard CPUs. 
+% We will present the MIC implementation and optimisations, performance tuning, benchmarks carried out, and the resulting 
+% performance measurements. 
 
 \section{Splotch Overview}
 \label{sect:overview}
@@ -147,7 +174,7 @@ performance measurements, comparing that of an OpenMP based implementation runni
 % This section gives a brief overview to the Splotch algorithm, along with a description of the MPI and OpenMP related 
 % functionality for reference as these are key to the development of the MIC implementation.
 
-Splotch is visualization algorithm written in pure C++ for generating 2 dimensional images from particle based datasets. 
+Splotch is visualization algorithm written in pure C++ for generating two dimensional images from particle based datasets. 
 % It has no reliance on external libraries, minus those required for parallelism or particular file formats 
 % e.g. HDF5 [ref], and can be compiled from a downloadable self-contained tar-ball with a suitable makefile, use of 
 % preprocessor definitions and makefile switches allows compilation for a variety of hardware environments. 
@@ -161,7 +188,7 @@ The main stages of the Splotch workflow can be summarised as:
   
 \vskip 1pc
 \noindent
-\textbf{Processing and Rasterization} 
+\textbf{Preprocessing and Rasterization} 
    Data is preprocessed, performing tasks such as ranging, normalization, and applying logarithms to particle attributes, 
    amongst others. Particles are roto-translated with reference to supplied camera and look-at positions. Active particles, 
    those within the view frustum, are identified and assigned an RGB color value dependant on particle properties and an 
@@ -218,7 +245,7 @@ The main stages of the Splotch workflow can be summarised as:
 \subsection{Overview of the MIC Architecture}
 \label{sect:mic}
 
-The core ideal behind the MIC micro-architecture is obtaining a massive level of parallelism for increasing throughput 
+The essential idea behind the MIC micro-architecture is obtaining a massive level of parallelism for increasing throughput 
 performance in power restricted cluster environments. To this end Intel's flagship MIC product, the Xeon Phi, 
 contains roughly 60 cores on a single chip, dependent on the model. The Xeon Phi acts as a coprocessor for a s
 tandard Intel Xeon processor. A user can execute a program natively by logging into the device itself, which hosts 
@@ -269,15 +296,15 @@ floating point operations per cycle.
 %\subsubsection{Offload model}
 % \label{sect:offloadmodel}
 
-The rendering algorithm can be broken down into a series of phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
+The algorithm can be broken down into a series of phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
 While the executable runs on the Xeon host, data and processing is offloaded to the device via Intel offload clauses.
 A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of signal 
 and wait clauses provided by the Intel extensions. This allows to minimise overhead due to transferring data to the device 
-for processing, and to facilitate the rendering of datasets potentially much larger than the memory capacity available.
+for processing, and to facilitate the visualization of datasets potentially much larger than the memory capacity available.
 
 \begin{figure}
 \centering
-\includegraphics[height=5.0cm]{exmodel}
+\includegraphics[height=7.0cm]{ExecutionModel}
 \caption{Model illustrating execution pattern of the new implementation}
 \label{fig:exmodel}
 \end{figure}
@@ -288,10 +315,10 @@ for processing, and to facilitate the rendering of datasets potentially much lar
 % parameters such as those used in the 3d transformation, which will be static throughout the rendering process. The render 
 % parameters are copied to the device, which subsequently begins rendering while the next chunk of data is transferred.
 
-The first stage of rendering is a highly parallel 3D transform and colorize performed on a per-particle basis using 
-four OpenMP threads per available core, to match the four available hardware threads, equating to roughly 240 threads. 
+The first stage of processinging is rasterization: a highly parallel 3D transform and colorize performed on a per-particle 
+basis using four OpenMP threads per available core to match the four available hardware threads, equating to roughly 240 threads. 
 Transform parameters are precomputed, as they are the same for each particle, and computation is distributed amongst 
-threads via an OpenMP parralel for loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler 
+threads via an OpenMP parallel for loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler 
 providing a large performance boost for this section.
 % This stage is amenable to fast parallel processing and requires only a small amount of tuning for MIC suitability.
 
@@ -356,10 +383,10 @@ memory means overheads incurred allocating these buffers cannot be mitigated by 
 % Setting MIC\_USE\_2MB\_BUFFERS to 64K reduced this allocation overhead to approximately 2s per GB. [are approximations okay?]
 
 Additionally, overheads in dynamic allocation and data transfer incur a penalty when running a single host process 
-offloading to the device. In order to minimise these penalties, multiple MPI processes on the host are each allocated 
-a subset of the device threads to exploit. In this way, the device is subdivided amongst the host MPI processes allowing 
-for memory and data transfer to occur in parallel providing a noticeable performance increase, further details of which are 
-given in sect. \ref{sect:results}.
+offloading to the device. In order to minimise these penalties, we make use of the MPI implementation of Splotch. 
+Multiple MPI processes on the host are each allocated a subset of the device threads to exploit. In this way, the device is 
+subdivided amongst the host MPI processes allowing for memory and data transfer to occur in parallel providing a noticeable 
+performance increase, further details of which are given in sect. \ref{sect:results}.
 
 % Often scientific datasets being visualized are very large, it is inevitable that there will at times be more data than 
 % available device memory. This raises the issue of allocating and waiting for data transfer from main memory which, 
@@ -384,13 +411,16 @@ given in sect. \ref{sect:results}.
 
 The large 512 bit width SIMD capability of the MIC architecture is exploited through vectorization carried out both 
 automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) \cite{imci}. Firstly the 
-core data structure used in Splotch rendering was re-examined, and converted from an array of structures (AoS) to 
-a structure of arrays (SoA). The AoS method stores a large array of structures, each containing all of the 
-information pertaining to a single particle. This aids the compiler in automatic vectorization, 
+core data structure used in Splotch, a 36 byte structure consisting of 9 fields, was re-examined and converted from an 
+array of structures (AoS) to a structure of arrays (SoA). The AoS method stores a large array of structures, each containing 
+all of the information pertaining to a single particle. This aids the compiler in automatic vectorization, 
 amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized 
 as described in Intels Vectorization guide \cite{vectorguide} which, while providing examples for SSE, is applicable 
-to IMCI as well. Reformatting the data storage method led to a 10\% performance increase in the rototranslation and 
-coloring phase, while the rendering phase was essentially unaffected, leading to a 3\% performance increase overall.
+to IMCI as well. Reformatting the data storage method led to a 10\% performance increase in the rasterization phase, 
+while the rendering phase was essentially unaffected, leading to a 3\% performance increase overall. The efficacy of 
+this modification may vary, as the rasterization phase affects all particles in the dataset whereas the rendering phase 
+affects only those particles viewable within the scene. Hence, if less particles are viewable in the scene the rasterization 
+phase will take up a larger portion of the overall time and the performance increase will be more noticeable.
 
 The rendering section of the algorithm is complex and unsuitable for automatic vectorization, this is manually 
 optimised through use of the Intel intrinsics, which map directly to IMCIs. Drawing consists of additively 
@@ -442,7 +472,7 @@ main begins execution.
 % a Splotch animation with a relatively small dataset, these overhead costs are paid only once during the first execution 
 % as for repeat run-throughs Splotch execution is not actually stopped.
 
-Various parameters of the algorithm can be tuned to find best performance. Rendering parameters such as the number of 
+Various parameters of the algorithm can be tuned to find best performance. Render parameters such as the number of 
 thread groups and tile size are set to optimal defaults for the test hardware based on results of scripted tests iterating 
 through sets of incremental potential values. These can be modified via a parameter file passed in at runtime for differing 
 hardware.
@@ -456,17 +486,17 @@ hardware.
 % eight, most likely due to the host socket for each device having eight-cores. [is this speculation bad?] 
 
 
-\section{Performance Analysis}
-\label{sect:performance}
+\section{Results}
+\label{sect:results}
 
 Performance analysis consists of running a variety of tests on the available hardware, the “Dommic” facility at the 
 Swiss National Supercomputing Centre, Lugano. Each node is based upon a dual socket eight-core Intel Xeon 2670 
 processor architecture running at 2.6 GHz with 32 GB of main system memory. Two Xeon Phi 5110 MIC coprocessors are 
 available per node. 
 
-Tests are carried out using an N-Body simulation performed using Gadget \cite{gadget}, consisting of roughly 21 million 
+Tests are carried out using an N-Body simulation performed using Gadget, consisting of roughly 21 million 
 particles;  ~10 million dark matter particles, ~10 million baryonic matter particles and ~1 million star particles. 
-A 100 frame animation orbiting the dataset is used to measure per-frame timings.
+A 100 frame animation orbiting the dataset is used to measure per-frame timings to produce an image of 800\textsuperscript{2} pixels.
 
 Both the host and device code use a tile size parameter of 100 pixels, while the device code has default parameters of 
 8 host MPI processes, with 2 device threadgroups of 15 threads each, which has been shown in tests to be the optimal 
@@ -477,45 +507,47 @@ distribution for this hardware.
 % addition for smaller tests a filtering system in the file reader module allows just a subset of the data to be loaded.
 % [update this with actual dataset size]
 
-\subsection{Results}
-\label{sect:results}
-
 \begin{figure}
 \centering
-\includegraphics[height=5.0cm]{TotalTime}
-\caption{Per-Frame rendering time using host with 1-16 cores vs host offloading to single and dual Xeon Phi devices}
-\label{fig:totaltimes}
+\begin{minipage}[t]{.45\textwidth}
+  \centering
+  \includegraphics[height=4.0cm]{TotalTime}
+  \caption{Per-Frame time for full process: host OpenMP 1-16 cores vs single and dual Xeon Phi devices.}
+  \label{fig:totaltimes}
+\end{minipage}
+\begin{minipage}[t]{.45\textwidth}
+  \centering
+  \includegraphics[height=4.0cm]{Rotocol}
+  \caption{Per-Frame time for rasterization phase: host OpenMP 1-16 cores vs single and dual Xeon Phi devices.}
+  \label{fig:rotocol}
+\end{minipage}
 \end{figure}
 
 Fig. \ref{fig:totaltimes} shows use of a single device provides comparable results to 4 cores on the host, while two devices outperform 
 16 cores by 20\%. The additional use of a second device provides a 2x performance improvement for the MIC algorithm. 
-Fig. \ref{fig:rotocol} shows the strongest area of improvement, the rototranslation and coloring phase, with a single device 
+Fig. \ref{fig:rotocol} shows the strongest area of improvement, the rasterization phase, with a single device 
 outperforming 16 cores roughly 2.5x, with roughly 3x improvement provided by using dual devices. The differing performances betweeen 
 fig. \ref{fig:totaltimes} and fig. \ref{fig:rotocol} are due to the rendering phase, which does not gain as significant a 
-performance boost as the roto-translation and coloring. 
+performance boost as the rasterization. 
+
+Fig. \ref{fig:mpitimes} shows comparison of per-frame processing times using varying numbers of MPI processes on the host, offloading to 
+both single and dual devices, against the OpenMP and the MPI implementations of Splotch. Subdividing the available device threads 
+amongst host MPI processes allows to transfer data and allocate memory in parallel while also more effectively spreading the 
+workload across the device to ensure all threads are working equally. These tests show best performance with 8 and 16 MPI 
+processes per device, likely correspondant to the dual socket 8 core host CPU. It is interesting to note the current offloading model 
+with a single device compares to 4 cores of the MPI host model, which scales linearly, with two devices comparing to 8 cores, leading 
+in the direction of a linear scaling with number of devices.
 
 \begin{figure}
 \centering
-\includegraphics[height=5.0cm]{Rotocol}
-\caption{Per-Frame time to rototranslate and colorize test dataset using host with 1-16 cores vs single and dual Xeon Phi devices}
-\label{fig:rotocol}
-\end{figure}
-
-Fig. \ref{fig:mpitimes} shows comparison of per-frame render times using varying numbers of MPI processes on the host, offloading to 
-both a single and dual devices. Subdividing the available device threads amongst host MPI processes allows to transfer data and allocate 
-memory in parallel while also more effectively spreading the workload across the device to ensure all threads are working equally. 
-These tests show best performance with 8 MPI processes per device, likely correspondant to the dual socket 8 core host CPU. 
-
-\begin{figure}
-\centering
-\includegraphics[height=5.0cm]{MPIFrameTimes}
-\caption{Per-Frame rendering time comparing 1-16 host MPI processes (per device) offloading to 1 and 2 Xeon Phi devices}
+\includegraphics[height=6.0cm]{mpi_omp_mic}
+\caption{Per-Frame processing time comparing MPI, OpenMP and MPI offloading to single and dual Xeon Phi devices}
 \label{fig:mpitimes}
 \end{figure}
 
 
 
-\section{Conclusions}
+\section{Conclusions and Future Work}
 \label{sect:conclusions}
 
 It can be seen from the results gathered so far that in some sections of code the MIC architecture excels well beyond the host, 
@@ -523,7 +555,9 @@ although in others a fair amount of modification is necessary to gain acceptable
 despite implementation through an unwieldy execution script, provides a considerable performance increase especially for data heavy 
 codes. 
 
-Further work is planned to enable the code to run on multiple host nodess utilising all available devices, with further optimisation and 
+The high performance of the MPI host code indicates implementing an approach running MPI processes on both the host and device 
+in order to fully exploit all available processing power may yield a higher overall performance, further work is planned to investigate this.
+In addition, work is planned to enable the code to run on multiple host nodess utilising all available devices, with further optimisation and 
 testing to be done in order to perfect the double buffered data transfer and processing approach to effectively visualise much larger 
 datasets. The ability to use multiple devices across multiple nodes will allow further testing of the scalability of the approach. 
 Features provided in the new OpenMP 4.0 specification such as the \textit{teams} construct will enable a OpenMP based approach to 
