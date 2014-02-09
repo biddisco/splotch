@@ -129,6 +129,9 @@ Finally we summarise our experiences and present pointers to future developments
 \section{Background}
 \label{sect:background}
 
+\subsection{The Splotch Code}
+\label{sect:splotchcode}
+
 Splotch \cite{splotch} is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
 supporting a number of popular formats for astrophysics. Once datasets are converted into the Splotch internal format as they are 
 loaded, followed by preprocessing and rasterisation, and finally rendering. Preprocessing can perform ranging, normalization, 
@@ -137,7 +140,10 @@ camera and look-at positions and assigned RGB color values appropriately using e
 pixels, rays are cast along lines of sight, and contributions of all encountered particles are accumulated. The contribution 
 of particles is determined by solving the radiative transfer equation \cite{splotchgpu}.
 
-The new implementation presented exploits the MIC architecture. The idea behind MIC is obtaining a massive level of parallelism for 
+\subsection{Overview of the MIC}
+\label{sect:micimplementation}
+
+The idea behind MIC is obtaining a massive level of parallelism for 
 increasing throughput performance in power restricted cluster environments. To this end Intel's flagship MIC product, the Xeon Phi,
 contains roughly 60 cores on a single chip, dependent on the model. The Xeon Phi acts as a coprocessor for a standard Intel Xeon 
 processor. Programs can be executed natively by logging into the device itself, which hosts a Linux micro-OS, or by using the 
