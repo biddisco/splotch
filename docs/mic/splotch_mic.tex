@@ -92,15 +92,14 @@ way in discovering and understanding correlations, associations and data pattern
 even errors. However, visualization algorithms typically require High Performance Computing (HPC) resources to overcome issues
 related to rendering large and complex datasets in acceptable timeframes.
 
-Splotch\cite{splotch} is an algorithm for visualizing big particle-based datasets, providing high quality imagery while exploiting
+Splotch~\cite{splotch} is an algorithm for visualizing big particle-based datasets, providing high quality imagery while exploiting
 a broad variety of HPC systems such as multi-core processors, multi-node supercomputing systems \cite{splotchmulti}, and
 also GPUs \cite{splotchgpu}. The ability to exploit all devices that may be available within a modern HPC system is of paramount
 importance towards achieving optimal overall performances. This paper reports on recent developments enabling Splotch to
 exploit the capability of the Intel PHI \cite{xeonphi} accelerator, taking advantage of the Many Integrated Core (MIC)
 architecture \cite{mic}, which is envisaged to provide, on suitable classes of algorithms, outstanding performance with power
-consumption being comparable to standard CPUs. We describe our MIC implementation (Sect. \ref{sect:micsplotch}) focusing on
-optimisation issues related to memory usage and data transfers and vectorisation. We then discuss the performance details
-(Sect. \ref{sect:results}) of our implementation using a benchmark dataset produced by a Gadget \cite{gadget} N-Body simulation. 
+consumption being comparable to standard CPUs. 
+We describe our MIC implementation (Sect. \ref{sect:micsplotch}) focusing on optimisation issues related to memory usage and data transfers and vectorisation. We then discuss the performance details (Sect. \ref{sect:results}) of our implementation using a benchmark dataset produced by a Gadget \cite{gadget} N-Body simulation. 
 Finally we summarise our experiences and present pointers to future developments.
 
 \section{Background}
@@ -109,7 +108,7 @@ Finally we summarise our experiences and present pointers to future developments
 \subsection{The Splotch Code}
 \label{sect:splotchcode}
 
-Splotch \cite{splotch} is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
+Splotch~\cite{splotch} is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
 supporting a number of popular formats for astrophysics. Datasets are converted into the Splotch internal format as they are 
 loaded from files. This is followed by preprocessing and rasterisation, and finally rendering. 
 Preprocessing can perform ranging, normalization, 
@@ -118,7 +117,7 @@ camera and look-at positions and assigned RGB color values appropriately using e
 pixels, rays are cast along lines of sight, and contributions of all encountered particles are accumulated. The contribution 
 of particles is determined by solving the radiative transfer equation \cite{splotchgpu}.
 
-\subsection{Overview of the MIC}
+\subsection{Overview of the Xeon Phi}
 \label{sect:micoverview}
 
 The idea behind MIC is obtaining a massive level of parallelism for increasing throughput performance in power restricted cluster 
@@ -126,8 +125,8 @@ environments. To this end Intel's flagship MIC product, the Xeon Phi, contains r
 model. The Xeon Phi acts as a coprocessor for a standard Intel Xeon processor. Programs can be executed natively by logging into 
 the device itself, which hosts a Linux micro-OS, or by using the device through one or more MPI processes amongst further processes 
 running on the Xeon host. Alternatively users can offload data and portions of code to the coprocessor via a series of pragma 
-based extensions available in C++ or FORTRAN.
-For a detailed technical description the processor's architecture, the reader is referred to the
+based extensions available in C++ or Fortran.
+For a detailed technical description of the processor's architecture, the reader is referred to the
 Xeon Phi whitepaper \cite{xeonphi}. Here, we give a short overview of its main features.
 
 Each core has access to a 512 KB private fully coherent L2 cache and memory controllers
@@ -146,7 +145,7 @@ floating point operations.
 \label{sect:micimplementation}
 
 
-The Splotch algorithm can be broken down into a series of distinct phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
+The Splotch algorithm can be broken down into a series of distinct phases illustrated by the execution model shown in Fig. \ref{fig:exmodel}.
 While the executable runs on the Xeon host, data and processing is offloaded to the device via Intel offload clauses.
 A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of signal 
 and wait clauses provided by the Intel extensions. This allows to minimise overhead due to transferring data to the device 
@@ -162,7 +161,7 @@ for processing, and to facilitate the visualization of datasets potentially much
 For rasterization, a highly parallel 3D transform and colorize is performed on a per-particle
 basis. Transform parameters are precomputed, as they are identical for each particle, and computation is distributed amongst
 threads via an OpenMP parallel for loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler providing a 
-performance boost for this section.
+performance boost for this phase.
 
 The rendering phase begins with splitting the number of available OpenMP threads into groups, the number of which is dependant on 
 a runtime parameter, allocating a buffer per group for the resulting image. The dataset is evenly distributed amongst the 
@@ -195,13 +194,13 @@ Additionally, overheads in dynamic allocation and data transfer incur a penalty 
 offloading to the device. In order to minimise these penalties, we make use of the MPI implementation of Splotch. 
 Multiple MPI processes on the host are each allocated a subset of the device threads to exploit. In this way, the device is 
 subdivided amongst the host MPI processes allowing for memory and data transfer to occur in parallel providing a noticeable 
-performance increase, further details of which are given in sect. \ref{sect:results}.
+performance increase, further details of which are given in Sect. \ref{sect:results}.
 
 \subsubsection{Vectorization}
 \label{sect:vectorization}
 
 The large 512 bit width SIMD capability of the MIC architecture is exploited through vectorization carried out both 
-automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI) \cite{imci}. Firstly the 
+automatically by the compiler, and manually using Intel Initial Many-Core Instructions (IMCI)~\cite{imci}. Firstly the 
 particle data structure used in Splotch, a 36 byte structure consisting of 9 fields, was re-examined and converted from an 
 array of structures (AoS) to a structure of arrays (SoA). This aids the compiler in automatic vectorization, 
 amongst other changes such as ensuring the correct data alignment and modifying loops to be more easily vectorized. 
@@ -209,7 +208,7 @@ Such optimisations are described in Intel's Vectorization guide \cite{vectorguid
 applicable to IMCI. Reformatting the data storage method led to a 10\% performance increase in the rasterization phase, 
 while the rendering phase was essentially unaffected, leading to a 3\% performance increase of the overall computation. 
 The efficacy of this modification may vary, as the rasterization phase affects all particles in the dataset whereas the rendering phase 
-affects only those particles viewable within the scene. In the rasterization phase particles are both read and stored after few 
+affects only those particles viewable within the scene. Moreover, in the rasterization phase particles are both read and stored after few 
 operations, while in the rendering phase they are simply read and not accessed further for the majority of the computation, therefore 
 this optimisation has a minor impact on the performance.
 
@@ -219,7 +218,7 @@ combining a pixel's current RGB values with the contribution from the current pa
 multiplying the particle color by a scalar contribution value. In order to expedite this process, up to five single 
 precision particle RGB values (totalling 480 bits) and five scalar contribution values are packed into two respective 
 512 bit vector containers. A third container contains 5 affected pixels, which are written simultaneously using a 
-fused multiply-add vector intrinsic, masked in order not to affect the final unused float value in the 16-float 
+fused-multiply-add vector intrinsic, masked in order not to affect the final unused float value in the 16-float 
 capable containers.
 
 \subsubsection{Tuning}
@@ -244,12 +243,12 @@ Lugano. In this system, each node is based upon a dual socket eight-core Intel X
 with 32 GB of main system memory. Two Xeon Phi 5110 MIC coprocessors are available per node. 
 
 Tests are carried out using an N-Body simulation performed using Gadget, consisting of roughly 21 million 
-particles;  ~10 million dark matter particles, ~10 million baryonic matter particles and ~1 million star particles. 
+particles; ~10 million dark matter particles, ~10 million baryonic matter particles and~1 million star particles. 
 A 100 frame animation orbiting the dataset is used to measure per-frame timings to produce an image of 800\textsuperscript{2} pixels. 
 For performance comparisons, both the host and device code use a tile size parameter of 100 pixels.
 
 In the tests measuring the device performance, we run 8 MPI processes on the host all offloading to the same device, 
-as discussed in sect. \ref{sect:memusage} and set thread groups of 15 threads each, which turned out to be the optimal distribution 
+as discussed in Sect.~\ref{sect:memusage} and set thread groups of 15 threads each, which turned out to be the optimal distribution 
 for the test system. We use four OpenMP threads per available core to match the four available hardware threads, equating to roughly 240 threads.
 OpenMP threads on the host are mapped to one per core.
 
@@ -268,13 +267,13 @@ OpenMP threads on the host are mapped to one per core.
 \label{fig:timings}
 \end{figure}
 
-Fig. \ref{fig:timings} (\emph{left}), describing per frame processing times of the OpenMP host implementation vs dual and single devices, 
+Fig.~\ref{fig:timings} (\emph{left}), describing per frame processing times of the OpenMP host implementation vs dual and single devices, 
 shows that use of a single device provides comparable results to 4 cores on the host, while two devices outperform 16 cores by 20\%, due to the 
 non-linear scaling of the OpenMP implementation. The additional use of a second device provides a 2x performance improvement for the 
 MIC algorithm. Fig. \ref{fig:timings} (\emph{right}) shows the strongest area of improvement, the rasterization phase, with a single 
 device outperforming 16 cores roughly 2.5x, with roughly 3x improvement provided by using dual devices. 
 
-Fig. \ref{fig:mpitimes} shows comparison of per-frame processing times using varying numbers of MPI processes on the host, offloading to 
+Fig.~\ref{fig:mpitimes} shows comparison of per-frame processing times using varying numbers of MPI processes on the host, offloading to 
 both single and dual devices, against the OpenMP and the MPI implementations of Splotch. Subdividing the available device threads 
 amongst host MPI processes allows to transfer data and allocate memory in parallel while also more effectively spreading the 
 workload across the device to ensure all threads are working equally. These tests show best performance with 8 and 16 MPI 
@@ -282,7 +281,7 @@ processes per device, possibly correspondent to the dual socket 8 core host CPU.
 with a single device is comparable to 4 cores of the MPI host model, which scales linearly, with two devices comparable to 8 cores, leading 
 in the direction of a linear scaling with number of devices.
 
-These results suggest that an optimal usage of the Xeon PHI architecture consists of processing the data concurrently by both 
+These results suggest that an optimal usage of the Xeon Phi architecture consists of processing the data concurrently by both 
 the multiple host cores and the device, coordinated through the MPI implementation, rather than using the host cores only for offload 
 management.
 Data to be processed by the MIC can be offloaded asynchronously by the various host cores; while data from one core is copied to 
@@ -292,7 +291,7 @@ previously sent by other cores.
 \begin{figure}
 \centering
 \includegraphics[height=6.0cm]{mpi_omp_mic}
-\caption{Per-Frame processing time comparing MPI, OpenMP and MPI offloading to single and dual Xeon Phi devices}
+\caption{Per-Frame processing time comparing MPI, OpenMP and MPI offloading to single and dual Xeon Phi devices.}
 \label{fig:mpitimes}
 \end{figure}
 
@@ -316,7 +315,7 @@ Features provided in the new OpenMP 4.0 specification such as the \textit{teams}
 thread grouping as opposed to the manual method implemented here, if these constructs become supported by the Intel compiler in the future. 
 
 Intel released details of their second generation Xeon Phi product, codenamed “Knights Landing”,  at the International Supercomputing 
-Conference 2013 \cite{knightlanding}. One important factor to note is the potential to use this as a standalone CPU rather than a co-processor. 
+Conference 2013 \cite{knightlanding}. One important factor to note is the potential to use this as a standalone CPU rather than a coprocessor. 
 This is worthy of further investigation as it invites the dismissal of complex and time consuming data transferral methods between 
 a host and coprocessor, while retaining the ability to run directly on the host rather than copying executables to an external device.
 
@@ -332,6 +331,9 @@ Jin, Z., Krokos, M., Rivi, M., Gheller, C., Dolag, K., Reinecke, M.: High-Perfor
 \bibitem{splotchgpu}
 Rivi, M., Gheller, C., Dykes, T., Krokos, M., Dolag, K.:  GPU Accelerated
   Particle Visualisation with Splotch. To appear in Astronomy and Computing (2014)
+ 
+ \bibitem{gadget} 
+The Gadget Code, \url{http://www.mpa-garching.mpg.de/gadget/}  
   
 \bibitem{xeonphi} 
 Chrysos, G.: Knights Corner, Intel’s first Many Integrated Core (MIC) Architecture Product. 
@@ -341,19 +343,16 @@ Chrysos, G.: Knights Corner, Intel’s first Many Integrated Core (MIC) Architec
 Intel Many Integrated Core Architecture, 
   \url{http://www.intel.com/content/www/us/en/architecture-and-technology/many-integrated-core/intel-many-integrated-core-architecture.html}
 
-\bibitem{mem_alloc} Intel, Effective Use of the Intel Compiler's Offload Features, (2013)
+\bibitem{mem_alloc} Intel: Effective Use of the Intel Compiler's Offload Features (2013)
 
 \bibitem{env_var_buf} 
-Intel, How to Use Huge Pages to Improve Application Performance on Intel Xeon Phi Coprocessor, (2012)
+Intel: How to Use Huge Pages to Improve Application Performance on Intel Xeon Phi Coprocessor (2012)
 
 \bibitem{imci} 
-Intel, Intel Xeon Phi Coprocessor Instruction Set Architecture Reference Manual, (2012)
+Intel: Intel Xeon Phi Coprocessor Instruction Set Architecture Reference Manual (2012)
 
 \bibitem{vectorguide} 
-Intel, A Guide to Vectorization with Intel C++ Compilers, (2012)
-
-\bibitem{gadget} 
-The Gadget Code, \url{http://www.mpa-garching.mpg.de/gadget/}
+Intel: A Guide to Vectorization with Intel C++ Compilers (2012)
 
 \bibitem{knightlanding} 
 Hazra, R.: Driving Industrial Innovation On the Path to Exascale: From Vision to Reality. 
