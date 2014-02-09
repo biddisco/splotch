@@ -62,10 +62,10 @@
 
 \begin{abstract}
 \emph{With the increasing size and complexity of data produced by large scale astrophysical simulations, 
-it is important to be able to exploit all available hardware in High performance Computing environments 
+it is important to be able to exploit all available hardware in High Performance Computing environments 
 for increased throughput and efficiency. We focus on the modification and optimisation of Splotch, a 
-scalable data visualization algorithm, to utilise the Xeon Phi, Intel's co-processor based upon the new 
-Many Integrated Core architecture. We discuss steps taken to offload data to the co-processor and 
+scalable data visualization algorithm, to utilise the Xeon Phi, Intel's coprocessor based upon the new 
+Many Integrated Core architecture. We discuss steps taken to offload data to the coprocessor and 
 algorithmic modifications to aid faster processing on the many-core architecture and make use of the 
 uniquely wide vector capabilities of the device, with accompanying performance results.}
 
@@ -96,10 +96,12 @@ Splotch~\cite{splotch} is an algorithm for visualizing big particle-based datase
 a broad variety of HPC systems such as multi-core processors, multi-node supercomputing systems \cite{splotchmulti}, and
 also GPUs \cite{splotchgpu}. The ability to exploit all devices that may be available within a modern HPC system is of paramount
 importance towards achieving optimal overall performances. This paper reports on recent developments enabling Splotch to
-exploit the capability of the Intel PHI \cite{xeonphi} accelerator, taking advantage of the Many Integrated Core (MIC)
+exploit the capability of the Intel Xeon PHI \cite{xeonphi} coprocessor, taking advantage of the Many Integrated Core (MIC)
 architecture \cite{mic}, which is envisaged to provide, on suitable classes of algorithms, outstanding performance with power
 consumption being comparable to standard CPUs. 
-We describe our MIC implementation (Sect. \ref{sect:micsplotch}) focusing on optimisation issues related to memory usage and data transfers and vectorisation. We then discuss the performance details (Sect. \ref{sect:results}) of our implementation using a benchmark dataset produced by a Gadget \cite{gadget} N-Body simulation. 
+We describe our MIC implementation (Sect. \ref{sect:micsplotch}) focusing on optimisation issues related to memory usage and data 
+transfers and vectorization. We then discuss the performance details (Sect. \ref{sect:results}) of our implementation using a 
+benchmark dataset produced by a Gadget \cite{gadget} N-Body simulation. 
 Finally we summarise our experiences and present pointers to future developments.
 
 \section{Background}
@@ -108,9 +110,9 @@ Finally we summarise our experiences and present pointers to future developments
 \subsection{The Splotch Code}
 \label{sect:splotchcode}
 
-Splotch~\cite{splotch} is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
+Splotch is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
 supporting a number of popular formats for astrophysics. Datasets are converted into the Splotch internal format as they are 
-loaded from files. This is followed by preprocessing and rasterisation, and finally rendering. 
+loaded from files. This is followed by preprocessing and rasterization, and finally rendering. 
 Preprocessing can perform ranging, normalization, 
 and apply logarithms to particle attributes if necessary. Particles are then roto-translated with reference to supplied 
 camera and look-at positions and assigned RGB color values appropriately using externally supplied color maps. For rendering 
@@ -147,9 +149,9 @@ floating point operations.
 
 The Splotch algorithm can be broken down into a series of distinct phases illustrated by the execution model shown in Fig. \ref{fig:exmodel}.
 While the executable runs on the Xeon host, data and processing is offloaded to the device via Intel offload clauses.
-A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of signal 
-and wait clauses provided by the Intel extensions. This allows to minimise overhead due to transferring data to the device 
-for processing, and to facilitate the visualization of datasets potentially much larger than the memory capacity available.
+A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of \emph{signal} 
+and \emph{wait} clauses provided by the Intel extensions. This allows to minimise overhead due to data transfers, 
+and to facilitate the visualization of datasets potentially much larger than the memory capacity available.
 
 \begin{figure}
 \centering
@@ -160,11 +162,11 @@ for processing, and to facilitate the visualization of datasets potentially much
 
 For rasterization, a highly parallel 3D transform and colorize is performed on a per-particle
 basis. Transform parameters are precomputed, as they are identical for each particle, and computation is distributed amongst
-threads via an OpenMP parallel for loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler providing a 
+threads via an OpenMP parallel for-loop. Further tuning enabled this loop to be auto-vectorized by the Intel compiler providing a 
 performance boost for this phase.
 
-The rendering phase begins with splitting the number of available OpenMP threads into groups, the number of which is dependant on 
-a runtime parameter, allocating a buffer per group for the resulting image. The dataset is evenly distributed amongst the 
+The rendering phase begins with splitting the number of available OpenMP threads into groups, the number of which is provided by the 
+user, allocating a buffer per group for the resulting image. The dataset is evenly distributed amongst the 
 groups, each rendering to the assigned buffers which are finally accumulated serially. 
 
 Each group image is split into a two dimensional grid of tiles which are distributed amongst threads to avoid race 
@@ -336,7 +338,7 @@ Rivi, M., Gheller, C., Dykes, T., Krokos, M., Dolag, K.:  GPU Accelerated
 The Gadget Code, \url{http://www.mpa-garching.mpg.de/gadget/}  
   
 \bibitem{xeonphi} 
-Chrysos, G.: Knights Corner, Intel's first Many Integrated Core (MIC) Architecture Product. 
+Chrysos, G.: Intel Xeon Phi coprocessor (codename Kights Corner). 
   Hot Chips (2012) 
 
 \bibitem{mic} 
