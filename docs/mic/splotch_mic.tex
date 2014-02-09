@@ -107,9 +107,11 @@ of terabytes. This situation can only be exacerbated as supercomputing advances 
 producing snapshots of sizes in the order of petabytes, or even exabytes towards the exascale era.
 
 Large size is not the only challenge posed, it is also essential to effectively extract information from the typically complex datasets. 
-Algorithms for data mining and analysis are often computationally demanding and in practice unusable on big datasets
-due to time constraints and power limitations. Exploration and discovery through visualization can then be an outstanding aid,
-e.g. by providing scientists with prompt and intuitive insights enabling them to identify interesting characteristics and thus
+Algorithms for data mining and analysis are often highly computationally demanding.
+%and in practice unusable on big datasets
+%due to time constraints and power limitations. 
+Exploration and discovery through visualization can then be an outstanding aid,
+e.g. by providing scientists with prompt and intuitive insights enabling them to identify relevant characteristics and thus
 define regions of interest within which to apply further time-consuming methods. Additionally, they can be a very effective
 way in discovering and understanding correlations, associations and data patterns, or in identifying unexpected behaviours or
 even errors. However, visualization algorithms typically require High Performance Computing (HPC) resources to overcome issues
@@ -133,8 +135,9 @@ Finally we summarise our experiences and present pointers to future developments
 \label{sect:splotchcode}
 
 Splotch \cite{splotch} is implemented in pure C++ (i.e. no dependencies upon external libraries) and includes several readers 
-supporting a number of popular formats for astrophysics. Once datasets are converted into the Splotch internal format as they are 
-loaded, followed by preprocessing and rasterisation, and finally rendering. Preprocessing can perform ranging, normalization, 
+supporting a number of popular formats for astrophysics. Datasets are converted into the Splotch internal format as they are 
+loaded from files. This is followed by preprocessing and rasterisation, and finally rendering. 
+Preprocessing can perform ranging, normalization, 
 and apply logarithms to particle attributes if necessary. Particles are then roto-translated with reference to supplied 
 camera and look-at positions and assigned RGB color values appropriately using externally supplied color maps. For rendering 
 pixels, rays are cast along lines of sight, and contributions of all encountered particles are accumulated. The contribution 
@@ -149,9 +152,10 @@ contains roughly 60 cores on a single chip, dependent on the model. The Xeon Phi
 processor. Programs can be executed natively by logging into the device itself, which hosts a Linux micro-OS, or by using the 
 device through one or more MPI processes amongst further processes running on the Xeon host. Alternatively users can offload 
 data and portions of code to the coprocessor via a series of pragma based extensions available in C++ or FORTRAN.
+For a detailed technical description the processor's architecture, the reader is referred to the
+Xeon Phi whitepaper \cite{xeonphi}. Here, we give a short overview of its main features.
 
-A brief description of the Xeon Phi is provided for our purposes, for a detailed technical description the reader is referred to the
-Xeon Phi whitepaper \cite{xeonphi}. Each core has access to a 512 KB private fully coherent L2 cache and memory controllers
+Each core has access to a 512 KB private fully coherent L2 cache and memory controllers
 and the PCIe client logic can access up to 8 GB of GDDR5 memory. A bi-directional ring interconnect
 brings these components together. The cores are in-order and up to 4 hardware threads are supported to mitigate
 the latencies inherent with in-order execution. The Vector Processor Unit (hereafter VPU) is worth mentioning due to
@@ -167,7 +171,7 @@ floating point operations.
 \label{sect:micimplementation}
 
 
-The algorithm can be broken down into a series of phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
+The Splotch algorithm can be broken down into a series of phases illustrated by the execution model shown in fig. \ref{fig:exmodel}.
 While the executable runs on the Xeon host, data and processing is offloaded to the device via Intel offload clauses.
 A double buffered scheme has been implemented using the ability to asynchronously transfer data via a series of signal 
 and wait clauses provided by the Intel extensions. This allows to minimise overhead due to transferring data to the device 
@@ -186,7 +190,7 @@ threads via an OpenMP parallel for loop.  We use four OpenMP threads per availab
 equating to roughly 240 threads. Further tuning enabled this loop to be auto-vectorized by the Intel compiler providing a large 
 performance boost for this section.
 
-During a pre-render stage the number of available OpenMP threads are split into groups, the number of which is dependant on 
+The rendering stage begins with splitting the number of available OpenMP threads into groups, the number of which is dependant on 
 a runtime parameter, allocating a buffer per group for the resulting image. The dataset is evenly distributed amongst the 
 groups, each rendering to the assigned buffers which are finally accumulated serially to a single image. 
 
@@ -194,7 +198,7 @@ Each group image is split into a two dimensional grid of tiles which are distrib
 conditions where multiple threads attempt to draw to a single pixel simultaneously. For each tile a list is generated 
 containing the indices of all particles affecting the tile.
 
-For the full render stage each thread processes a set number of tiles, rendering the list of particles for each tile. 
+Each thread processes a set number of tiles, rendering the list of particles for each tile. 
 In this way pixels are not shared between threads and concurrent accesses are avoided. Finally when all 
 chunks of data have been processed and accumulated, the resultant device image is copied back to the host for output. 
 
@@ -305,6 +309,13 @@ processes per device, likely correspondant to the dual socket 8 core host CPU. I
 with a single device compares to 4 cores of the MPI host model, which scales linearly, with two devices comparing to 8 cores, leading 
 in the direction of a linear scaling with number of devices.
 
+These results suggest that an optimal usage of the Xeon PHI architecture 
+consists in processing the data concurrently by both the multiple host cores, coordinated through the MPI
+implementation, and by the device.
+Data to be processed by the MIC can be off-loaded asynchronouly by the various host's cores.
+While data from one core are copied to the device, the same core can continue its 
+data rendering. At the same time, the MIC can process data already available, previously sent by other cores.
+
 \begin{figure}
 \centering
 \includegraphics[height=6.0cm]{mpi_omp_mic}
@@ -324,7 +335,7 @@ codes.
 
 The high performance of the MPI host code indicates implementing an approach running MPI processes on both the host and device 
 in order to fully exploit all available processing power may yield a higher overall performance, further work is planned to investigate this.
-In addition, work is planned to enable the code to run on multiple host nodess utilising all available devices, with further optimisation and 
+In addition, work is planned to enable the code to run on multiple host nodes utilising all available devices, with further optimisation and 
 testing to be done in order to perfect the double buffered data transfer and processing approach to effectively visualize much larger 
 datasets. The ability to use multiple devices across multiple nodes will allow further testing of the scalability of the approach. 
 Features provided in the new OpenMP 4.0 specification such as the \textit{teams} construct will enable a OpenMP based approach to 
