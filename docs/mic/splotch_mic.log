@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/MacPorts 2013_3) (format=pdflatex 2013.11.12)  9 FEB 2014 22:52
+This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013/MacPorts 2013_3) (format=pdflatex 2013.11.12)  9 FEB 2014 22:55
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -363,8 +363,8 @@ Missing character: There is no Ä in font cmr10!
 Missing character: There is no ù in font cmr10!
 
 Underfull \hbox (badness 10000) in paragraph at lines 345--347
-[]\OT1/cmr/m/n/9 Intel Many In-te-grated Core Ar-chi-tec-ture, $\OT1/cmtt/m/n/9
- http : / / www . intel . com /
+[]\OT1/cmr/m/n/9 Intel: In-tel Many In-te-grated Core Ar-chi-tec-ture, $\OT1/cm
+tt/m/n/9 http : / / www . intel . com /
  []
 
 
