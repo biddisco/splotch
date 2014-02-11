@@ -80,9 +80,10 @@ Nowadays HPC systems are increasingly populated with GPUs employed not just as g
 {\bf
 The same problem has already been faced by several authors, who proposed various solutions. In \cite{liu2010}, two methods based on 
 the adoption of CUDA optimized atomic operations are used to implement on the GPU a full rendering pipeline, called {\it FreePipe}. 
-This approach provides good performance
-when small triangles of homogeneous size have to be drawn. Our data encompasses particles of any radius (from very small, to the size of the full image),
-for which such solution is unsuitable. In \cite{laine2011}, a more sophisticated and comprehensive solution
+This approach provides good performance on relatively large datasets (few million of elements),
+when small triangles of homogeneous size have to be drawn. For much larger data, as that Splotch addresses, atomic operations 
+can lead to a huge performance penalty. Furthermore, our data encompasses particles of any radius (from very small, to the size of the full image),
+for which FreePipe is not ideal. In \cite{laine2011}, a more sophisticated and comprehensive solution
 is proposed, based on the implementation of several rendering steps, acting at different resolutions and allowing performing the whole
 data processing on the accelerator. Such approach, however, leads to a complete refactoring of the code and introduces 
 additional memory consuming algorithmic components whose performance 
