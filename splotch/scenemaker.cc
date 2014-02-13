@@ -1030,7 +1030,7 @@ void sceneMaker::MpiFetchRemoteParticles ()
   buildIndex(id1.begin(), id1.end(), idx1);
 
 #if 0
-  // make sure that id1 and id2 are sorted (debugging only)
+  // make sure that id1 is sorted (debugging only)
   for (tsize i=1; i<idx1.size(); ++i)
     planck_assert(id1[idx1[i-1]]<id1[idx1[i]],"id1 not ordered");
 #endif
