@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011
+ * Copyright (c) 2011-2014
  *              Marzia Rivi (1), Tim Dykes (2)
  *               (1) University of Oxford
  *               (2) University of Portsmouth

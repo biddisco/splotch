@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011
+ * Copyright (c) 2010-2014
  *              Marzia Rivi (1) 
  *               (1) University of Oxford
  *
