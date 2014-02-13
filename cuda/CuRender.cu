@@ -1,3 +1,25 @@
+/*
+ * Copyright (c) 2004-2011
+ *              Marzia Rivi (1), Tim Dykes (2)
+ *               (1) University of Oxford
+ *               (2) University of Portsmouth
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
+ 
 // Implementation only for the case A=E
 
 #include <cuda.h>
@@ -31,18 +53,15 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //get parameters for rendering
   int tile_sidex, tile_sidey, width, nxtiles, nytiles;
   gv->policy->GetTileInfo(&tile_sidex, &tile_sidey, &width, &nxtiles, &nytiles);
-
-  //--------------------------------------------------------------------------
+ 
   tstack_push("do logs");
-  // Ranging - Tim Dykes 
   if(doLogs)
   {
     cu_range(nParticle, gv);
     cudaThreadSynchronize();
   }
   tstack_pop("do logs");
-  //--------------------------------------------------------------------------
-
+ 
   //--------------------------------------
   //  particle projection and coloring
   //--------------------------------------

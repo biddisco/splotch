@@ -1,6 +1,24 @@
 /*
-Copyright things go here.
-*/
+ * Copyright (c) 2004-2011
+ *              Marzia Rivi (1), Tim Dykes (2)
+ *               (1) University of Oxford
+ *               (2) University of Portsmouth
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ */
 
 #ifndef SPLOTCH_CUDA_H
 #define SPLOTCH_CUDA_H
@@ -45,8 +63,6 @@ struct cu_param
   float zmaxval, zminval;
   bool col_vector[MAX_P_TYPE];
   float brightness[MAX_P_TYPE];
-    //------------------------------------------------------------------------
-  // Ranging additions - Tim Dykes
   bool log_int[MAX_P_TYPE];
   bool log_col[MAX_P_TYPE];
   bool asinh_col[MAX_P_TYPE];
@@ -55,7 +71,6 @@ struct cu_param
   float cnorm_mins[MAX_P_TYPE];
   float cnorm_maxs[MAX_P_TYPE];
   bool do_logs;
-  //------------------------------------------------------------------------
   float bfak, h2sigma, sigma0, rfac;
   };
 
@@ -94,10 +109,7 @@ struct cu_gpu_vars //variables used by each gpu
 int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
 int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles);
-//---------------------------------------------------------------------------------
-// Ranging Changes - Tim Dykes
 int cu_range(int nP, cu_gpu_vars* pgv);
-//---------------------------------------------------------------------------------
 void cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 void cu_render1
   (int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
