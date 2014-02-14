@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011
+ * Copyright (c) 2004-2014
  *              Martin Reinecke (1), Klaus Dolag (1)
  *               (1) Max-Planck-Institute for Astrophysics
  *
