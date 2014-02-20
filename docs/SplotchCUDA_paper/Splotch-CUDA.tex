@@ -436,12 +436,6 @@ $N_{pix}$ from ${2}^{7}$ to ${2}^{12}$. According to \eqref{ops} and \eqref{radi
 
 \subsection{Speed-up}
 \label{sec:speed-up}
-\begin{figure}
-\centering
-\includegraphics[scale=0.22]{panorama.eps}
-\caption{Our reference particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation. Starting from very far (top-left, Test 1) and reaching progressively very close to the center of the simulation (bottom-left, Test 6 - the image of Test 7 is omitted). The mass distribution of gas particles is shown.}
-\label{fig:panorama}
-\end{figure}
 
 In the next series of tests, we discuss the speed-up achieved with respect to the original Splotch. 
 The dependency of the computing time from the radius, defined by equation \eqref{radius}, has been analysed maintaining a fixed image resolution at ($N_{pix} = 2^{11}$) and progressively changing the camera position 
@@ -453,17 +447,10 @@ centre of the simulation (Tests~3 to~7). Figure~\ref{fig:panorama} illustrates r
 
 \begin{figure}
 \centering
-\includegraphics[scale=0.5]{radii.eps}
-\caption{Normalised percentage distribution of the particles radii in the seven tests (dark blue line refers to Test~1, light blue to Test~7). Radius bins in the x-axis corresponds to: $r\le 2$ (bin~1), $2<r\le 4$ (bin~2), $4<r\le 8$ (bin~3), $8<r\le 16$ (bin~4), $r>16$ (bin~5). 
-}
-\label{fig:radii}
+\includegraphics[scale=0.22]{panorama.eps}
+\caption{Our reference particle simulation as rendered by Splotch at a number of different camera positions mimicing a zoom-in operation. Starting from very far (top-left, Test 1) and reaching progressively very close to the center of the simulation (bottom-left, Test 6 - the image of Test 7 is omitted). The mass distribution of gas particles is shown.}
+\label{fig:panorama}
 \end{figure}
-
-We observe that approaching the center of the simulation results in larger radii 
-as expressed by the average $R_0=<r(p)>$ radius and illustrated by Fig.~\ref{fig:radii}. 
-Table~\ref{tab:bin} presents the estimated values of $R_0$, together with the number of active particles and computing times. As we approach the centre of the simulation fewer particles are active, an increasingly larger number being outside the scene - this leads to a reduction in computing times. At the same time, however, particles are closer to the camera and their radius increases contributing to a progressively larger number of screen pixels,
-thus increasing computing times with the square of their radius. 
-These trends tend to compensate maintaining on average~9 to~11 seconds overall computing times.
 
 \begin{table}
 \label{tab:bin}
@@ -484,6 +471,20 @@ Test 7  & 13.66  & 4,222,214    & 9.07 \\
 \end{center}
 \caption{Illustration of average particle radius (column 2) together with number of active particles (column~3) and computing times (column~4) for each test performed (test ID is displayed in column~1).}
 \end{table}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{radii.eps}
+\caption{Normalised percentage distribution of the particles radii in the seven tests (dark blue line refers to Test~1, light blue to Test~7). Radius bins in the x-axis corresponds to: $r\le 2$ (bin~1), $2<r\le 4$ (bin~2), $4<r\le 8$ (bin~3), $8<r\le 16$ (bin~4), $r>16$ (bin~5). 
+}
+\label{fig:radii}
+\end{figure}
+
+We observe that approaching the center of the simulation results in larger radii 
+as expressed by the average $R_0=<r(p)>$ radius and illustrated by Fig.~\ref{fig:radii}. 
+Table~\ref{tab:bin} presents the estimated values of $R_0$, together with the number of active particles and computing times. As we approach the centre of the simulation fewer particles are active, an increasingly larger number being outside the scene - this leads to a reduction in computing times. At the same time, however, particles are closer to the camera and their radius increases contributing to a progressively larger number of screen pixels,
+thus increasing computing times with the square of their radius. 
+These trends tend to compensate maintaining on average~9 to~11 seconds overall computing times.
 
 CPU Splotch timings were obtained adopting the OpenMP paradigm on 1, 2, 4 and 8 cores respectively. OpenMP was used in order to exploit the shared memory capability of the computing node. It provides a slightly better intra-node parallel performance with respect to MPI. The results are illustrated in Fig.~\ref{fig:gpucpu} as a function of computing times per particle, since the number of processed particles depends on camera settings.
 
