@@ -219,8 +219,8 @@ __global__ void k_process
   p[m].e.b = e.b*I; 
   
   // manage particles outside the image but that influence it
-  if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
-  if(y < 0.0 || y >= (float)dparams.yres){p_active[m] = -2; return;};
+  if(x < 0.0 || x > (float)dparams.xres){p_active[m] = -2; return;};
+  if(y < 0.0 || y > (float)dparams.yres){p_active[m] = -2; return;};
   // active particle = tile_id to which it belongs to
   /////////////CLAAAAA p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   p_active[m] = int(y/float(tile_sidey)) + int(x/float(tile_sidex))*nytiles; 
@@ -444,7 +444,7 @@ __global__ void k_render1
   int xmax = xo + tile_sidex+2*width;
   int step = blockDim.x/2;
 
-  if ((threadIdx.x < step)  && (yo > 0))
+  if ((threadIdx.x < step)  && (yo >= 0))
   {
     k0 = width*(tile_sidey+2*width);
     for (int i = threadIdx.x; i<tile_sidex*width; i=i+step) 
@@ -456,7 +456,7 @@ __global__ void k_render1
       pic1[k].b += Btile[j].b;
     }
   }
-  else if ((threadIdx.x >= step)  && (ymax < dparams.yres))
+  else if ((threadIdx.x >= step)  && (ymax <= dparams.yres))
   {
     k0 = width*(tile_sidey+2*width) + width + tile_sidey; 
     for (int i = threadIdx.x - step; i<tile_sidex*width; i=i+step) 
@@ -471,7 +471,7 @@ __global__ void k_render1
   __syncthreads();
 
 // 2. rows
-  if ((threadIdx.x < step) && (xo > 0))
+  if ((threadIdx.x < step) && (xo >= 0))
   {
     k0 = width; 
     for (int i=threadIdx.x; i<tile_sidey*width; i=i+step) 
@@ -483,7 +483,7 @@ __global__ void k_render1
       pic2[k].b += Btile[j].b;
     }
   }
-  else if ((threadIdx.x >= step)  && (xmax < dparams.xres))
+  else if ((threadIdx.x >= step)  && (xmax <= dparams.xres))
   {
     k0 = width + (width+tile_sidex)*(tile_sidey+2*width); // starting point
     for (int i=threadIdx.x - step; i<tile_sidey*width; i=i+step) 
@@ -500,7 +500,7 @@ __global__ void k_render1
 // 3. corners
 // dimension corners = 1/4 dimension blocks
   int i;
-  if ((threadIdx.x < blockDim.x/4) && (xo > 0) && (yo > 0))
+  if ((threadIdx.x < blockDim.x/4) && (xo >= 0) && (yo >= 0))
   {
      j = threadIdx.x + (threadIdx.x/width)*(tile_sidey+width);
      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
@@ -508,7 +508,7 @@ __global__ void k_render1
      pic3[k].g += Btile[j].g;
      pic3[k].b += Btile[j].b;
   }
-  else if ((threadIdx.x >= blockDim.x/4 && threadIdx.x < blockDim.x/2) && (xo > 0) && (ymax < dparams.yres))
+  else if ((threadIdx.x >= blockDim.x/4 && threadIdx.x < blockDim.x/2) && (xo >= 0) && (ymax <= dparams.yres))
   {
      k0 = width + tile_sidey; 
      i = threadIdx.x - blockDim.x/4; 
@@ -518,7 +518,7 @@ __global__ void k_render1
      pic3[k].g += Btile[j].g;
      pic3[k].b += Btile[j].b;
   }
-  else if ((threadIdx.x >= blockDim.x/2 && threadIdx.x < 3*blockDim.x/4) && (xmax < dparams.xres) && (yo > 0))
+  else if ((threadIdx.x >= blockDim.x/2 && threadIdx.x < 3*blockDim.x/4) && (xmax <= dparams.xres) && (yo >= 0))
   {
      k0 = (width + tile_sidex)*(tile_sidey+2*width);
      i = threadIdx.x - blockDim.x/2; 
@@ -528,7 +528,7 @@ __global__ void k_render1
      pic3[k].g += Btile[j].g;
      pic3[k].b += Btile[j].b;
   }
-  else if ((threadIdx.x >= 3*blockDim.x/4) && (xmax < dparams.xres) && (ymax < dparams.yres))
+  else if ((threadIdx.x >= 3*blockDim.x/4) && (xmax <= dparams.xres) && (ymax <= dparams.yres))
   {
      k0 = (width + tile_sidex)*(tile_sidey+2*width) + width + tile_sidey;
      i = threadIdx.x - 3*blockDim.x/4; 
