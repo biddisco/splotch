@@ -421,6 +421,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    peoffset[0] = startpesize;
    H5Sselect_hyperslab(outspace, H5S_SELECT_SET, peoffset, NULL, pecount, NULL);
 
+
 // create parallel transfer properties 
    fapl_id = H5Pcreate(H5P_DATASET_XFER);
    H5Pset_dxpl_mpio(fapl_id, H5FD_MPIO_INDEPENDENT);
@@ -430,9 +431,9 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 ///   H5Pset_chunk(plist_id, outrank, pecount);
 
 // create coordinates entry
-   outobj_id[0] = H5Dcreate2(output_file, "coordx", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
-   outobj_id[1] = H5Dcreate2(output_file, "coordy", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
-   outobj_id[2] = H5Dcreate2(output_file, "coordz", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
+   outobj_id[0] = H5Dcreate1(output_file, "coordx", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
+   outobj_id[1] = H5Dcreate1(output_file, "coordy", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
+   outobj_id[2] = H5Dcreate1(output_file, "coordz", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
 
 // create fields entry
    int activefields=0;
@@ -440,8 +441,8 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    {
       if(color[ifields] != -1)
       {
-        outobj_id[activefields+3] = H5Dcreate2(output_file, fieldsnames[color[ifields]].c_str(), H5T_NATIVE_FLOAT, 
-                                              outspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
+        outobj_id[activefields+3] = H5Dcreate1(output_file, fieldsnames[color[ifields]].c_str(), H5T_NATIVE_FLOAT, 
+                                              outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
         activefields++;
       }
    }
@@ -763,7 +764,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 
 // write data in file
 
-   for(int ii=0; ii<1000; ii++)
+   for(int ii=0; ii<10; ii++)
       cout << colors[0][ii] << " " << colors[1][ii] << " " << colors [2][ii] << " " << colors [3][ii] << endl;
 
    float * pointsaux = new float [pesize];
@@ -772,20 +773,23 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 // write positions
    for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[0][jj];
    H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+   //H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[0][0]);
    for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[1][jj];
    H5Dwrite(outobj_id[1], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+   //H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[1][0]);
    for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[2][jj];
    H5Dwrite(outobj_id[2], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+   //H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[2][0]);
 
 // write fields
    for (int ii=0; ii<activefields; ii++)
      {
-        for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[ii+3][jj];
+        for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[ii+3][jj]; 
         //H5Dwrite(outobj_id[color[ii]], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[ii+3][0]);
-        H5Dwrite(outobj_id[color[ii]], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+        H5Dwrite(outobj_id[ii+3], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
      }
 
-     delete [] pointsaux;
+   delete [] pointsaux;
 
 // free HDF5 stuff
 
@@ -822,6 +826,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 #endif
 
 
+   cout << "START " << startpesize << " END " << endpesize << " TOT " << pesize << endl;
    return total_size;
 
 }
