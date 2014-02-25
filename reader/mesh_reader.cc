@@ -1,7 +1,6 @@
 /*
  * Copyright (c) 2004-2014
- *              Martin Reinecke (1), Klaus Dolag (1)
- *               (1) Max-Planck-Institute for Astrophysics
+ *              Claudio Gheller ETH-CSCS
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
