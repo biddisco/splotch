@@ -81,7 +81,7 @@ Nowadays HPC systems are increasingly populated with GPUs employed not just as g
 
 The same problem has already been faced by several authors, who proposed various solutions. In~\cite{liu2010}, two methods based on 
 the adoption of CUDA optimized atomic operations are used to implement on the GPU a full rendering pipeline, called {\it FreePipe}. 
-This approach provides good performance on relatively large datasets of the order of few million of elements.
+This approach provides good performance on relatively large datasets of the order of few million elements.
 %when small triangles of homogeneous size have to be drawn. 
 For much larger data, as that Splotch addresses, atomic operations 
 can lead to performance penalties. Furthermore, our data encompasses particles of any radius (from very small, to the size of the full image),
@@ -135,7 +135,7 @@ order along the line of sight \cite{2008NJPh...10l5006D}, thus strongly simplifi
 version of the algorithm, that splits the data among processors, each calculating an independent partial image. 
 This approach has proved to be
 %This condition cannot be adopted in general cases. However, after extensive testing on a number of different datasets,  it proved to be 
-effective for typical of astrophysical data, due to the fact that visualised matter is either diffused and optically thin 
+effective for typical astrophysical data, due to the fact that visualised matter is either diffused and optically thin 
 (i.e. almost transparent, as for the intergalactic medium) or extremely bright and compact (as for stars or small galaxies).
 %In these opposite regimes the ${\bf E}_p = {\bf A}_p$ assumptions gives no artifacts on the resulting images. 
 %However, there are cases where this condition leads to negligible errors (as for gas clouds in spiral galaxies), and
