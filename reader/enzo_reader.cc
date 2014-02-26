@@ -434,6 +434,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    outobj_id[0] = H5Dcreate1(output_file, "coordx", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
    outobj_id[1] = H5Dcreate1(output_file, "coordy", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
    outobj_id[2] = H5Dcreate1(output_file, "coordz", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
+   outobj_id[3] = H5Dcreate1(output_file, "resolution", H5T_NATIVE_FLOAT, outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
 
 // create fields entry
    int activefields=0;
@@ -441,18 +442,18 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    {
       if(color[ifields] != -1)
       {
-        outobj_id[activefields+3] = H5Dcreate1(output_file, fieldsnames[color[ifields]].c_str(), H5T_NATIVE_FLOAT, 
+        outobj_id[activefields+4] = H5Dcreate1(output_file, fieldsnames[color[ifields]].c_str(), H5T_NATIVE_FLOAT, 
                                               outspace, H5P_DEFAULT);//, H5P_DEFAULT, H5P_DEFAULT);//, plist_id, H5P_DEFAULT);
         activefields++;
       }
    }
-   colors.resize(activefields+3);
+   colors.resize(activefields+4);
 ///   H5Pclose(plist_id);
 
    fseek (pFile , sizeof(nfiles) , SEEK_SET );
      
 // allocate the vectors
-   for (int ii=0; ii<activefields+3; ii++)colors[ii].resize(pesize);
+   for (int ii=0; ii<activefields+4; ii++)colors[ii].resize(pesize);
 
 #endif
 
@@ -461,6 +462,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    long xcounter = 0;
    long ccounter = 0;
    long ccounter0 = 0;
+   float * smooth = new float [nfiles];
 
    for (int i=0; i<nfiles; i++)
 //   for (int i=0; i<1; i++)
@@ -503,6 +505,9 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 	    rdxxx[j] = 1.0 / dxxx[j];
  
         }
+// assume same resolution in all directions
+        smooth[i] = dxxx[0];
+       
 
         levelbox = log10(dxbase[0]/dxxx[0])/log10(2.0);
         nlevelbox = (int)levelbox;
@@ -662,6 +667,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
                colors[0][xcounter] = points[iaux].x;
                colors[1][xcounter] = points[iaux].y;
                colors[2][xcounter] = points[iaux].z;
+               colors[3][xcounter] = smooth[i];
 #endif
                xcounter++;
         }
@@ -722,13 +728,13 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 // store data in arrays
             for (long ii=0; ii<sourcesize; ii++)
             {
-                colors[k+3][ccounter] = dataarray[ii];
+                colors[k+4][ccounter] = dataarray[ii];
                 ccounter++;
             }
 
 #endif
 
-
+#ifndef MESHMERGER
 #define CASEMACRO__(num,str,noval,ss) \
       case num: \
         if (sf[num]>=0) \
@@ -747,7 +753,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
                //CASEMACRO__(3,I,dxxx[0]*dxxx[0]*dxxx[0],1.0)
              }
 
-
+#endif // not MESHMERGER
 // end of loop over fields 
        }
 #ifdef MESHMERGER
@@ -780,13 +786,16 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
    for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[2][jj];
    H5Dwrite(outobj_id[2], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
    //H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[2][0]);
+   for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[3][jj];
+   H5Dwrite(outobj_id[3], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+   //H5Dwrite(outobj_id[0], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[2][0]);
 
 // write fields
    for (int ii=0; ii<activefields; ii++)
      {
-        for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[ii+3][jj]; 
+        for (long jj=0; jj<pesize; jj++)pointsaux[jj]=colors[ii+4][jj]; 
         //H5Dwrite(outobj_id[color[ii]], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, &colors[ii+3][0]);
-        H5Dwrite(outobj_id[ii+3], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
+        H5Dwrite(outobj_id[ii+4], H5T_NATIVE_FLOAT, memspace, outspace, fapl_id, pointsaux);
      }
 
    delete [] pointsaux;
@@ -794,7 +803,7 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 // free HDF5 stuff
 
    H5Pclose(fapl_id);
-   for (int ii=0; ii<activefields+3; ii++)H5Dclose(outobj_id[ii]);
+   for (int ii=0; ii<activefields+4; ii++)H5Dclose(outobj_id[ii]);
    H5Sclose(memspace);
    H5Sclose(outspace);
    H5Fclose(output_file);
@@ -810,6 +819,11 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 
    fclose (pFile);
 
+#ifdef MESHMERGER
+   cout << "Data saved in " << outfile.c_str() << endl;
+   exit (21);
+#endif
+
    for(long ir=0; ir<total_size; ir++)points[ir].I = points[ir].I*(points[ir].r/minradius);
    //for(long ir=0; ir<total_size; ir++)points[ir].r = points[ir].r*sqrt(points[ir].r/minradius);
 
@@ -823,10 +837,9 @@ long enzo_reader (paramfile &params, std::vector<particle_sim> &points)
 
 #ifdef DEBUG
    printf("PE %d MANAGE %ld POINTS\n", mype, total_size);
+   cout << "START " << startpesize << " END " << endpesize << " TOT " << pesize << endl;
 #endif
 
-
-   cout << "START " << startpesize << " END " << endpesize << " TOT " << pesize << endl;
    return total_size;
 
 }
