@@ -87,11 +87,11 @@ For much larger data, as that Splotch addresses, atomic operations
 can lead to performance penalties. Furthermore, our data encompasses particles of any radius (from very small, to the size of the full image),
 for which FreePipe is not optimal. In~\cite{laine2011}, a more sophisticated and comprehensive solution
 is proposed, based on the implementation of several rendering steps, acting at different resolutions and allowing performing the whole
-data processing on the accelerator. Such approach, however, requires a complete refactoring of the code and introduces 
-additional memory consuming algorithmic components whose performance 
-scalability with the number of particles is unclear. The tests presented in the paper, in fact, 
+data processing on the accelerator. 
+Such an approach however, requires a complete refactoring of the code and introduces additional memory consuming algorithmic components that may impact overall performance for large data sizes. 
+The tests presented in their paper, in fact, 
 deal with only at most few million points, a small number 
-compared to our target data size, spanning from hundred million to billion particles.
+compared to our target data sizes, spanning from hundred million to billion particles.
 As a result we propose a novel approach, based on a concurrent use of the GPU and the CPU.
 This followed a
 preliminary investigation, as reported in~\cite{jin:high-performance}, that 
@@ -131,8 +131,9 @@ where ${\bf I}({\bf x})$ represents radiation intensity at position ${\bf x}$, $
 where ${\bf x}_p$ denotes particle coordinates. This distribution is clipped to zero at a given distance $\chi\cdot\sigma_p$, 
 where $\chi$ is a suitably-defined multiplicative factor and $\sigma_p$ is the particle smoothing length. Any rays passing at distances larger than $\chi\cdot\sigma_p$ are unaffected by $\rho_p$. 
 Assuming ${\bf E}_p = {\bf A}_p$ the solution of equation \eqref{rad} does not depend on the particles integration 
-order along the line of sight \cite{2008NJPh...10l5006D}, thus strongly simplifing the design of the parallel 
-version of the algorithm, that splits the data among processors, each calculating an independent partial image. 
+order along the line of sight \cite{2008NJPh...10l5006D}, thus strongly simplifying the design of a parallel 
+version of the algorithm.
+% that splits the data among processors each calculating an independent partial image. 
 This approach has proved to be
 %This condition cannot be adopted in general cases. However, after extensive testing on a number of different datasets,  it proved to be 
 effective for typical astrophysical data, due to the fact that visualised matter is either diffused and optically thin 
