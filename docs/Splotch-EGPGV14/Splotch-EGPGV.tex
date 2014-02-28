@@ -1,0 +1,134 @@
+ 
+\documentclass{egpubl}
+\usepackage{pgv13}
+
+% --- for  Annual CONFERENCE
+% \ConferenceSubmission % uncomment for Conference submission
+% \ConferencePaper      % uncomment for (final) Conference Paper
+% \STAR                 % uncomment for STAR contribution
+% \Tutorial             % uncomment for Tutorial contribution
+% \ShortPresentation    % uncomment for (final) Short Conference Presentation
+%
+% --- for  CGF Journal
+% \JournalSubmission    % uncomment for submission to Computer Graphics Forum
+% \JournalPaper         % uncomment for final version of Journal Paper
+%
+% --- for  EG Workshop Proceedings
+\WsSubmission    % uncomment for submission to EG Workshop
+% \WsPaper         % uncomment for final version of EG Workshop contribution
+%
+ \electronicVersion % can be used both for the printed and electronic version
+
+% for including postscript figures
+% mind: package option 'draft' will replace PS figure by a filname within a frame
+\ifpdf \usepackage[pdftex]{graphicx} \pdfcompresslevel=9
+\else \usepackage[dvips]{graphicx} \fi
+
+\PrintedOrElectronic
+
+\usepackage{t1enc,dfadobe}
+
+\usepackage{egweblnk}
+\usepackage{cite}
+
+\title[Visualization of Large Cosmological Data on HPC Systems]%
+      {Visualization of Large Cosmological Data on HPC Systems}
+
+% for anonymous conference submission please enter your SUBMISSION ID
+% instead of the author's name (and leave the affiliation blank) !!
+\author[M. Rivi \& C. Gheller \& T. Dykes \& I. Cant \& M. Krokos \& K. Dolag]
+       {M. Rivi\thanks{Corresponding author}$^{1}$
+        and C. Gheller$^{2}$ and T. Dykes$^{3}$ and I. Cant$^3$ and M. Krokos$^{3}$ and K. Dolag$^{4}$
+        \\
+         $^1$Department of Physics, University of Oxford, United Kingdom\\
+         $^2$ETH-CSCS, Lugano, Switzerland\\
+         $^3$School of Creative Technologies, University of Portsmouth, United Kingdom\\
+         $^4$University Observatory Munich, Germany
+       }
+
+% ------------------------------------------------------------------------
+
+% if the Editors-in-Chief have given you the data, you may uncomment
+% the following five lines and insert it here
+%
+% \volume{27}   % the volume in which the issue will be published;
+% \issue{1}     % the issue number of the publication
+% \pStartPage{1}      % set starting page
+
+
+%-------------------------------------------------------------------------
+\begin{document}
+
+% \teaser{
+%  \includegraphics[width=\linewidth]{eg_new}
+%  \centering
+%   \caption{New EG Logo}
+% \label{fig:teaser}
+% }
+
+\maketitle
+
+\begin{abstract}
+   The abstract may be up to 3 inches (7.62 cm) long.... 
+%   Leave one blank line after the abstract, then add the subject categories according to the ACM Classification Index 
+
+\begin{classification} % according to http://www.acm.org/class/1998/
+\CCScat{Programming Techniques}{D.1.3}{Cuncurrent Programming}{Parallel programming}
+\CCScat{Computer Graphics}{I.3.7}{Three-Dimensional Graphics and Realism}{Animation}
+\CCScat{Simulation and Modeling}{I.6.3}{Applications}
+\CCScat{Physical Sciences and Engineering}{J.2}{Astronomy}
+\end{classification}
+
+\end{abstract}
+
+ 
+%-------------------------------------------------------------------------
+\section{Introduction}
+
+%-------------------------------------------------------------------------
+\section{Splotch: a visualisation tool for astrophysical data}
+\cite{DRGI08}
+
+%-------------------------------------------------------------------------
+\subsection{Algorithm overview }
+
+%-------------------------------------------------------------------------
+\subsection{MPI+CUDA implementation}
+\cite{JKR*10}
+\cite{RGD*14}
+%-------------------------------------------------------------------------
+\section{Splotch Previewer}
+
+%-------------------------------------------------------------------------
+\section{Movie preparation}
+
+Dataset generation: Simulation of large scale structures of the Universe
+
+Gadget Reader?
+
+Investigation of the data through the Previewer to prepare camera path and parameter file:
+booster to sample data
+
+Visualisation of snapshots by Splotch on CSCS system
+
+%-------------------------------------------------------------------------
+\section{Performance Tests}
+
+
+ 
+
+%-------------------------------------------------------------------------
+\section{Conclusions}
+
+ 
+
+%-------------------------------------------------------------------------
+
+%\bibliographystyle{eg-alpha}
+\bibliographystyle{eg-alpha-doi}
+
+\bibliography{Splotch-EGPGV}
+
+
+
+\end{document}

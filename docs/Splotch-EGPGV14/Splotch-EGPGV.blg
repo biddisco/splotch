@@ -1,0 +1,51 @@
+This is BibTeX, Version 0.99d (TeX Live 2012)
+Capacity: max_strings=35307, hash_size=35307, hash_prime=30011
+The top-level auxiliary file: Splotch-EGPGV.aux
+The style file: eg-alpha-doi.bst
+Reallocated glb_str_ptr (elt_size=4) to 20 items from 10.
+Reallocated global_strs (elt_size=20001) to 20 items from 10.
+Reallocated glb_str_end (elt_size=4) to 20 items from 10.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Database file #1: Splotch-EGPGV.bib
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+You've used 3 entries,
+            3585 wiz_defined-function locations,
+            761 strings with 6274 characters,
+and the built_in function-call counts, 1774 in all, are:
+= -- 165
+> -- 106
+< -- 0
++ -- 40
+- -- 40
+* -- 147
+:= -- 305
+add.period$ -- 8
+call.type$ -- 3
+change.case$ -- 27
+chr.to.int$ -- 3
+cite$ -- 3
+duplicate$ -- 36
+empty$ -- 122
+format.name$ -- 41
+if$ -- 391
+int.to.chr$ -- 1
+int.to.str$ -- 0
+missing$ -- 3
+newline$ -- 21
+num.names$ -- 9
+pop$ -- 29
+preamble$ -- 1
+purify$ -- 30
+quote$ -- 0
+skip$ -- 85
+stack$ -- 0
+substring$ -- 66
+swap$ -- 8
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 27
+warning$ -- 0
+while$ -- 11
+width$ -- 4
+write$ -- 42

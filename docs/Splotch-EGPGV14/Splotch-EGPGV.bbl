@@ -1,0 +1,22 @@
+\newcommand{\etalchar}[1]{$^{#1}$}
+\begin{thebibliography}{\uppercase{RGD{\etalchar{*}}14}}
+
+\bibitem[DRGI08]{DRGI08}
+\textsc{Dolag K., Reinecke M., Gheller C., Imboden S.}:
+\newblock Splotch: visualising cosmological simulations.
+\newblock \emph{New Journal of Physics 10}, 12 (2008), 125006.
+\newblock \href {http://dx.doi.org/10.1088/1367-2630/10/12/125006}
+  {\path{doi:10.1088/1367-2630/10/12/125006}}.
+
+\bibitem[JKR{\etalchar{*}}10]{JKR*10}
+\textsc{Jin Z., Krokos M., Rivi M., Gheller C., Dolag K., Reinecke M.}:
+\newblock High-performance astrophysical visualisation using {S}plotch.
+\newblock \emph{Procedia Computer Science 1}, 3 (2010), 1775--1784.
+\newblock (Proc. International Conference on Computational Science 2010).
+
+\bibitem[RGD{\etalchar{*}}14]{RGD*14}
+\textsc{Rivi M., Gheller C., Dykes T., Krokos M., Dolag K.}:
+\newblock {GPU} accelerated particle visualisation with {S}plotch.
+\newblock \emph{Astronomy and Computing} (2014).
+
+\end{thebibliography}
