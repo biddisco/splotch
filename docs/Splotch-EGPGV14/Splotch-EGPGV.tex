@@ -86,9 +86,67 @@
 \section{Introduction}
 
 %-------------------------------------------------------------------------
+\section{Visualization of cosmological simulations}
+
+Astrophysicists exploit numerical simulations as an effective instrument to describe, 
+investigate and understand the evolution of planets, stars, galaxies and all
+the different observed objects and structures 
+within the framework of the expanding space-time of the universe. 
+There are various numerical methods, grid or particle based, to
+perform such simulations. Cluster of galaxies and filamentary structures represent
+major topics of investigation. Clusters of galaxies are ideal cosmological probes, being 
+the largest collapsed objects in the Universe, hence very sensitive to the structure formation process.
+Filaments track the large scale structure of the universe and characterize the 
+topology of matter (both dark and baryonic) spatial distribution. Differently from clusters,
+filaments are low density objects, hard to detect for the current telescopes. However the interest
+around such structures is quicly rising, thanks to the new generations of observational
+instruments, like LOFAR or SKA (REF), which can represent suitable tools to trace the filamentary network.
+
+The data produced by numerical simulations require visualisation in order to be fully 
+understood, galaxy clusters to be quickly identified and 
+their physical properties promptly and effectively displayed and in order 
+to figure and conceive the intricated  
+connectivity of galaxies, stars and filaments.
+
+In this work, we focus on one of the largest N-body+SPH cosmological simulations
+currently available, part of a number of numerical realization known as \textit{Magneticum 
+Pathfinder} (REF). Magneticum Pathfinder aims at describing the details of the formation 
+of cosmological structures by performing a set of large scale and high resolution simulations, 
+taking into account a broad number of physical processes to allow detailed comparison 
+to a variety of multi-wavelength observational data. Figure~\ref{fig:pathfinder} summarizes 
+the main properties of the different computational boxes simulated in the Pathfinder 
+project.
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.33]{pathfinder.jpg}
+\caption{Main details on the different simulations run in the Magneticum 
+Pathfinder project.}
+\label{fig:pathfinder}
+\end{figure}
+
+For all the tests we have used the largest simulation, describing a cubic volume
+with side L=1.3 gigaparsec, a representative fraction of the whole universe.
+The simulations describes the dark matter component as a set of about four billion particles. The 
+same number of fluid elements are used to treat the baryonic component (diffused gas).
+More than one billion particles are used to describe the stars. Further five hundred
+thousand particles are introduced to describe black holes. Gravity, magneto-hydrodynamics,
+cooling and thermal conduction, star formation and chemical enrichment, feedback from
+active galaxies are all processes included in the simulation, with corresponding
+output variables that can be adopted for visualization (assigning colors or transparencies
+to the associated particle species).
+
+The full dataset has been used for all the benchmarks on the HPC system. It has
+instead been decimated in order to create a smaller realization to be
+used by the previewer for fast exploration and creation of the camera path. The decimation
+procedure is simple, since accuracy is not a requirement for the preview stage. It is based on the
+extraction of one particle every N. The parameter N is set according to the expected size
+of the dataset intended of the previewer. Selected data are saved in a raw binary file.
+
+%-------------------------------------------------------------------------
 \section{Splotch: a visualisation tool for astrophysical data}
 
-Splotch (REF WEB) is an open-source, pure C++ code for effectively visualizing large-scale, particle-based datasets. It was designed for visualising N-body and Smoothed Particles Hydrodynamics simulations where the data are particles represented by a Gaussian distribution with compact support. However it has also been efficiently used with data defined by regular or adaptive refined meshes by the development of readers able to convert them in the Splotch data type. Several readers are provided supporting a number of popular formats for astrophysics, e.g. HDF5, ...
+Splotch (REF WEB) is an open-source, pure C++ code for effectively visualizing large-scale, particle-based datasets. It was designed for visualising N-body and Smoothed Particles Hydrodynamics (SPH) simulations where the data are particles represented by a Gaussian distribution with compact support. However it has also been efficiently used with data defined by regular or adaptive refined meshes by the development of readers able to convert them in the Splotch data type. Several readers are provided supporting a number of popular formats for astrophysics, e.g. HDF5, ...
 
 The rendering algorithm is a derivate of what in general is called volume ray casting and uses an approximation of the radiative transfer equation
 which, together with the application of perspective, gives the produced images a very realistic appearance. 
@@ -125,75 +183,36 @@ This basic MPI+CUDA implementation requires each task exploiting a different GPU
 %-------------------------------------------------------------------------
 \section{Splotch Previewer}
 
+\subsection{}
 Motivation, features and implementation.
 
-%-------------------------------------------------------------------------
-\section{Visualization of cosmological simulations}
+\subsection{}
+Application to our dataset...
 
-Astrophysicists exploit numerical simulations as an effective instrument to describe, 
-investigate and understand the evolution of planets, stars, galaxies and all
-the different observed objects and structures 
-within the framework of the expanding space-time of the universe. 
-There are various numerical methods, grid or particle based, to
-perform such simulations. Cluster of galaxies and filamentary structures represent
-major topics of investigation. Clusters of galaxies are ideal cosmological probes, being 
-the largest collapsed objects in the Universe, hence very sensitive to the structure formation process.
-Filaments track the large scale structure of the universe and characterize the 
-topology of matter (both dark and baryonic) spatial distribution. Differently from clusters,
-filaments are low density objects, hard to detect for the current telescopes. However the interest
-around such structures is quicly rising, thanks to the new generations of observational
-instruments, like LOFAR or SKA (REF), which can represent suitable tools to trace the filamentary network.
-
-The data produced by nuerical simulations require visualisation in order to be fully 
-understood, galaxy clusters to be quickly identified and 
-their physical properties promptly and effectively displayed and in order to 
-to figure and conceive the intricated  
-connectivity of galaxies, stars and filaments.
-
-In this work, we focus on one of the largest N-body+SPH cosmological simulations
-currently available, part of a number of numerical realization known as {\it Magneticum 
-Pathfinder} (REF). Magneticum Pathfinder aims at describing the details of the formation 
-of cosmological structures by performing a set of large scale and high resolution simulations, 
-taking into account a broad number of physical processes to allow detailed comparison 
-to a variety of multi-wavelength observational data. Figure~\ref{fig:pathfinder} summarizes 
-the main properties of the different computational boxes simulated in the Pathfinder 
-project.
-
-\begin{figure}
+\begin{figure}[htb]
 \centering
-\includegraphics[scale=0.33]{pathfinder.jpg}
-\caption{Main details on the different simulations run in the Magneticum 
-Pathfinder project.}
-\label{fig:pathfinder}
+%\includegraphics[scale=0.33]{}
+\caption{3D sampled datset...}
+\label{fig:sample}
 \end{figure}
 
-For all the tests we have used the largest simulation, describing a cubic volume
-with side L=1.3 gigaparsec, a representative fraction of the whole universe.
-The simulations describes the dark matter component as a set of about four billion particles. The 
-same number of fluid elements are used to treat the baryonic component (diffused gas).
-More than one billion particles are used to describe the stars. Further five hundred
-thousand particles are introduced to describe black holes. Gravity, magneto-hydrodynamics,
-cooling and thermal conduction, star formation and chemical enrichment, feedback from
-active galaxies are all processes included in the simulation, with corresponding
-output variables that can be adopted for visualization (assigning colors or transparencies
-to the associated particle species).
-
-The full dataset has been used for all the benchmarks on the HPC system. It has
-instead been decimated in order to create a smaller realization to be
-used by the previewer for fast exploration and creation of the camera path. The decimation
-procedure is simple, since accuracy is not a requirement for the preview stage. It is based on the
-extraction of one particle every N. The parameter N is set according to the expected size
-of the dataset intended of the previewer. Selected data are saved in a raw binary file.
+\begin{figure}[htb]
+\centering
+%\includegraphics[scale=0.33]{}
+\caption{Camera path....}
+\label{fig:camera}
+\end{figure}
 
 
 %-------------------------------------------------------------------------
-\section{Performance Tests}
+\section{Results?}
 
-Platform description....
+The execution and performance tests were performed on the Piz Daint facility of the Swiss National Supercomputing Centre. 
+This system has a total of 5272 hybrid compute nodes, each containing a dual-socket 8-core Intel Xeon E5-2670 processor with 32~GB shared memory and one NVIDIA Tesla~K20X GPU with 6~GB of GDDR5 memory, 250~GB/sec main memory bandwidth and peak single precision floating point performance of 3.95~TFlops/sec.
 
-Scalability comparison between MPI and MPI+CUDA.
+\subsection{Performance tests}
 
- 
+\subsection{Movie}
 
 %-------------------------------------------------------------------------
 \section{Conclusions}
