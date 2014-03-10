@@ -219,8 +219,8 @@ __global__ void k_process
   p[m].e.b = e.b*I; 
   
   // manage particles outside the image but that influence it
-  if(x < 0.0 || x > (float)dparams.xres){p_active[m] = -2; return;};
-  if(y < 0.0 || y > (float)dparams.yres){p_active[m] = -2; return;};
+  if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
+  if(y < 0.0 || y >= (float)dparams.yres){p_active[m] = -2; return;};
   // active particle = tile_id to which it belongs to
   /////////////CLAAAAA p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   p_active[m] = int(y/float(tile_sidey)) + int(x/float(tile_sidex))*nytiles; 
@@ -367,7 +367,6 @@ __global__ void k_render1
   int j = 0;
   int last = min(NPSIZE, blockDim.x);
   //now do the rendering: each thread processes a pixel of particle i
-
   while (j < local_chunk_length) 
   {
       k = threadIdx.x; 
@@ -390,7 +389,6 @@ __global__ void k_render1
         maxy[k]=min(maxy[k],dparams.yres);
       }
       __syncthreads(); 
-
       j += last; //blockDim.x;
       if (j > local_chunk_length) last = local_chunk_length%last; //blockDim.x;
       for (int i=0; i<last; i++)
@@ -405,7 +403,7 @@ __global__ void k_render1
            // global pixel index = x*dparams.yres+y
            // localx = x-xo,   localy = y-yo 
            int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
-       //    if (lp >= tileBsize) printf("lp = %d, tile=%d, x=%d, y=%d xr =%f \n",lp,tile,x,y,posx[i]);
+         //  if (lp >= tileBsize) printf("lp = %d, tile=%d, x=%d, y=%d xo =%f yo=%f tile_sidey=%d width=%d\n",lp,tile,x,y,xo,yo,tile_sidey,width);
            float dsq = (y-posy[i])*(y-posy[i]) + (x-posx[i])*(x-posx[i]);
            if (dsq<radsq[i])
            {
@@ -414,14 +412,14 @@ __global__ void k_render1
              Btile[lp].g += -att*e[i].g;
              Btile[lp].b += -att*e[i].b;
            }
-           else
-           {
-             Btile[lp].r += 0.0f;
-             Btile[lp].g += 0.0f;
-             Btile[lp].b += 0.0f;
-           }
+       //    else
+       //    {
+       //      Btile[lp].r += 0.0f;
+       //      Btile[lp].g += 0.0f;
+       //      Btile[lp].b += 0.0f;
+       //    } 
           }
-      }
+      } 
       __syncthreads();  
   }
 
