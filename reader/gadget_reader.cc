@@ -81,7 +81,7 @@ int gadget_find_block (bifstream &file,const string &label)
   return(blocksize-8);
 }
 
-int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params, float sample_factor)
+int gadget_read_header(bifstream &file, unsigned int *npart, double &time, unsigned int *nparttotal, double &boxsize, paramfile &params, double sample_factor)
 {
   bool doSample = params.find<bool>("sampler",false);
   double h,O,L;
@@ -128,11 +128,11 @@ void gadget_reader(paramfile &params, int interpol_mode,
   // Sampling, this cannot be done while interpolating...
   // Sample factor is read in as percentage then converted to factor
   bool doSample = params.find<bool>("sampler",false);
-  float sample_factor = 1;
+  double sample_factor = 1;
   if(doSample && !interpol_mode)
   { 
     // If no factor, use 100% sampling ie no sample.
-    sample_factor = params.find<float>("sample_factor",100);
+    sample_factor = params.find<double>("sample_factor",100);
     if((sample_factor > 0) && (sample_factor <= 100))
     {
       sample_factor = 100/sample_factor;
@@ -384,8 +384,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
           type = ptype_found;
         for(int s=LastType+1; s<type; s++)
           if(npartthis[s]>0 && (1<<s & present))
-            infile.skip(4*3*npartthis[s]*sample_factor);
-        arr<float32> ftmp(3*npartthis[type]*sample_factor);
+            infile.skip(4*3*npartthis[s]);
+        arr<float32> ftmp(3*npartthis[type]);
         infile.get(&ftmp[0],ftmp.size());
         for(unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
@@ -711,9 +711,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
           int present = params.find<int>("size_present"+dataToString(itype),type);
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
-              infile.skip(4*npartthis[s]*sample_factor);
+              infile.skip(4*npartthis[s]);
         }
-        arr<float32> ftmp(npartthis[type]*sample_factor);
+        arr<float32> ftmp(npartthis[type]);
         if (fix_size == 0.0) infile.get(&ftmp[0],ftmp.size());
         for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
@@ -782,7 +782,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
             {
-              int nskip=npartthis[s]*sample_factor;
+              int nskip=npartthis[s];
               if(col_vector)
                 nskip *=3;
               infile.skip(4*nskip);
@@ -792,8 +792,8 @@ void gadget_reader(paramfile &params, int interpol_mode,
           if(mpiMgr.master())
             cout << " Cannot find color field <" << label_col << "> ..." << endl;
         tsize fnread=0;
-        if (read_col>0) fnread=npartthis[type]*sample_factor;
-        if ((read_col>0) && col_vector) fnread=3*npartthis[type]*sample_factor;
+        if (read_col>0) fnread=npartthis[type];
+        if ((read_col>0) && col_vector) fnread=3*npartthis[type];
         arr<float32> ftmp(fnread);
         infile.get(&ftmp[0],ftmp.size());
         for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
@@ -889,12 +889,12 @@ void gadget_reader(paramfile &params, int interpol_mode,
           int present = params.find<int>("intensity_present"+dataToString(itype),type);
           for(int s=LastType+1; s<type; s++)
             if(npartthis[s]>0 && (1<<s & present))
-              infile.skip(4*npartthis[s]*sample_factor);
+              infile.skip(4*npartthis[s]);
         }
         else
           if(mpiMgr.master() && itype==0 && f==0)
             cout << " Cannot find intensity field <" << label_int << "> ..." << endl;
-        arr<float32> ftmp(npartthis[type]*sample_factor);
+        arr<float32> ftmp(npartthis[type]);
         if (read_int>0) infile.get(&ftmp[0],ftmp.size());
         for (unsigned int m=0; m<npartthis[type]*sample_factor; m+=sample_factor)
         {
