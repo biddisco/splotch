@@ -40,7 +40,7 @@
 #define MyMaxID ULLONG_MAX
 #else
 #define MyIDType uint32
-#define MyMaxID ULONG_MAX
+#define MyMaxID UINT_MAX
 #endif
 
 struct particle_sim
