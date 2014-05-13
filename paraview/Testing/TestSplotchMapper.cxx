@@ -17,7 +17,7 @@
   #include "vtkMPICommunicator.h"
 #endif
 // Otherwise
-#include "vtkMultiProcessController.h"
+#include "vtkDummyController.h"
 
 #include "vtkActor.h"
 #include "vtkAppendPolyData.h"
@@ -25,11 +25,10 @@
 #include "vtkPointSource.h"
 #include "vtkDataSet.h"
 #include "vtkMath.h"
-#include "vtkParallelFactory.h"
 #include "vtkPolyData.h"
 #include "vtkPolyDataMapper.h"
-#include "Testing/Cxx/vtkTestUtilities.h"
-#include "Testing/Cxx/vtkRegressionTestImage.h"
+#include "vtkTestUtilities.h"
+#include "vtkRegressionTestImage.h"
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
@@ -264,14 +263,10 @@ int main (int argc, char* argv[])
 
   vtkMPIController* controller = vtkMPIController::New();
 #else
-  vtkMultiProcessController* controller = vtkMultiProcessController::GetGlobalController();
+  vtkDummyController* controller = vtkDummyController::SafeDownCast(vtkDummyController::New());
 #endif
 
   controller->Initialize(&argc, &argv, 1);
-
-  vtkParallelFactory* pf = vtkParallelFactory::New();
-  vtkObjectFactory::RegisterFactory(pf);
-  pf->Delete();
  
   // Added for regression test.
   // ----------------------------------------------

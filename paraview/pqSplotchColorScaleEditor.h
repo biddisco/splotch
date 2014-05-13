@@ -37,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _pqSplotchColorScaleEditor_h
 
 
-#include "pqColorScaleEditor.h"
+#include "pqColorMapEditor.h"
 #include <QDialog>
 
 class pqSplotchColorScaleEditorForm;
@@ -51,7 +51,7 @@ class QString;
 class vtkTransferFunctionViewer;
 
 
-class pqSplotchColorScaleEditor : public pqColorScaleEditor
+class pqSplotchColorScaleEditor : public pqColorMapEditor
 {
   Q_OBJECT
 

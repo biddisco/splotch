@@ -17,7 +17,7 @@
 
 #include "vtkSmartPointer.h"
 #include "vtkTesting.h"
-#include "Testing/Cxx/vtkTestUtilities.h"
+#include "vtkTestUtilities.h"
 #include "vtkAppendPolyData.h"
 #include "vtkPointData.h"
 #include "vtkH5PartWriter.h"
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
   }
 
   vtkSmartPointer<vtkH5PartWriter> writer = vtkSmartPointer<vtkH5PartWriter>::New();
-  writer->SetInput(poly);
+  writer->SetInputData(poly);
   writer->SetFileName(hdf5file.c_str());
   writer->Write();
 

@@ -34,7 +34,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \date 2/14/2007
 
 #include "pqSplotchColorScaleEditor.h"
-#include "ui_pqColorScaleDialog.h"
 
 #include "pqApplicationCore.h"
 #include "pqChartValue.h"
@@ -87,7 +86,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //----------------------------------------------------------------------------
 pqSplotchColorScaleEditor::pqSplotchColorScaleEditor(QWidget *widgetParent)
-  : pqColorScaleEditor(widgetParent)
+  : pqColorMapEditor(widgetParent)
 {
   this->ActiveColorTable = NULL;
 }

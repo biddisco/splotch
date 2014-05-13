@@ -220,6 +220,9 @@ int vtkSplotchPainter::GetLogColour(int ptype)
 //-----------------------------------------------------------------------------
 void vtkSplotchPainter::ProcessInformation(vtkInformation* info)
 {
+  info->Set(vtkScalarsToColorsPainter::INTERPOLATE_SCALARS_BEFORE_MAPPING(),
+    0);
+
   if (info->Has(vtkScalarsToColorsPainter::SCALAR_MODE()))
     {
     this->SetScalarMode(info->Get(vtkScalarsToColorsPainter::SCALAR_MODE()));

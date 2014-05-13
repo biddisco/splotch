@@ -330,8 +330,8 @@ void pqSplotchDisplayPanelDecorator::EditColour()
 
   pqSplotchColorScaleEditor editor(pqCoreUtilities::mainWidget());
   editor.setActiveColorTable(pqlut);
-  editor.setRepresentation(this->Internals->PipelineRepresentation);
-  editor.exec();
+//  editor.setRepresentation(this->Internals->PipelineRepresentation);
+//  editor.exec();
 }
 //-----------------------------------------------------------------------------
 void pqSplotchDisplayPanelDecorator::RepaintClicked()
