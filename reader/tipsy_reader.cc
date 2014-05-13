@@ -41,7 +41,7 @@ void tipsy_reader (paramfile &params, vector<particle_sim> &points)
   int ptypes = params.find<int>("ptypes",1);
   string datafile = params.find<string>("infile");
 
-  if (mpiMgr.master())cout << "TIPSY file format\n";
+  if (MPI_Manager::GetInstance()->master())cout << "TIPSY file format\n";
 
 // set the array that identifies the quantities to read
   arr<int> qty_idx;
@@ -75,7 +75,7 @@ void tipsy_reader (paramfile &params, vector<particle_sim> &points)
 
   np_active = new int [ptypes];
 
-  if (mpiMgr.master())
+  if (MPI_Manager::GetInstance()->master())
   cout << "File containing "
        << nbodies << " particles\n " 
        << ndim << " dim\n " 
@@ -105,7 +105,7 @@ void tipsy_reader (paramfile &params, vector<particle_sim> &points)
 
   for(int itype=0;itype<ptypes;itype++)
   {
-     mpiMgr.calcShare (0, np_species[np_active[itype]], mybegin, myend);
+     MPI_Manager::GetInstance()->calcShare (0, np_species[np_active[itype]], mybegin, myend);
      npar_species[np_active[itype]] = myend-mybegin;
      cout << "MYEND " << myend << "  MYBEGIN " << mybegin << "\n";
      nstart_species[np_active[itype]] = mybegin;

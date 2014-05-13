@@ -97,12 +97,12 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	info_file info(repo);
 
 	// Get MPI info
-	int ntasks = mpiMgr.num_ranks();
-	int rankthistask = mpiMgr.rank();
+	int ntasks = MPI_Manager::GetInstance()->num_ranks();
+	int rankthistask = MPI_Manager::GetInstance()->rank();
 
 	// MPI setup
 #ifdef USE_MPI
-	if(mpiMgr.master())
+	if(MPI_Manager::GetInstance()->master())
 		std::cout << "RAMSES READER MPI: Reading output from " << info.ncpu << " cpus with " << ntasks << " tasks." << std::endl;
 #endif
 
@@ -114,13 +114,13 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	{
 		if(sample_factor < 0 || sample_factor > 100)
 		{
-			if(mpiMgr.master())
+			if(MPI_Manager::GetInstance()->master())
 				std::cout << "Invalid sample factor: " << sample_factor << "\n Use a percentage to sample, ie sample_factor=50\n";
 			exit(0);
 		}
 		else
 		{
-			if(mpiMgr.master())
+			if(MPI_Manager::GetInstance()->master())
 			{
 				std::cout << "Sampler: Chosen sample percentage: " << sample_factor << "%\n";
 				std::cout << "Sampling nearest available fraction of data: 1/" << (100/sample_factor)<< std::endl; 
@@ -166,19 +166,19 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 		else C3 = 0;
 		if(check == 2) 
 		{
-			if(mpiMgr.master())
+			if(MPI_Manager::GetInstance()->master())
 				std::cout << "Ramses reader: must set either one or three param file elements red, green, blue, not two. Aborting." << std::endl;
 			exit(0);
 		}
 
 		if(info.ndim != 3)
 		{
-			if(mpiMgr.master())
+			if(MPI_Manager::GetInstance()->master())
 				std::cout << "Ramses amr reader: non 3 dimension data detected. Aborting" << std::endl;
 			exit(0);
 		}
 
-		if(mpiMgr.master())
+		if(MPI_Manager::GetInstance()->master())
 			std::cout << "Reading AMR data... " << std::endl;
 
 		int nfiles = info.ncpu;
@@ -237,7 +237,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			if( (C1 != -1 && (C1 < 0 || C1 >= hydro.meta.nvar)) || (C2 != -1 && (C2 < 0 || C2 >= hydro.meta.nvar)) ||
 				(C3 != -1 && (C3 < 0 || C3 >= hydro.meta.nvar)) || (!const_i && (intensity[0] < 0 || intensity[0] >= hydro.meta.nvar)) )
 			{
-				if(mpiMgr.master())
+				if(MPI_Manager::GetInstance()->master())
 				{
 					std::cout << "Trying to read variables that are not in file, there are " << hydro.meta.nvar << " hydro variables in file.";
 					std::cout << "Check red,green,blue,intensity parameters. Aborting." << std::endl;
@@ -513,7 +513,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			} // End loop over levels
 		} // End loop over files
 
-		if(mpiMgr.master())
+		if(MPI_Manager::GetInstance()->master())
 			std::cout << "Read " << nlevelmax << " levels for " << info.ncpu << " domains." << std::endl;
 	}
 
@@ -563,7 +563,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 			exit(0);
 		}
 
-		if(mpiMgr.master())
+		if(MPI_Manager::GetInstance()->master())
 			std::cout << "Reading particle data..." << std::endl;
 
 		int nfiles = info.ncpu;
@@ -653,7 +653,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 				// In this case rank 0 reads all particles.
 				if(partsthisfile < ntasks)
 				{
-					if(mpiMgr.master())
+					if(MPI_Manager::GetInstance()->master())
 					{
 						firstpart = 0;
 						partsthistask = partsthisfile;
@@ -836,7 +836,7 @@ void ramses_reader(paramfile &params, std::vector<particle_sim> &points)
 	
 	if(mode!= 0  && mode != 1 && mode != 2)
 	{
-		if(mpiMgr.master())
+		if(MPI_Manager::GetInstance()->master())
 		{
 			// Explain mode parameter usage and quit
 			std::cout << "Reader parameters incorrect. Please set read_mode in parameter file (default 0).\n";

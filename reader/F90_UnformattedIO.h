@@ -130,7 +130,7 @@ public:
 		file.read((char*)&post, PREPOST_DATA);
 		if(pre!=post)
 		{
-			if(mpiMgr.master())
+			if(MPI_Manager::GetInstance()->master())
 				std::cout << "Failed read fortran 1d array: pre != post"<< std::endl;
 		}
 	}
@@ -146,7 +146,7 @@ public:
 		// Validate
 		if((firstelement + numelements) > (pre/sizeof(T)))
 		{
-			std::cout << "Failed read fortran 1d array subsection: Requested more elements than array contains; from rank: " << mpiMgr.rank() << std::endl;
+			std::cout << "Failed read fortran 1d array subsection: Requested more elements than array contains; from rank: " << MPI_Manager::GetInstance()->rank() << std::endl;
 		}
 
 		// Skip to start record
@@ -162,7 +162,7 @@ public:
 		file.read((char*)&post, PREPOST_DATA);
 		if(pre!=post)
 		{
-			std::cout << "Failed read fortran 1d array subsection: pre != post; from rank: " << mpiMgr.rank() << std::endl;
+			std::cout << "Failed read fortran 1d array subsection: pre != post; from rank: " << MPI_Manager::GetInstance()->rank() << std::endl;
 		}
 	}
 

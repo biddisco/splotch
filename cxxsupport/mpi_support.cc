@@ -35,7 +35,7 @@
 #endif
 #include "mpi_support.h"
 
-MPI_Manager mpiMgr;
+MPI_Manager *MPI_Manager::Instance = NULL;
 
 using namespace std;
 
@@ -141,24 +141,24 @@ void MPI_Manager::all2allv_easy_prep (tsize insz, const arr<int> &numin,
 
 #ifdef USE_MPI
 
-MPI_Manager::MPI_Manager ()
+MPI_Manager::MPI_Manager (bool need_init)
   {
-  int flag;
-  MPI_Initialized(&flag);
-  if (!flag)
-    {
-    MPI_Init(0,0);
-    MPI_Errhandler_set(LS_COMM, MPI_ERRORS_ARE_FATAL);
+    this->initialized = false;
+    int mpi_already_initialized = 0;
+    MPI_Initialized(&mpi_already_initialized);
+    if (need_init || !mpi_already_initialized) {
+      MPI_Init(0,0);
+      MPI_Errhandler_set(MPI_COMM_WORLD, MPI_ERRORS_ARE_FATAL);
+      this->initialized = true;
     }
   MPI_Comm_size(LS_COMM, &num_ranks_);
   MPI_Comm_rank(LS_COMM, &rank_);
   }
 MPI_Manager::~MPI_Manager ()
-  {
-  int flag;
-  MPI_Finalized(&flag);
-  if (!flag)
-    MPI_Finalize();
+  { 
+  if (this->initialized) {
+    MPI_Finalize(); 
+   }
   }
 
 void MPI_Manager::abort() const
@@ -169,7 +169,7 @@ void MPI_Manager::barrier() const
 
 #else
 
-MPI_Manager::MPI_Manager ()
+MPI_Manager::MPI_Manager (bool need_init)
   : num_ranks_(1), rank_(0) {}
 MPI_Manager::~MPI_Manager () {}
 

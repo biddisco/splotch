@@ -66,7 +66,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   qty_idx[6] = params.find<int>("C2",-1)-1;
   qty_idx[7] = params.find<int>("C3",-1)-1;
 
-  if (mpiMgr.master())
+  if (MPI_Manager::GetInstance()->master())
     {
     cout << "Input data file name: " << datafile << endl;
     cout << "Number of columns " << nfields << endl;
@@ -83,7 +83,7 @@ void bin_reader_prep (paramfile &params, bifstream &inp, arr<int> &qty_idx,
   npart_total = inp.tellg()/(sizeof(float)*nfields);
   inp.seekg(0,ios::beg);
   int64 myend;
-  mpiMgr.calcShare (0, npart_total, mybegin, myend);
+  MPI_Manager::GetInstance()->calcShare (0, npart_total, mybegin, myend);
   npart = myend-mybegin;
 
   }
@@ -98,8 +98,8 @@ void bin_reader_finish (vector<particle_sim> &points, bifstream &inp)
     minr = min(minr,points[i].x);
     maxr = max(maxr,points[i].x);
     }
-  mpiMgr.allreduce(maxr,MPI_Manager::Max);
-  mpiMgr.allreduce(minr,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(maxr,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(minr,MPI_Manager::Min);
   //cout << ">>>>>>>> : " << minr << " , " << maxr << endl;
   inp.close();
   }
@@ -114,7 +114,7 @@ void bin_reader_tab (paramfile &params, vector<particle_sim> &points)
   int nfields;
   int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
-  if (mpiMgr.master())
+  if (MPI_Manager::GetInstance()->master())
     cout << "TABULAR BINARY FILE" << endl;
   bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, npart_total);
 
@@ -150,7 +150,7 @@ void bin_reader_block (paramfile &params, vector<particle_sim> &points)
   int nfields;
   int64 mybegin, npart, npart_total;
   arr<int> qty_idx;
-  if (mpiMgr.master())
+  if (MPI_Manager::GetInstance()->master())
     cout << "BLOCK BINARY FILE" << endl;
   bin_reader_prep (params, inp, qty_idx, nfields, mybegin, npart, npart_total);
 

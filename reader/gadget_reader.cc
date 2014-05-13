@@ -163,7 +163,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   //string filename;
   bifstream infile;
 
-  int ThisTask=mpiMgr.rank(),NTasks=mpiMgr.num_ranks();
+  int ThisTask=MPI_Manager::GetInstance()->rank(),NTasks=MPI_Manager::GetInstance()->num_ranks();
   arr<int> ThisTaskReads(NTasks), DataFromTask(NTasks);
   arr<long> NPartThisTask(NTasks);
 
@@ -226,7 +226,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
   }
 
-  if(mpiMgr.master())
+  if(MPI_Manager::GetInstance()->master())
   {
     int itask=0;
     for(int rt=0;rt<readparallel;rt++)
@@ -317,12 +317,12 @@ void gadget_reader(paramfile &params, int interpol_mode,
   }
 
   // Broadcast num particles and rank of broadcast root to all tasks
-  mpiMgr.bcast(NPartThisTask,0);
-  mpiMgr.bcast(boxsize,0);
-  mpiMgr.bcast(time,0);
+  MPI_Manager::GetInstance()->bcast(NPartThisTask,0);
+  MPI_Manager::GetInstance()->bcast(boxsize,0);
+  MPI_Manager::GetInstance()->bcast(time,0);
 
   // Master outputs some useful data
-  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+  if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
   {
     cout << " Reading " << numfiles << " files by " << readparallel << " tasks ... " << endl;
     cout << " Task " << ThisTask << "/" << NTasks << endl;
@@ -356,7 +356,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   arr<float> v1_tmp(nmax), v2_tmp(nmax), v3_tmp(nmax);
   arr<uint32> i1_tmp(nmax);
 
-  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+  if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading positions ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
   {
@@ -411,10 +411,10 @@ void gadget_reader(paramfile &params, int interpol_mode,
             ncount++;
             if(ncount == NPartThisTask[ToTask])
             {
-              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
             }
@@ -428,10 +428,10 @@ void gadget_reader(paramfile &params, int interpol_mode,
   }
   else
   {
-    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
     {
       p[m].x=v1_tmp[m];
@@ -451,13 +451,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
       posnorm[2].collect(p[m].z);
     }
 
-    mpiMgr.allreduce(posnorm[0].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(posnorm[1].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(posnorm[2].minv,MPI_Manager::Min);
-    mpiMgr.allreduce(posnorm[0].maxv,MPI_Manager::Max);
-    mpiMgr.allreduce(posnorm[1].maxv,MPI_Manager::Max);
-    mpiMgr.allreduce(posnorm[2].maxv,MPI_Manager::Max);
-    if(mpiMgr.master())
+    MPI_Manager::GetInstance()->allreduce(posnorm[0].minv,MPI_Manager::Min);
+    MPI_Manager::GetInstance()->allreduce(posnorm[1].minv,MPI_Manager::Min);
+    MPI_Manager::GetInstance()->allreduce(posnorm[2].minv,MPI_Manager::Min);
+    MPI_Manager::GetInstance()->allreduce(posnorm[0].maxv,MPI_Manager::Max);
+    MPI_Manager::GetInstance()->allreduce(posnorm[1].maxv,MPI_Manager::Max);
+    MPI_Manager::GetInstance()->allreduce(posnorm[2].maxv,MPI_Manager::Max);
+    if(MPI_Manager::GetInstance()->master())
     {
       if(ptype_found == 1)
       {
@@ -495,7 +495,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   {
     if (interpol_mode>1)
     {
-      if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+      if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
         cout << " Reading velocities ..." << endl;
       if(ThisTaskReads[ThisTask] >= 0)
       {
@@ -544,9 +544,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
                 ncount++;
                 if(ncount == NPartThisTask[ToTask])
                 {
-                  mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
-                  mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
-                  mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
+                  MPI_Manager::GetInstance()->sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+                  MPI_Manager::GetInstance()->sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+                  MPI_Manager::GetInstance()->sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
                   ToTask++;
                   ncount=0;
                 }
@@ -560,9 +560,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
       }
       else
       {
-        mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-        mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-        mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        MPI_Manager::GetInstance()->recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        MPI_Manager::GetInstance()->recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+        MPI_Manager::GetInstance()->recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
         for (int m=0; m<NPartThisTask[ThisTask]; ++m)
         {
           vel[m].x=v1_tmp[m];
@@ -572,7 +572,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
       }
     }
 
-    if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+    if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
       cout << " Reading ids ..." << endl;
     if(ThisTaskReads[ThisTask] >= 0)
     {
@@ -606,7 +606,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           tstack_replace("Reading","Patching particle IDs");
           if(type == 0)
           {
-	    if(mpiMgr.master())
+	    if(MPI_Manager::GetInstance()->master())
 	      cout << " WARNING: Patching IDs for gas particles!" << endl;
  
             MyIDType bits=1;
@@ -624,7 +624,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
           }
           else if(type == 4)
           {
-	    if(mpiMgr.master())
+	    if(MPI_Manager::GetInstance()->master())
 	      cout << " WARNING: Patching IDs for star particles!" << endl;
             MyIDType bits=1;
             if (sizeof(MyIDType)==4)
@@ -661,7 +661,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
               ncount++;
               if(ncount == NPartThisTask[ToTask])
               {
-                mpiMgr.sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
+                MPI_Manager::GetInstance()->sendRaw(&i1_tmp[0], NPartThisTask[ToTask], ToTask);
                 ToTask++;
                 ncount=0;
               }
@@ -675,13 +675,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
     }
     else
     {
-      mpiMgr.recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+      MPI_Manager::GetInstance()->recvRaw(&i1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
       for (int m=0; m<NPartThisTask[ThisTask]; ++m)
         id[m]=i1_tmp[m];
     }
   }
 
-  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+  if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading smoothing ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
   {
@@ -731,7 +731,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             v1_tmp[ncount++] = (fix_size==0.0) ? ftmp[m]*size_fac : fix_size;
             if(ncount == NPartThisTask[ToTask])
             {
-              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
             }
@@ -745,13 +745,13 @@ void gadget_reader(paramfile &params, int interpol_mode,
   }
   else
   {
-    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].r=v1_tmp[m];
   }
 
 
-  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+  if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading colors ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
   {
@@ -789,7 +789,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             }
         }
         else
-          if(mpiMgr.master())
+          if(MPI_Manager::GetInstance()->master())
             cout << " Cannot find color field <" << label_col << "> ..." << endl;
         tsize fnread=0;
         if (read_col>0) fnread=npartthis[type];
@@ -838,9 +838,9 @@ void gadget_reader(paramfile &params, int interpol_mode,
             ncount++;
             if(ncount == NPartThisTask[ToTask])
             {
-              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
-              mpiMgr.sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v2_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v3_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
             }
@@ -854,15 +854,15 @@ void gadget_reader(paramfile &params, int interpol_mode,
   }
   else
   {
-    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
-    mpiMgr.recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v2_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v3_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (unsigned int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].e.Set(v1_tmp[m],v2_tmp[m],v3_tmp[m]);
   }
 
 
-  if(mpiMgr.master() && !params.find<bool>("AnalyzeSimulationOnly"))
+  if(MPI_Manager::GetInstance()->master() && !params.find<bool>("AnalyzeSimulationOnly"))
     cout << " Reading intensity ..." << endl;
   if(ThisTaskReads[ThisTask] >= 0)
   {
@@ -892,7 +892,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
               infile.skip(4*npartthis[s]);
         }
         else
-          if(mpiMgr.master() && itype==0 && f==0)
+          if(MPI_Manager::GetInstance()->master() && itype==0 && f==0)
             cout << " Cannot find intensity field <" << label_int << "> ..." << endl;
         arr<float32> ftmp(npartthis[type]);
         if (read_int>0) infile.get(&ftmp[0],ftmp.size());
@@ -912,7 +912,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
             v1_tmp[ncount++] = (read_int>0) ? ftmp[m] : 1;
             if(ncount == NPartThisTask[ToTask])
             {
-              mpiMgr.sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
+              MPI_Manager::GetInstance()->sendRaw(&v1_tmp[0], NPartThisTask[ToTask], ToTask);
               ToTask++;
               ncount=0;
             }
@@ -926,7 +926,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   }
   else
   {
-    mpiMgr.recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
+    MPI_Manager::GetInstance()->recvRaw(&v1_tmp[0], NPartThisTask[ThisTask], DataFromTask[ThisTask]);
     for (int m=0; m<NPartThisTask[ThisTask]; ++m)
       p[m].I=v1_tmp[m];
   }

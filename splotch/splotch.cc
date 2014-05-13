@@ -55,7 +55,7 @@ int splotchMain (VisIVOServerOptions opt)
 int main (int argc, const char **argv)
 #endif
   {
-
+  mpiMgr = new MPI_Manager(true);
 #ifdef PREVIEWER
   bool pvMode=false;
   int paramFileArg=-1;
@@ -90,7 +90,7 @@ int main (int argc, const char **argv)
 
   tstack_push("Splotch");
   tstack_push("Setup");
-  bool master = mpiMgr.master();
+  bool master = mpiMgr->master();
 
   // Prevent the rendering to quit if the "stop" file
   // has been forgotten before Splotch was started
@@ -133,7 +133,7 @@ int main (int argc, const char **argv)
   g_params =&params;
 #endif
 #if (defined(CUDA) || defined(OPENCL))
-  int myID = mpiMgr.rank();
+  int myID = mpiMgr->rank();
   int nDevNode = check_device(myID);     // number of GPUs available per node
   int mydevID = -1;
   int nTasksDev;     // number of processes using the same GPU
@@ -237,11 +237,11 @@ int main (int argc, const char **argv)
       }
 
     tstack_push("Post-processing");
-    mpiMgr.allreduceRaw
+    mpiMgr->allreduceRaw
       (reinterpret_cast<float *>(&pic[0][0]),3*xres*yres,MPI_Manager::Sum);
 
     exptable<float32> xexp(-20.0);
-    if (mpiMgr.master() && a_eq_e)
+    if (master && a_eq_e)
       for (int ix=0;ix<xres;ix++)
         for (int iy=0;iy<yres;iy++)
           {
@@ -283,6 +283,9 @@ int main (int argc, const char **argv)
             break;
           case 3:
             img.write_TGA_rle(outfile+".tga");
+            break;
+          case 4:
+            img.write_bmp(outfile);
             break;
           default:
             planck_fail("No valid image file type given ...");
