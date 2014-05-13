@@ -174,6 +174,9 @@ void parse_file (const string &filename, map<string,string> &dict)
   {
   int lineno=0;
   dict.clear();
+  if (filename=="") {
+    return;
+  }
   ifstream inp(filename.c_str());
   planck_assert (inp,"Could not open parameter file '"+filename+"'.");
   while (inp)

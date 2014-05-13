@@ -62,8 +62,18 @@ class MPI_Manager
     int num_ranks_, rank_;
 
   public:
-    MPI_Manager();
+     MPI_Manager(bool need_init);
     ~MPI_Manager();
+
+    static MPI_Manager *Instance;
+    static MPI_Manager *GetInstance() { 
+      if (MPI_Manager::Instance==NULL) {
+        MPI_Manager::Instance = new MPI_Manager(false);
+      }
+      return MPI_Manager::Instance; 
+    }
+
+    int initialized;
 
     void abort() const;
 
@@ -373,6 +383,5 @@ class MPI_Manager
       }
   };
 
-extern MPI_Manager mpiMgr;
 
 #endif

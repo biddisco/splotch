@@ -62,7 +62,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
   {
   int ptypes = params.find<int>("ptypes",1);
 
-  bool master = mpiMgr.master();
+  bool master = MPI_Manager::GetInstance()->master();
   amap.resize(ptypes);
 
   if (master)
@@ -123,7 +123,7 @@ void get_colourmaps (paramfile &params, vector<COLOURMAP> &amap)
 
 void timeReport()
   {
-  if (mpiMgr.master())
+  if (MPI_Manager::GetInstance()->master())
     tstack_report("Splotch");
   }
 

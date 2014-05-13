@@ -55,7 +55,9 @@ class sceneMaker
 
     void particle_normalize(std::vector<particle_sim> &p, bool verbose) const;
 
+#ifndef PARAVIEW_SPLOTCH
     void fetchFiles(std::vector<particle_sim> &particle_data, double fidx);
+#endif
 
     // --- routines and variables for the MPI parallelization of the particle
     //     interpolation ---
@@ -77,9 +79,11 @@ class sceneMaker
 
   public:
   sceneMaker (paramfile &par);
+#ifndef PARAVIEW_SPLOTCH
   bool getNextScene (std::vector<particle_sim> &particle_data,
       std::vector<particle_sim> &r_points, vec3 &campos,
       vec3 &lookat, vec3 &sky, std::string &outfile);
+#endif
   };
 
 #endif

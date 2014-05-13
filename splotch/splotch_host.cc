@@ -54,6 +54,23 @@ const float32 rfac=1.5*h2sigma/(sqrt(2.)*sigma0);
 const float32 rfac=1.;
 #endif
 
+
+void particle_eliminate(paramfile &params, vector<particle_sim> &p, tsize &npart_all)
+  {
+  tdiff i1=0, i2=p.size()-1;
+  while (true)
+    {
+    while (i1<=i2 && p[i1].active) ++i1;
+    while (i1<=i2 && !p[i2].active) --i2;
+    if (i1>=i2) break;
+    swap(p[i1],p[i2]);
+    }
+  tsize npart=i2+1;
+  p.resize(npart);
+  npart_all=npart;
+  MPI_Manager::GetInstance()->allreduce (npart_all,MPI_Manager::Sum);
+}
+
 void particle_project(paramfile &params, vector<particle_sim> &p,
   const vec3 &campos, const vec3 &lookat, vec3 sky)
   {
@@ -201,26 +218,26 @@ void particle_sort(vector<particle_sim> &p, int sort_type, bool verbose)
   switch(sort_type)
     {
     case 0:
-      if (verbose && mpiMgr.master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " skipped sorting ..." << endl;
       break;
     case 1:
-      if (verbose && mpiMgr.master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by z ..." << endl;
       sort(p.begin(), p.end(), zcmp());
       break;
     case 2:
-      if (verbose && mpiMgr.master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp1());
       break;
     case 3:
-      if (verbose && mpiMgr.master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " reverse sorting by value ..." << endl;
       sort(p.begin(), p.end(), vcmp2());
       break;
     case 4:
-      if (verbose && mpiMgr.master())
+      if (verbose && MPI_Manager::GetInstance()->master())
         cout << " sorting by size ..." << endl;
       sort(p.begin(), p.end(), hcmp());
       break;
@@ -236,7 +253,7 @@ const int chunkdim=100;
 void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
   bool a_eq_e, float32 grayabsorb)
   {
-  planck_assert(a_eq_e || (mpiMgr.num_ranks()==1),
+  planck_assert(a_eq_e || (MPI_Manager::GetInstance()->num_ranks()==1),
     "MPI only supported for A==E so far");
 
   int xres=pic.size1(), yres=pic.size2();
@@ -259,7 +276,6 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
   arr2<vector<uint32> > lidx(ncx,ncy);
   int mythread=openmp_thread_num(),
       nthreads=openmp_num_threads();
-
   int64 lo, hi;
   calcShareGeneral (0, npart, nthreads, mythread, lo, hi);
   for (int64 i=lo; i<hi; ++i)
@@ -443,7 +459,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
   vector<COLOURMAP> &amap, float b_brightness, tsize npart_all)
   {
-    bool master = mpiMgr.master();
+  bool master = MPI_Manager::GetInstance()->master();
     tsize npart = particles.size();
   //tsize npart_all = npart;
   //mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
@@ -472,18 +488,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   tstack_push("Particle elimination");
   if (master)
     cout << endl << "host: eliminating inactive particles ..." << endl;
-  tdiff i1=0, i2=particles.size()-1;
-  while (true)
-    {
-    while (i1<=i2 && particles[i1].active) ++i1;
-    while (i1<=i2 && !particles[i2].active) --i2;
-    if (i1>=i2) break;
-    swap(particles[i1],particles[i2]);
-    }
-  npart=i2+1;
-  particles.resize(npart);
-  npart_all=npart;
-  mpiMgr.allreduce (npart_all,MPI_Manager::Sum);
+  particle_eliminate(params, particles, npart_all);
   if (master)
     cout << npart_all << " particles left" << endl;
   tstack_pop("Particle elimination");
@@ -496,7 +501,7 @@ void host_rendering (paramfile &params, vector<particle_sim> &particles,
   if (!params.find<bool>("a_eq_e",true))
     {
     if (master)
-      (mpiMgr.num_ranks()>1) ?
+      (MPI_Manager::GetInstance()->num_ranks()>1) ?
         cout << endl << "host: applying local sort ..." << endl :
         cout << endl << "host: applying sort (" << npart << ") ..." << endl;
     int sort_type = params.find<int>("sort_type",1);

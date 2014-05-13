@@ -35,78 +35,31 @@
 template<typename T, int sz> class svec;
 
 #if (defined(__SSE2__))
-
-#include <xmmintrin.h>
+#include "sse_utils.h"
 #include <emmintrin.h>
-
-template<> class svec<int, 4>
-  {
-  public:
     typedef int Ts;
-    typedef __m128i Tv;
     typedef union { Tv v; Ts d[4]; } Tu;
-    Tv v;
-
-    svec () {}
-    svec (const svec &b) : v(b.v) {}
-    svec (const Tv &b) : v(b) {}
     svec (const Ts &val) : v(_mm_set1_epi32(val)) {}
     svec (const Ts &val1, const Ts &val2, const Ts &val3, const Ts &val4)
-      : v(_mm_set_epi32(val4,val3,val2,val1)) {}
-
     const svec &operator= (const Ts &val)
-      { v=_mm_set1_epi32(val); return *this; }
-    const svec &operator= (const svec &b)
-      { v=b.v; return *this; }
-
     Ts operator[] (int p) const
-      { Tu u; u.v=v; return u.d[p]; }
     void set (int p, Ts val)
-      { Tu u; u.v=v; u.d[p]=val; v=u.v; }
-
-    const svec &operator+= (const svec &b)
-      { v=_mm_add_epi32(v,b.v); return *this; }
-    const svec &operator-= (const svec &b)
-      { v=_mm_sub_epi32(v,b.v); return *this; }
-    svec operator+ (const svec &b) const
-      { return svec(_mm_add_epi32(v,b.v)); }
-    svec operator- (const svec &b) const
-      { return svec(_mm_sub_epi32(v,b.v)); }
-
-    const svec &operator&= (const svec &b)
-      { v=_mm_and_si128(v,b.v); return *this; }
-    const svec &operator|= (const svec &b)
-      { v=_mm_or_si128(v,b.v); return *this; }
     const svec &operator^= (const svec &b)
       { v=_mm_xor_si128(v,b.v); return *this; }
-    svec operator& (const svec &b) const
-      { return svec(_mm_and_si128(v,b.v)); }
-    svec operator| (const svec &b) const
-      { return svec(_mm_or_si128(v,b.v)); }
     svec operator^ (const svec &b) const
       { return svec(_mm_xor_si128(v,b.v)); }
     svec andnot (const svec &b) const
       { return svec(_mm_andnot_si128(v,b.v)); }
-
     const svec &operator<<= (int b)
       { v=_mm_slli_epi32(v,b); return *this; }
-    svec operator<< (int b) const
-      { return svec(_mm_slli_epi32(v,b)); }
     const svec &operator>>= (int b)
       { v=_mm_srai_epi32(v,b); return *this; }
     svec operator>> (int b) const
       { return svec(_mm_srai_epi32(v,b)); }
-
-    svec eq (const svec &b) const
-      { return svec(_mm_cmpeq_epi32(v,b.v)); }
     svec gt (const svec &b) const
       { return svec(_mm_cmpgt_epi32(v,b.v)); }
     svec lt (const svec &b) const
       { return svec(_mm_cmplt_epi32(v,b.v)); }
-  };
-
-typedef svec<int,4> V4si;
-
 #if 0
 template<> class svec<long long , 2>
   {
@@ -115,7 +68,6 @@ template<> class svec<long long , 2>
     typedef __m128i Tv;
     typedef union { Tv v; Ts d[2]; } Tu;
     Tv v;
-
     svec () {}
     svec (const svec &b) : v(b.v) {}
     svec (const Tv &b) : v(b) {}
@@ -132,7 +84,6 @@ template<> class svec<long long , 2>
       { Tu u; u.v=v; return u.d[p]; }
     void set (int p, int val)
       { Tu u; u.v=v; u.d[p]=val; v=u.v; }
-
     const svec &operator+= (const svec &b)
       { v=_mm_add_epi64(v,b.v); return *this; }
     const svec &operator-= (const svec &b)
@@ -271,111 +222,20 @@ inline V4sf min (const V4sf &a, const V4sf &b)
   { return _mm_min_ps(a.v,b.v); }
 inline V4sf max (const V4sf &a, const V4sf &b)
   { return _mm_max_ps(a.v,b.v); }
-
-template<> class svec<double, 2>
-  {
-  public:
     typedef double Ts;
-    typedef __m128d Tv;
     typedef union { Tv v; Ts d[2]; } Tu;
-    Tv v;
-
-    svec () {}
-    svec (const svec &b) : v(b.v) {}
-    svec (const Tv &b) : v(b) {}
     svec (const Ts &val) : v(_mm_set1_pd(val)) {}
     svec (const Ts &val1, const Ts &val2)
-      : v(_mm_set_pd(val2,val1)) {}
-    explicit svec (const svec<int,4> &b) : v(_mm_cvtepi32_pd(b.v)) {}
-
-    operator svec<int,4>() const
-      { return svec<int,4> (_mm_cvtpd_epi32(v)); }
     const svec &operator= (const Ts &val)
-      { v=_mm_set1_pd(val); return *this; }
-    const svec &operator= (const svec &b)
-      { v=b.v; return *this; }
-
     Ts operator[] (int p) const
-      { Tu u; u.v=v; return u.d[p]; }
     void set (int p, Ts val)
-      { Tu u; u.v=v; u.d[p]=val; v=u.v; }
-
-    const svec &operator+= (const svec &b)
-      { v=_mm_add_pd(v,b.v); return *this; }
-    const svec &operator-= (const svec &b)
-      { v=_mm_sub_pd(v,b.v); return *this; }
-    const svec &operator*= (const svec &b)
-      { v=_mm_mul_pd(v,b.v); return *this; }
-    const svec &operator/= (const svec &b)
-      { v=_mm_div_pd(v,b.v); return *this; }
-
-    svec operator+ (const svec &b) const
-      { return svec(_mm_add_pd(v,b.v)); }
-    svec operator- (const svec &b) const
-      { return svec(_mm_sub_pd(v,b.v)); }
-    svec operator* (const svec &b) const
-      { return svec(_mm_mul_pd(v,b.v)); }
-    svec operator/ (const svec &b) const
-      { return svec(_mm_div_pd(v,b.v)); }
-
-    const svec &operator&= (const svec &b)
-      { v=_mm_and_pd(v,b.v); return *this; }
-    const svec &operator|= (const svec &b)
-      { v=_mm_or_pd(v,b.v); return *this; }
-    const svec &operator^= (const svec &b)
-      { v=_mm_xor_pd(v,b.v); return *this; }
-    svec operator& (const svec &b) const
-      { return svec(_mm_and_pd(v,b.v)); }
-    svec operator| (const svec &b) const
-      { return svec(_mm_or_pd(v,b.v)); }
-    svec operator^ (const svec &b) const
-      { return svec(_mm_xor_pd(v,b.v)); }
-
-    svec operator- () const
-      { return svec(_mm_xor_pd(_mm_set1_pd(-0.),v)); }
-
-    svec eq (const svec &b) const
-      { return svec(_mm_cmpeq_pd(v,b.v)); }
-    svec neq (const svec &b) const
-      { return svec(_mm_cmpneq_pd(v,b.v)); }
-    svec lt (const svec &b) const
-      { return svec(_mm_cmplt_pd(v,b.v)); }
-    svec le (const svec &b) const
-      { return svec(_mm_cmple_pd(v,b.v)); }
-    svec gt (const svec &b) const
-      { return svec(_mm_cmpgt_pd(v,b.v)); }
-    svec ge (const svec &b) const
-      { return svec(_mm_cmpge_pd(v,b.v)); }
-
     void writeTo (Ts *val) const
-      { _mm_storeu_pd (val, v); }
     void writeTo (Ts &a, Ts &b) const
-      { _mm_store_sd(&a,v); _mm_storeh_pd(&b,v); }
     void readFrom (const Ts *val)
-      { v=_mm_loadu_pd(val); }
     void readFrom (const Ts &a, const Ts &b)
-      { v=_mm_set_pd(b,a); }
-  };
-
-typedef svec<double,2> V2df;
-
-inline V2df sqrt(const V2df &v)
-  { return V2df(_mm_sqrt_pd(v.v)); }
-inline V2df abs(const V2df &v)
-  { return V2df(_mm_andnot_pd(_mm_set1_pd(-0.),v.v)); }
-inline V2df blend(const V2df &mask, const V2df &a, const V2df &b)
-  { return V2df(_mm_or_pd(_mm_and_pd(a.v,mask.v),_mm_andnot_pd(mask.v,b.v))); }
-inline bool any (const V2df &a)
-  { return _mm_movemask_pd(a.v)!=0; }
-inline bool all (const V2df &a)
-  { return _mm_movemask_pd(a.v)==3; }
-inline bool none (const V2df &a)
-  { return _mm_movemask_pd(a.v)==0; }
-
 template<typename T> inline T vcast(const V4si &a);
 template<typename T> inline T vcast(const V4sf &a);
 template<typename T> inline T vcast(const V2df &a);
-
 template<> inline V4si vcast (const V4sf &a)
   { return V4si (_mm_castps_si128(a.v)); }
 template<> inline V4sf vcast (const V4si &a)
