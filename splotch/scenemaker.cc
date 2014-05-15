@@ -30,7 +30,9 @@
 #include "cxxsupport/walltimer.h"
 #include "cxxsupport/cxxutils.h"
 #include "cxxsupport/datatypes.h"
+#ifndef PARAVIEW_SPLOTCH_DISABLE_READERS
 #include "reader/reader.h"
+#endif
 #include "booster/mesh_vis.h"
 #ifndef NEW_MPISTUFF
 #include <limits>
@@ -701,6 +703,9 @@ sceneMaker::sceneMaker (paramfile &par)
     }
   }
 
+#ifdef PARAVIEW_SPLOTCH_DISABLE_READERS
+  void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx) {}
+#else
 void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
   {
   if (scenes[cur_scene].reuse_particles)
@@ -1004,6 +1009,7 @@ void sceneMaker::fetchFiles(vector<particle_sim> &particle_data, double fidx)
     randomizer(particle_data, Mesh, MeshD);
     }
   }
+#endif
 
 bool sceneMaker::getNextScene (vector<particle_sim> &particle_data,
   vector<particle_sim> &r_points, vec3 &campos, vec3 &lookat, vec3 &sky,

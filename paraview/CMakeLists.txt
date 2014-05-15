@@ -1,4 +1,4 @@
-PROJECT("SPLOTCH_plugin")
+PROJECT("pv_splotch")
 
 #--------------------------------------------------
 # cmake old/new compatibility
@@ -8,6 +8,7 @@ cmake_minimum_required(VERSION 2.8)
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 OLD)
   cmake_policy(SET CMP0017 NEW)
+  cmake_policy(SET CMP0023 OLD)
 endif(COMMAND cmake_policy)
 
 #--------------------------------------------------
@@ -42,8 +43,8 @@ IF (NOT TARGET splotchcore)
   #-----------------------------------------------------------------------------
   # OpenMP
   #-----------------------------------------------------------------------------
-  OPTION(SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
-  IF (SPLOTCH_USE_OPENMP)
+  OPTION(PV_SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
+  IF (PV_SPLOTCH_USE_OPENMP)
     ADD_DEFINITIONS(-DHAVE_OPENMP)
     if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
       SET(OpenMP_CXX_FLAGS "-fopenmp" )
@@ -54,7 +55,7 @@ IF (NOT TARGET splotchcore)
     if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
       SET(OpenMP_CXX_FLAGS "-fopenmp" )
     endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
-  ENDIF (SPLOTCH_USE_OPENMP)
+  ENDIF (PV_SPLOTCH_USE_OPENMP)
 
   #-----------------------------------------------------------------------------
   # Include Directories
@@ -63,32 +64,40 @@ IF (NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../
     ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
     ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader
-    ${CMAKE_CURRENT_SOURCE_DIR}/../writer
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
   )
 
-  #-----------------------------------------------------------------------------
-  # Source files for splotch IO library
-  #-----------------------------------------------------------------------------
-  SET(SPLOTCH_IO_LIB_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/mesh_reader.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/gadget_reader.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/millenium_reader.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader_mpi.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/tipsy_reader.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../reader/ramses_reader.cc
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
-#    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
-  )
-  add_definitions(-DPARAVIEW_SPLOTCH)
+  OPTION(PV_SPLOTCH_DISABLE_READERS "Turn off compilation of readers if paraview ones are used instead" ON)
+  if(PV_SPLOTCH_DISABLE_READERS)
+    message("adding def PARAVIEW_SPLOTCH_DISABLE_READERS")
+    add_definitions(-DPARAVIEW_SPLOTCH_DISABLE_READERS)
+  else (PV_SPLOTCH_DISABLE_READERS)
+    INCLUDE_DIRECTORIES(
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader
+      ${CMAKE_CURRENT_SOURCE_DIR}/../writer
+    )
 
-  ADD_LIBRARY(splotchio STATIC ${SPLOTCH_IO_LIB_SRCS})
-  SET_TARGET_PROPERTIES(splotchio PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
-  TARGET_LINK_LIBRARIES(splotchio ${SPLOTCH_MPI_LIBS})
+    #-----------------------------------------------------------------------------
+    # Source files for splotch IO library
+    #-----------------------------------------------------------------------------
+    SET(SPLOTCH_IO_LIB_SRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/mesh_reader.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/gadget_reader.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/millenium_reader.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader_mpi.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/tipsy_reader.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../reader/ramses_reader.cc
+  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
+  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
+  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
+    )
+    set(SPLOTCH_IO_LIBRARY splotchio)
+    ADD_LIBRARY(${SPLOTCH_IO_LIBRARY} STATIC ${SPLOTCH_IO_LIB_SRCS})
+    SET_TARGET_PROPERTIES(${SPLOTCH_IO_LIBRARY} PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+    TARGET_LINK_LIBRARIES(${SPLOTCH_IO_LIBRARY} ${SPLOTCH_MPI_LIBS})
+  endif()
   
   #-----------------------------------------------------------------------------
   # Source files for splotch core library
@@ -112,7 +121,7 @@ IF (NOT TARGET splotchcore)
 
 #  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
-  TARGET_LINK_LIBRARIES(splotchcore splotchio ${SPLOTCH_MPI_LIBS})
+  TARGET_LINK_LIBRARIES(splotchcore ${SPLOTCH_IO_LIBRARY} ${SPLOTCH_MPI_LIBS})
   SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
 ENDIF (NOT TARGET splotchcore)
@@ -199,7 +208,7 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(pv_splotch splotchcore splotchio ${DEP_LIBS})
+TARGET_LINK_LIBRARIES(pv_splotch splotchcore ${SPLOTCH_IO_LIBRARY} ${DEP_LIBS})
 SET_TARGET_PROPERTIES(pv_splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
 #--------------------------------------------------------
@@ -233,10 +242,11 @@ ENDIF (BUILD_TESTING)
 #--------------------------------------------------
 # Tools : Splotch format converter
 #--------------------------------------------------
-IF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
-  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
-  ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
-  TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
-ENDIF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
-
+if(NOT PV_SPLOTCH_DISABLE_READERS)
+  IF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
+    ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
+    TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
+  ENDIF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+endif()
 

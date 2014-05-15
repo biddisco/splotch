@@ -21,7 +21,7 @@ IF (USE_HDF5)
   TARGET_LINK_LIBRARIES(TestSplotchMapper
     pv_meshless
     pv_splotch
-    splotchio
+    ${SPLOTCH_IO_LIBRARY}
     )
 
   ADD_TEST(
