@@ -27,6 +27,7 @@
 #ifndef __vtkSplotchDefaultPainter_h
 #define __vtkSplotchDefaultPainter_h
 
+#include "pv_splotch_configure.h"
 #include "vtkDefaultPainter.h"
 
 class vtkSplotchPainter;
@@ -38,7 +39,14 @@ class vtkSplotchPainter;
  typedef vtkObject vtkMIPPainter;
 #endif
 
-class VTK_EXPORT vtkSplotchDefaultPainter : public vtkDefaultPainter
+// if CUDA rendering is enabled
+#ifdef PV_SPLOTCH_USE_PISTON
+ class vtkCUDASplotchPainter;
+#else 
+ typedef vtkObject vtkCUDASplotchPainter;
+#endif
+
+class pv_splotch_EXPORT vtkSplotchDefaultPainter : public vtkDefaultPainter
 {
 public:
   static vtkSplotchDefaultPainter* New();
@@ -59,7 +67,12 @@ public:
   // Enable the use of MIP (if this is a LOD renderer)
   void SetUseMIP(int m);
   vtkGetMacro(UseMIP, int);
-  
+
+  // Description:
+  // Enable/disble the use of GPU rendering with Piston
+  void SetEnableCUDA(int m);
+  vtkGetMacro(EnableCUDA, int);
+
 //BTX
 protected:
    vtkSplotchDefaultPainter();
@@ -73,9 +86,15 @@ protected:
   // Take part in garbage collection.
   virtual void ReportReferences(vtkGarbageCollector *collector);
 
-  vtkSplotchPainter *SplotchPainter;
-  vtkMIPPainter     *MIPPainter;
-  int                UseMIP; 
+  // Generic CPU based splotch painter
+  vtkSplotchPainter     *SplotchPainter;
+  // Special painter using MIP
+  vtkMIPPainter         *MIPPainter;
+  int                    UseMIP; 
+  // CUDA version of splotch painter
+  int                    EnableCUDA;
+  vtkCUDASplotchPainter *CUDAPainter;
+
 private:
   vtkSplotchDefaultPainter(const vtkSplotchDefaultPainter&); // Not implemented.
   void operator=(const vtkSplotchDefaultPainter&); // Not implemented.

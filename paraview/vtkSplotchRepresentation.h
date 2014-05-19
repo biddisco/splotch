@@ -20,6 +20,7 @@
 #ifndef __vtkSplotchRepresentation_h
 #define __vtkSplotchRepresentation_h
 
+#include "pv_splotch_configure.h"
 #include "vtkGeometryRepresentation.h"
 #include "vtkStringArray.h"
 #include "vtkSmartPointer.h"
@@ -27,7 +28,7 @@
 class vtkSplotchPainter;
 class vtkSplotchDefaultPainter;
 
-class VTK_EXPORT vtkSplotchRepresentation : public vtkGeometryRepresentation
+class pv_splotch_EXPORT vtkSplotchRepresentation : public vtkGeometryRepresentation
 {
 public:
   static vtkSplotchRepresentation* New();
@@ -77,8 +78,12 @@ public:
   void   SetGrayAbsorption(double b);
   double GetGrayAbsorption();
 
+  void   SetEnableCUDA(int mode);
+
   // Gather all the settings in one call for feeding back to the gui display
   vtkStringArray *GetActiveParticleSettings();
+
+  bool AddToView(vtkView* view);
 
 //BTX
 protected:

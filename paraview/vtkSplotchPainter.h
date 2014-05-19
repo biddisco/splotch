@@ -21,6 +21,7 @@
 #ifndef __vtkSplotchPainter_h
 #define __vtkSplotchPainter_h
 
+#include "pv_splotch_configure.h"
 #include "vtkPolyDataPainter.h"
 
 #include <vector> // needed for our arrays
@@ -29,14 +30,14 @@
 class vtkMultiProcessController;
 class vtkScalarsToColorsPainter;
 
-class VTK_EXPORT vtkSplotchPainter : public vtkPolyDataPainter
+class pv_splotch_EXPORT vtkSplotchPainter : public vtkPolyDataPainter
 {
 public:
   static vtkSplotchPainter* New();
   vtkTypeMacro(vtkSplotchPainter, vtkPolyDataPainter);
 
   // Description:
-  void Render(vtkRenderer* renderer, vtkActor* actor, 
+  void RenderInternal(vtkRenderer* renderer, vtkActor* actor, 
     unsigned long typeflags, bool forceCompileOnly);
 
   // Description:

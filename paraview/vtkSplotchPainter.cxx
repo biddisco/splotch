@@ -291,9 +291,11 @@ typedef void *                  IceTContext;
 #define ICET_NUM_TILES          (ICET_STATE_ENGINE_START | (IceTEnum)0x0010)
 #define ICET_TILE_VIEWPORTS     (ICET_STATE_ENGINE_START | (IceTEnum)0x0011)
 // ---------------------------------------------------------------------------
-void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor, 
+void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
   unsigned long typeflags, bool forceCompileOnly)
 {
+//  this->PrepareForRendering();
+  //
   int X = ren->GetSize()[0];
   int Y = ren->GetSize()[1];
   vtkDataObject *indo = this->GetInput();
@@ -318,7 +320,7 @@ void vtkSplotchPainter::Render(vtkRenderer* ren, vtkActor* actor,
   //
   // Make sure we have the right color array and other info
   //
-  this->ProcessInformation(this->Information);
+//  this->ProcessInformation(this->Information);
   //
   // Get the LUT and scalar array
   //

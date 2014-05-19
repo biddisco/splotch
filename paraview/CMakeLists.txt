@@ -5,17 +5,37 @@ PROJECT("pv_splotch")
 #--------------------------------------------------
 cmake_minimum_required(VERSION 2.8)
 
-if(COMMAND cmake_policy)
-  cmake_policy(SET CMP0003 OLD)
-  cmake_policy(SET CMP0017 NEW)
-  cmake_policy(SET CMP0023 OLD)
-endif(COMMAND cmake_policy)
+#--------------------------------------------------
+# cmake policies
+# see http://www.cmake.org/cmake/help/v2.8.12/cmake.html#section_Policies
+#--------------------------------------------------
+foreach(p
+    CMP0003 
+    CMP0017 
+    CMP0023 
+    )
+  if(POLICY ${p})
+    cmake_policy(SET ${p} NEW)
+  endif()
+endforeach()
 
 #--------------------------------------------------
 # Find and Use ParaView
 #--------------------------------------------------
-FIND_PACKAGE(ParaView REQUIRED)
-INCLUDE(${PARAVIEW_USE_FILE})
+IF (ParaView_SOURCE_DIR)
+  IF(PARAVIEW_BUILD_QT_GUI)
+    INCLUDE(${QT_USE_FILE})
+  ENDIF(PARAVIEW_BUILD_QT_GUI)
+  INCLUDE_DIRECTORIES(
+    ${HDF5_INCLUDE_DIR}
+    ${PARAVIEW_INCLUDE_DIRS}
+    ${PARAVIEW_GUI_INCLUDE_DIRS}
+    ${VTK_INCLUDE_DIR}
+  )
+ELSE (ParaView_SOURCE_DIR)
+  FIND_PACKAGE(ParaView REQUIRED)
+  INCLUDE(${PARAVIEW_USE_FILE})
+ENDIF (ParaView_SOURCE_DIR)
 
 #
 # For the Painter we need access to some IceT viewport info
@@ -26,36 +46,112 @@ INCLUDE_DIRECTORIES(${ParaView_BINARY_DIR}/Utilities/IceT/src/include)
 #------------------------------------------------------
 # MPI support if ParaView compiled with MPI
 #------------------------------------------------------
-IF (PARAVIEW_USE_MPI)
+if(PARAVIEW_USE_MPI)
   FIND_PACKAGE(MPI)   
   INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
   ADD_DEFINITIONS(-DUSE_MPI)
-ENDIF (PARAVIEW_USE_MPI)
+endif(PARAVIEW_USE_MPI)
 
-IF(PARAVIEW_USE_ICE_T)
+if(PARAVIEW_USE_ICE_T)
   ADD_DEFINITIONS(-DUSE_ICET)
-ENDIF(PARAVIEW_USE_ICE_T)
+endif(PARAVIEW_USE_ICE_T)
+
 #--------------------------------------------------
-# If not called from the splotch source directory
+# if not called from the splotch source directory
 # then build splotch
 #--------------------------------------------------
-IF (NOT TARGET splotchcore)
+if(NOT TARGET splotchcore)
   #-----------------------------------------------------------------------------
   # OpenMP
   #-----------------------------------------------------------------------------
-  OPTION(PV_SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
-  IF (PV_SPLOTCH_USE_OPENMP)
+  option(PV_SPLOTCH_USE_OPENMP "Compile with OpenMP support" ON)
+  if(PV_SPLOTCH_USE_OPENMP)
     ADD_DEFINITIONS(-DHAVE_OPENMP)
-    if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+    if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
       SET(OpenMP_CXX_FLAGS "-fopenmp" )
-    endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
-    IF (WIN32 AND MSVC) 
+    endif(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+    if(WIN32 AND MSVC) 
       SET(OpenMP_CXX_FLAGS "/openmp")
-    ENDIF (WIN32 AND MSVC) 
-    if (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+    endif(WIN32 AND MSVC) 
+    if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
       SET(OpenMP_CXX_FLAGS "-fopenmp" )
-    endif (CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
-  ENDIF (PV_SPLOTCH_USE_OPENMP)
+    endif(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+  endif(PV_SPLOTCH_USE_OPENMP)
+
+  #-----------------------------------------------------------------------------
+  # CUDA
+  #-----------------------------------------------------------------------------
+  #--------------------------------------------------
+  # pv-cuda-piston required for cuda support
+  #--------------------------------------------------
+  find_package(pv_cuda_piston NO_MODULE)
+  if(NOT pv_cuda_piston_FOUND)
+    set(CUDA_DEFAULT OFF)
+  else()
+    set(CUDA_DEFAULT ON)
+    message("pv cuda piston was found")
+  endif()
+
+  option(PV_SPLOTCH_USE_CUDA "Compile with Cuda support" ${CUDA_DEFAULT})
+
+  if(PV_SPLOTCH_USE_CUDA)
+    find_package(pv_cuda_piston NO_MODULE)
+    if (NOT TARGET pv_cuda_piston)
+      message(FATAL_ERROR "Cannot enable Cuda without cuda-piston plugin")
+    endif()
+
+    set(PV_SPLOTCH_DEP_LIBS pv_cuda_piston)
+
+    add_definitions(-DPV_SPLOTCH_USE_PISTON)
+
+    INCLUDE_DIRECTORIES(
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston
+      ${pv_cuda_piston_INCLUDE_DIR}
+    )
+
+    #--------------------------------------------------
+    # #defines for splotch
+    #--------------------------------------------------
+    add_definitions(-DCUDA -DHYPERQ)
+
+    #--------------------------------------------------
+    # include path for Thrust
+    #--------------------------------------------------
+    include_directories(${CUDATHRUST_INCLUDE_DIRS})
+
+    INCLUDE_DIRECTORIES(
+      ${CMAKE_CURRENT_SOURCE_DIR}/../
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda
+    )
+      
+    set(PV_SPLOTCH_CUDA_CSRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch_cuda2.cc
+    )
+    set(PV_SPLOTCH_CUDA_SRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/deviceQuery.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/CuPolicy.cu
+#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch_kernel.cu
+#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/CuRender.cu
+    )
+    set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkCUDASplotchPainter.cxx
+    )
+
+    #--------------------------------------------------
+    # Define CUDA compiled source files
+    #--------------------------------------------------
+    if(BUILD_SHARED_LIBS)
+      set(GPGPU_BUILD_TYPE SHARED)
+    endif()
+
+    # set this, otherwise C_SOURCES is empty in Visual Studio  
+    set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
+
+    # call the cuda wrapper
+    cuda_compile(PV_SPLOTCH_CUDA_C_SRCS ${PV_SPLOTCH_CUDA_SRCS} ${GPGPU_BUILD_TYPE})
+    message("Cuda srcs generated from ${PV_SPLOTCH_CUDA_SRCS} are ${PV_SPLOTCH_CUDA_C_SRCS}|")
+  endif()
 
   #-----------------------------------------------------------------------------
   # Include Directories
@@ -68,7 +164,7 @@ IF (NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
   )
 
-  OPTION(PV_SPLOTCH_DISABLE_READERS "Turn off compilation of readers if paraview ones are used instead" ON)
+  option(PV_SPLOTCH_DISABLE_READERS "Turn off compilation of readers ifparaview ones are used instead" ON)
   if(PV_SPLOTCH_DISABLE_READERS)
     message("adding def PARAVIEW_SPLOTCH_DISABLE_READERS")
     add_definitions(-DPARAVIEW_SPLOTCH_DISABLE_READERS)
@@ -116,7 +212,9 @@ IF (NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc
+    ${PV_SPLOTCH_CUDA_CSRCS}
+    ${PV_SPLOTCH_CUDA_C_SRCS}
   )
 
 #  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
@@ -124,7 +222,7 @@ IF (NOT TARGET splotchcore)
   TARGET_LINK_LIBRARIES(splotchcore ${SPLOTCH_IO_LIBRARY} ${SPLOTCH_MPI_LIBS})
   SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
-ENDIF (NOT TARGET splotchcore)
+endif(NOT TARGET splotchcore)
 
 #--------------------------------------------------
 # Set project include directories 
@@ -141,9 +239,10 @@ SET( splotch_plugin_WRAPPED_SRCS
   vtkSplotchRepresentation.cxx  
   vtkSplotchDefaultPainter.cxx
   vtkSplotchPainter.cxx
+  ${PV_SPLOTCH_CUDA_PLUGIN_SRCS}
 )
 
-IF(PARAVIEW_BUILD_QT_GUI)
+if(PARAVIEW_BUILD_QT_GUI)
   #--------------------------------------------------
   # Qt .ui files that are wrapped and added to plugin
   #--------------------------------------------------
@@ -171,24 +270,24 @@ IF(PARAVIEW_BUILD_QT_GUI)
     CLASS_NAME pqSplotchDisplayPanelDecorator
     PANEL_TYPES pqDisplayProxyEditor)
 
-ENDIF(PARAVIEW_BUILD_QT_GUI)
+endif(PARAVIEW_BUILD_QT_GUI)
 
 #--------------------------------------------------
 # Splotch uses MIP for LOD
 #--------------------------------------------------
-IF (TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+if(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
   INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-astro)
-  SET(DEP_LIBS pv_astro)
+  SET(PV_SPLOTCH_DEP_LIBS ${PV_SPLOTCH_DEP_LIBS} pv_astro)
   ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
-ENDIF (TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+endif(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
 
 #--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
-SET(LIBRARY_TARGET_NAME pv_splotch)
+SET(PLUGIN_NAME pv_splotch)
 
 ADD_PARAVIEW_PLUGIN(
-  ${LIBRARY_TARGET_NAME}
+  ${PLUGIN_NAME}
   "1.0" 
 
   SERVER_MANAGER_XML 
@@ -208,14 +307,28 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-TARGET_LINK_LIBRARIES(pv_splotch splotchcore ${SPLOTCH_IO_LIBRARY} ${DEP_LIBS})
-SET_TARGET_PROPERTIES(pv_splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+message("Libs we need are ${PV_SPLOTCH_DEP_LIBS}")
+TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
+  PUBLIC
+    splotchcore 
+    ${SPLOTCH_IO_LIBRARY} 
+    ${PV_SPLOTCH_DEP_LIBS}
+)
+
+SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects
 # that will be using this library
 #--------------------------------------------------------
 SET(splotch_plugin_INCLUDE_DIRS "${PROJECT_SOURCE_DIR};${PROJECT_BINARY_DIR}")
+
+#--------------------------------------------------------
+# Create the module import/export configuration header.
+#--------------------------------------------------------
+CONFIGURE_FILE(${PROJECT_SOURCE_DIR}/module_configure.h.in
+               ${PROJECT_BINARY_DIR}/pv_splotch_configure.h
+               @ONLY IMMEDIATE)
 
 #--------------------------------------------------
 # Install
@@ -233,20 +346,20 @@ INSTALL(
 #--------------------------------------------------
 # Testing
 #--------------------------------------------------
-IF (BUILD_TESTING)
+if(BUILD_TESTING)
   SET(PLUGIN_TEST_DIR ${PROJECT_BINARY_DIR}/Testing/Temporary)
   MAKE_DIRECTORY(${PLUGIN_TEST_DIR})
   ADD_SUBDIRECTORY(Testing)
-ENDIF (BUILD_TESTING)  
+endif(BUILD_TESTING)  
 
 #--------------------------------------------------
 # Tools : Splotch format converter
 #--------------------------------------------------
 if(NOT PV_SPLOTCH_DISABLE_READERS)
-  IF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+  if(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
     INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
     ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
     TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
-  ENDIF(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+  endif(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
 endif()
 

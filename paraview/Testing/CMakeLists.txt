@@ -16,7 +16,8 @@ INCLUDE_DIRECTORIES(
 # --------------------------------------------------
 # Optional Splotch+HDF5 test
 # --------------------------------------------------
-IF (USE_HDF5)
+find_package(pv_meshless)
+IF (pv_meshless_FOUND)
   ADD_EXECUTABLE(TestSplotchMapper TestSplotchMapper.cxx)
   TARGET_LINK_LIBRARIES(TestSplotchMapper
     pv_meshless
@@ -35,4 +36,4 @@ IF (USE_HDF5)
       -R
       -V ${PROJECT_SOURCE_DIR}/Testing/baseline/TestSplotchMapper.png
   )  
-ENDIF (USE_HDF5)
+ENDIF ()

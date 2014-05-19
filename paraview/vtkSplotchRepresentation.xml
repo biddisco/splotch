@@ -38,6 +38,7 @@
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
           <Property name="ActiveScalars"/>
+          <Property name="EnableCUDA"/>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -77,6 +78,7 @@
           <Property name="RadiusScalars"/>
           <Property name="TypeScalars"/>
           <Property name="ActiveScalars"/>
+          <Property name="EnableCUDA"/>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -99,12 +101,16 @@
         <InputArrayDomain 
           name="input_array" 
           attribute_type="point">
-          <RequiredProperties>
-            <Property name="SetInputArrayToProcess"
-              function="FieldDataSelection"/>
-          </RequiredProperties>
         </InputArrayDomain>
       </InputProperty>
+
+      <IntVectorProperty
+         name="EnableCUDA"
+         command="SetEnableCUDA"
+         number_of_elements="1"
+         default_values="0" >
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
 
       <IntVectorProperty name="ActiveParticleType"
         command="SetActiveParticleType"

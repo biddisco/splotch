@@ -22,6 +22,9 @@
 #ifdef PV_SPLOTCH_WITH_MIP
  #include "vtkMIPPainter.h"
 #endif
+#ifdef PV_SPLOTCH_USE_PISTON
+  #include "vtkCUDASplotchPainter.h"
+#endif
 
 vtkStandardNewMacro(vtkSplotchDefaultPainter);
 vtkCxxSetObjectMacro(vtkSplotchDefaultPainter, SplotchPainter, vtkSplotchPainter);
@@ -33,6 +36,9 @@ vtkSplotchDefaultPainter::vtkSplotchDefaultPainter()
   this->UseMIP = 0;
 #ifdef PV_SPLOTCH_WITH_MIP
   this->MIPPainter = vtkMIPPainter::New();
+#endif
+#ifdef PV_SPLOTCH_USE_PISTON
+  this->CUDAPainter = vtkCUDASplotchPainter::New();
 #endif
 }
 
@@ -54,12 +60,34 @@ void vtkSplotchDefaultPainter::SetUseMIP(int m)
 }
 
 //----------------------------------------------------------------------------
+void vtkSplotchDefaultPainter::SetEnableCUDA(int m)
+{
+#ifdef PV_SPLOTCH_USE_PISTON
+  if (!this->CUDAPainter) {
+    this->CUDAPainter = vtkCUDASplotchPainter::New();
+  }
+  this->EnableCUDA = m;
+  this->BuildPainterChain();
+#endif
+}
+
+//----------------------------------------------------------------------------
 void vtkSplotchDefaultPainter::UpdateBounds(double bounds[6])
 {
-  if (this->SplotchPainter->GetInput()!=this->GetInput()) {
-    this->SplotchPainter->SetInput(this->GetInput());
+  if (!this->EnableCUDA) {
+    if (this->SplotchPainter->GetInput()!=this->GetInput()) {
+      this->SplotchPainter->SetInput(this->GetInput());
+    }
+    this->SplotchPainter->UpdateBounds(bounds);
   }
-  this->SplotchPainter->UpdateBounds(bounds);
+  else {
+#ifdef PV_SPLOTCH_USE_PISTON
+    if (this->CUDAPainter->GetInput()!=this->GetInput()) {
+      this->CUDAPainter->SetInput(this->GetInput());
+    }
+    this->CUDAPainter->UpdateBounds(bounds);
+  }
+#endif
 }
 
 //----------------------------------------------------------------------------
@@ -74,11 +102,15 @@ void vtkSplotchDefaultPainter::BuildPainterChain()
   this->SetLightingPainter(NULL);
   this->SetClipPlanesPainter(NULL);
   // and set ours at the end of the chain
-  this->SetDefaultPainterDelegate(this->SplotchPainter);
+  vtkSplotchPainter *splotchPainter = this->SplotchPainter;
+  if (this->EnableCUDA) {
+    splotchPainter = this->CUDAPainter;
+  }
+  this->SetDefaultPainterDelegate(splotchPainter);
   // allow superclass to pieces everything together
   this->Superclass::BuildPainterChain();
   // We need the ScalarsToColors Painter as the MIP handles scalar mapping specially
-  this->SplotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());
+  splotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());
 }
 
 //----------------------------------------------------------------------------
