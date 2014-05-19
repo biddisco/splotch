@@ -16,7 +16,7 @@ INCLUDE_DIRECTORIES(
 # --------------------------------------------------
 # Optional Splotch+HDF5 test
 # --------------------------------------------------
-find_package(pv_meshless)
+find_package(pv_meshless NO_MODULE)
 IF (pv_meshless_FOUND)
   ADD_EXECUTABLE(TestSplotchMapper TestSplotchMapper.cxx)
   TARGET_LINK_LIBRARIES(TestSplotchMapper

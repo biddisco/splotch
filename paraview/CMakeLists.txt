@@ -95,7 +95,6 @@ if(NOT TARGET splotchcore)
   option(PV_SPLOTCH_USE_CUDA "Compile with Cuda support" ${CUDA_DEFAULT})
 
   if(PV_SPLOTCH_USE_CUDA)
-    find_package(pv_cuda_piston NO_MODULE)
     if (NOT TARGET pv_cuda_piston)
       message(FATAL_ERROR "Cannot enable Cuda without cuda-piston plugin")
     endif()
@@ -307,7 +306,6 @@ ADD_PARAVIEW_PLUGIN(
     ${IFACE_SRCS}
 )
 
-message("Libs we need are ${PV_SPLOTCH_DEP_LIBS}")
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
   PUBLIC
     splotchcore 
