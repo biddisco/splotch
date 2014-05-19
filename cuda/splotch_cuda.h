@@ -105,6 +105,43 @@ struct cu_gpu_vars //variables used by each gpu
   int                 colormap_ptypes;
   };
 
+#ifndef SPLOTCH_HIDE_CUDA_DEFS
+// check for active big particles to copy back to the host
+struct reg_notValid
+  {
+    __host__ __device__
+    bool operator()(const int flag)
+    {
+      return (flag==-2);
+    }
+  };
+
+// check for non-active and big particles to remove from the device
+struct particle_notValid
+  {
+    __host__ __device__
+    bool operator()(const int flag)
+    {
+      return (flag < 0);
+    }
+  };
+
+struct sum_op
+{
+  __host__ __device__
+  cu_particle_sim operator()(cu_particle_sim& p1, cu_particle_sim& p2) const{
+
+    cu_particle_sim sum;
+    sum = p1;
+    sum.e.r = p1.e.r + p2.e.r;
+    sum.e.g = p1.e.g + p2.e.g;
+    sum.e.b = p1.e.b + p2.e.b;
+
+    return sum; 
+   } 
+};
+#endif
+
 //functions
 int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);

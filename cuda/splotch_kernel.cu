@@ -582,40 +582,5 @@ __global__ void k_addC3(int nC3, int *index, cu_particle_sim *part, cu_color *pi
   
 }
 
-// check for non-active and big particles to remove from the device
-struct particle_notValid
-  {
-    __host__ __device__
-    bool operator()(const int flag)
-    {
-      return (flag < 0);
-    }
-  };
-
-// check for active big particles to copy back to the host
-struct reg_notValid
-  {
-    __host__ __device__
-    bool operator()(const int flag)
-    {
-      return (flag==-2);
-    }
-  };
-
-struct sum_op
-{
-  __host__ __device__
-  cu_particle_sim operator()(cu_particle_sim& p1, cu_particle_sim& p2) const{
-
-    cu_particle_sim sum;
-    sum = p1;
-    sum.e.r = p1.e.r + p2.e.r;
-    sum.e.g = p1.e.g + p2.e.g;
-    sum.e.b = p1.e.b + p2.e.b;
-
-    return sum; 
-   } 
-};
-
 #endif
 

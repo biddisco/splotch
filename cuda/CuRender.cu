@@ -180,13 +180,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cu_render1(newParticle, dimGrid, block_size, a_eq_e, (float) grayabsorb, gv, tile_sidex, tile_sidey, width, nytiles);
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;
 //    cudaEventRecord(stop,0);
-    cout << "Rank " << mpiMgr.rank() << " : Device rendering on " << newParticle << " particles" << endl;
+    cout << "Rank " << MPI_Manager::GetInstance()->rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
 
   // LARGE particles rendering on the host 
   if (nHostPart > 0)
   {
-     cout << "Rank " << mpiMgr.rank() << " : Host rendering on " << nHostPart << " particles" << endl;
+     cout << "Rank " << MPI_Manager::GetInstance()->rank() << " : Host rendering on " << nHostPart << " particles" << endl;
      host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
   }
 
@@ -201,7 +201,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 //    cudaEventDestroy(stop);
 
     cudaThreadSynchronize();
-  //  cout << "Rank " << mpiMgr.rank() << cudaGetErrorString(cudaGetLastError()) << endl;
+  //  cout << "Rank " << MPI_Manager::GetInstance()->rank() << cudaGetErrorString(cudaGetLastError()) << endl;
   }
 
   tstack_push("point-like particles rendering");
@@ -220,7 +220,7 @@ int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres
   int res = xres*yres;
   // add images on the device: pic+pic1+pic2+pic3
   cu_add_images(res, gv);
-  // cout << "Rank " << mpiMgr.rank() << cudaGetErrorString(cudaGetLastError()) << endl;
+  // cout << "Rank " << MPI_Manager::GetInstance()->rank() << cudaGetErrorString(cudaGetLastError()) << endl;
 
   COLOUR *Pic = new COLOUR [res];
   // copy back the image
@@ -228,7 +228,7 @@ int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres
   cudaError_t error = cudaMemcpy(Pic, gv->d_pic, res * sizeof(cu_color), cudaMemcpyDeviceToHost);
   if (error != cudaSuccess) 
   {
-    cout << "Rank " << mpiMgr.rank() << " Image copy: Device Memcpy error!" << endl;
+    cout << "Rank " << MPI_Manager::GetInstance()->rank() << " Image copy: Device Memcpy error!" << endl;
     return 0;
   }
   tstack_pop("Data copy");

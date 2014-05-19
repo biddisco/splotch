@@ -20,7 +20,7 @@
  *
  */
 
-
+#define SPLOTCH_HIDE_CUDA_DEFS
 #include "cuda/splotch_cuda2.h"
 #include "cuda/splotch_cuda.h"
 #include "cxxsupport/string_utils.h"
@@ -57,7 +57,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
   if (len <= 0)
     {
     cout << "Graphics memory setting error" << endl;
-    mpiMgr.abort();
+    MPI_Manager::GetInstance()->abort();
     }
 
   // enable device and allocate arrays
@@ -85,7 +85,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
       for (int y=0; y<yres; y++)
         pic[x][y] += Pic_host[x][y];
      tstack_pop("combine images");
-     cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
+     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
      startP = endP;
     }
     add_device_image(pic, &gv, xres, yres);
