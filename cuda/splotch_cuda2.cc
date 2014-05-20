@@ -20,7 +20,17 @@
  *
  */
 
-#define SPLOTCH_HIDE_CUDA_DEFS
+#include <cmath>
+#include <iostream>
+#include <fstream>
+
+#include "splotch/scenemaker.h"
+#include "splotch/splotchutils.h"
+#include "cxxsupport/lsconstants.h"
+#include "cxxsupport/walltimer.h"
+#include "cxxsupport/cxxutils.h"
+#include "cxxsupport/datatypes.h"
+
 #include "cuda/splotch_cuda2.h"
 #include "cuda/splotch_cuda.h"
 #include "cxxsupport/string_utils.h"

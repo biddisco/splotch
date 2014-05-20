@@ -37,6 +37,10 @@
 #include "vtkCompositeDataIterator.h"
 //
 #include <thrust/version.h>
+#include <stdexcept>
+//
+#include "cuda/splotch_cuda2.h"
+
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkCUDASplotchPainter);
 //-----------------------------------------------------------------------------
@@ -90,67 +94,43 @@ vtkCUDASplotchPainter::~vtkCUDASplotchPainter()
   delete this->Internal;
 }
 //-----------------------------------------------------------------------------
-int device_binding(int mpi_rank)
+void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
 {
-  int local_rank = mpi_rank;
-  int dev_count, use_dev_count, my_dev_id;
-  char *str;
-
-  if ((str = getenv ("MV2_COMM_WORLD_LOCAL_RANK")) != NULL)
+  // call superclass function
+  this->vtkSplotchPainter::PrepareForRendering(renderer, actor);
+  //
+  // if we are not using CUDA exit immediately
+  if (!this->EnableCUDA) {
+    return;
+  }
+  // if the input dataset is invalid exit immediately
+  vtkDataObject* input = this->GetInput();
+  if (!input)
   {
-    local_rank = atoi (str);
-    printf ("MV2_COMM_WORLD_LOCAL_RANK %s\n", str);
+    vtkErrorMacro("No input present.");
+    return;
   }
 
-  if ((str = getenv ("MPISPAWN_LOCAL_NPROCS")) != NULL)
-  {
-    //num_local_procs = atoi (str);
-    printf ("MPISPAWN_LOCAL_NPROCS %s\n", str);
-  }
+  //
+  // does a shallow copy of input to output
+  //
+  this->Superclass::PrepareForRendering(renderer, actor);
 
-  dev_count = vtkpiston::GetCudaDeviceCount();
-  if ((str = getenv ("NUM_GPU_DEVICES")) != NULL)
+  // Now if we have composite data, we need to MapScalars for all leaves.
+  if (input->IsA("vtkCompositeDataSet"))
   {
-    use_dev_count = atoi (str);
-    printf ("NUM_GPU_DEVICES %s\n", str);
+    throw std::runtime_error("Not supported");
   }
   else
   {
-    use_dev_count = dev_count;
+    this->DataSetToPiston->SetInputData(input);
+    this->DataSetToPiston->SetOpacityArrayName(NULL);
+//    this->DataSetToPiston->SetScalarArrayName(this->ScalarsToColors->GetArrayName());
+    this->DataSetToPiston->Update();
   }
-
-  my_dev_id = (use_dev_count>0) ? (local_rank % use_dev_count) : 0;
-  printf ("local rank = %d dev id = %d\n", local_rank, my_dev_id);
-  return my_dev_id;
-}
-//-----------------------------------------------------------------------------
-int vtkCUDASplotchPainter::InitCudaGL(vtkRenderWindow *rw, int rank, int &displayId)
-{
-  if (!vtkCUDASplotchPainter::CudaGLInitted)
-  {
-    int major = THRUST_MAJOR_VERSION;
-    int minor = THRUST_MINOR_VERSION;
-    std::cout << "Thrust v" << major << "." << minor << std::endl;
-    //
-    vtkOpenGLExtensionManager *em = vtkOpenGLExtensionManager::New();
-    em->SetRenderWindow(rw);
-    em->Update();
-    if (!em->LoadSupportedExtension("GL_VERSION_1_5"))
-    {
-      std::cout << "WARNING: GL_VERSION_1_5 unsupported Can not use direct piston rendering" << endl;
-      std::cout << em->GetExtensionsString() << std::endl;
-      em->FastDelete();
-      return 0;
-    }
-    em->FastDelete();
-    if (displayId<0 || displayId>=vtkpiston::GetCudaDeviceCount()) {
-      // try another method to get the device ID
-      displayId = device_binding(rank);
-    }
-    vtkCUDASplotchPainter::CudaGLInitted = true;
-    vtkpiston::CudaGLInit(displayId);
-  }
-  return 1;
+  //
+  this->Camera = renderer->GetActiveCamera();
+  this->Actor  = actor;
 }
 //-----------------------------------------------------------------------------
 void vtkCUDASplotchPainter::PrepareDirectRenderBuffers(int nPoints, int nCells)
@@ -207,6 +187,52 @@ void vtkCUDASplotchPainter::PrepareDirectRenderBuffers(int nPoints, int nCells)
     this->Internal->vboBuffers[2]);
   vtkpiston::CudaRegisterBuffer(&this->Internal->vboResources[3],
     this->Internal->vboBuffers[3]);
+}
+// ---------------------------------------------------------------------------
+void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
+  unsigned long typeflags, bool forceCompileOnly)
+{
+  if (!this->EnableCUDA) {
+    this->vtkSplotchPainter::RenderInternal(ren, actor, typeflags, forceCompileOnly);
+    return;
+  }
+
+  //
+  int mydevID = 0;
+  int nTasksDev = 1;
+  std::vector<COLOURMAP> amap;
+
+  paramfile params;
+  params.find("ptypes", this->NumberOfParticleTypes);
+  params.find("xres", X);
+  params.find("yres", Y);
+  for (int i=0; i<this->NumberOfParticleTypes; i++) {
+    std::string name;
+    name = "intensity_log" + NumToStrSPM<int>(i);
+    params.find(name, (this->LogIntensity[i]!=0));
+    name = "brightness" + NumToStrSPM<int>(i);
+    params.find(name, this->Brightness[i]);
+  }
+  params.find("gray_absorption", this->GrayAbsorption);
+  params.find("zmin", zmin);
+  params.find("zmax", zmax);
+  params.find("fov",  splotchFOV);
+  params.find("projection", true);
+  params.find("minrad_pix", 1);
+  params.find("a_eq_e", true);
+  params.find("colorbar", false);
+  params.find("quality_factor", 0.001);
+  params.find("boost", true);
+  params.find("intensity_min0", -11.8784);
+  params.find("intensity_max0",  -1.44456);
+
+  params.find("color_min0", 0.152815);
+  params.find("color_max0",  6.29244);
+
+
+// raw data passed into splotch renderer internals
+  cuda_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params);
+
 }
 //-----------------------------------------------------------------------------
 void vtkCUDASplotchPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
@@ -340,37 +366,6 @@ void vtkCUDASplotchPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
   timer->StopTimer();
   double rendertime = timer->GetElapsedTime();
   //  std::cout << setprecision(6) << "RenderTime : << " <<  rendertime << std::endl;
-}
-//-----------------------------------------------------------------------------
-void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
-{
-  vtkDataObject* input = this->GetInput();
-  if (!input)
-  {
-    vtkErrorMacro("No input present.");
-    return;
-  }
-
-  //
-  // does a shallow copy of input to output
-  //
-  this->Superclass::PrepareForRendering(renderer, actor);
-
-  // Now if we have composite data, we need to MapScalars for all leaves.
-  if (input->IsA("vtkCompositeDataSet"))
-  {
-    throw std::runtime_error("Not supported");
-  }
-  else
-  {
-    this->DataSetToPiston->SetInputData(input);
-    this->DataSetToPiston->SetOpacityArrayName(NULL);
-//    this->DataSetToPiston->SetScalarArrayName(this->ScalarsToColors->GetArrayName());
-    this->DataSetToPiston->Update();
-  }
-  //
-  this->Camera = renderer->GetActiveCamera();
-  this->Actor  = actor;
 }
 //-----------------------------------------------------------------------------
 

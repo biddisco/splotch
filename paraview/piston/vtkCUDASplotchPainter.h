@@ -41,18 +41,6 @@ public:
   vtkTypeMacro(vtkCUDASplotchPainter, vtkSplotchPainter);
 
   // Description:
-  // Manually call this before any cuda filters are created
-  // to use direct GPU rendering.
-  static int InitCudaGL(vtkRenderWindow *rw, int rank, int &displayId);
-
-  // Description:
-  // Return true if using cuda interop feature otherwise false.
-  inline static bool IsEnabledCudaGL()
-    {
-    return CudaGLInitted;
-    }
-
-  // Description:
   // Release any graphics resources that are being consumed by this mapper.
   // The parameter window could be used to determine which graphic
   // resources to release.
@@ -66,6 +54,12 @@ protected:
 
   void PrepareForRendering(vtkRenderer* renderer, vtkActor* actor);
 
+  void RenderInternal(vtkRenderer* ren, vtkActor* actor, 
+    unsigned long typeflags, bool forceCompileOnly);
+
+  //
+  //
+  //
   vtkSmartPointer<vtkDataSetToPiston>            DataSetToPiston;
   vtkCamera                                     *Camera;
   vtkActor                                      *Actor;

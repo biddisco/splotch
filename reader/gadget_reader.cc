@@ -187,6 +187,7 @@ void gadget_reader(paramfile &params, int interpol_mode,
   {
     filename += snapdir+intToString(snr,3)+"/";
   }
+  filename.clear();
   //
   // (3) add a number to the filename, which is done always based on snr
   //     e.g. "/data/snapshot_000/snap_000"

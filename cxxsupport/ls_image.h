@@ -185,6 +185,7 @@ class LS_Image
 
     /*! Writes the image to \a file in binary PPM format. */
     void write_PPM (const std::string &file) const;
+    void write_bmp (const std::string &file) const;
   };
 
 /*! \} */

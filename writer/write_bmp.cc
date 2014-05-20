@@ -1,15 +1,17 @@
 #include <algorithm>
 
 #include "cxxsupport/bstream.h"
-#include "writer/writer.h"
+//#include "writer/writer.h"
+#include "ls_image.h"
 
 using namespace std;
 
-void write_bmp(paramfile &params, const arr2<COLOUR> &pic,
-  const string &frame_name)
+void LS_Image::write_bmp (const string &file) const
+//void write_bmp(paramfile &params, const arr2<COLOUR> &pic,
+//  const string &frame_name)
 {
-  cout << " writing bmp file '" << frame_name << "'" << endl;
-  tsize xres=pic.size1(), yres=pic.size2();
+  cout << " writing bmp file '" << file.c_str() << "'" << endl;
+  tsize xres=pixel.size1(), yres=pixel.size2();
 
   FILE *f;
   unsigned char *img = NULL;
@@ -23,9 +25,9 @@ void write_bmp(paramfile &params, const arr2<COLOUR> &pic,
       for(int j=0; j<yres; j++)
   {
       x=i; y=(yres-1)-j;
-      r = pic[i][j].r*255;
-      g = pic[i][j].g*255;
-      b = pic[i][j].b*255;
+      r = pixel[i][j].r*255;
+      g = pixel[i][j].g*255;
+      b = pixel[i][j].b*255;
       if (r > 255) r=255;
       if (g > 255) g=255;
       if (b > 255) b=255;
@@ -53,7 +55,7 @@ void write_bmp(paramfile &params, const arr2<COLOUR> &pic,
   bmpinfoheader[10] = (unsigned char)(       yres>>16);
   bmpinfoheader[11] = (unsigned char)(       yres>>24);
 
-  f = fopen(frame_name.c_str(),"wb");
+  f = fopen(file.c_str(),"wb");
   fwrite(bmpfileheader,1,14,f);
   fwrite(bmpinfoheader,1,40,f);
   for(int i=0; i<yres; i++)

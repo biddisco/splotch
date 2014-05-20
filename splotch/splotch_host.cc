@@ -455,7 +455,7 @@ void render_new (particle_sim *p, int npart, arr2<COLOUR> &pic,
 
 using namespace host_funct;
 
-void host_rendering (paramfile &params, vector<particle_sim> &particles,
+void host_funct::host_rendering (paramfile &params, vector<particle_sim> &particles,
   arr2<COLOUR> &pic, const vec3 &campos, const vec3 &lookat, const vec3 &sky,
   vector<COLOURMAP> &amap, float b_brightness, tsize npart_all)
   {

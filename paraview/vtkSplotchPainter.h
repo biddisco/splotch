@@ -23,9 +23,14 @@
 
 #include "pv_splotch_configure.h"
 #include "vtkPolyDataPainter.h"
+//#include "kernel/colour.h"
+//#include "cxxsupport/vec3.h"
+//#include "cxxsupport/arr.h"
 
 #include <vector> // needed for our arrays
 #include <string> // needed for our arrays
+
+#include "splotch/splotchutils.h"
 
 class vtkMultiProcessController;
 class vtkScalarsToColorsPainter;
@@ -112,6 +117,11 @@ public:
   virtual void SetController(vtkMultiProcessController* controller);
   vtkGetObjectMacro(Controller, vtkMultiProcessController);
 
+  // Description:
+  // Enable/disble the use of GPU rendering with Piston
+  vtkSetMacro(EnableCUDA, int);
+  vtkGetMacro(EnableCUDA, int);
+
 protected:
    vtkSplotchPainter();
   ~vtkSplotchPainter();
@@ -120,6 +130,10 @@ protected:
   // Called before RenderInternal() if the Information has been changed
   // since the last time this method was called.
   virtual void ProcessInformation(vtkInformation*);
+
+  virtual void PrepareForRendering(vtkRenderer* renderer, vtkActor* actor);
+
+  template <typename T> std::string NumToStrSPM(T data);
 
   char   *TypeScalars;
   char   *ActiveScalars;
@@ -141,6 +155,17 @@ protected:
   int   ArrayId;
   char *ArrayName;
   int   ScalarMode;
+  int   EnableCUDA;
+
+  int     X, Y;
+  vec3    campos, lookat, sky;
+  double  zmin,zmax;
+  double  FOV, newFOV, splotchFOV;
+  double *brightness;
+  bool    colourspresent;
+  vtkIdType N;
+  arr2<COLOUR> pic;
+  std::vector<particle_sim> particle_data; 
 
 private:
   vtkSplotchPainter(const vtkSplotchPainter&); // Not implemented.

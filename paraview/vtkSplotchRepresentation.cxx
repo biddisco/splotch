@@ -135,7 +135,7 @@ void vtkSplotchRepresentation::PrintSelf(ostream& os, vtkIndent indent)
 void vtkSplotchRepresentation::SetEnableCUDA(int mode)
 {
 #ifdef PV_SPLOTCH_USE_PISTON
-  if (!vtkCUDASplotchPainter::IsEnabledCudaGL()) {
+  if (!vtkpiston::IsEnabledCudaGL()) {
     mode = 0;
   }
   this->SplotchDefaultPainter->SetEnableCUDA(mode);
@@ -322,7 +322,7 @@ bool vtkSplotchRepresentation::AddToView(vtkView* view)
 {
   vtkPVRenderView* rview = vtkPVRenderView::SafeDownCast(view);
 #ifdef PV_SPLOTCH_USE_PISTON
-  if (rview && !vtkCUDASplotchPainter::IsEnabledCudaGL()) {
+  if (rview && !vtkpiston::IsEnabledCudaGL()) {
     
     // if we have no hints as to the display VAR, we'll use the rank (modulus GPU count)
     vtkMultiProcessController *controller = vtkMultiProcessController::GetGlobalController();
@@ -335,8 +335,13 @@ bool vtkSplotchRepresentation::AddToView(vtkView* view)
     vtksys::RegularExpression regex(".*:.*\\.([0-9]+)");
     int displaynum = -1;
     if (regex.find(display.c_str())) {
-      if (regex.match(1).size()>0) {
-        displaynum = atoi(regex.match(1).c_str());
+      try {
+        if (regex.match(1).size()>0) {
+          displaynum = atoi(regex.match(1).c_str());
+        }
+      }
+      catch (...)
+      {
       }
     }
     else {
@@ -345,7 +350,7 @@ bool vtkSplotchRepresentation::AddToView(vtkView* view)
 #endif
     }
     //
-    bool ok = vtkCUDASplotchPainter::InitCudaGL(rview->GetRenderWindow(), rank, displaynum);
+    bool ok = vtkpiston::InitCudaGL(rview->GetRenderWindow(), rank, displaynum);
     // 
     vtksys::SystemInformation sysInfo;
     std::string hostname = sysInfo.GetHostname();

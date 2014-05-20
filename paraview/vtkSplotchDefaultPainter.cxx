@@ -31,14 +31,15 @@ vtkCxxSetObjectMacro(vtkSplotchDefaultPainter, SplotchPainter, vtkSplotchPainter
 //----------------------------------------------------------------------------
 vtkSplotchDefaultPainter::vtkSplotchDefaultPainter()
 {
+#ifndef PV_SPLOTCH_USE_PISTON
   this->SplotchPainter = vtkSplotchPainter::New();
+#else
+  this->SplotchPainter = vtkCUDASplotchPainter::New();
+#endif
   this->MIPPainter = NULL;
   this->UseMIP = 0;
 #ifdef PV_SPLOTCH_WITH_MIP
   this->MIPPainter = vtkMIPPainter::New();
-#endif
-#ifdef PV_SPLOTCH_USE_PISTON
-  this->CUDAPainter = vtkCUDASplotchPainter::New();
 #endif
 }
 
@@ -62,32 +63,17 @@ void vtkSplotchDefaultPainter::SetUseMIP(int m)
 //----------------------------------------------------------------------------
 void vtkSplotchDefaultPainter::SetEnableCUDA(int m)
 {
-#ifdef PV_SPLOTCH_USE_PISTON
-  if (!this->CUDAPainter) {
-    this->CUDAPainter = vtkCUDASplotchPainter::New();
-  }
   this->EnableCUDA = m;
-  this->BuildPainterChain();
-#endif
+  this->SplotchPainter->SetEnableCUDA(m);
 }
 
 //----------------------------------------------------------------------------
 void vtkSplotchDefaultPainter::UpdateBounds(double bounds[6])
 {
-  if (!this->EnableCUDA) {
-    if (this->SplotchPainter->GetInput()!=this->GetInput()) {
-      this->SplotchPainter->SetInput(this->GetInput());
-    }
-    this->SplotchPainter->UpdateBounds(bounds);
+  if (this->SplotchPainter->GetInput()!=this->GetInput()) {
+    this->SplotchPainter->SetInput(this->GetInput());
   }
-  else {
-#ifdef PV_SPLOTCH_USE_PISTON
-    if (this->CUDAPainter->GetInput()!=this->GetInput()) {
-      this->CUDAPainter->SetInput(this->GetInput());
-    }
-    this->CUDAPainter->UpdateBounds(bounds);
-  }
-#endif
+  this->SplotchPainter->UpdateBounds(bounds);
 }
 
 //----------------------------------------------------------------------------
@@ -102,15 +88,11 @@ void vtkSplotchDefaultPainter::BuildPainterChain()
   this->SetLightingPainter(NULL);
   this->SetClipPlanesPainter(NULL);
   // and set ours at the end of the chain
-  vtkSplotchPainter *splotchPainter = this->SplotchPainter;
-  if (this->EnableCUDA) {
-    splotchPainter = this->CUDAPainter;
-  }
-  this->SetDefaultPainterDelegate(splotchPainter);
+  this->SetDefaultPainterDelegate(this->SplotchPainter);
   // allow superclass to pieces everything together
   this->Superclass::BuildPainterChain();
   // We need the ScalarsToColors Painter as the MIP handles scalar mapping specially
-  splotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());
+  this->SplotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());
 }
 
 //----------------------------------------------------------------------------

@@ -64,7 +64,7 @@ void MPI_status()
 #ifndef USE_MPI
   cout << "MPI: not supported by this binary" << endl;
 #else
-  int tasks = mpiMgr.num_ranks();
+  int tasks = MPI_Manager::GetInstance()->num_ranks();
   if (tasks>1)
     cout << "MPI active with " << tasks << " tasks." << endl;
   else

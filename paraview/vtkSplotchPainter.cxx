@@ -82,14 +82,15 @@ vtkSplotchPainter *vtkSplotchPainter::New()
 // ---------------------------------------------------------------------------
 vtkSplotchPainter::vtkSplotchPainter()
 {
-  this->TypeScalars      = NULL;
-  this->ActiveScalars    = NULL;
-  this->NumberOfParticleTypes = 0;
+  this->TypeScalars            = NULL;
+  this->ActiveScalars          = NULL;
+  this->NumberOfParticleTypes  = 0;
   this->SetNumberOfParticleTypes(1); 
-  this->GrayAbsorption   = 0.001;
-  this->RadiusMultiplier = 1.0;
+  this->GrayAbsorption         = 0.001;
+  this->RadiusMultiplier       = 1.0;
   this->ScalarsToColorsPainter = NULL;
   this->Controller             = NULL;
+  this->EnableCUDA             = 0;
   this->SetController(vtkMultiProcessController::GetGlobalController());
   //
   this->ArrayName = NULL;
@@ -250,7 +251,7 @@ void vtkSplotchPainter::ProcessInformation(vtkInformation* info)
   }
 // ---------------------------------------------------------------------------
 template <typename T>
-std::string NumToStrSPM(T data) {
+std::string vtkSplotchPainter::NumToStrSPM(T data) {
   vtksys_ios::ostringstream oss;
   oss.precision(5);  
   oss << data;
@@ -290,14 +291,12 @@ typedef void *                  IceTContext;
 #define ICET_STATE_ENGINE_START (IceTEnum)0x00000000
 #define ICET_NUM_TILES          (ICET_STATE_ENGINE_START | (IceTEnum)0x0010)
 #define ICET_TILE_VIEWPORTS     (ICET_STATE_ENGINE_START | (IceTEnum)0x0011)
-// ---------------------------------------------------------------------------
-void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
-  unsigned long typeflags, bool forceCompileOnly)
+//-----------------------------------------------------------------------------
+void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
 {
-//  this->PrepareForRendering();
   //
-  int X = ren->GetSize()[0];
-  int Y = ren->GetSize()[1];
+  X = ren->GetSize()[0];
+  Y = ren->GetSize()[1];
   vtkDataObject *indo = this->GetInput();
   vtkPointSet *input = vtkPointSet::SafeDownCast(indo);
   vtkPoints *pts = input->GetPoints();
@@ -318,13 +317,9 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     input->GetPointData()->GetArray(this->ActiveScalars) : NULL;  
 
   //
-  // Make sure we have the right color array and other info
-  //
-//  this->ProcessInformation(this->Information);
-  //
   // Get the LUT and scalar array
   //
-  bool colourspresent = false;
+  colourspresent = false;
   int cellFlag=0;
   vtkDataSet* ds = static_cast<vtkDataSet*>(input);
   vtkDataArray* scalars = vtkAbstractMapper::GetScalars(ds,
@@ -383,23 +378,20 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   //
   // watch out, if one process has no points, pts array will be NULL
   //
-  vtkIdType N = pts ? pts->GetNumberOfPoints() : 0;
+  N = pts ? pts->GetNumberOfPoints() : 0;
   float *pointsF = NULL;
   double *pointsD = NULL;
   if (N>0) {
     FloatOrDoubleArrayPointer(pts->GetData(), pointsF, pointsD);
   }
 
-  std::vector<particle_sim> particle_data; // raw data 
-  vec3 campos, lookat, sky;
-  double zmin,zmax;
   ren->GetActiveCamera()->GetPosition(&campos.x);
   ren->GetActiveCamera()->GetFocalPoint(&lookat.x);
   ren->GetActiveCamera()->GetViewUp(&sky.x);
   ren->GetActiveCamera()->GetClippingRange(zmin, zmax);
-  double FOV = ren->GetActiveCamera()->GetViewAngle();
-  double newFOV = tan(vtkMath::RadiansFromDegrees(FOV/2.0))*X/Y;
-  double splotchFOV = vtkMath::DegreesFromRadians(2.0*atan(newFOV));
+  FOV = ren->GetActiveCamera()->GetViewAngle();
+  newFOV = tan(vtkMath::RadiansFromDegrees(FOV/2.0))*X/Y;
+  splotchFOV = vtkMath::DegreesFromRadians(2.0*atan(newFOV));
 
   double bounds[6];
   input->GetBounds(bounds);
@@ -408,7 +400,7 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
 
   particle_data.resize(N, particle_sim());
 
-  double *brightness = &this->Brightness[0];
+  brightness = &this->Brightness[0];
 
 //  vtkIdType activeParticles = 0;
     #define activeParticles i 
@@ -472,6 +464,11 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   }
 //  particle_data.resize(activeParticles);
 
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
+  unsigned long typeflags, bool forceCompileOnly)
+{
   paramfile params;
   params.find("ptypes", this->NumberOfParticleTypes);
   params.find("xres", X);
@@ -486,23 +483,23 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   params.find("gray_absorption", this->GrayAbsorption);
   params.find("zmin", zmin);
   params.find("zmax", zmax);
-  params.find("fov", splotchFOV);
+  params.find("fov",  splotchFOV);
   params.find("projection", true);
   params.find("minrad_pix", 1);
   params.find("a_eq_e", true);
   params.find("colorbar", false);
   params.find("quality_factor", 0.001);
-  params.find("boost", true);
+  params.find("boost", false);
 
   host_funct::particle_normalize2(params, particle_data, true);
 
-  arr2<COLOUR> pic(X,Y);
+  pic.alloc(X,Y);
 
   if(particle_data.size()>0) {
     host_funct::particle_project(params, particle_data, campos, lookat, sky);
   }
 #pragma omp parallel for
-  for (int i=0; i<N/*activeParticles*/; i++) {
+  for (int i=0; i<N /*activeParticles*/; i++) {
     if (colourspresent) {      
       double b = brightness[particle_data[i].type];
       particle_data[i].e.r *= particle_data[i].I*b;

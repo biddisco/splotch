@@ -50,11 +50,17 @@ if(PARAVIEW_USE_MPI)
   FIND_PACKAGE(MPI)   
   INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
   ADD_DEFINITIONS(-DUSE_MPI)
+  set(SPLOTCH_MPI_LIBS ${MPI_C_LIBRARIES})
 endif(PARAVIEW_USE_MPI)
 
 if(PARAVIEW_USE_ICE_T)
   ADD_DEFINITIONS(-DUSE_ICET)
 endif(PARAVIEW_USE_ICE_T)
+
+# --------------------------------------------------
+# We must build sub libraries with -fPIC
+# --------------------------------------------------
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 #--------------------------------------------------
 # if not called from the splotch source directory
@@ -95,6 +101,12 @@ if(NOT TARGET splotchcore)
   option(PV_SPLOTCH_USE_CUDA "Compile with Cuda support" ${CUDA_DEFAULT})
 
   if(PV_SPLOTCH_USE_CUDA)
+    # these should have already been found by pv-cuda-piston
+    find_package(CUDA REQUIRED)
+
+    #
+    # use /MDd flag in CXX flags to solve some link issues on windows
+    #
     if (NOT TARGET pv_cuda_piston)
       message(FATAL_ERROR "Cannot enable Cuda without cuda-piston plugin")
     endif()
@@ -185,7 +197,7 @@ if(NOT TARGET splotchcore)
       ${CMAKE_CURRENT_SOURCE_DIR}/../reader/tipsy_reader.cc
       ${CMAKE_CURRENT_SOURCE_DIR}/../reader/ramses_reader.cc
   #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
-  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
   #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
     )
     set(SPLOTCH_IO_LIBRARY splotchio)
@@ -207,6 +219,8 @@ if(NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/mpi_support.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/paramfile.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/string_utils.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/ls_image.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport/announce.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/m_rotation.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
@@ -218,8 +232,24 @@ if(NOT TARGET splotchcore)
 
 #  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
-  TARGET_LINK_LIBRARIES(splotchcore ${SPLOTCH_IO_LIBRARY} ${SPLOTCH_MPI_LIBS})
+
+  TARGET_LINK_LIBRARIES(splotchcore 
+    ${SPLOTCH_IO_LIBRARY} 
+    ${SPLOTCH_MPI_LIBS}     
+    ${CUDA_LIBRARIES}
+  )
   SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+
+  add_executable(splotch 
+    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch.cc
+  )
+
+  target_link_libraries(splotch 
+    splotchcore 
+    ${SPLOTCH_IO_LIBRARY} 
+    ${SPLOTCH_MPI_LIBS}     
+    ${CUDA_LIBRARIES}
+  )
 
 endif(NOT TARGET splotchcore)
 
@@ -295,7 +325,8 @@ ADD_PARAVIEW_PLUGIN(
     ${splotch_plugin_WRAPPED_SRCS}
   SERVER_SOURCES
     ${splotch_plugin_SRCS} 
-  GUI_RESOURCE_FILES
+#    ${SPLOTCH_CORE_LIB_SRCS}
+   GUI_RESOURCE_FILES
     ${splotch_plugin_CLIENT_XML}
   GUI_INTERFACES 
     ${IFACES} 

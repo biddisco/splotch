@@ -105,7 +105,7 @@ struct cu_gpu_vars //variables used by each gpu
   int                 colormap_ptypes;
   };
 
-#ifndef SPLOTCH_HIDE_CUDA_DEFS
+#ifdef __CUDACC__
 // check for active big particles to copy back to the host
 struct reg_notValid
   {
