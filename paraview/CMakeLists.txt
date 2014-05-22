@@ -11,7 +11,8 @@ cmake_minimum_required(VERSION 2.8)
 #--------------------------------------------------
 foreach(p
     CMP0003 
-    CMP0017 
+    CMP0017
+    CMP0022 
     CMP0023 
     )
   if(POLICY ${p})
@@ -172,7 +173,8 @@ if(NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../kernel
     ${CMAKE_CURRENT_SOURCE_DIR}/../cxxsupport
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch
-    ${CMAKE_CURRENT_SOURCE_DIR}/../booster          
+    ${CMAKE_CURRENT_SOURCE_DIR}/../booster
+    ${CMAKE_CURRENT_SOURCE_DIR}/../c_utils
   )
 
   option(PV_SPLOTCH_DISABLE_READERS "Turn off compilation of readers ifparaview ones are used instead" ON)
@@ -196,9 +198,6 @@ if(NOT TARGET splotchcore)
       ${CMAKE_CURRENT_SOURCE_DIR}/../reader/bin_reader_mpi.cc
       ${CMAKE_CURRENT_SOURCE_DIR}/../reader/tipsy_reader.cc
       ${CMAKE_CURRENT_SOURCE_DIR}/../reader/ramses_reader.cc
-  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_tga.cc
-      ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_bmp.cc
-  #    ${CMAKE_CURRENT_SOURCE_DIR}/../writer/write_ppm.cc
     )
     set(SPLOTCH_IO_LIBRARY splotchio)
     ADD_LIBRARY(${SPLOTCH_IO_LIBRARY} STATIC ${SPLOTCH_IO_LIB_SRCS})
