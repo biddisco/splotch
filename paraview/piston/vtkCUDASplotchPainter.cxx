@@ -200,7 +200,6 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   //
   int mydevID = 0;
   int nTasksDev = 1;
-  std::vector<COLOURMAP> amap;
 
   paramfile params;
   params.find("ptypes", this->NumberOfParticleTypes);
@@ -226,13 +225,22 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   params.find("intensity_min0", -11.8784);
   params.find("intensity_max0",  -1.44456);
 
-  params.find("color_min0", 0.152815);
+  params.find("color_min0",  0.152815);
   params.find("color_max0",  6.29244);
 
+  COLOURMAP c1;
+  c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
+  c1.addVal(0.5, COLOUR(0.5, 1.0, 0.5));
+  c1.addVal(1.0, COLOUR(1.0, 0.0, 0.0));
 
-// raw data passed into splotch renderer internals
-  cuda_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params);
+  std::vector<COLOURMAP> amap;
+  amap.push_back(c1);
+  //  amap.push_back(c1);
 
+  // raw data passed into splotch renderer internals
+  cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params);
+  //
+  this->PostRenderCompositing(ren, actor);
 }
 //-----------------------------------------------------------------------------
 void vtkCUDASplotchPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)

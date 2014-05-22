@@ -89,7 +89,7 @@ void vtkSplotchDefaultPainter::BuildPainterChain()
   this->SetClipPlanesPainter(NULL);
   // and set ours at the end of the chain
   this->SetDefaultPainterDelegate(this->SplotchPainter);
-  // allow superclass to pieces everything together
+  // allow superclass to piece everything together
   this->Superclass::BuildPainterChain();
   // We need the ScalarsToColors Painter as the MIP handles scalar mapping specially
   this->SplotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());

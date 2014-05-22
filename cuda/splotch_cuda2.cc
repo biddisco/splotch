@@ -39,6 +39,76 @@
 
 using namespace std;
 
+//
+// paraview version of rendering sets up colour map independently
+// and leaves particles on GPU between frames if they have not been modified
+//
+void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
+{
+  tstack_push("CUDA");
+  tstack_push("Device setup");
+  long int nP = particle.size();
+  pic.fill(COLOUR(0.0, 0.0, 0.0));
+  int xres = pic.size1();
+  int yres = pic.size2();
+ // cout << "resolution = " << xres << " x " << yres << endl;
+  arr2<COLOUR> Pic_host(xres,yres);
+  int ptypes = g_params.find<int>("ptypes",1);
+
+  // CUDA Init
+  // Initialize policy class
+  CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
+  int ntiles = policy->GetNumTiles();
+
+  cu_gpu_vars gv;
+  memset(&gv, 0, sizeof(cu_gpu_vars));
+  gv.policy = policy;
+  setup_colormap(ptypes, amap, &gv);
+
+  // num particles to manage at once
+  float factor = g_params.find<float>("particle_mem_factor", 4);
+  long int len = cu_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
+  if (len <= 0)
+    {
+    cout << "Graphics memory setting error" << endl;
+    MPI_Manager::GetInstance()->abort();
+    }
+
+  // enable device and allocate arrays
+  bool doLogs = true;
+  int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+  tstack_pop("Device setup");
+  if (!error)
+  {
+    //a new linear pic object that will carry the result
+    float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
+    bool a_eq_e = g_params.find<bool>("a_eq_e",true);
+ 
+    int endP = 0;
+    int startP = 0;
+    int nPR = 0;
+
+    while(endP < nP)
+    {
+     endP = startP + len;   //set range
+     if (endP > nP) endP = nP;
+     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
+     // combine host results of chunks
+     tstack_push("combine images");
+     for (int x=0; x<xres; x++)
+      for (int y=0; y<yres; y++)
+        pic[x][y] += Pic_host[x][y];
+     tstack_pop("combine images");
+     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
+     startP = endP;
+    }
+    add_device_image(pic, &gv, xres, yres);
+    tstack_pop("CUDA");
+    cu_end(&gv);
+  }
+
+ }
+
 void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
 {
   tstack_push("CUDA");

@@ -133,6 +133,8 @@ protected:
 
   virtual void PrepareForRendering(vtkRenderer* renderer, vtkActor* actor);
 
+  virtual void PostRenderCompositing(vtkRenderer* renderer, vtkActor* actor);
+
   template <typename T> std::string NumToStrSPM(T data);
 
   char   *TypeScalars;
@@ -163,6 +165,10 @@ protected:
   double  FOV, newFOV, splotchFOV;
   double *brightness;
   bool    colourspresent;
+  bool    a_eq_e;
+  unsigned char *cdata3;
+  unsigned char *cdata4;
+
   vtkIdType N;
   arr2<COLOUR> pic;
   std::vector<particle_sim> particle_data; 

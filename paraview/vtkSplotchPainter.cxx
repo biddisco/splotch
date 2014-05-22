@@ -325,9 +325,13 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   vtkDataArray* scalars = vtkAbstractMapper::GetScalars(ds,
     this->ScalarMode, this->ArrayAccessMode, this->ArrayId,
     this->ArrayName, cellFlag);
+
+//  double range[2];
+//  scalars->GetRange(range);
+
   // if scalars are a RGB colour table, then we don't need to map them.
-  unsigned char *cdata3 = NULL;
-  unsigned char *cdata4 = NULL;
+  cdata3 = NULL;
+  cdata4 = NULL;
   if (scalars && scalars->GetDataType()==VTK_UNSIGNED_CHAR && scalars->GetNumberOfComponents()==3) {
     cdata3 = static_cast<unsigned char*>(scalars->GetVoidPointer(0));
     colourspresent = true;
@@ -491,6 +495,9 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   params.find("quality_factor", 0.001);
   params.find("boost", false);
 
+  params.find("color_min0",  0.0);
+  params.find("color_max0",  1.0);
+
   host_funct::particle_normalize2(params, particle_data, true);
 
   pic.alloc(X,Y);
@@ -523,7 +530,7 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   // --------------------------------
   // ----------- Sorting ------------
   // --------------------------------
-  bool a_eq_e = params.find<bool>("a_eq_e",true);
+  a_eq_e = params.find<bool>("a_eq_e",true);
   if (!a_eq_e) {
     int sort_type = params.find<int>("sort_type",1);
     host_funct::particle_sort(particle_data,sort_type,true);
@@ -542,6 +549,12 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     host_funct::render_new(&(particle_data[0]),particle_data.size(), pic, a_eq_e, this->GrayAbsorption);
   }
 
+  this->PostRenderCompositing(ren, actor);
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
+{
+  //
   MPI_Manager::GetInstance()->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
