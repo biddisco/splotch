@@ -33,10 +33,11 @@
 #define PLANCK_SSE_UTILS_CXX_H
 
 template<typename T, int sz> class svec;
-
+#undef __SSE2__
 #if (defined(__SSE2__))
 #include "sse_utils.h"
 #include <emmintrin.h>
+   typedef __m128i Tv;
     typedef int Ts;
     typedef union { Tv v; Ts d[4]; } Tu;
     svec (const Ts &val) : v(_mm_set1_epi32(val)) {}

@@ -210,9 +210,9 @@ int main (int argc, const char **argv)
        MPI_Manager::GetInstance()->allreduce (npart_all,MPI_Manager::Sum);
 #if (!defined(CUDA) && !defined(OPENCL))
       if(boost)
-        host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, npart_all);
+        host_funct::host_rendering(params, r_points, pic, campos, lookat, sky, amap, b_brightness, npart_all);
       else
-        host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, npart_all);
+        host_funct::host_rendering(params, particle_data, pic, campos, lookat, sky, amap, b_brightness, npart_all);
 #else
      if (mydevID >= 0)
         {

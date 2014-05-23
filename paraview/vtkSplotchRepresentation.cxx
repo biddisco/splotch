@@ -40,10 +40,20 @@
 #include <vtksys/SystemInformation.hxx>
 #include <vtksys/RegularExpression.hxx>
 
+//#ifdef PARAVIEW_USE_MPI
+#include "vtkMPI.h"
+#include "vtkMPIController.h"
+#include "vtkMPICommunicator.h"
+//#endif
+// Otherwise
+#include "vtkMultiProcessController.h"
+
 vtkStandardNewMacro(vtkSplotchRepresentation);
 //----------------------------------------------------------------------------
 vtkSplotchRepresentation::vtkSplotchRepresentation()
 {
+//  this->CheckMPIController();
+  //
   this->SplotchDefaultPainter    = vtkSplotchDefaultPainter::New();
   this->LODSplotchDefaultPainter = vtkSplotchDefaultPainter::New();
   this->SplotchPainter           = this->SplotchDefaultPainter->GetSplotchPainter();
@@ -75,6 +85,43 @@ vtkSplotchRepresentation::~vtkSplotchRepresentation()
   this->LODSplotchDefaultPainter->Delete();
   this->SplotchPainter->Delete();
   this->LODSplotchPainter->Delete();
+}
+
+//----------------------------------------------------------------------------
+void vtkSplotchRepresentation::CheckMPIController()
+{
+  if (vtkMPIController::GetGlobalController()->IsA("vtkDummyController"))
+  {
+    vtkDebugMacro("Running vtkDummyController : replacing it");
+    int flag = 0;
+    MPI_Initialized(&flag);
+    if (flag == 0)
+    {
+      vtkDebugMacro("Running without MPI, attempting to initialize ");
+      //int argc = 1;
+      //const char *argv = "D:\\cmakebuild\\pv-shared\\bin\\RelWithDebInfo\\paraview.exe";
+      //char **_argv = (char**) &argv;
+      int provided, rank, size;
+      MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &provided);
+      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+      MPI_Comm_size(MPI_COMM_WORLD, &size);
+      //
+      if (rank == 0) {
+        if (provided != MPI_THREAD_MULTIPLE) {
+          std::cout << "MPI_THREAD_MULTIPLE not set, you may need to recompile your "
+          << "MPI distribution with threads enabled" << std::endl;
+        }
+        else {
+          std::cout << "MPI_THREAD_MULTIPLE is OK (DSM override)" << std::endl;
+        }
+      }
+    }
+    //
+    vtkDebugMacro("Setting Global MPI controller");
+    vtkSmartPointer<vtkMPIController> controller = vtkSmartPointer<vtkMPIController>::New();
+    if (flag == 0) controller->Initialize(NULL, NULL, 1);
+    vtkMPIController::SetGlobalController(controller);
+  }
 }
 
 //----------------------------------------------------------------------------

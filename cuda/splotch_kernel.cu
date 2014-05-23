@@ -93,7 +93,7 @@ __global__ void k_process
   float I = p[m].I;
 
     // Normalization and clamping 
-
+#define NO_I_NORM
 #ifndef NO_I_NORM
   // Norm and clamp I
     if (dparams.inorm_maxs[ptype]==dparams.inorm_mins[ptype])
@@ -102,6 +102,7 @@ __global__ void k_process
       I = (max(dparams.inorm_mins[ptype],min(dparams.inorm_maxs[ptype],I))-dparams.inorm_mins[ptype])/(dparams.inorm_maxs[ptype]-dparams.inorm_mins[ptype]);
 #endif
 
+#if 0
   // Norm and clamp er
     if (dparams.cnorm_maxs[ptype]==dparams.cnorm_mins[ptype])
       er = 1;
@@ -122,6 +123,7 @@ __global__ void k_process
       else
         eb = (max(dparams.cnorm_mins[ptype],min(dparams.cnorm_maxs[ptype],er))-dparams.cnorm_mins[ptype])/(dparams.cnorm_maxs[ptype]-dparams.cnorm_mins[ptype]);
     }
+#endif
 
  // cu_color e;
  // e.r=p[m].e.r;
@@ -206,17 +208,17 @@ __global__ void k_process
 
 //coloring
 // get color, associated from physical quantity contained in e.r, from lookup table
-  cu_color e;
-  e.r=er;
-  e.g=eg;
-  e.b=eb;
+//  cu_color e;
+//  e.r=er;
+//  e.g=eg;
+//  e.b=eb;
 
-  if (!dparams.col_vector[ptype])
-     e = get_color(ptype, e.r, mapSize, types);
+//  if (!dparams.col_vector[ptype])
+//     e = get_color(ptype, e.r, mapSize, types);
 
-  p[m].e.r = e.r*I;
-  p[m].e.g = e.g*I;
-  p[m].e.b = e.b*I; 
+//  p[m].e.r = e.r*I;
+//  p[m].e.g = e.g*I;
+//  p[m].e.b = e.b*I; 
   
   // manage particles outside the image but that influence it
   if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};

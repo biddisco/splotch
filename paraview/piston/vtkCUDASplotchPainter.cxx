@@ -225,9 +225,10 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   params.find("a_eq_e", true);
   params.find("colorbar", false);
   params.find("quality_factor", 0.001);
-  params.find("boost", true);
-  params.find("intensity_min0", -11.8784);
-  params.find("intensity_max0",  -1.44456);
+  params.find("boost", false);
+
+//  params.find("intensity_min0", -11.8784);
+//  params.find("intensity_max0",  -1.44456);
 
   params.find("color_min0",  0.152815);
   params.find("color_max0",  6.29244);

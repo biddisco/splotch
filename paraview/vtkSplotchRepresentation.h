@@ -90,6 +90,8 @@ protected:
   vtkSplotchRepresentation();
   ~vtkSplotchRepresentation();
 
+  void CheckMPIController();
+  
   // Description:
   // This method is called in the constructor. If the subclasses override any of
   // the iVar vtkObject's of this class e.g. the Mappers, GeometryFilter etc.,
