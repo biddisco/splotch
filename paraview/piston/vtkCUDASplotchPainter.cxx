@@ -30,6 +30,7 @@
 #include "vtkPoints.h"
 #include "vtkPointData.h"
 #include "vtkPolyData.h"
+#include "vtkScalarsToColorsPainter.h"
 //
 #include "vtkObjectFactory.h"
 #include "vtkTimerLog.h"
@@ -37,9 +38,16 @@
 #include "vtkCompositeDataIterator.h"
 //
 #include <thrust/version.h>
+#include <thrust/copy.h>
 #include <stdexcept>
 //
 #include "cuda/splotch_cuda2.h"
+//
+#include <piston/choose_container.h>
+//
+#include "vtkPistonDataObject.h"
+#include "vtkPistonDataWrangling.h"
+#include "vtkPistonReference.h"
 
 //-----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkCUDASplotchPainter);
@@ -83,7 +91,7 @@ public:
 //-----------------------------------------------------------------------------
 vtkCUDASplotchPainter::vtkCUDASplotchPainter()
 {
-  this->DataSetToPiston  = vtkSmartPointer<vtkDataSetToPiston>::New();
+  this->DataSetToPiston  = vtkSmartPointer<vtkDataSetToSplotch>::New();
   //
   this->Internal = new vtkCUDASplotchPainter::InternalInfo();
 }
@@ -111,11 +119,6 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
     return;
   }
 
-  //
-  // does a shallow copy of input to output
-  //
-  this->Superclass::PrepareForRendering(renderer, actor);
-
   // Now if we have composite data, we need to MapScalars for all leaves.
   if (input->IsA("vtkCompositeDataSet"))
   {
@@ -124,8 +127,9 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
   else
   {
     this->DataSetToPiston->SetInputData(input);
-    this->DataSetToPiston->SetOpacityArrayName(NULL);
-//    this->DataSetToPiston->SetScalarArrayName(this->ScalarsToColors->GetArrayName());
+    this->DataSetToPiston->SetRadiusArrayName(this->GetRadiusScalars(0));
+    this->DataSetToPiston->SetIntensityArrayName(this->GetIntensityScalars(0));
+    this->DataSetToPiston->SetScalarArrayName(this->ArrayName);
     this->DataSetToPiston->Update();
   }
   //
@@ -237,15 +241,25 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   amap.push_back(c1);
   //  amap.push_back(c1);
 
-  // raw data passed into splotch renderer internals
-  cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params);
+  vtkPistonDataObject *id = this->DataSetToPiston->GetPistonDataObjectOutput(0);
+  if (!id) {
+    return;
+  }
+  vtkPistonReference *tr = id->GetReference();
+  
+  vtkpiston::vtk_polydata *pd = (vtkpiston::vtk_polydata*)(tr->data);
+  if (pd->userPointer) {
+    // raw data passed into splotch renderer internals
+    cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params);
+  }
+
   //
   this->PostRenderCompositing(ren, actor);
 }
 //-----------------------------------------------------------------------------
 void vtkCUDASplotchPainter::RenderOnGPU(vtkCamera *cam, vtkActor *act)
 {
-  vtkPistonDataObject *id = vtkPistonDataObject::SafeDownCast(this->DataSetToPiston->GetOutputDataObject(0));
+  vtkPistonDataObject *id = this->DataSetToPiston->GetPistonDataObjectOutput(0);
   if (!id) {
     return;
   }

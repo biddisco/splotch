@@ -24,7 +24,7 @@
 #include "vtkCUDAPiston.h"
 #include "vtkSplotchPainter.h"
 #include "vtkSmartPointer.h"
-#include "vtkDataSetToPiston.h"
+#include "vtkDataSetToSplotch.h"
 
 class vtkRenderWindow;
 class vtkCamera;
@@ -60,7 +60,7 @@ protected:
   //
   //
   //
-  vtkSmartPointer<vtkDataSetToPiston>            DataSetToPiston;
+  vtkSmartPointer<vtkDataSetToSplotch>           DataSetToPiston;
   vtkCamera                                     *Camera;
   vtkActor                                      *Actor;
 

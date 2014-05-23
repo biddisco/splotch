@@ -154,6 +154,7 @@ void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv);
 void cu_addC3(int nP, int nC3, int res, cu_gpu_vars* pgv);
 void cu_add_images(int res, cu_gpu_vars* pgv);
 void cu_end(cu_gpu_vars* pgv);
+long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor, int nP);
 long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor);
 void getCuTransformParams(cu_param &para_trans,
       paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);

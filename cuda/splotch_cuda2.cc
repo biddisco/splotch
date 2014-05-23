@@ -52,7 +52,6 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   int xres = pic.size1();
   int yres = pic.size2();
  // cout << "resolution = " << xres << " x " << yres << endl;
-  arr2<COLOUR> Pic_host(xres,yres);
   int ptypes = g_params.find<int>("ptypes",1);
 
   // CUDA Init
@@ -67,7 +66,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
 
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 4);
-  long int len = cu_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
+  long int len = cu_paraview_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor, nP);
   if (len <= 0)
     {
     cout << "Graphics memory setting error" << endl;
@@ -88,20 +87,17 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     int startP = 0;
     int nPR = 0;
 
-    while(endP < nP)
-    {
-     endP = startP + len;   //set range
-     if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
-     // combine host results of chunks
-     tstack_push("combine images");
-     for (int x=0; x<xres; x++)
-      for (int y=0; y<yres; y++)
-        pic[x][y] += Pic_host[x][y];
-     tstack_pop("combine images");
-     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
-     startP = endP;
+    // We only render a single chunk in the paraview version.
+    endP = startP + len;   //set range
+    if (endP > nP) endP = nP;
+    nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, true);
+    // combine host results of chunks
+    cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
+    startP = endP;
+    if (endP<nP) {
+      cout << "Not enough memory on GPU to render all particles " << std::endl;
     }
+
     add_device_image(pic, &gv, xres, yres);
     tstack_pop("CUDA");
     cu_end(&gv);
@@ -158,7 +154,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
+     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, false);
      // combine host results of chunks
      tstack_push("combine images");
      for (int x=0; x<xres; x++)

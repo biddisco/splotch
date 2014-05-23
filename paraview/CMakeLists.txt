@@ -148,6 +148,7 @@ if(NOT TARGET splotchcore)
     )
     set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
       ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkCUDASplotchPainter.cxx
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkDataSetToSplotch.cxx
     )
 
     #--------------------------------------------------
