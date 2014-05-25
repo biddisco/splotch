@@ -231,6 +231,20 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
   return 0;
   }
 
+int cu_copy_particles_from_gpubuffer(void *gpubuffer, unsigned int n, cu_gpu_vars* pgv)
+  {
+  cudaError_t error;
+  size_t size = n*sizeof(cu_particle_sim);
+  error = cudaMemcpy(pgv->d_pd, gpubuffer, size, cudaMemcpyDeviceToDevice);
+  if (error != cudaSuccess)
+  {
+   cout << "Device Memory: particle data copy error!" << endl;
+   return 1;
+  }
+  return 0;
+  }
+
+
 
 int cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv)
   {

@@ -43,7 +43,7 @@ using namespace std;
 // paraview version of rendering sets up colour map independently
 // and leaves particles on GPU between frames if they have not been modified
 //
-void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
+void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params, void *gpudata)
 {
   tstack_push("CUDA");
   tstack_push("Device setup");
@@ -90,7 +90,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     // We only render a single chunk in the paraview version.
     endP = startP + len;   //set range
     if (endP > nP) endP = nP;
-    nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, true);
+    nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, gpudata);
     // combine host results of chunks
     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
     startP = endP;
@@ -154,7 +154,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, false);
+     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, NULL);
      // combine host results of chunks
      tstack_push("combine images");
      for (int x=0; x<xres; x++)

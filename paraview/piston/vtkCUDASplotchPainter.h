@@ -46,8 +46,6 @@ public:
   // resources to release.
   virtual void ReleaseGraphicsResources(vtkWindow *) {};
 
-  void RenderOnGPU(vtkCamera *cam, vtkActor *act);
-
 protected:
   vtkCUDASplotchPainter();
   ~vtkCUDASplotchPainter();
@@ -65,11 +63,6 @@ protected:
   vtkActor                                      *Actor;
 
 protected:
-  // Description:
-  // Allocates buffers that are shared between CUDA and GL
-  void PrepareDirectRenderBuffers(int nPoints, int nCells);
-
-  static bool CudaGLInitted;
 
   class InternalInfo;
   InternalInfo *Internal;

@@ -41,14 +41,14 @@
 
 using namespace std;
 
-int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, bool paraview_mode)
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata)
 {
   cudaError_t error;
 
   //copy data particle to device memory
   tstack_push("Data copy");
-  if (paraview_mode) {
-    cu_copy_particles_to_device(d_particle_data, nParticle, gv);
+  if (gpudata) {
+    cu_copy_particles_from_gpubuffer(gpudata, nParticle, gv);
   }
   else {
     cu_copy_particles_to_device(d_particle_data, nParticle, gv);

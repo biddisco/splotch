@@ -172,6 +172,9 @@ protected:
   vtkIdType N;
   arr2<COLOUR> pic;
   std::vector<particle_sim> particle_data; 
+  bool particle_compute;
+
+  vtkTimeStamp ParticleDataComputeTime;
 
 private:
   vtkSplotchPainter(const vtkSplotchPainter&); // Not implemented.
