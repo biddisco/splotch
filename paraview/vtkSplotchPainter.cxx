@@ -107,10 +107,8 @@ vtkSplotchPainter::~vtkSplotchPainter()
   delete []this->ActiveScalars;
 }
 // ---------------------------------------------------------------------------
-void vtkSplotchPainter::UpdateBounds(double bounds[6])
+void vtkSplotchPainter::UpdateBounds(double bounds[6], vtkDataSet *input)
 {
-  vtkPointSet *input = vtkPointSet::SafeDownCast(this->GetInput());
-  // if it hasn't been set yet, abort.
   if (!input) return;
   input->GetBounds(bounds);
   //
@@ -221,8 +219,7 @@ int vtkSplotchPainter::GetLogColour(int ptype)
 //-----------------------------------------------------------------------------
 void vtkSplotchPainter::ProcessInformation(vtkInformation* info)
 {
-  info->Set(vtkScalarsToColorsPainter::INTERPOLATE_SCALARS_BEFORE_MAPPING(),
-    0);
+  info->Set(vtkScalarsToColorsPainter::INTERPOLATE_SCALARS_BEFORE_MAPPING(), 0);
 
   if (info->Has(vtkScalarsToColorsPainter::SCALAR_MODE()))
     {
@@ -340,8 +337,15 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
     vtkScalarsToColors *lut = this->ScalarsToColorsPainter->GetLookupTable();
     //
     vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetScalars());
-    cdata4 = colors ? colors->GetPointer(0) : NULL;
-    colourspresent = (cdata4!=NULL);
+    if (colors) {
+      cdata4 = colors ? colors->GetPointer(0) : NULL;
+      colourspresent = (cdata4!=NULL);
+    }
+    else if (input->GetPointData()->GetArray("Color")) {
+      cdata4 = colors ? colors->GetPointer(0) : NULL;
+      colourspresent = (cdata4!=NULL);
+
+    }
   }
 
   // We need the viewport/viewsize scaled by the Image Reduction Factor when downsampling
@@ -402,12 +406,12 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   double length = input->GetLength();
   double radius = N>0 ? length/N : length/1000.0;
 
-  this->particle_compute = false;
+  this->particle_compute = true;
   if (pts->GetMTime()>ParticleDataComputeTime.GetMTime()) {
     std::cout << "Modified - need to recompute particle data " << std::endl;
     ParticleDataComputeTime.Modified();
     this->particle_compute = true;
-//    this->DebugOn();
+    this->DebugOn();
   }
   particle_data.resize(N, particle_sim());
 
@@ -492,8 +496,8 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     params.find(name, this->Brightness[i]);
   }
   params.find("gray_absorption", this->GrayAbsorption);
-  params.find("zmin", zmin);
-  params.find("zmax", zmax);
+  params.find("zmin", 0.0); // zmin - (zmax-zmin)/1.0);
+  params.find("zmax", 1.e23); //zmax + (zmax-zmin)/1.0);
   params.find("fov",  splotchFOV);
   params.find("projection", true);
   params.find("minrad_pix", 1);
@@ -508,9 +512,26 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   pic.alloc(X,Y);
 
   if (this->particle_compute) {
+    int t = 0;
     host_funct::particle_normalize2(params, particle_data, true);
+    if(params.param_present("intensity_min"+dataToString(t)))
+      intnorm[0] = params.find<float>("intensity_min"+dataToString(t));
+    if(params.param_present("intensity_max"+dataToString(t)))
+      intnorm[1] = params.find<float>("intensity_max"+dataToString(t));
+    if(params.param_present("color_min"+dataToString(t)))
+      colnorm[0] = params.find<float>("color_min"+dataToString(t));
+    if(params.param_present("color_max"+dataToString(t)))
+      colnorm[1] = params.find<float>("color_max"+dataToString(t));
+  }
+  else {
+    int t=0;
+    params.setParam("intensity_min"+dataToString(t), intnorm[0]);
+    params.setParam("intensity_max"+dataToString(t), intnorm[1]);
+    params.setParam("color_min"+dataToString(t), colnorm[0]);
+    params.setParam("color_max"+dataToString(t), colnorm[1]);
+  }
 
-
+  if (this->particle_compute) {
     if(particle_data.size()>0) {
       host_funct::particle_project(params, particle_data, campos, lookat, sky);
     }

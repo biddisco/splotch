@@ -17,6 +17,9 @@
 #include "vtkGarbageCollector.h"
 #include "vtkSplotchPainter.h"
 #include "vtkObjectFactory.h"
+#include "vtkScalarsToColorsPainter.h"
+#include "vtkInformation.h"
+#include "vtkDataSet.h"
 
 // If the MIP renderer is available
 #ifdef PV_SPLOTCH_WITH_MIP
@@ -70,29 +73,41 @@ void vtkSplotchDefaultPainter::SetEnableCUDA(int m)
 //----------------------------------------------------------------------------
 void vtkSplotchDefaultPainter::UpdateBounds(double bounds[6])
 {
-  if (this->SplotchPainter->GetInput()!=this->GetInput()) {
-    this->SplotchPainter->SetInput(this->GetInput());
-  }
-  this->SplotchPainter->UpdateBounds(bounds);
+  this->SplotchPainter->UpdateBounds(bounds, vtkDataSet::SafeDownCast(this->GetInput()));
 }
 
 //----------------------------------------------------------------------------
 void vtkSplotchDefaultPainter::BuildPainterChain()
 {
   // Override painters we don't want.
+  this->SetClipPlanesPainter(NULL);
   this->SetDisplayListPainter(NULL);
   this->SetCompositePainter(NULL);
-  this->SetCoincidentTopologyResolutionPainter(NULL);
-  this->SetRepresentationPainter(NULL);
   // Lighting painter aborts render if no input, which locks up our collectives
   this->SetLightingPainter(NULL);
-  this->SetClipPlanesPainter(NULL);
-  // and set ours at the end of the chain
-  this->SetDefaultPainterDelegate(this->SplotchPainter);
-  // allow superclass to piece everything together
+  this->SetRepresentationPainter(NULL);
+  this->SetCoincidentTopologyResolutionPainter(NULL);
+  //
+  // allow superclass to set its internals (nothing left except scalars to colours)
   this->Superclass::BuildPainterChain();
+  //
+  vtkScalarsToColorsPainter *scalarsToColors = this->GetScalarsToColorsPainter();
+  // 
+  scalarsToColors->SetDelegatePainter(this->SplotchPainter);
+
+
+//  vtkPainter *next = scalarsToColors->GetDelegatePainter();
+//  scalarsToColors->SetDelegatePainter(NULL);
+
   // We need the ScalarsToColors Painter as the MIP handles scalar mapping specially
-  this->SplotchPainter->SetScalarsToColorsPainter(this->GetScalarsToColorsPainter());
+//  this->SplotchPainter->SetDelegatePainter(scalarsToColors);
+  this->SplotchPainter->SetScalarsToColorsPainter(scalarsToColors); 
+}
+
+//-----------------------------------------------------------------------------
+void vtkSplotchDefaultPainter::ProcessInformation(vtkInformation* info)
+{
+  info->Set(vtkScalarsToColorsPainter::INTERPOLATE_SCALARS_BEFORE_MAPPING(), 0);
 }
 
 //----------------------------------------------------------------------------

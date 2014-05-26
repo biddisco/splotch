@@ -107,7 +107,7 @@ public:
   // The MIP painter must return the complete bounds of the whole dataset
   // not just the local 'piece', otherwise the compositing blanks out parts it thinks
   // are not covered by any geometry.
-  void UpdateBounds(double bounds[6]);
+  void UpdateBounds(double bounds[6], vtkDataSet *input);
 
   // Description:
   // Set/Get the controller used for coordinating parallel writing
@@ -173,7 +173,8 @@ protected:
   arr2<COLOUR> pic;
   std::vector<particle_sim> particle_data; 
   bool particle_compute;
-
+  double intnorm[2];
+  double colnorm[2];
   vtkTimeStamp ParticleDataComputeTime;
 
 private:

@@ -85,6 +85,7 @@ protected:
   // Description:
   // Take part in garbage collection.
   virtual void ReportReferences(vtkGarbageCollector *collector);
+  virtual void ProcessInformation(vtkInformation* info);
 
   // Generic CPU based splotch painter
   vtkSplotchPainter     *SplotchPainter;
