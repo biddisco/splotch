@@ -121,7 +121,7 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
 int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
   {
   cudaError_t error;
-  cudaSetDevice (devID); // initialize cuda runtime
+//  cudaSetDevice (devID); // initialize cuda runtime
  
   // particle vector  
   size_t size = nP * sizeof(cu_particle_sim);

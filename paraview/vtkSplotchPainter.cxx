@@ -337,15 +337,8 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
     vtkScalarsToColors *lut = this->ScalarsToColorsPainter->GetLookupTable();
     //
     vtkSmartPointer<vtkUnsignedCharArray> colors = vtkUnsignedCharArray::SafeDownCast(input->GetPointData()->GetScalars());
-    if (colors) {
-      cdata4 = colors ? colors->GetPointer(0) : NULL;
-      colourspresent = (cdata4!=NULL);
-    }
-    else if (input->GetPointData()->GetArray("Color")) {
-      cdata4 = colors ? colors->GetPointer(0) : NULL;
-      colourspresent = (cdata4!=NULL);
-
-    }
+    cdata4 = colors ? colors->GetPointer(0) : NULL;
+    colourspresent = (cdata4!=NULL);
   }
 
   // We need the viewport/viewsize scaled by the Image Reduction Factor when downsampling
@@ -406,7 +399,7 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   double length = input->GetLength();
   double radius = N>0 ? length/N : length/1000.0;
 
-  this->particle_compute = true;
+  this->particle_compute = false;
   if (pts->GetMTime()>ParticleDataComputeTime.GetMTime()) {
     std::cout << "Modified - need to recompute particle data " << std::endl;
     ParticleDataComputeTime.Modified();
@@ -481,10 +474,8 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   }
 }
 // ---------------------------------------------------------------------------
-void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
-  unsigned long typeflags, bool forceCompileOnly)
+void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
 {
-  paramfile params;
   params.find("ptypes", this->NumberOfParticleTypes);
   params.find("xres", X);
   params.find("yres", Y);
@@ -530,6 +521,13 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     params.setParam("color_min"+dataToString(t), colnorm[0]);
     params.setParam("color_max"+dataToString(t), colnorm[1]);
   }
+}
+
+// ---------------------------------------------------------------------------
+void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
+  unsigned long typeflags, bool forceCompileOnly)
+{
+  this->RenderSplotchParams(ren, actor);
 
   if (this->particle_compute) {
     if(particle_data.size()>0) {

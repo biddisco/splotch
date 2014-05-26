@@ -87,9 +87,9 @@ __global__ void k_process
 
   int ptype = p[m].type;
   float r = p[m].r;
-  float er = p[m].e.r;
-  float eg = p[m].e.g;
-  float eb = p[m].e.b;
+//  float er = p[m].e.r;
+//  float eg = p[m].e.g;
+//  float eb = p[m].e.b;
   float I = p[m].I;
 
     // Normalization and clamping 

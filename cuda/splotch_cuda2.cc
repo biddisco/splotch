@@ -37,6 +37,19 @@
 #include "cuda/CuPolicy.h"
 #include "cuda/CuRender.h"
 
+
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+#include <thrust/sort.h>
+#include <thrust/unique.h>
+#include <thrust/remove.h>
+#include <thrust/copy.h>
+#include <thrust/extrema.h>
+#include <thrust/scan.h>
+#include <thrust/iterator/constant_iterator.h>
+#include <thrust/system_error.h>
+
+
 using namespace std;
 
 //
@@ -53,12 +66,22 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   int yres = pic.size2();
  // cout << "resolution = " << xres << " x " << yres << endl;
   int ptypes = g_params.find<int>("ptypes",1);
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
 
   // CUDA Init
   // Initialize policy class
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
   int ntiles = policy->GetNumTiles();
 
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
   cu_gpu_vars gv;
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
@@ -73,9 +96,19 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     MPI_Manager::GetInstance()->abort();
     }
 
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
   // enable device and allocate arrays
   bool doLogs = true;
   int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
   tstack_pop("Device setup");
   if (!error)
   {
@@ -91,7 +124,6 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     endP = startP + len;   //set range
     if (endP > nP) endP = nP;
     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, gpudata);
-    // combine host results of chunks
     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
     startP = endP;
     if (endP<nP) {
@@ -99,10 +131,20 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     }
 
     add_device_image(pic, &gv, xres, yres);
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
     tstack_pop("CUDA");
     cu_end(&gv);
   }
 
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nP);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle.data()));
+   }
  }
 
 void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)

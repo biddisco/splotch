@@ -147,33 +147,7 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   int mydevID = 0;
   int nTasksDev = 1;
 
-  paramfile params;
-  params.find("ptypes", this->NumberOfParticleTypes);
-  params.find("xres", X);
-  params.find("yres", Y);
-  for (int i=0; i<this->NumberOfParticleTypes; i++) {
-    std::string name;
-    name = "intensity_log" + NumToStrSPM<int>(i);
-    params.find(name, (this->LogIntensity[i]!=0));
-    name = "brightness" + NumToStrSPM<int>(i);
-    params.find(name, this->Brightness[i]);
-  }
-  params.find("gray_absorption", this->GrayAbsorption);
-  params.find("zmin", zmin);
-  params.find("zmax", zmax);
-  params.find("fov",  splotchFOV);
-  params.find("projection", true);
-  params.find("minrad_pix", 1);
-  params.find("a_eq_e", true);
-  params.find("colorbar", false);
-  params.find("quality_factor", 0.001);
-  params.find("boost", false);
-
-  params.find("intensity_min0", -11.8784);
-  params.find("intensity_max0",  -1.44456);
-
-  params.find("color_min0",  0.152815);
-  params.find("color_max0",  6.29244);
+  this->RenderSplotchParams(ren, actor);
 
   COLOURMAP c1;
   c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
@@ -189,15 +163,35 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     return;
   }
   vtkPistonReference *tr = id->GetReference();
+
+  int N = particle_data.size();
   
   vtkpiston::vtk_polydata *pd = (vtkpiston::vtk_polydata*)(tr->data);
   if (pd->userPointer) {
+    particle_data.clear();
+    particle_data.resize(N);
+    for (int i=0; i<N; i++) {
+      particle_data[i].e = COLOUR(0,0,0);
+      particle_data[i].x = 0;
+      particle_data[i].y = 0;
+      particle_data[i].z = 0;
+      particle_data[i].r = 0;
+      particle_data[i].I = 1;
+      particle_data[i].type = 0;
+    }
     // raw data passed into splotch renderer internals
     cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params, pd->userPointer);
   }
 
   //
   this->PostRenderCompositing(ren, actor);
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(pd->userPointer));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + N);
+    thrust::copy(dt_a.begin(), dt_a.end(), (cu_particle_sim*)(particle_data.data()));
+   }
+
 }
 //-----------------------------------------------------------------------------
 

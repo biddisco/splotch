@@ -134,6 +134,7 @@ protected:
   virtual void PrepareForRendering(vtkRenderer* renderer, vtkActor* actor);
 
   virtual void PostRenderCompositing(vtkRenderer* renderer, vtkActor* actor);
+    virtual void RenderSplotchParams(vtkRenderer* ren, vtkActor* actor);
 
   template <typename T> std::string NumToStrSPM(T data);
 
@@ -176,6 +177,7 @@ protected:
   double intnorm[2];
   double colnorm[2];
   vtkTimeStamp ParticleDataComputeTime;
+  paramfile params;
 
 private:
   vtkSplotchPainter(const vtkSplotchPainter&); // Not implemented.

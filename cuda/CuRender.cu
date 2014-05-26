@@ -49,6 +49,10 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   tstack_push("Data copy");
   if (gpudata) {
     cu_copy_particles_from_gpubuffer(gpudata, nParticle, gv);
+//    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gv->d_pd));
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
   }
   else {
     cu_copy_particles_to_device(d_particle_data, nParticle, gv);
@@ -58,7 +62,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //get parameters for rendering
   int tile_sidex, tile_sidey, width, nxtiles, nytiles;
   gv->policy->GetTileInfo(&tile_sidex, &tile_sidey, &width, &nxtiles, &nytiles);
- 
+
+  {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+  }
+
   tstack_push("do logs");
   if(doLogs)
   {
@@ -67,6 +77,11 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   }
   tstack_pop("do logs");
  
+  {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+  }
   //--------------------------------------
   //  particle projection and coloring
   //--------------------------------------
@@ -76,6 +91,12 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   cudaThreadSynchronize();
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   tstack_pop("Particle projection & coloring");
+
+  {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+  }
 
   int new_ntiles, newParticle, nHostPart;
   int nC3 = 0;
@@ -92,6 +113,10 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    thrust::device_vector<cu_particle_sim>::iterator end = thrust:: copy_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, d_host_part.begin(), reg_notValid()); 
    nHostPart = end - d_host_part.begin();
 
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+
    // Copy back big particles
    if (nHostPart > 0)
    {
@@ -103,6 +128,12 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
       error = cudaMemcpyAsync(host_part, d_host_part_ptr, nHostPart*sizeof(cu_particle_sim), cudaMemcpyDeviceToHost, 0);
       if (error != cudaSuccess) cout << "Big particles Memcpy error!" << endl;
     }
+   }
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
    }
 
    //Remove non-active and host particles
@@ -117,6 +148,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    tstack_pop("Particle Filtering");
 
    tstack_push("Particle Distribution");
+
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
 
    //sort particles according to their tile id
    thrust::sort_by_key(dev_ptr_flag, dev_ptr_flag + newParticle, dev_ptr_pd);
@@ -133,6 +171,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 
    thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
    tstack_pop("Particle Distribution");
+
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
 
   }
   catch(thrust::system_error &e)
@@ -153,6 +198,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 
   tstack_push("CUDA Rendering");
 
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
+
   // SMALL (point-like) particles rendering on the device
   if (nC3)
   {
@@ -168,6 +220,13 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     new_ntiles--; 
     tstack_pop("point-like particles rendering");
   }
+
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
 
   // MEDIUM particles rendering on the device
   // 1 block ----> loop on chunk of particles, 1 thread ----> 1 pixel of the particle
@@ -188,11 +247,19 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cout << "Rank " << MPI_Manager::GetInstance()->rank() << " : Device rendering on " << newParticle << " particles" << endl;
   }
 
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
+
   // LARGE particles rendering on the host 
   if (nHostPart > 0)
   {
      cout << "Rank " << MPI_Manager::GetInstance()->rank() << " : Host rendering on " << nHostPart << " particles" << endl;
-     host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
+// JB CUDA
+//     host_funct::render_new(host_part, nHostPart, Pic_host, a_eq_e, grayabsorb);
   }
 
   if (new_ntiles > 0)
@@ -216,7 +283,21 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 
   tstack_pop("CUDA Rendering");
 
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
+
+
   if (host_part) cudaFreeHost(host_part);
+
+   {
+    thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(gpudata));
+    thrust::device_vector<cu_particle_sim> dt_a(devPtr, devPtr + nParticle);
+    thrust::copy(dt_a.begin(), dt_a.end(), d_particle_data);
+   }
+
   return nHostPart+newParticle;
 }
 
