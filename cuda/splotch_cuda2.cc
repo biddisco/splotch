@@ -43,10 +43,11 @@ using namespace std;
 // paraview version of rendering sets up colour map independently
 // and leaves particles on GPU between frames if they have not been modified
 //
-void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params, void *gpudata)
+cu_gpu_vars gv;
+
+void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params, void *gpudata, bool init)
 {
   tstack_push("CUDA");
-  tstack_push("Device setup");
   long int nP = particle.size();
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
@@ -55,14 +56,14 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   int ptypes = g_params.find<int>("ptypes",1);
 
   // CUDA Init
-  // Initialize policy class
-  CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
-  int ntiles = policy->GetNumTiles();
-
-  cu_gpu_vars gv;
-  memset(&gv, 0, sizeof(cu_gpu_vars));
-  gv.policy = policy;
-  setup_colormap(ptypes, amap, &gv);
+  if (init) {
+    memset(&gv, 0, sizeof(cu_gpu_vars));
+    // Initialize policy class
+    CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
+    gv.policy = policy;
+    setup_colormap(ptypes, amap, &gv);
+  }
+  int ntiles = gv.policy->GetNumTiles();
 
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 4);
@@ -75,8 +76,18 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
 
   // enable device and allocate arrays
   bool doLogs = true;
-  int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
-  tstack_pop("Device setup");
+  int error=0;
+  if (init) {
+    tstack_push("Device setup");
+    if (gv.d_pd!=NULL) {
+      cu_end(&gv);
+    }
+    error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+    tstack_pop("Device setup");
+  }
+  else {
+    error = cu_init_params(&gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+  }
   if (!error)
   {
     //a new linear pic object that will carry the result
@@ -100,7 +111,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
 
     add_device_image(pic, &gv, xres, yres);
     tstack_pop("CUDA");
-    cu_end(&gv);
+//     cu_end(&gv);
   }
 
  }

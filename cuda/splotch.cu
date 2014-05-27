@@ -121,7 +121,7 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
 int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
   {
   cudaError_t error;
-  cudaSetDevice (devID); // initialize cuda runtime
+//  cudaSetDevice (devID); // initialize cuda runtime
  
   // particle vector  
   size_t size = nP * sizeof(cu_particle_sim);
@@ -196,8 +196,20 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
      cout << "Device Malloc: array tiles allocation error!" << endl;
      return 1;
   }
+
+  return cu_init_params(pgv, fparams, campos, lookat, sky, b_brightness, doLogs);
+  }
+
   
-  //retrieve parameters
+ int cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
+  {
+  int size = pgv->policy->GetImageSize();
+  cudaMemset(pgv->d_pic,0,size);
+  cudaMemset(pgv->d_pic1,0,size);
+  cudaMemset(pgv->d_pic2,0,size);
+  cudaMemset(pgv->d_pic3,0,size);
+
+ //retrieve parameters
   cu_param tparams;
   getCuTransformParams(tparams,fparams,campos,lookat,sky);
 
@@ -220,16 +232,15 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
   std::string key = "cuda_doLogs";
   doLogs = findParamWithoutChange<bool>(&fparams, key, dflt);
 
-
   //dump parameters to device
-  error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
+  int error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
   if (error != cudaSuccess)
   {
     cout << "Device Malloc: parameters allocation error!" << endl;
     return 1;
   }
-  return 0;
-  }
+return 0;
+}
 
 int cu_copy_particles_from_gpubuffer(void *gpubuffer, unsigned int n, cu_gpu_vars* pgv)
   {

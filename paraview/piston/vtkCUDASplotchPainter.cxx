@@ -147,33 +147,7 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   int mydevID = 0;
   int nTasksDev = 1;
 
-  paramfile params;
-  params.find("ptypes", this->NumberOfParticleTypes);
-  params.find("xres", X);
-  params.find("yres", Y);
-  for (int i=0; i<this->NumberOfParticleTypes; i++) {
-    std::string name;
-    name = "intensity_log" + NumToStrSPM<int>(i);
-    params.find(name, (this->LogIntensity[i]!=0));
-    name = "brightness" + NumToStrSPM<int>(i);
-    params.find(name, this->Brightness[i]);
-  }
-  params.find("gray_absorption", this->GrayAbsorption);
-  params.find("zmin", zmin);
-  params.find("zmax", zmax);
-  params.find("fov",  splotchFOV);
-  params.find("projection", true);
-  params.find("minrad_pix", 1);
-  params.find("a_eq_e", true);
-  params.find("colorbar", false);
-  params.find("quality_factor", 0.001);
-  params.find("boost", false);
-
-  params.find("intensity_min0", -11.8784);
-  params.find("intensity_max0",  -1.44456);
-
-  params.find("color_min0",  0.152815);
-  params.find("color_max0",  6.29244);
+  this->RenderSplotchParams(ren, actor);
 
   COLOURMAP c1;
   c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
@@ -189,11 +163,11 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     return;
   }
   vtkPistonReference *tr = id->GetReference();
-  
+
   vtkpiston::vtk_polydata *pd = (vtkpiston::vtk_polydata*)(tr->data);
   if (pd->userPointer) {
     // raw data passed into splotch renderer internals
-    cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params, pd->userPointer);
+    cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params, pd->userPointer, this->particle_compute);
   }
 
   //

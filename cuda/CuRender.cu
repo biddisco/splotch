@@ -58,7 +58,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //get parameters for rendering
   int tile_sidex, tile_sidey, width, nxtiles, nytiles;
   gv->policy->GetTileInfo(&tile_sidex, &tile_sidey, &width, &nxtiles, &nytiles);
- 
+
   tstack_push("do logs");
   if(doLogs)
   {

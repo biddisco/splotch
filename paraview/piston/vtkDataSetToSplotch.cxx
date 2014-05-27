@@ -35,19 +35,7 @@
 #include "vtkPistonReference.h"
 #include "vtkCUDAPiston.h"
 //
-//#include "cuda/splotch_cuda.h"
-struct cu_color
-  {
-  float r,g,b;
-  };
-
-struct cu_particle_sim
-  {
-    cu_color e;
-    float x,y,z,r,I;
-    unsigned short type;
-    bool active;
-  };
+#include "cuda/splotch_cuda.h"
 //
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDataSetToSplotch);
@@ -123,8 +111,7 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
   vtkDataArray        *inscalars = id->GetPointData()->GetArray(this->ScalarArrayName);
   vtkDataArray         *inradius = id->GetPointData()->GetArray(this->RadiusArrayName);
   vtkDataArray      *inintensity = id->GetPointData()->GetArray(this->IntensityArrayName);
-  vtkUnsignedCharArray *incolors = vtkUnsignedCharArray::SafeDownCast(
-    id->GetPointData()->GetArray("Color"));
+  vtkUnsignedCharArray *incolors = vtkUnsignedCharArray::SafeDownCast(id->GetPointData()->GetScalars());
   //
   thrust::host_vector<cu_particle_sim> cuda_particles(nPoints);
   for (int i=0; i<nPoints; i++) {
@@ -133,16 +120,24 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     cuda_particles[i].y = (float)nextP[1];
     cuda_particles[i].z = (float)nextP[2];
     //
-    if (incolors) {
-      double *nextC = incolors->GetTuple4(i);
-      cuda_particles[i].e.r = (float)nextC[0];
-      cuda_particles[i].e.g = (float)nextC[1];
-      cuda_particles[i].e.b = (float)nextC[2];
+    if (inintensity) {
+      cuda_particles[i].I = (float)inintensity->GetTuple1(i);
     }
     else {
-      cuda_particles[i].e.r = 0.5;
-      cuda_particles[i].e.g = 0.5;
-      cuda_particles[i].e.b = 0.5;
+      cuda_particles[i].I = 1;
+    }
+    //
+    if (incolors) {
+      double I = 0.05*cuda_particles[i].I/256.0;
+      double *nextC = incolors->GetTuple4(i);
+      cuda_particles[i].e.r = (float)nextC[0]*I;
+      cuda_particles[i].e.g = (float)nextC[1]*I;
+      cuda_particles[i].e.b = (float)nextC[2]*I;
+    }
+    else {
+      cuda_particles[i].e.r = 0.01;
+      cuda_particles[i].e.g = 0.01;
+      cuda_particles[i].e.b = 0.01;
     }
     //
     if (inradius) {
@@ -151,21 +146,19 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     else {
       cuda_particles[i].r = 0.01;
     }
-    //
-    if (inintensity) {
-      cuda_particles[i].I = (float)inintensity->GetTuple1(i);
-    }
-    else {
-      cuda_particles[i].I = 1;
-    }
     cuda_particles[i].type   = 0;
     cuda_particles[i].active = 1;
   }
   // allocate enough space for an array of cu_particle_sim
   cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(cu_particle_sim));
+
+  thrust::host_vector<cu_particle_sim> dt_a(&cuda_particles[0], &cuda_particles[0] + nPoints);
+  thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(newD->userPointer));
+  thrust::copy(dt_a.begin(), dt_a.end(), devPtr);
+
   // copy from host vector to device, first wrap raw pointer with a device_ptr
-  thrust::device_ptr<cu_particle_sim> dev_ptr = thrust::device_pointer_cast<cu_particle_sim>((cu_particle_sim*)newD->userPointer);
-  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
+//  thrust::device_ptr<cu_particle_sim> dev_ptr = thrust::device_pointer_cast<cu_particle_sim>((cu_particle_sim*)newD->userPointer);
+//  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
   //thrust::copy(cuda_particles.begin(), cuda_particles.end(), dev_ptr);
   //
   return 1;
