@@ -160,7 +160,7 @@ protected:
   int   ScalarMode;
   int   EnableCUDA;
 
-  int     X, Y;
+  int     X, Y, lastX, lastY, XYchanged;
   vec3    campos, lookat, sky;
   double  zmin,zmax;
   double  FOV, newFOV, splotchFOV;

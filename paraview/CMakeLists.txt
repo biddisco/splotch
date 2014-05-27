@@ -58,6 +58,8 @@ if(PARAVIEW_USE_ICE_T)
   ADD_DEFINITIONS(-DUSE_ICET)
 endif(PARAVIEW_USE_ICE_T)
 
+ADD_DEFINITIONS(-DPARAVIEW_SPLOTCH)
+
 # --------------------------------------------------
 # We must build sub libraries with -fPIC
 # --------------------------------------------------

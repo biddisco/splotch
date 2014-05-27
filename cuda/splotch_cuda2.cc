@@ -43,11 +43,13 @@ using namespace std;
 // paraview version of rendering sets up colour map independently
 // and leaves particles on GPU between frames if they have not been modified
 //
-cu_gpu_vars gv;
+cu_gpu_vars gv = {0};
+long int LEN   = 0;
+int nTasksDev  = 1;
+int    mydevID = 0;
 
-void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params, void *gpudata, bool init)
+int cuda_paraview_init(arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, paramfile &g_params)
 {
-  tstack_push("CUDA");
   long int nP = particle.size();
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
@@ -56,39 +58,47 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   int ptypes = g_params.find<int>("ptypes",1);
 
   // CUDA Init
-  if (init) {
-    memset(&gv, 0, sizeof(cu_gpu_vars));
-    // Initialize policy class
-    CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
-    gv.policy = policy;
-    setup_colormap(ptypes, amap, &gv);
+  // if data was allocated previously, delete it
+  if (gv.d_pd!=NULL) {
+    cu_end(&gv);
   }
-  int ntiles = gv.policy->GetNumTiles();
+  memset(&gv, 0, sizeof(cu_gpu_vars));
+  // Initialize policy class
+  CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
+  gv.policy = policy;
 
+  int ntiles = gv.policy->GetNumTiles();
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 4);
-  long int len = cu_paraview_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor, nP);
-  if (len <= 0)
+  LEN = cu_paraview_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor, nP);
+  if (LEN <= 0)
     {
     cout << "Graphics memory setting error" << endl;
     MPI_Manager::GetInstance()->abort();
     }
 
   // enable device and allocate arrays
-  bool doLogs = true;
   int error=0;
-  if (init) {
-    tstack_push("Device setup");
-    if (gv.d_pd!=NULL) {
-      cu_end(&gv);
-    }
-    error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
-    tstack_pop("Device setup");
-  }
-  else {
-    error = cu_init_params(&gv, g_params, campos, lookat, sky, b_brightness, doLogs);
-  }
-  if (!error)
+  tstack_push("Device setup");
+  error = cu_init(mydevID, LEN, ntiles, &gv);
+  tstack_pop("Device setup");
+
+  return error;
+}
+
+void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, paramfile &g_params, void *gpudata)
+{
+  tstack_push("CUDA");
+  
+  int ntiles = gv.policy->GetNumTiles();
+  int xres = pic.size1();
+  int yres = pic.size2();
+  long int nP = particle.size();
+  bool doLogs = true;
+
+  tstack_push("Device setup");
+  int error = cu_init_params(&gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+  tstack_pop("Device setup");
   {
     //a new linear pic object that will carry the result
     float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
@@ -99,7 +109,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     int nPR = 0;
 
     // We only render a single chunk in the paraview version.
-    endP = startP + len;   //set range
+    endP = startP + LEN;   //set range
     if (endP > nP) endP = nP;
     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, gpudata);
     // combine host results of chunks
@@ -149,7 +159,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
 
   // enable device and allocate arrays
   bool doLogs = true;
-  int error = cu_init(mydevID, len, ntiles, &gv, g_params, campos, lookat, sky, b_brightness, doLogs);
+  int error = cu_init(mydevID, len, ntiles, &gv);
   tstack_pop("Device setup");
   if (!error)
   {

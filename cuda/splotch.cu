@@ -118,7 +118,7 @@ paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky)
   }
 
 
-int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
+int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   {
   cudaError_t error;
 //  cudaSetDevice (devID); // initialize cuda runtime
@@ -197,7 +197,7 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv, paramfile &fpa
      return 1;
   }
 
-  return cu_init_params(pgv, fparams, campos, lookat, sky, b_brightness, doLogs);
+  return error;
   }
 
   
@@ -372,7 +372,9 @@ void cu_end(cu_gpu_vars* pgv)
   CLEAR_MEM((pgv->d_tileID));
 
   delete pgv->policy;
+#ifndef PARAVIEW_SPLOTCH
   cudaThreadExit();
+#endif
   }
 
 long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor)

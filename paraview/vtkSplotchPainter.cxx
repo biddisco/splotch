@@ -98,6 +98,9 @@ vtkSplotchPainter::vtkSplotchPainter()
   this->ArrayComponent = 0;
   this->ArrayAccessMode = VTK_GET_ARRAY_BY_ID;
   //
+  this->lastX = -1;
+  this->lastY = -1;
+  //
   MPI_Manager::GetInstance();
 }
 // ---------------------------------------------------------------------------
@@ -323,9 +326,6 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
     this->ScalarMode, this->ArrayAccessMode, this->ArrayId,
     this->ArrayName, cellFlag);
 
-//  double range[2];
-//  scalars->GetRange(range);
-
   // if scalars are a RGB colour table, then we don't need to map them.
   cdata3 = NULL;
   cdata4 = NULL;
@@ -400,17 +400,23 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   double radius = N>0 ? length/N : length/1000.0;
 
   this->particle_compute = false;
-  if (pts->GetMTime()>ParticleDataComputeTime.GetMTime()) {
+  if (X!=lastX || Y!=lastY) {
+    pic.alloc(X,Y);
+    this->particle_compute = true;
+    lastX = X;
+    lastY = Y;
+  }
+
+  if (!this->EnableCUDA || this->GetMTime()>ParticleDataComputeTime.GetMTime()) {
     std::cout << "Modified - need to recompute particle data " << std::endl;
     ParticleDataComputeTime.Modified();
     this->particle_compute = true;
-//    this->DebugOn();
   }
-  particle_data.resize(N, particle_sim());
 
   brightness = &this->Brightness[0];
 
   if (this->particle_compute) {
+    particle_data.resize(N, particle_sim());
     // for openmp, disable activeparticles
     //  vtkIdType activeParticles = 0;
   #define activeParticles i
@@ -472,35 +478,35 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   //    activeParticles++;
     }
   }
+
+  this->RenderSplotchParams(ren, actor);
 }
 // ---------------------------------------------------------------------------
 void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
 {
-  params.find("ptypes", this->NumberOfParticleTypes);
-  params.find("xres", X);
-  params.find("yres", Y);
+  params.setParam("ptypes", this->NumberOfParticleTypes);
+  params.setParam("xres", X);
+  params.setParam("yres", Y);
   for (int i=0; i<this->NumberOfParticleTypes; i++) {
     std::string name;
     name = "intensity_log" + NumToStrSPM<int>(i);
-    params.find(name, (this->LogIntensity[i]!=0));
+    params.setParam(name, (this->LogIntensity[i]!=0));
     name = "brightness" + NumToStrSPM<int>(i);
-    params.find(name, this->Brightness[i]);
+    params.setParam(name, this->Brightness[i]);
   }
-  params.find("gray_absorption", this->GrayAbsorption);
-  params.find("zmin", 0.0); // zmin - (zmax-zmin)/1.0);
-  params.find("zmax", 1.e23); //zmax + (zmax-zmin)/1.0);
-  params.find("fov",  splotchFOV);
-  params.find("projection", true);
-  params.find("minrad_pix", 1);
-  params.find("a_eq_e", true);
-  params.find("colorbar", false);
-  params.find("quality_factor", 0.001);
-  params.find("boost", false);
+  params.setParam("gray_absorption", this->GrayAbsorption);
+  params.setParam("zmin", 0.0); // zmin - (zmax-zmin)/1.0);
+  params.setParam("zmax", 1.e23); //zmax + (zmax-zmin)/1.0);
+  params.setParam("fov",  splotchFOV);
+  params.setParam("projection", true);
+  params.setParam("minrad_pix", 1);
+  params.setParam("a_eq_e", true);
+  params.setParam("colorbar", false);
+  params.setParam("quality_factor", 0.001);
+  params.setParam("boost", false);
 
-  params.find("color_min0",  0.0);
-  params.find("color_max0",  1.0);
-
-  pic.alloc(X,Y);
+  params.setParam("color_min0",  0.0);
+  params.setParam("color_max0",  1.0);
 
   if (this->particle_compute) {
     int t = 0;
@@ -527,8 +533,6 @@ void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
 void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor, 
   unsigned long typeflags, bool forceCompileOnly)
 {
-  this->RenderSplotchParams(ren, actor);
-
   if (this->particle_compute) {
     if(particle_data.size()>0) {
       host_funct::particle_project(params, particle_data, campos, lookat, sky);

@@ -161,13 +161,11 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     cuda_particles[i].type   = 0;
     cuda_particles[i].active = 1;
   }
+
   // allocate enough space for an array of cu_particle_sim
   cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(cu_particle_sim));
-
-  // copy from host vector to device, first wrap raw pointer with a device_ptr
-  thrust::device_ptr<cu_particle_sim> dev_ptr = thrust::device_pointer_cast<cu_particle_sim>((cu_particle_sim*)newD->userPointer);
+  // copy from host to device
   cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
-  //thrust::copy(cuda_particles.begin(), cuda_particles.end(), dev_ptr);
   //
   return 1;
 }

@@ -128,6 +128,11 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
     this->DataSetToPiston->SetRadiusArrayName(this->GetRadiusScalars(0));
     this->DataSetToPiston->SetIntensityArrayName(this->GetIntensityScalars(0));
     this->DataSetToPiston->SetScalarArrayName(this->ArrayName);
+    if (this->particle_compute) {
+      this->DataSetToPiston->Modified();
+      // before writing particles to the GPU, re-initialize splotch GPU vars
+      cuda_paraview_init(pic, particle_data, campos, lookat, sky, 1.0, params);
+    }
     this->DataSetToPiston->Update();
   }
   //
@@ -147,16 +152,14 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   int mydevID = 0;
   int nTasksDev = 1;
 
-  this->RenderSplotchParams(ren, actor);
 
-  COLOURMAP c1;
-  c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
-  c1.addVal(0.5, COLOUR(0.5, 1.0, 0.5));
-  c1.addVal(1.0, COLOUR(1.0, 0.0, 0.0));
+//  COLOURMAP c1;
+//  c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
+//  c1.addVal(0.5, COLOUR(0.5, 1.0, 0.5));
+//  c1.addVal(1.0, COLOUR(1.0, 0.0, 0.0));
 
-  std::vector<COLOURMAP> amap;
-  amap.push_back(c1);
-  //  amap.push_back(c1);
+//  std::vector<COLOURMAP> amap;
+//  amap.push_back(c1);
 
   vtkPistonDataObject *id = this->DataSetToPiston->GetPistonDataObjectOutput(0);
   if (!id) {
@@ -167,7 +170,7 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   vtkpiston::vtk_polydata *pd = (vtkpiston::vtk_polydata*)(tr->data);
   if (pd->userPointer) {
     // raw data passed into splotch renderer internals
-    cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, amap, 1.0, params, pd->userPointer, this->particle_compute);
+    cuda_paraview_rendering(mydevID, nTasksDev, pic, particle_data, campos, lookat, sky, 1.0, params, pd->userPointer);
   }
 
   //
