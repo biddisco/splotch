@@ -35,7 +35,19 @@
 #include "vtkPistonReference.h"
 #include "vtkCUDAPiston.h"
 //
-#include "cuda/splotch_cuda.h"
+//#include "cuda/splotch_cuda.h"
+struct cu_color
+  {
+  float r,g,b;
+  };
+
+struct cu_particle_sim
+  {
+    cu_color e;
+    float x,y,z,r,I;
+    unsigned short type;
+    bool active;
+  };
 //
 //----------------------------------------------------------------------------
 vtkStandardNewMacro(vtkDataSetToSplotch);
@@ -152,13 +164,9 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
   // allocate enough space for an array of cu_particle_sim
   cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(cu_particle_sim));
 
-  thrust::host_vector<cu_particle_sim> dt_a(&cuda_particles[0], &cuda_particles[0] + nPoints);
-  thrust::device_ptr<cu_particle_sim> devPtr((cu_particle_sim*)(newD->userPointer));
-  thrust::copy(dt_a.begin(), dt_a.end(), devPtr);
-
   // copy from host vector to device, first wrap raw pointer with a device_ptr
-//  thrust::device_ptr<cu_particle_sim> dev_ptr = thrust::device_pointer_cast<cu_particle_sim>((cu_particle_sim*)newD->userPointer);
-//  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
+  thrust::device_ptr<cu_particle_sim> dev_ptr = thrust::device_pointer_cast<cu_particle_sim>((cu_particle_sim*)newD->userPointer);
+  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
   //thrust::copy(cuda_particles.begin(), cuda_particles.end(), dev_ptr);
   //
   return 1;
