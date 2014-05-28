@@ -88,10 +88,10 @@ int main(int argc, char **argv)
   if (MPI_Manager::GetInstance()->master()) {}
   double dummy;
   
-  int fidx = 0;
+  int fidx    = params.find<int>("fidx",0);;
   int simtype = params.find<int>("simtype");
   int spacing = params.find<double>("snapshot_spacing",1);
-  int snr1 = int(fidx/spacing)*spacing, snr2=snr1+spacing;
+  int snr1    = int(fidx/spacing)*spacing, snr2=snr1+spacing;
   double frac=(fidx-snr1)/spacing;
 
 // only used if interpol_mode>0
@@ -154,6 +154,7 @@ int main(int argc, char **argv)
       else
         {
         double dummy;
+        std::cout << "Reading Gadget type 2" << std::endl;
         gadget_reader(params,interpol_mode,particle_data,id1,vel1,0,dummy,boxsize);
         }
       break;
