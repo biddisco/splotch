@@ -94,6 +94,12 @@ bool CheckDirty(vtkDataSet *ds, vtkPistonReference *tr)
 }
 
 //------------------------------------------------------------------------------
+void vtkDataSetToSplotch::SetParticleData(std::vector<particle_sim> &particles)
+{
+  this->particle_data = &particles;
+}
+
+//------------------------------------------------------------------------------
 int vtkDataSetToSplotch::RequestData(vtkInformation *request,
                                      vtkInformationVector** inputVector,
                                      vtkInformationVector* outputVector)
@@ -125,7 +131,8 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
   vtkDataArray      *inintensity = id->GetPointData()->GetArray(this->IntensityArrayName);
   vtkUnsignedCharArray *incolors = vtkUnsignedCharArray::SafeDownCast(id->GetPointData()->GetScalars());
   //
-  thrust::host_vector<cu_particle_sim> cuda_particles(nPoints);
+  thrust::host_vector<particle_sim> cuda_particles(nPoints);
+  /*
   for (int i=0; i<nPoints; i++) {
     double *nextP = id->GetPoint(i);
     cuda_particles[i].x = (float)nextP[0];
@@ -140,7 +147,8 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     }
     //
     if (incolors) {
-      double I = 0.05*cuda_particles[i].I/256.0;
+      double I = this->Brightness * cuda_particles[i].I/256.0;
+      cuda_particles[i].I = 1.0;
       double *nextC = incolors->GetTuple4(i);
       cuda_particles[i].e.r = (float)nextC[0]*I;
       cuda_particles[i].e.g = (float)nextC[1]*I;
@@ -153,7 +161,7 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     }
     //
     if (inradius) {
-      cuda_particles[i].r = (float)inradius->GetTuple1(i);
+      cuda_particles[i].r = (float)inradius->GetTuple1(i) * this->RadiusMultiplier;
     }
     else {
       cuda_particles[i].r = 0.01;
@@ -161,11 +169,19 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     cuda_particles[i].type   = 0;
     cuda_particles[i].active = 1;
   }
-
+*/
+  for (int i=0; i<nPoints; i++) {
+    cuda_particles[i] = (*particle_data)[i];
+    double b = this->Brightness;
+    cuda_particles[i].e.r *= (*particle_data)[i].I*b;
+    cuda_particles[i].e.g *= (*particle_data)[i].I*b;
+    cuda_particles[i].e.b *= (*particle_data)[i].I*b;
+    cuda_particles[i].r *= this->RadiusMultiplier;
+  }
   // allocate enough space for an array of cu_particle_sim
-  cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(cu_particle_sim));
+  cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(particle_sim));
   // copy from host to device
-  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(cu_particle_sim), cudaMemcpyHostToDevice);
+  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(particle_sim), cudaMemcpyHostToDevice);
   //
   return 1;
 }

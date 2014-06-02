@@ -177,6 +177,19 @@ const char *vtkSplotchPainter::GetRadiusScalars(int ptype)
   return this->RadiusScalars[ptype].c_str();
 }
 // ---------------------------------------------------------------------------
+void vtkSplotchPainter::SetRGBScalars(int ptype, const char *s)
+{
+  if (std::string(s)!=this->RGBScalars[ptype]) {
+    this->RGBScalars[ptype] = s;
+    this->Modified();
+  }
+}
+// ---------------------------------------------------------------------------
+const char *vtkSplotchPainter::GetRGBScalars(int ptype)
+{
+  return this->RGBScalars[ptype].c_str();
+}
+// ---------------------------------------------------------------------------
 void vtkSplotchPainter::SetBrightness(int ptype, double b)
 {
   if (b!=this->Brightness[ptype]) {
@@ -413,7 +426,7 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
     this->particle_compute = true;
   }
 
-  brightness = &this->Brightness[0];
+//  brightness = &this->Brightness[0];
 
   if (this->particle_compute) {
     particle_data.resize(N, particle_sim());
@@ -454,7 +467,12 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
       double intensitydata[1];
       if (intensityarrays[ptype]) {
         intensityarrays[ptype]->GetTuple(i,intensitydata);
-        particle_data[activeParticles].I = intensitydata[0];
+        if (this->LogIntensity[ptype]) {
+          particle_data[activeParticles].I = pow(10,intensitydata[0]);
+        }
+        else {
+          particle_data[activeParticles].I = intensitydata[0];
+        }
       }
       else {
         particle_data[activeParticles].I = 1.0;
@@ -473,8 +491,13 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
         particle_data[activeParticles].e.r = 0.1;
         particle_data[activeParticles].e.g = 0.1;
         particle_data[activeParticles].e.b = 0.1;
-        particle_data[activeParticles].I   = 1.0;
       }
+/*
+      double b = this->Brightness[particle_data[i].type];
+      particle_data[i].e.r *= particle_data[i].I*b;
+      particle_data[i].e.g *= particle_data[i].I*b;
+      particle_data[i].e.b *= particle_data[i].I*b;
+*/
   //    activeParticles++;
     }
   }
@@ -492,7 +515,7 @@ void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
     name = "intensity_log" + NumToStrSPM<int>(i);
     params.setParam(name, (this->LogIntensity[i]!=0));
     name = "brightness" + NumToStrSPM<int>(i);
-    params.setParam(name, this->Brightness[i]);
+//    params.setParam(name, this->Brightness[i]);
   }
   params.setParam("gray_absorption", this->GrayAbsorption);
   params.setParam("zmin", 0.0); // zmin - (zmax-zmin)/1.0);
@@ -505,8 +528,8 @@ void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
   params.setParam("quality_factor", 0.001);
   params.setParam("boost", false);
 
-  params.setParam("color_min0",  0.0);
-  params.setParam("color_max0",  1.0);
+//  params.setParam("color_min0",  0.0);
+//  params.setParam("color_max0",  1.0);
 
   if (this->particle_compute) {
     int t = 0;
@@ -540,7 +563,7 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   #pragma omp parallel for
     for (int i=0; i<N /*activeParticles*/; i++) {
       if (colourspresent) {
-        double b = brightness[particle_data[i].type];
+        double b = this->Brightness[particle_data[i].type];
         particle_data[i].e.r *= particle_data[i].I*b;
         particle_data[i].e.g *= particle_data[i].I*b;
         particle_data[i].e.b *= particle_data[i].I*b;
@@ -579,7 +602,7 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   }
 
   if (particle_data.size()>0) {
-    host_funct::render_new(&(particle_data[0]),particle_data.size(), pic, a_eq_e, this->GrayAbsorption);
+    host_funct::render_new(&(particle_data[0]), particle_data.size(), pic, a_eq_e, this->GrayAbsorption);
   }
 
   this->PostRenderCompositing(ren, actor);

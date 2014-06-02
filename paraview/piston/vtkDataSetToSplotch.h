@@ -26,6 +26,8 @@
 
 #include "pv_splotch_configure.h"
 #include "vtkDataSetToPiston.h"
+#include <vector>
+#include "splotch/splotchutils.h"
 
 class vtkDataSet;
 
@@ -51,6 +53,17 @@ public:
   vtkSetStringMacro(IntensityArrayName);
   vtkGetStringMacro(IntensityArrayName);
 
+  // Description:
+  // Set/Get the name of the color array
+  vtkSetStringMacro(TypeArrayName);
+  vtkGetStringMacro(TypeArrayName);
+
+  vtkSetMacro(Brightness,double);
+
+  vtkSetMacro(RadiusMultiplier, double);
+//BTX
+  void SetParticleData(std::vector<particle_sim> &particles);
+  //ETX
 protected:
   vtkDataSetToSplotch();
   ~vtkDataSetToSplotch();
@@ -68,7 +81,12 @@ protected:
   char *ScalarArrayName;
   char *RadiusArrayName;
   char *IntensityArrayName;
-
+  char *TypeArrayName;
+  double Brightness;
+  double RadiusMultiplier;
+  //BTX
+  std::vector<particle_sim> *particle_data;
+//ETX
 private:
   vtkDataSetToSplotch(const vtkDataSetToSplotch&);  // Not implemented.
   void operator=(const vtkDataSetToSplotch&);  // Not implemented.

@@ -128,6 +128,10 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
     this->DataSetToPiston->SetRadiusArrayName(this->GetRadiusScalars(0));
     this->DataSetToPiston->SetIntensityArrayName(this->GetIntensityScalars(0));
     this->DataSetToPiston->SetScalarArrayName(this->ArrayName);
+//    this->DataSetToPiston->SetTypeArrayName(this->TypeScalars);
+    this->DataSetToPiston->SetBrightness(this->Brightness[0]);
+    this->DataSetToPiston->SetRadiusMultiplier(this->RadiusMultiplier);
+    this->DataSetToPiston->SetParticleData(this->particle_data);
     if (this->particle_compute) {
       this->DataSetToPiston->Modified();
       // before writing particles to the GPU, re-initialize splotch GPU vars
@@ -151,15 +155,6 @@ void vtkCUDASplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
   //
   int mydevID = 0;
   int nTasksDev = 1;
-
-
-//  COLOURMAP c1;
-//  c1.addVal(0.0, COLOUR(0.0, 0.0, 1.0));
-//  c1.addVal(0.5, COLOUR(0.5, 1.0, 0.5));
-//  c1.addVal(1.0, COLOUR(1.0, 0.0, 0.0));
-
-//  std::vector<COLOURMAP> amap;
-//  amap.push_back(c1);
 
   vtkPistonDataObject *id = this->DataSetToPiston->GetPistonDataObjectOutput(0);
   if (!id) {

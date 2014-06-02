@@ -72,6 +72,9 @@ public:
   void SetRadiusScalars(int ptype, const char *s);
   const char *GetRadiusScalars(int ptype);
 
+  void SetRGBScalars(int ptype, const char *s);
+  const char *GetRGBScalars(int ptype);
+
   void SetBrightness(int ptype, double);
   double GetBrightness(int ptype);
 
@@ -145,6 +148,7 @@ protected:
   int     NumberOfParticleTypes;
   std::vector<std::string> IntensityScalars;
   std::vector<std::string> RadiusScalars;
+  std::vector<std::string> RGBScalars;
   std::vector<double>      Brightness;
   std::vector<int>         LogIntensity;
   std::vector<int>         LogColour;
@@ -164,7 +168,7 @@ protected:
   vec3    campos, lookat, sky;
   double  zmin,zmax;
   double  FOV, newFOV, splotchFOV;
-  double *brightness;
+//  double *brightness;
   bool    colourspresent;
   bool    a_eq_e;
   unsigned char *cdata3;

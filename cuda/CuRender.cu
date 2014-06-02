@@ -77,7 +77,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
   tstack_pop("Particle projection & coloring");
 
-  int new_ntiles, newParticle, nHostPart;
+  int new_ntiles, newParticle, nHostPart=0;
   int nC3 = 0;
   particle_sim *host_part = 0;
   thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
