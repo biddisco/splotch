@@ -94,6 +94,8 @@ public:
   vtkGetMacro(RadiusMultiplier,double);
   vtkSetMacro(RadiusMultiplier,double);
 
+  void SetMaxRadius(int ptype, double);
+  double GetMaxRadius(int ptype);
   // Description:
   // The MIP Renderer needs to manually convert scalars to colours
   // so we must have a copy of the painter used by the rest of the rendering pipeline
@@ -153,6 +155,7 @@ protected:
   std::vector<int>         LogIntensity;
   std::vector<int>         LogColour;
   std::vector<int>         TypeActive;
+  std::vector<double>      MaxRadius;
 
   vtkMultiProcessController *Controller;
   vtkScalarsToColorsPainter *ScalarsToColorsPainter;

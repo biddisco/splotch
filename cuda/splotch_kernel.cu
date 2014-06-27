@@ -213,12 +213,15 @@ __global__ void k_process
 //  e.g=eg;
 //  e.b=eb;
 
+// Paraview splotch doesnt need this
 //  if (!dparams.col_vector[ptype])
 //     e = get_color(ptype, e.r, mapSize, types);
 
-//  p[m].e.r = e.r*I;
-//  p[m].e.g = e.g*I;
-//  p[m].e.b = e.b*I; 
+  // Now data is kept on the device (paraview splotch) we do this at rendertime to avoid accidentally
+  // modifying colors every frame
+ p[m].e.r *= I;
+ p[m].e.g *= I;
+ p[m].e.b *= I; 
   
   // manage particles outside the image but that influence it
   if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
@@ -339,6 +342,7 @@ __global__ void k_render1
    extern __shared__ cu_color Btile[];
    __shared__ int local_chunk_length, end;
    __shared__ cu_color e[NPSIZE];
+  // __shared__ float it[NPSIZE];
    __shared__ float radsq[NPSIZE], stp[NPSIZE];
    __shared__ float posx[NPSIZE], posy[NPSIZE];
    __shared__ int minx[NPSIZE], maxx[NPSIZE], miny[NPSIZE], maxy[NPSIZE];
@@ -376,6 +380,7 @@ __global__ void k_render1
       {
         cu_particle_sim p = part[end-k-j];
         e[k] = p.e;
+        //it[k] = p.I;
         posx[k] = p.x; posy[k] = p.y;
         float rfacr = dparams.rfac*p.r;
         radsq[k] = rfacr*rfacr;
@@ -410,9 +415,9 @@ __global__ void k_render1
            if (dsq<radsq[i])
            {
              float att = __expf(stp[i]*dsq);
-             Btile[lp].r += -att*e[i].r;
-             Btile[lp].g += -att*e[i].g;
-             Btile[lp].b += -att*e[i].b;
+             Btile[lp].r += -att*e[i].r /* *it[i] */;
+             Btile[lp].g += -att*e[i].g /* *it[i] */;
+             Btile[lp].b += -att*e[i].b /* *it[i] */;
            }
        //    else
        //    {
@@ -578,11 +583,23 @@ __global__ void k_addC3(int nC3, int *index, cu_particle_sim *part, cu_color *pi
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >= nC3) return;
 
-  pic[index[m]].r += - part[m].e.r;
-  pic[index[m]].g += - part[m].e.g;
-  pic[index[m]].b += - part[m].e.b;
+  pic[index[m]].r += - (part[m].e.r /* * part[m].I*/);
+  pic[index[m]].g += - (part[m].e.g /* * part[m].I*/);
+  pic[index[m]].b += - (part[m].e.b /* * part[m].I*/);
   
 }
+
+// __global__ void k_update_C1_I(int nC1, cu_particle_sim *part)
+// {
+//    //first get the index m of this thread
+//   int m=blockIdx.x *blockDim.x + threadIdx.x;
+//   if (m >= nC1) return;
+
+//   part[m].e.r *= part[m].I;
+//   part[m].e.g *= part[m].I;
+//   part[m].e.b *= part[m].I;
+  
+// }
 
 #endif
 

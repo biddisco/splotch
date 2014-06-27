@@ -172,10 +172,14 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
 */
   for (int i=0; i<nPoints; i++) {
     cuda_particles[i] = (*particle_data)[i];
-    double b = this->Brightness;
-    cuda_particles[i].e.r *= (*particle_data)[i].I*b;
-    cuda_particles[i].e.g *= (*particle_data)[i].I*b;
-    cuda_particles[i].e.b *= (*particle_data)[i].I*b;
+  
+  //  Cannot do this I*b modification here because I is further modified during particle projection but before colorize
+  //  double b = this->Brightness[cuda_particles[i].type];
+
+  //   cuda_particles[i].e.r *= (*particle_data)[i].I*b;
+  //   cuda_particles[i].e.g *= (*particle_data)[i].I*b;
+  //   cuda_particles[i].e.b *= (*particle_data)[i].I*b;
+
     cuda_particles[i].r *= this->RadiusMultiplier;
   }
   // allocate enough space for an array of cu_particle_sim

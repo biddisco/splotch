@@ -64,9 +64,6 @@ protected:
 
 protected:
 
-  class InternalInfo;
-  InternalInfo *Internal;
-
 private:
   vtkCUDASplotchPainter(const vtkCUDASplotchPainter&); // Not implemented.
   void operator=(const vtkCUDASplotchPainter&); // Not implemented.

@@ -58,11 +58,12 @@ public:
   vtkSetStringMacro(TypeArrayName);
   vtkGetStringMacro(TypeArrayName);
 
-  vtkSetMacro(Brightness,double);
+  vtkSetMacro(Brightness, double*);
 
   vtkSetMacro(RadiusMultiplier, double);
 //BTX
   void SetParticleData(std::vector<particle_sim> &particles);
+
   //ETX
 protected:
   vtkDataSetToSplotch();
@@ -82,7 +83,7 @@ protected:
   char *RadiusArrayName;
   char *IntensityArrayName;
   char *TypeArrayName;
-  double Brightness;
+  double *Brightness;
   double RadiusMultiplier;
   //BTX
   std::vector<particle_sim> *particle_data;

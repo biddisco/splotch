@@ -61,7 +61,7 @@
 #include "pqComboBoxDomain.h"
 
 // splotch enhanced qt classes
-#include "pqSplotchColorScaleEditor.h"
+//#include "pqSplotchColorScaleEditor.h"
 
 class pqSplotchDisplayPanelDecorator::pqInternals: public Ui::pqSplotchDisplayPanelDecorator
 {
@@ -328,8 +328,8 @@ void pqSplotchDisplayPanelDecorator::EditColour()
   pqScalarsToColors      *pqlut = this->Internals->PipelineRepresentation->getLookupTable();
   vtkSMProxy               *lut = (pqlut)? pqlut->getProxy() : 0;
 
-  pqSplotchColorScaleEditor editor(pqCoreUtilities::mainWidget());
-  editor.setActiveColorTable(pqlut);
+ // pqSplotchColorScaleEditor editor(pqCoreUtilities::mainWidget());
+ // editor.setActiveColorTable(pqlut);
 //  editor.setRepresentation(this->Internals->PipelineRepresentation);
 //  editor.exec();
 }

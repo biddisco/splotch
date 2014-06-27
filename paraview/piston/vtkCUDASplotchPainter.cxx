@@ -56,34 +56,6 @@ vtkStandardNewMacro(vtkCUDASplotchPainter);
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
-class vtkCUDASplotchPainter::InternalInfo {
-public:
-  InternalInfo() {
-    this->BufferSize = 0;
-    this->CellCount = 0;
-    this->DataObjectMTimeCache = 0;
-    this->clearBuffers();
-  }
-  ~InternalInfo() {
-    this->clearBuffers();
-  }
-  void clearBuffers() {
-    if (this->BufferSize != 0 && this->vboBuffers[0] != -1) {
-      vtkgl::DeleteBuffers(NUM_INTEROP_BUFFERS, this->vboBuffers);
-    }
-    for (int i=0; i<NUM_INTEROP_BUFFERS; i++) {
-      vboBuffers[i] = -1;
-      vboResources[i] = NULL;
-    }
-  }
-
-  int     BufferSize;
-  int     CellCount;
-  GLuint  vboBuffers[NUM_INTEROP_BUFFERS];
-  struct  cudaGraphicsResource* vboResources[NUM_INTEROP_BUFFERS];
-  //
-  unsigned long DataObjectMTimeCache;
-};
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -92,12 +64,10 @@ vtkCUDASplotchPainter::vtkCUDASplotchPainter()
 {
   this->DataSetToPiston  = vtkSmartPointer<vtkDataSetToSplotch>::New();
   //
-  this->Internal = new vtkCUDASplotchPainter::InternalInfo();
-}
+ }
 //-----------------------------------------------------------------------------
 vtkCUDASplotchPainter::~vtkCUDASplotchPainter()
 {
-  delete this->Internal;
 }
 //-----------------------------------------------------------------------------
 void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor* actor)
@@ -129,7 +99,7 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
     this->DataSetToPiston->SetIntensityArrayName(this->GetIntensityScalars(0));
     this->DataSetToPiston->SetScalarArrayName(this->ArrayName);
 //    this->DataSetToPiston->SetTypeArrayName(this->TypeScalars);
-    this->DataSetToPiston->SetBrightness(this->Brightness[0]);
+    this->DataSetToPiston->SetBrightness(&(this->Brightness[0]));
     this->DataSetToPiston->SetRadiusMultiplier(this->RadiusMultiplier);
     this->DataSetToPiston->SetParticleData(this->particle_data);
     if (this->particle_compute) {

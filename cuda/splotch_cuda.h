@@ -160,5 +160,6 @@ long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, s
 long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor);
 void getCuTransformParams(cu_param &para_trans,
       paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);
+//void cu_update_C1_I(int nC1, cu_particle_sim *part, cu_gpu_vars* pgv);
 
 #endif

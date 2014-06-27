@@ -51,7 +51,7 @@ if(PARAVIEW_USE_MPI)
   FIND_PACKAGE(MPI)   
   INCLUDE_DIRECTORIES(${MPI_INCLUDE_PATH})
   ADD_DEFINITIONS(-DUSE_MPI)
-  set(SPLOTCH_MPI_LIBS ${MPI_C_LIBRARIES})
+  set(SPLOTCH_MPI_LIBS ${MPI_LIBRARY} ${MPI_C_LIBRARIES})
 endif(PARAVIEW_USE_MPI)
 
 if(PARAVIEW_USE_ICE_T)
@@ -287,12 +287,10 @@ if(PARAVIEW_BUILD_QT_GUI)
 
   qt4_wrap_cpp(MOC_SRCS 
     pqSplotchDisplayPanelDecorator.h
-    pqSplotchColorScaleEditor.h
     )
      
   set(Plugin_SRCS
     pqSplotchDisplayPanelDecorator.cxx
-    pqSplotchColorScaleEditor.cxx
     )
 
   add_paraview_display_panel_decorator(
@@ -344,6 +342,7 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
     splotchcore 
     ${SPLOTCH_IO_LIBRARY} 
     ${PV_SPLOTCH_DEP_LIBS}
+    ${MPI_LIBRARY}
 )
 
 SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")

@@ -358,6 +358,14 @@ void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv)
   k_renderC3<<<dimGrid, dimBlock>>>(nC3, pgv->d_pd+nP-nC3, pgv->d_index);
   }
 
+// // Update the intensity of C1 particles before copying back to host
+// void cu_update_C1_I(int nC1, cu_particle_sim *part,cu_gpu_vars* pgv)
+// {
+//   dim3 dimGrid, dimBlock;
+//   pgv->policy->GetDimsBlockGrid(nC1, &dimGrid, &dimBlock);
+ 
+//   k_update_C1_I<<<dimGrid, dimBlock>>>(nC1, part);
+// }
 
 void cu_end(cu_gpu_vars* pgv)
   {

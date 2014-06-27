@@ -28,6 +28,7 @@
           <Property name="Brightness"/>
           <Property name="BrightnessLOD"/>
           <Property name="RadiusMultiplier"/>
+          <Property name="MaxRadius"/>
           <Property name="LODMIP"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
@@ -67,7 +68,8 @@
         <ExposedProperties>
           <Property name="Brightness"/>
           <Property name="BrightnessLOD"/>
-          <Property name="RadiusMultiplier"/>          
+          <Property name="RadiusMultiplier"/>
+          <Property name="MaxRadius"/>          
           <Property name="LODMIP"/>
           <Property name="GrayAbsorption"/>
           <Property name="LogIntensity"/>
@@ -150,6 +152,13 @@
         number_of_elements="1"
         default_values="0">
         <DoubleRangeDomain name="range" min="-100" max="100"/>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="MaxRadius"
+        command="SetMaxRadius"
+        number_of_elements="1"
+        default_values="0">
+        <DoubleRangeDomain name="range" min="0" max="100"/>
       </DoubleVectorProperty>
 
       <IntVectorProperty name="LODMIP"

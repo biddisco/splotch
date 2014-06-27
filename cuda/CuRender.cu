@@ -96,6 +96,10 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    if (nHostPart > 0)
    {
     cu_particle_sim *d_host_part_ptr = thrust::raw_pointer_cast(&d_host_part[0]);
+
+    // Modify color by this frames intensity value before sending back
+    //cu_update_C1_I(nHostPart, d_host_part_ptr, gv);
+
     error = cudaHostAlloc((void**) &host_part, nHostPart*sizeof(cu_particle_sim), cudaHostAllocDefault);
     if (error != cudaSuccess) cout << "cudaHostAlloc error!" << endl;
     else
@@ -113,6 +117,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
      cout << endl << "Eliminating inactive particles..." << endl;
      cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
      thrust::remove_if(dev_ptr_flag, dev_ptr_flag+nParticle, particle_notValid());
+     cout << "Eliminated" << endl;
    }
    tstack_pop("Particle Filtering");
 
@@ -132,6 +137,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 //   cout << nC3 << " of them are point-like particles" << endl;
 
    thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
+   cout << "Distribution finished" << endl;
    tstack_pop("Particle Distribution");
 
   }

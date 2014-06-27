@@ -66,6 +66,9 @@ public:
   void   SetRadiusMultiplier(double r);
   double GetRadiusMultiplier();
 
+  void   SetMaxRadius(double r);
+  double GetMaxRadius();
+
   void   SetLODMIP(int l);
   int    GetLODMIP();
 
