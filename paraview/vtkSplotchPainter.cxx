@@ -455,13 +455,14 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   #pragma omp parallel for
     for (vtkIdType i=0; i<N; i++) {
       // what particle type is this
-      int ptype = 0; // TypeArray ? TypeArray->GetTuple1(i) : 0;
+      int ptype =  TypeArray ? TypeArray->GetTuple1(i) : 0;
       // clamp it to prevent array access faults
-      // ptype = ptype<this->NumberOfParticleTypes ? ptype : 0;
-      particle_data[activeParticles].type   = ptype;
+      ptype = (ptype < this->NumberOfParticleTypes) ? ptype : 0;
+      particle_data[i].type   = ptype;
       // is this particle active
-  //    bool active = this->TypeActive[ptype] && (ActiveArray ? (ActiveArray->GetTuple1(i)!=0) : 1);
-  //    if (!active) continue;
+      particle_data[i].active = this->TypeActive[ptype];
+
+      if (!particle_data[i].active) continue;
       // if we are active, setup parameters
       particle_data[activeParticles].active = true; // active;
       //
