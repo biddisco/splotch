@@ -272,16 +272,16 @@ double vtkSplotchRepresentation::GetMaxRadius()
   return this->SplotchPainter->GetMaxRadius(this->ActiveParticleType);
 }
 //----------------------------------------------------------------------------
-void vtkSplotchRepresentation::SetLODMIP(int l)
-{
-  if (this->SplotchPainter) this->SplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
-  if (this->LODSplotchPainter) this->LODSplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
-}
+// void vtkSplotchRepresentation::SetLODMIP(int l)
+// {
+//   if (this->SplotchPainter) this->SplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+//   if (this->LODSplotchPainter) this->LODSplotchPainter->SetLogIntensity(this->ActiveParticleType, l);
+// }
 //----------------------------------------------------------------------------
-int vtkSplotchRepresentation::GetLODMIP()
-{
-  return this->SplotchPainter->GetLogIntensity(this->ActiveParticleType);
-}
+// int vtkSplotchRepresentation::GetLODMIP()
+// {
+//   return this->SplotchPainter->GetLogIntensity(this->ActiveParticleType);
+// }
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetLogIntensity(int l)
 {

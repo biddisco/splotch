@@ -42,7 +42,7 @@
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
-            <Property name="LODMIP"/>
+            <!--Property name="LODMIP"/-->
             <Property name="BrightnessLOD"/>         
           </PropertyGroup>
         </ExposedProperties>
@@ -88,7 +88,7 @@
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
-            <Property name="LODMIP"/>
+            <!--Property name="LODMIP"/-->
             <Property name="BrightnessLOD"/>         
           </PropertyGroup>
         </ExposedProperties>
@@ -261,12 +261,12 @@
         </Documentation>
       </DoubleVectorProperty>
 
-      <IntVectorProperty name="LODMIP"
+      <!--IntVectorProperty name="LODMIP"
         command="SetLODMIP"
         number_of_elements="1"
         default_values="0">
         <BooleanDomain name="bool"/>
-      </IntVectorProperty>
+      </IntVectorProperty-->
 
     </RepresentationProxy>
 

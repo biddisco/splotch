@@ -69,8 +69,8 @@ public:
   void   SetMaxRadius(double r);
   double GetMaxRadius();
 
-  void   SetLODMIP(int l);
-  int    GetLODMIP();
+  // void   SetLODMIP(int l);
+  // int    GetLODMIP();
 
   void   SetLogIntensity(int l);
   int    GetLogIntensity();

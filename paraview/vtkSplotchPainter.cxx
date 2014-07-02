@@ -135,7 +135,7 @@ void vtkSplotchPainter::SetNumberOfParticleTypes(int N)
   this->RadiusScalars.resize(this->NumberOfParticleTypes,"");
   this->Brightness.resize(this->NumberOfParticleTypes,10.5);
   this->LogIntensity.resize(this->NumberOfParticleTypes,0);
-  this->TypeActive.resize(this->NumberOfParticleTypes,0);
+  this->TypeActive.resize(this->NumberOfParticleTypes,1);
   this->LogColour.resize(this->NumberOfParticleTypes,0);
   this->MaxRadius.resize(this->NumberOfParticleTypes,0.0);
 }
@@ -454,18 +454,19 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   #define activeParticles i
   #pragma omp parallel for
     for (vtkIdType i=0; i<N; i++) {
-      // what particle type is this
+      // Check particle type (clamp for safety)
       int ptype =  TypeArray ? TypeArray->GetTuple1(i) : 0;
-      // clamp it to prevent array access faults
       ptype = (ptype < this->NumberOfParticleTypes) ? ptype : 0;
+
+      // Set type and active status (if filtered by type)
       particle_data[i].type   = ptype;
-      // is this particle active
       particle_data[i].active = this->TypeActive[ptype];
 
+      // Skip this particle if inactive, otherwise continue to setup parameters
       if (!particle_data[i].active) continue;
-      // if we are active, setup parameters
-      particle_data[activeParticles].active = true; // active;
-      //
+      
+      particle_data[activeParticles].active = true; 
+
       if (pointsF) {
         particle_data[activeParticles].x = pointsF[i*3+0];
         particle_data[activeParticles].y = pointsF[i*3+1];
@@ -518,13 +519,6 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
         particle_data[activeParticles].e.g = 0.1;
         particle_data[activeParticles].e.b = 0.1;
       }
-/*
-      double b = this->Brightness[particle_data[i].type];
-      particle_data[i].e.r *= particle_data[i].I*b;
-      particle_data[i].e.g *= particle_data[i].I*b;
-      particle_data[i].e.b *= particle_data[i].I*b;
-*/
-  //    activeParticles++;
     }
   }
 
