@@ -34,7 +34,7 @@
 #include "cxxsupport/openmp_support.h"
 
 #define SPLOTCH_CLASSIC
-
+#define SPLOTCH_PARAVIEW
 using namespace std;
 
 namespace host_funct {
@@ -118,6 +118,12 @@ void particle_project(paramfile &params, vector<particle_sim> &p,
 #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m)
     {
+
+    #ifdef SPLOTCH_PARAVIEW
+      // Paraview plugin also uses active status to filter by type
+      if(!p[m].active) continue;
+    #endif
+
     vec3 v(p[m].x,p[m].y,p[m].z);
     v=trans.TransPoint(v);
     p[m].x=v.x; p[m].y=v.y; p[m].z=v.z;
