@@ -25,21 +25,26 @@
         </ShareProperties>
 
         <ExposedProperties>
-          <Property name="Brightness"/>
-          <Property name="BrightnessLOD"/>
-          <Property name="RadiusMultiplier"/>
-          <Property name="MaxRadius"/>
-          <Property name="LODMIP"/>
-          <Property name="GrayAbsorption"/>
-          <Property name="LogIntensity"/>
-          <Property name="TypeActive"/>
-          <Property name="ActiveParticleType"/>
-          <Property name="ActiveParticleSettings"/>
-          <Property name="IntensityScalars"/>
-          <Property name="RadiusScalars"/>
-          <Property name="TypeScalars"/>
-          <Property name="ActiveScalars"/>
-          <Property name="EnableCUDA"/>
+          <PropertyGroup label="Data Structure" >
+            <Property name="TypeActive"/>
+            <Property name="ActiveParticleType"/>
+            <Property name="ActiveParticleSettings"/>
+            <Property name="IntensityScalars"/>
+            <Property name="RadiusScalars"/>
+            <Property name="TypeScalars"/> 
+          </PropertyGroup>
+          <PropertyGroup label="Preprocessing" >
+            <Property name="GrayAbsorption"/>
+            <Property name="LogIntensity"/>
+          </PropertyGroup>
+          <PropertyGroup label="Render Parameters" >
+            <Property name="EnableCUDA"/> 
+            <Property name="Brightness"/>
+            <Property name="RadiusMultiplier"/>
+            <Property name="MaxRadius"/>
+            <Property name="LODMIP"/>
+            <Property name="BrightnessLOD"/>         
+          </PropertyGroup>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -66,21 +71,26 @@
         </ShareProperties>
 
         <ExposedProperties>
-          <Property name="Brightness"/>
-          <Property name="BrightnessLOD"/>
-          <Property name="RadiusMultiplier"/>
-          <Property name="MaxRadius"/>          
-          <Property name="LODMIP"/>
-          <Property name="GrayAbsorption"/>
-          <Property name="LogIntensity"/>
-          <Property name="TypeActive"/>
-          <Property name="ActiveParticleType"/>
-          <Property name="ActiveParticleSettings"/>
-          <Property name="IntensityScalars"/>
-          <Property name="RadiusScalars"/>
-          <Property name="TypeScalars"/>
-          <Property name="ActiveScalars"/>
-          <Property name="EnableCUDA"/>
+          <PropertyGroup label="Data Structure" >
+            <Property name="TypeActive"/>
+            <Property name="ActiveParticleType"/>
+            <Property name="ActiveParticleSettings"/>
+            <Property name="IntensityScalars"/>
+            <Property name="RadiusScalars"/>
+            <Property name="TypeScalars"/> 
+          </PropertyGroup>
+          <PropertyGroup label="Preprocessing" >
+            <Property name="GrayAbsorption"/>
+            <Property name="LogIntensity"/>
+          </PropertyGroup>
+          <PropertyGroup label="Render Parameters" >
+            <Property name="EnableCUDA"/> 
+            <Property name="Brightness"/>
+            <Property name="RadiusMultiplier"/>
+            <Property name="MaxRadius"/>
+            <Property name="LODMIP"/>
+            <Property name="BrightnessLOD"/>         
+          </PropertyGroup>
         </ExposedProperties>
       </SubProxy>
     </Extension>
@@ -95,7 +105,8 @@
       <Documentation>
         Representation for Particle or Point Data.
       </Documentation>
-
+      
+      <!-- Properties relating to data structure -->
       <InputProperty name="Input" command="SetInputConnection">
         <DataTypeDomain name="input_type">
           <DataType value="vtkPointSet"/>
@@ -105,12 +116,11 @@
           attribute_type="point">
         </InputArrayDomain>
       </InputProperty>
-
-      <IntVectorProperty
-         name="EnableCUDA"
-         command="SetEnableCUDA"
-         number_of_elements="1"
-         default_values="0" >
+      
+      <IntVectorProperty name="TypeActive"
+        command="SetTypeActive"
+        number_of_elements="1"
+        default_values="1">
         <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
@@ -126,71 +136,6 @@
          information_only="1">
         <StringArrayHelper/>
       </StringVectorProperty>
-
-      <DoubleVectorProperty name="Brightness"
-        command="SetBrightness"
-        number_of_elements="1"
-        default_values="200">
-        <DoubleRangeDomain name="range" min="-500" max="500"/>
-        <Documentation>
-          The value passed to the mapper is 10^(Brightness/100)
-        </Documentation>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="BrightnessLOD"
-        command="SetBrightnessLOD"
-        number_of_elements="1"
-        default_values="200">
-        <DoubleRangeDomain name="range" min="-500" max="500"/>
-        <Documentation>
-          The value passed to the mapper is 10^(Brightness/100)
-        </Documentation>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="RadiusMultiplier"
-        command="SetRadiusMultiplier"
-        number_of_elements="1"
-        default_values="0">
-        <DoubleRangeDomain name="range" min="-100" max="100"/>
-      </DoubleVectorProperty>
-
-      <DoubleVectorProperty name="MaxRadius"
-        command="SetMaxRadius"
-        number_of_elements="1"
-        default_values="0">
-        <DoubleRangeDomain name="range" min="0" max="100"/>
-      </DoubleVectorProperty>
-
-      <IntVectorProperty name="LODMIP"
-        command="SetLODMIP"
-        number_of_elements="1"
-        default_values="0">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
-
-      <DoubleVectorProperty name="GrayAbsorption"
-        command="SetGrayAbsorption"
-        number_of_elements="1"
-        default_values="-400">
-        <DoubleRangeDomain name="range" min="-500" max="0"/>
-        <Documentation>
-          The value passed to the mapper is 10^(GrayAbsorption/100)
-        </Documentation>
-      </DoubleVectorProperty>
-
-      <IntVectorProperty name="LogIntensity"
-        command="SetLogIntensity"
-        number_of_elements="1"
-        default_values="0">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
-
-      <IntVectorProperty name="TypeActive"
-        command="SetTypeActive"
-        number_of_elements="1"
-        default_values="1">
-        <BooleanDomain name="bool"/>
-      </IntVectorProperty>
 
       <StringVectorProperty
         name="IntensityScalars"
@@ -252,25 +197,76 @@
         </ArrayListDomain>
       </StringVectorProperty>
 
-      <StringVectorProperty
-        name="ActiveScalars"
-        command="SetActiveScalars"
+       <!-- Properties relating to data preprocessing -->
+      <DoubleVectorProperty name="GrayAbsorption"
+        command="SetGrayAbsorption"
         number_of_elements="1"
-        animateable="0"
-        default_values="Active"
-        default_regex_delimiter=","
-        default_regex="^[Aa]ctiveScalars"
-        label="Active flag Array">
-        <ArrayListDomain
-          name="array_list"
-          attribute_type="Scalars"
-          none_string="Not available"
-          input_domain_name="input_array">
-          <RequiredProperties>
-            <Property name="Input" function="Input"/>
-          </RequiredProperties>
-        </ArrayListDomain>
-      </StringVectorProperty>
+        default_values="-400">
+        <DoubleRangeDomain name="range" min="-500" max="0"/>
+        <Documentation>
+          The value passed to the mapper is 10^(GrayAbsorption/100)
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="LogIntensity"
+        command="SetLogIntensity"
+        number_of_elements="1"
+        default_values="0">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <!-- Properties relating to render parameters -->
+      <IntVectorProperty
+         name="EnableCUDA"
+         command="SetEnableCUDA"
+         number_of_elements="1"
+         default_values="0" >
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <DoubleVectorProperty name="Brightness"
+        command="SetBrightness"
+        number_of_elements="1"
+        default_values="200">
+        <DoubleRangeDomain name="range" min="-500" max="500"/>
+        <Documentation>
+          The value passed to the mapper is 10^(Brightness/100)
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="BrightnessLOD"
+        command="SetBrightnessLOD"
+        number_of_elements="1"
+        default_values="200">
+        <DoubleRangeDomain name="range" min="-500" max="500"/>
+        <Documentation>
+          The value passed to the mapper is 10^(Brightness/100)
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="RadiusMultiplier"
+        command="SetRadiusMultiplier"
+        number_of_elements="1"
+        default_values="0">
+        <!--DoubleRangeDomain name="range" min="-100" max="100"/-->
+      </DoubleVectorProperty>
+
+      <DoubleVectorProperty name="MaxRadius"
+        command="SetMaxRadius"
+        number_of_elements="1"
+        default_values="0">
+        <!--DoubleRangeDomain name="range" min="0" max="100"/-->
+        <Documentation>
+          0 indicates no maximum
+        </Documentation>
+      </DoubleVectorProperty>
+
+      <IntVectorProperty name="LODMIP"
+        command="SetLODMIP"
+        number_of_elements="1"
+        default_values="0">
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
 
     </RepresentationProxy>
 
