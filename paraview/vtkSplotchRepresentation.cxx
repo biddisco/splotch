@@ -194,10 +194,12 @@ void vtkSplotchRepresentation::SetEnableCUDA(int mode)
 void vtkSplotchRepresentation::SetActiveParticleType(int p)
 {
   // this only allocates space in the mapper, it does not actually set the max
-  if (this->SplotchPainter) this->SplotchPainter->SetNumberOfParticleTypes(p+1);
-  if (this->LODSplotchPainter) this->LODSplotchPainter->SetNumberOfParticleTypes(p+1);
+  // if (this->SplotchPainter) this->SplotchPainter->SetNumberOfParticleTypes(p+1);
+  // if (this->LODSplotchPainter) this->LODSplotchPainter->SetNumberOfParticleTypes(p+1);
   // this is the active one
   this->ActiveParticleType = p;
+  // update gui here
+  
 }
 //----------------------------------------------------------------------------
 template <typename T>

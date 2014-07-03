@@ -83,7 +83,12 @@ __global__ void k_process
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
-
+  
+  // For paraview, add #defs
+  if(!p[m].active) {
+    p_active[m] = -1;
+    return;
+  }
 
   int ptype = p[m].type;
   float r = p[m].r;

@@ -84,8 +84,9 @@ vtkSplotchPainter::vtkSplotchPainter()
 {
   this->TypeScalars            = NULL;
   this->ActiveScalars          = NULL;
-  this->NumberOfParticleTypes  = 0;
-  this->SetNumberOfParticleTypes(1); 
+  // 
+  this->NumberOfParticleTypes  = 1;
+  this->SetNumberOfParticleTypes(0); 
   this->GrayAbsorption         = 0.001;
   this->RadiusMultiplier       = 1.0;
   this->ScalarsToColorsPainter = NULL;
@@ -138,6 +139,24 @@ void vtkSplotchPainter::SetNumberOfParticleTypes(int N)
   this->TypeActive.resize(this->NumberOfParticleTypes,1);
   this->LogColour.resize(this->NumberOfParticleTypes,0);
   this->MaxRadius.resize(this->NumberOfParticleTypes,0.0);
+  intnorm_min.resize(this->NumberOfParticleTypes,0.0);
+  intnorm_max.resize(this->NumberOfParticleTypes,0.0);
+  colnorm_min.resize(this->NumberOfParticleTypes,0.0);
+  colnorm_max.resize(this->NumberOfParticleTypes,0.0);  
+
+  // Reinitialise array names 
+  vtkDataObject *indo = this->GetInput();
+  vtkPointSet *input = vtkPointSet::SafeDownCast(indo);
+
+  radiusarrays.resize(this->NumberOfParticleTypes,NULL);
+  intensityarrays.resize(this->NumberOfParticleTypes,NULL);
+  // TODO: int i = previousNumberOfParticleTypes
+  for (int i=0; i<this->NumberOfParticleTypes; i++) {
+    radiusarrays[i] = (this->RadiusScalars[i].size()>0) ? 
+      input->GetPointData()->GetArray(this->RadiusScalars[i].c_str()) : NULL;
+    intensityarrays[i] = (this->IntensityScalars[i].size()>0) ? 
+      input->GetPointData()->GetArray(this->IntensityScalars[i].c_str()) : NULL;  
+  }
 }
 // ---------------------------------------------------------------------------
 void vtkSplotchPainter::SetTypeActive(int ptype, int a)
@@ -333,8 +352,6 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   vtkPoints *pts = input->GetPoints();
   
   // Init arrays (can use different radius array per ptype etc)
-  std::vector<vtkDataArray *> radiusarrays(this->NumberOfParticleTypes);
-  std::vector<vtkDataArray *> intensityarrays(this->NumberOfParticleTypes);
   for (int i=0; i<this->NumberOfParticleTypes; i++) {
     radiusarrays[i] = (this->RadiusScalars[i].size()>0) ? 
       input->GetPointData()->GetArray(this->RadiusScalars[i].c_str()) : NULL;
@@ -345,8 +362,10 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   vtkDataArray *TypeArray = this->TypeScalars ? 
     input->GetPointData()->GetArray(this->TypeScalars) : NULL;  
   //
-  vtkDataArray *ActiveArray = this->ActiveScalars ? 
-    input->GetPointData()->GetArray(this->ActiveScalars) : NULL;  
+   // Active array should not be changeable, as this is used internally by splotch
+  // for clipping.(and now also for type filtering in splotch-paraview)
+  // vtkDataArray *ActiveArray = this->ActiveScalars ? 
+  //   input->GetPointData()->GetArray(this->ActiveScalars) : NULL;  
 
   //
   // Get the LUT and scalar array
@@ -454,9 +473,22 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   #define activeParticles i
   #pragma omp parallel for
     for (vtkIdType i=0; i<N; i++) {
-      // Check particle type (clamp for safety)
+      // Check particle type
       int ptype =  TypeArray ? TypeArray->GetTuple1(i) : 0;
-      ptype = (ptype < this->NumberOfParticleTypes) ? ptype : 0;
+
+      // If this is a new type we must update to handle this
+      if(ptype >= this->NumberOfParticleTypes)
+      {
+        std::cout << "Caught new type" << std::endl;
+        #pragma omp critical (update_type)
+        {
+          // Double check in case another thread modified it before we entered critical section
+          if(ptype >= this->NumberOfParticleTypes)
+          {
+            this->SetNumberOfParticleTypes(ptype+1);
+          }
+        }
+      }
 
       // Set type and active status (if filtered by type)
       particle_data[i].type   = ptype;
@@ -520,6 +552,7 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
         particle_data[activeParticles].e.b = 0.1;
       }
     }
+    std::cout << "Particle data recomputed successfully" << std::endl; 
   }
 
   this->RenderSplotchParams(ren, actor);
@@ -551,24 +584,30 @@ void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
 //  params.setParam("color_min0",  0.0);
 //  params.setParam("color_max0",  1.0);
 
+  // If particles are recomputed, normalization values are in param struct
+  // Otherwise we write the ones we already have to the param struct for use later
   if (this->particle_compute) {
-    int t = 0;
     host_funct::particle_normalize2(params, particle_data, true);
-    if(params.param_present("intensity_min"+dataToString(t)))
-      intnorm[0] = params.find<float>("intensity_min"+dataToString(t));
-    if(params.param_present("intensity_max"+dataToString(t)))
-      intnorm[1] = params.find<float>("intensity_max"+dataToString(t));
-    if(params.param_present("color_min"+dataToString(t)))
-      colnorm[0] = params.find<float>("color_min"+dataToString(t));
-    if(params.param_present("color_max"+dataToString(t)))
-      colnorm[1] = params.find<float>("color_max"+dataToString(t));
+    for(int t = 0; t < this->NumberOfParticleTypes; t++)
+    {
+      if(params.param_present("intensity_min"+dataToString(t)))
+        intnorm_min[t] = params.find<float>("intensity_min"+dataToString(t));
+      if(params.param_present("intensity_max"+dataToString(t)))
+        intnorm_max[t] = params.find<float>("intensity_max"+dataToString(t));
+      if(params.param_present("color_min"+dataToString(t)))
+        colnorm_min[t] = params.find<float>("color_min"+dataToString(t));
+      if(params.param_present("color_max"+dataToString(t)))
+        colnorm_max[t] = params.find<float>("color_max"+dataToString(t));
+    }
   }
   else {
-    int t=0;
-    params.setParam("intensity_min"+dataToString(t), intnorm[0]);
-    params.setParam("intensity_max"+dataToString(t), intnorm[1]);
-    params.setParam("color_min"+dataToString(t), colnorm[0]);
-    params.setParam("color_max"+dataToString(t), colnorm[1]);
+    for(int t = 0; t < this->NumberOfParticleTypes; t++)
+    {
+      params.setParam("intensity_min"+dataToString(t), intnorm_min[t]);
+      params.setParam("intensity_max"+dataToString(t), intnorm_max[t]);
+      params.setParam("color_min"+dataToString(t), colnorm_min[t]);
+      params.setParam("color_max"+dataToString(t), colnorm_max[t]);
+    }
   }
 }
 
@@ -580,19 +619,14 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     if(particle_data.size()>0) {
       host_funct::particle_project(params, particle_data, campos, lookat, sky);
     }
-    int temp = 0;
+
   //#pragma omp parallel for
     for (int i=0; i<N /*activeParticles*/; i++) {
       if (colourspresent) {
-        if(particle_data[i].type != 0)
-        {
-          temp++;
-        }
         double b = this->Brightness[particle_data[i].type];
         particle_data[i].e.r *= particle_data[i].I*b;
         particle_data[i].e.g *= particle_data[i].I*b;
         particle_data[i].e.b *= particle_data[i].I*b;
-
       }
       else { // we don't support any other mode
         particle_data[i].e.r = 0.9;
@@ -602,7 +636,6 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
       }
     }
 
-    std::cout << "Particles not type 0: " << temp << std::endl;
     // ------------------------------------
     // -- Eliminating inactive particles --
     // ------------------------------------

@@ -98,7 +98,7 @@ void vtkCUDASplotchPainter::PrepareForRendering(vtkRenderer* renderer, vtkActor*
     this->DataSetToPiston->SetRadiusArrayName(this->GetRadiusScalars(0));
     this->DataSetToPiston->SetIntensityArrayName(this->GetIntensityScalars(0));
     this->DataSetToPiston->SetScalarArrayName(this->ArrayName);
-//    this->DataSetToPiston->SetTypeArrayName(this->TypeScalars);
+    //this->DataSetToPiston->SetTypeArrayName(this->TypeScalars);
     this->DataSetToPiston->SetBrightness(&(this->Brightness[0]));
     this->DataSetToPiston->SetRadiusMultiplier(this->RadiusMultiplier);
     this->DataSetToPiston->SetParticleData(this->particle_data);

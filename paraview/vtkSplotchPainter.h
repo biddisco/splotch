@@ -23,6 +23,7 @@
 
 #include "pv_splotch_configure.h"
 #include "vtkPolyDataPainter.h"
+#include "vtkDataArray.h"
 //#include "kernel/colour.h"
 //#include "cxxsupport/vec3.h"
 //#include "cxxsupport/arr.h"
@@ -181,10 +182,15 @@ protected:
   arr2<COLOUR> pic;
   std::vector<particle_sim> particle_data; 
   bool particle_compute;
-  double intnorm[2];
-  double colnorm[2];
+  std::vector<double>  intnorm_min;
+  std::vector<double>  intnorm_max;
+  std::vector<double>  colnorm_min;
+  std::vector<double>  colnorm_max;
   vtkTimeStamp ParticleDataComputeTime;
   paramfile params;
+
+  std::vector<vtkDataArray *> radiusarrays;
+  std::vector<vtkDataArray *> intensityarrays;
 
 private:
   vtkSplotchPainter(const vtkSplotchPainter&); // Not implemented.
