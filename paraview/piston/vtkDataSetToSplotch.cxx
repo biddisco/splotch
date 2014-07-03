@@ -131,7 +131,7 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
   vtkDataArray      *inintensity = id->GetPointData()->GetArray(this->IntensityArrayName);
   vtkUnsignedCharArray *incolors = vtkUnsignedCharArray::SafeDownCast(id->GetPointData()->GetScalars());
   //
-  thrust::host_vector<particle_sim> cuda_particles(nPoints);
+  //thrust::host_vector<particle_sim> cuda_particles(nPoints);
   /*
   for (int i=0; i<nPoints; i++) {
     double *nextP = id->GetPoint(i);
@@ -170,9 +170,9 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
     cuda_particles[i].active = 1;
   }
 */
-  for (int i=0; i<nPoints; i++) {
-    cuda_particles[i] = (*particle_data)[i];
-  
+ // for (int i=0; i<nPoints; i++) {
+  //  cuda_particles[i] = (*particle_data)[i];
+ //   cuda_particles[i].active = true;
   //  Cannot do this I*b modification here because I is further modified during particle projection but before colorize
   //  double b = this->Brightness[cuda_particles[i].type];
 
@@ -180,12 +180,13 @@ int vtkDataSetToSplotch::RequestData(vtkInformation *request,
   //   cuda_particles[i].e.g *= (*particle_data)[i].I*b;
   //   cuda_particles[i].e.b *= (*particle_data)[i].I*b;
 
-    cuda_particles[i].r *= this->RadiusMultiplier;
-  }
+  //   cuda_particles[i].r *= this->RadiusMultiplier;
+  // }
   // allocate enough space for an array of cu_particle_sim
   cudaMalloc((void **) &newD->userPointer, nPoints*sizeof(particle_sim));
   // copy from host to device
-  cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(particle_sim), cudaMemcpyHostToDevice);
+  //cudaMemcpy(newD->userPointer, &cuda_particles[0], nPoints*sizeof(particle_sim), cudaMemcpyHostToDevice);
+  cudaMemcpy(newD->userPointer, &(*particle_data)[0], nPoints*sizeof(particle_sim), cudaMemcpyHostToDevice);
   //
   return 1;
 }
