@@ -112,14 +112,28 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    //Remove non-active and host particles
    thrust::device_ptr<cu_particle_sim> new_end = thrust::remove_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, particle_notValid());
    newParticle = new_end.get() - dev_ptr_pd.get();
+   long nLeft = 0;
    if( newParticle != nParticle )
    {
-     cout << endl << "Eliminating inactive particles..." << endl;
-     cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
-     thrust::remove_if(dev_ptr_flag, dev_ptr_flag+nParticle, particle_notValid());
-     cout << "Eliminated" << endl;
+    cout << endl << "Eliminating inactive particles..." << endl;
+    nLeft = newParticle+nHostPart;
+    if(!nLeft)
+      cout << "No active particles left!" << endl;
+    else
+      cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
+    thrust::remove_if(dev_ptr_flag, dev_ptr_flag+nParticle, particle_notValid());
+    cout << "Eliminated" << endl;
    }
+  
    tstack_pop("Particle Filtering");
+   
+   // We didnt have to render anything, all particles were inactive.
+   if(!nLeft)
+   {  
+      return 0;
+   }  
+
+   
 
    tstack_push("Particle Distribution");
 
