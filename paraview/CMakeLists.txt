@@ -277,27 +277,38 @@ if(PARAVIEW_BUILD_QT_GUI)
   #--------------------------------------------------
   # Qt .ui files that are wrapped and added to plugin
   #--------------------------------------------------
-  set(UI_FORMS
-    pqSplotchDisplayPanelDecorator.ui
-  )
+#  set(UI_FORMS
+#    pqSplotchDisplayPanelDecorator.ui
+#  )
       
-  qt4_wrap_ui(UI_SRCS 
-    ${UI_FORMS}
-  )
+ # qt4_wrap_ui(UI_SRCS 
+#    ${UI_FORMS}
+#  )
 
-  qt4_wrap_cpp(MOC_SRCS 
-    pqSplotchDisplayPanelDecorator.h
-    )
+#  qt4_wrap_cpp(MOC_SRCS 
+#    pqSplotchDisplayPanelDecorator.h
+#    )
      
+#  set(Plugin_SRCS
+#    pqSplotchDisplayPanelDecorator.cxx
+#    )
+
+#  add_paraview_display_panel_decorator(
+#    IFACES
+ #   IFACE_SRCS
+ #   CLASS_NAME pqSplotchDisplayPanelDecorator
+ #   PANEL_TYPES pqDisplayProxyEditor)
+
+   qt4_wrap_cpp(MOC_SRCS
+    pqSplotchPropertyWidgetDecorator.h)
+
   set(Plugin_SRCS
-    pqSplotchDisplayPanelDecorator.cxx
+    pqSplotchPropertyWidgetDecorator.cxx
     )
 
-  add_paraview_display_panel_decorator(
-    IFACES
-    IFACE_SRCS
-    CLASS_NAME pqSplotchDisplayPanelDecorator
-    PANEL_TYPES pqDisplayProxyEditor)
+  add_paraview_property_widget_decorator(IFACES IFACE_SRCS
+    TYPE "splotch_decorator"
+    CLASS_NAME pqSplotchPropertyWidgetDecorator)
 
 endif(PARAVIEW_BUILD_QT_GUI)
 

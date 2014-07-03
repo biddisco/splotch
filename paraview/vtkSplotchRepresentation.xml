@@ -128,6 +128,9 @@
         command="SetActiveParticleType"
         number_of_elements="1"
         default_values="0">
+      <Hints>
+          <PropertyWidgetDecorator type="splotch_decorator" />
+      </Hints>
       </IntVectorProperty>-->
 
       <StringVectorProperty
