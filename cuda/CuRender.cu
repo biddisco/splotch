@@ -184,7 +184,8 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<cu_particle_sim> >  new_end_C3;
     thrust::sort_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3);
     new_end_C3 = thrust::reduce_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3, dev_ptr_Index, dev_ptr_pd + newParticle - nC3,  binary_pred, sum_op());
-    nC3 = new_end_C3.first.get() - dev_ptr_Index.get();
+    //nC3 = new_end_C3.first.get() - dev_ptr_Index.get();
+    cu_addC3(newParticle, nC3, new_end_C3.first.get() - dev_ptr_Index.get(), gv);
     new_ntiles--; 
     tstack_pop("point-like particles rendering");
   }
