@@ -68,6 +68,7 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
   int m;
 #ifdef CUDA
   // In cuda version logs are performed on device
+  #pragma omp for schedule(guided,1000)
   for (m=0; m<npart; ++m)
     {
     int t=p[m].type;
