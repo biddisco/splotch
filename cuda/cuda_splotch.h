@@ -20,19 +20,25 @@
  *
  */
 
-#ifndef SPLOTCH_CUDA2_H
-#define SPLOTCH_CUDA2_H
+#ifndef CUDA_SPLOTCH_H
+#define CUDA_SPLOTCH_H
 
-#include "cuda/splotch_cuda.h"
+#include "cxxsupport/string_utils.h"
 #include "cxxsupport/walltimer.h"
 
-int check_device(int rank);
-void print_device_info(int rank, int dev);
+#include "cuda/cuda_utils.h"
+#include "cuda/cuda_render.h"
 
-void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, std::vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params);
-void setup_colormap(int ptypes, std::vector<COLOURMAP> &amap, cu_gpu_vars* gv);
-//
+#ifdef SPLOTCH_PARAVIEW
 int  cuda_paraview_init(arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, paramfile &g_params);
 void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, paramfile &g_params, void *gpudata);
+#else
+void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, std::vector<particle_sim> &particle, const vec3 &campos, const vec3 &centerpos, const vec3 &lookat, vec3 &sky, std::vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params);
+void setup_colormap(int ptypes, std::vector<COLOURMAP> &amap, cu_gpu_vars* gv);
+#endif
+
+// NVIDIA device query functions defined in cuda_device_query.cu
+int check_device(int rank);
+void print_device_info(int rank, int dev);
 
 #endif

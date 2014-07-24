@@ -23,37 +23,24 @@
 #ifndef __KERNEL__
 #define __KERNEL__
 
-#include "cuda/splotch_cuda.h"
-#include <cstdio>
-
-//#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
-//#define printf(f, ...) ((void)(f, __VA_ARGS__),0)
-//#endif
-
-
-//MACROs
-#define Pi 3.141592653589793238462643383279502884197
-#define MAXSIZE 1000
-
-/////////constant memory declaration /////////////////////
-
-__constant__ cu_color_map_entry dmap[MAXSIZE];
-__constant__ int ptype_points[10];
-__constant__ cu_param dparams;
-
+ #include "cuda_kernel.cuh"
 //help functions
 
+__constant__ cu_param dparams;
+__constant__ cu_color_map_entry dmap[MAXSIZE];
+__constant__ int ptype_points[10];
+
 __device__ __forceinline__ void clamp (float minv, float maxv, float &val)
-  {
+{
   val = min(maxv, max(minv, val));
-  }
+}
 
 __device__ __forceinline__   double my_asinh (double val)
-  { return log(val+sqrt(1.+val*val)); }
+{ return log(val+sqrt(1.+val*val)); }
 
 //fetch a color from color table on device
 __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size, int map_ptypes)
-  {
+{
   //first find the right entry for this ptype
   int     start, end;
   start = ptype_points[ptype];
@@ -74,31 +61,37 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size
   clr.b =clr1.b + fract*(clr2.b-clr1.b);
 
   return clr;
-  }
+}
 
 //Transform+coloring by kernel
-__global__ void k_process
-  (cu_particle_sim *p, int *p_active, int n, int mapSize, int types, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
-  {
+__global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize, int types, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
+{
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
-  
-  // For paraview, add #defs
-  if(!p[m].active) {
-    p_active[m] = -1;
-    return;
-  }
+
+  #ifdef SPLOTCH_PARAVIEW
+  // For paraview version we may be using active to filter by type 
+  // Which is set before this kernel runs
+    if(!p[m].active) {
+      p_active[m] = -1;
+      return;
+    }
+  #else
+   float er = p[m].e.r;
+   float eg = p[m].e.g;
+   float eb = p[m].e.b;    
+  #endif
 
   int ptype = p[m].type;
   float r = p[m].r;
-//  float er = p[m].e.r;
-//  float eg = p[m].e.g;
-//  float eb = p[m].e.b;
   float I = p[m].I;
+  
+  #ifdef SPLOTCH_PARAVIEW 
+    #define NO_I_NORM
+  #endif
 
-    // Normalization and clamping 
-#define NO_I_NORM
+  // Normalization and clamping 
 #ifndef NO_I_NORM
   // Norm and clamp I
     if (dparams.inorm_maxs[ptype]==dparams.inorm_mins[ptype])
@@ -107,7 +100,7 @@ __global__ void k_process
       I = (max(dparams.inorm_mins[ptype],min(dparams.inorm_maxs[ptype],I))-dparams.inorm_mins[ptype])/(dparams.inorm_maxs[ptype]-dparams.inorm_mins[ptype]);
 #endif
 
-#if 0
+#ifndef SPLOTCH_PARAVIEW
   // Norm and clamp er
     if (dparams.cnorm_maxs[ptype]==dparams.cnorm_mins[ptype])
       er = 1;
@@ -130,11 +123,6 @@ __global__ void k_process
     }
 #endif
 
- // cu_color e;
- // e.r=p[m].e.r;
- // e.g=p[m].e.g;
- // e.b=p[m].e.b;
-
   //now do x,y,z
  // float zminval = 0.0;
  // float zmaxval = 1e23;
@@ -150,16 +138,16 @@ __global__ void k_process
   //const float   res2 = 0.5f*dparams.xres;
   //const float   ycorr = 0.5f*(dparams.yres-dparams.xres);
   if (!dparams.projection)
-    {
+  {
     x = 0.5f*dparams.xres * (x+dparams.fovfct*dparams.dist)*xfac2;
     y = 0.5f*dparams.xres * (y+dparams.fovfct*dparams.dist)*xfac2 + 0.5f*(dparams.yres-dparams.xres);
-    }
+  }
   else
-    {
+  {
     xfac2=1.f/(dparams.fovfct*z);
     x = 0.5f*dparams.xres * (x+dparams.fovfct*z)*xfac2;
     y = 0.5f*dparams.xres * (y+dparams.fovfct*z)*xfac2 +  0.5f*(dparams.yres-dparams.xres);
-    }
+  }
 
 #ifdef SPLOTCH_CLASSIC
   I *= 0.5f*dparams.bfak/r;
@@ -182,7 +170,6 @@ __global__ void k_process
 
   p[m].active = false;
   p_active[m] = -1;	// non active particle
-
   // compute region occupied by the partile
   //float raux=dparams.rfac;
   const float rfacr=dparams.rfac*r;
@@ -203,7 +190,6 @@ __global__ void k_process
   if (maxy<=0) return;
   maxy=min(maxy,dparams.yres);
   if (miny>=maxy) return;
- 
   p[m].active = true;
   
   p[m].x = x;
@@ -213,17 +199,16 @@ __global__ void k_process
 
 //coloring
 // get color, associated from physical quantity contained in e.r, from lookup table
-//  cu_color e;
-//  e.r=er;
-//  e.g=eg;
-//  e.b=eb;
+#ifndef SPLOTCH_PARAVIEW
+ cu_color e;
+ e.r=er;
+ e.g=eg;
+ e.b=eb;
 
-// Paraview splotch doesnt need this
-//  if (!dparams.col_vector[ptype])
-//     e = get_color(ptype, e.r, mapSize, types);
+ if (!dparams.col_vector[ptype])
+    e = get_color(ptype, e.r, mapSize, types);
+#endif
 
-  // Now data is kept on the device (paraview splotch) we do this at rendertime to avoid accidentally
-  // modifying colors every frame
  p[m].e.r *= I;
  p[m].e.g *= I;
  p[m].e.b *= I; 
@@ -257,7 +242,6 @@ __global__ void k_range(int nP, cu_particle_sim *p)
   int ptype = p[m].type;
 
   // Check if we need to log10 intensity
- // 
   if (dparams.log_int[ptype])
   { 
     if(p[m].I > 0)
@@ -275,11 +259,6 @@ __global__ void k_range(int nP, cu_particle_sim *p)
     else
       p[m].e.r =-38;
   }
-//else
-//{
-//  if (dparams.asinh_col[ptype])
-//    p[m].e.r = my_asinh(p[m].e.r);
-//}
 
   if (dparams.col_vector[ptype])
   {
@@ -288,43 +267,9 @@ __global__ void k_range(int nP, cu_particle_sim *p)
       p[m].e.g = log10(p[m].e.g);
       p[m].e.b = log10(p[m].e.b);
     }
-//  if (dparams.asinh_col[ptype])
-//  {
-//    p[m].e.g = my_asinh(p[m].e.g);
-//    p[m].e.b = my_asinh(p[m].e.b);
-//  }
   }
 
 }
- 
-
-//colorize by kernel
-/*__global__ void k_colorize
-  (cu_particle_sim *p2, int mapSize, int types, int n)
-  {
-  //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >= n) return; 
-
-  int ptype = p2[m].type;
-  cu_color e;  
-    e.r=p2[m].e.r;
-    e.g=p2[m].e.g;
-    e.b=p2[m].e.b;
-
-  float intensity = p2[m].I;
-  intensity *= dparams.brightness[ptype];
-
-// get color, associated from physical quantity contained in e.r, from lookup table
-  if (!dparams.col_vector[ptype])
-     e = get_color(ptype, e.r, mapSize, types);
-
-  p2[m].e.r = e.r*intensity;;
-  p2[m].e.g = e.g*intensity;;
-  p2[m].e.b = e.b*intensity;;
- }
-*/
-
 
 // change of linear coordinate: from tile to global image
 // lpix -> (x,y) -> (X,Y) -> gpix 
@@ -341,33 +286,35 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
 
 //device render function k_render1
 // a_eq_e = false is not supported
-__global__ void k_render1
-  (int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
+__global__ void k_renderC2
+__launch_bounds__(256, 8) 
+(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
 {
    extern __shared__ cu_color Btile[];
-   __shared__ int local_chunk_length, end;
+   __shared__ int local_chunk_length, start;
    __shared__ cu_color e[NPSIZE];
-  // __shared__ float it[NPSIZE];
    __shared__ float radsq[NPSIZE], stp[NPSIZE];
    __shared__ float posx[NPSIZE], posy[NPSIZE];
    __shared__ int minx[NPSIZE], maxx[NPSIZE], miny[NPSIZE], maxy[NPSIZE];
    
+   // 1D length of Btile (tile plus boundarys) = 2x1D length of normal tile
    int tileBsize = (tile_sidex+2*width)*(tile_sidey+2*width);
-   int tile = tileId[blockIdx.x];	// tile number 
+   // Each block assigned a tile
+   int tile = tileId[blockIdx.x]; // tile number 
 
    if (threadIdx.x == 0)
    {
-      end = tilepart[blockIdx.x];
-      if (blockIdx.x == 0) local_chunk_length = end;
-      else local_chunk_length = end - tilepart[blockIdx.x-1];
-      end--;
+      if (blockIdx.x == 0) start = 0;
+      else start = tilepart[blockIdx.x-1];
+      local_chunk_length = tilepart[blockIdx.x] - start;
    }
    __syncthreads();
 
    int xo = (tile/nytiles)*tile_sidex - width;  // Btile origin x
    int yo = (tile%nytiles)*tile_sidey - width;  // Btile origin y
 
-  //inizialise Btile
+   // Inizialise Btile
+   // Block Dim is width of Btile, each thread inits the y column of pixels corresponding to its index on the x
   for (int i=threadIdx.x; i<tileBsize; i=i+blockDim.x) 
   {
      Btile[i].r = 0.0f;  Btile[i].g = 0.0f;   Btile[i].b = 0.0f;
@@ -376,21 +323,24 @@ __global__ void k_render1
 
   int x,y,k;
   int j = 0;
+  // Check we dont go over width of tile(shouldnt be hardcoded to 16...)
   int last = min(NPSIZE, blockDim.x);
-  //now do the rendering: each thread processes a pixel of particle i
+  // Now do the rendering: each thread processes a pixel of particle i
+  // We do 16 particles per loop of this while block
   while (j < local_chunk_length) 
   {
+      // The first 16 threads get the particles color/position/render params
       k = threadIdx.x; 
       if(k < last)
       {
-        cu_particle_sim p = part[end-k-j];
+        cu_particle_sim p = part[start+k+j];
         e[k] = p.e;
-        //it[k] = p.I;
         posx[k] = p.x; posy[k] = p.y;
         float rfacr = dparams.rfac*p.r;
         radsq[k] = rfacr*rfacr;
         stp[k] = -1.f/(dparams.h2sigma*dparams.h2sigma*p.r*p.r);
 
+        // Get min and max pixels affected, clamp to edges of image
         minx[k]=int(p.x-rfacr+1.f);
         minx[k]=max(minx[k],0);
         maxx[k]=int(p.x+rfacr+1.f);
@@ -403,43 +353,59 @@ __global__ void k_render1
       __syncthreads(); 
       j += last; //blockDim.x;
       if (j > local_chunk_length) last = local_chunk_length%last; //blockDim.x;
+      // Loop over 16 particles
       for (int i=0; i<last; i++)
       {
+         // Number of pixels affected by this particle
          int reg = (maxx[i]-minx[i])*(maxy[i]-miny[i]);
-         // render pixel threadIdx.x of particle i
+         // Render pixel threadIdx.x of particle i
          if (threadIdx.x < reg)
          {
            // global pixel coordinates
            x = threadIdx.x/(maxy[i]-miny[i]) + minx[i];
            y = threadIdx.x%(maxy[i]-miny[i]) + miny[i];
+           // Get local pixal coords within btile
            // global pixel index = x*dparams.yres+y
            // localx = x-xo,   localy = y-yo 
            int lp = (x-xo)*(tile_sidey+2*width) + y-yo;  //local pixel index
          //  if (lp >= tileBsize) printf("lp = %d, tile=%d, x=%d, y=%d xo =%f yo=%f tile_sidey=%d width=%d\n",lp,tile,x,y,xo,yo,tile_sidey,width);
+          // How far are we from the pixel centre
            float dsq = (y-posy[i])*(y-posy[i]) + (x-posx[i])*(x-posx[i]);
            if (dsq<radsq[i])
            {
+            // Attribution is exp of stp * distance from centre
              float att = __expf(stp[i]*dsq);
-             Btile[lp].r += -att*e[i].r /* *it[i] */;
-             Btile[lp].g += -att*e[i].g /* *it[i] */;
-             Btile[lp].b += -att*e[i].b /* *it[i] */;
+             Btile[lp].r += -att*e[i].r;
+             Btile[lp].g += -att*e[i].g;
+             Btile[lp].b += -att*e[i].b;
            }
-       //    else
-       //    {
-       //      Btile[lp].r += 0.0f;
-       //      Btile[lp].g += 0.0f;
-       //      Btile[lp].b += 0.0f;
-       //    } 
           }
       } 
       __syncthreads();  
   }
 
-  //update inner tile in the global image
-  int k0 = width*(tile_sidey+2*width) + width; // starting point
+#ifdef CUDA_USE_ATOMICS
+
+    // Atomic update of image
+   for (int i=threadIdx.x; i<9*tile_sidex*tile_sidey; i=i+blockDim.x) 
+   {
+      int kk = pixelLocalToGlobal(i,xo,yo,width,tile_sidey);
+      atomicAdd(&(pic[kk].r),Btile[i].r);
+      atomicAdd(&(pic[kk].g),Btile[i].g);
+      atomicAdd(&(pic[kk].b),Btile[i].b);
+   }
+
+#else
+
+// Update inner tile in the global image
+// First work out the starting point of the inner tile within the btile
+// (i.e. we skip the top boundary row, and the first pixel row of the left boundary column)
+  int k0 = width*(tile_sidey+2*width) + width; 
   for (int i=threadIdx.x; i<tile_sidex*tile_sidey; i=i+blockDim.x) 
   {
-     j = k0 + i + (i/tile_sidey)*2*width; //add correction due to the boundary
+     // Add correction to skip boundary pixels
+     j = k0 + i + (i/tile_sidey)*2*width; 
+     // Convert to global coords
      k = pixelLocalToGlobal(j,xo,yo,width,tile_sidey);
      pic[k].r += Btile[j].r;
      pic[k].g += Btile[j].g;
@@ -449,13 +415,16 @@ __global__ void k_render1
 
 // update boundary in 3 steps: 
 // 1. columns
-
   int ymax = yo + tile_sidey+2*width;
   int xmax = xo + tile_sidex+2*width;
+  // Step is used for to split threads between left column/right column
+  // or top row/bottom row, or corners
   int step = blockDim.x/2;
 
+  // i.e. left column
   if ((threadIdx.x < step)  && (yo >= 0))
   {
+    // Get to start pixel of left column (on furthest left pixel of btile)
     k0 = width*(tile_sidey+2*width);
     for (int i = threadIdx.x; i<tile_sidex*width; i=i+step) 
     {
@@ -466,8 +435,10 @@ __global__ void k_render1
       pic1[k].b += Btile[j].b;
     }
   }
+  // i.e. right column
   else if ((threadIdx.x >= step)  && (ymax <= dparams.yres))
   {
+    // Furthest left pixel of righthand column
     k0 = width*(tile_sidey+2*width) + width + tile_sidey; 
     for (int i = threadIdx.x - step; i<tile_sidex*width; i=i+step) 
     {
@@ -548,14 +519,14 @@ __global__ void k_render1
      pic3[k].g += Btile[j].g;
      pic3[k].b += Btile[j].b;
   }
+#endif
 
 }
 
 
-//device render function k_renderC3
-// each thread render a particle
-__global__ void k_renderC3
-  (int n, cu_particle_sim *part, int *index)
+// Index C3 particles
+// Work out th eindex of the pixel each particle affects
+__global__ void k_indexC3(int n, cu_particle_sim *part, int *index)
 {
    //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
@@ -571,6 +542,19 @@ __global__ void k_renderC3
   //pixel = -p.e
 }
 
+__global__ void k_renderC3(int nC3, int *index, cu_particle_sim *part, cu_color *pic)
+{
+   //first get the index m of this thread
+  int m=blockIdx.x *blockDim.x + threadIdx.x;
+  if (m >= nC3) return;
+
+  pic[index[m]].r += - part[m].e.r;
+  pic[index[m]].g += - part[m].e.g;
+  pic[index[m]].b += - part[m].e.b;
+  
+}
+
+#ifndef CUDA_USE_ATOMICS
 __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3)
 {
    //first get the index m of this thread
@@ -581,30 +565,7 @@ __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic
    pic[m].g += pic1[m].g + pic2[m].g + pic3[m].g;
    pic[m].b += pic1[m].b + pic2[m].b + pic3[m].b;
 }
-
-__global__ void k_addC3(int nC3, int *index, cu_particle_sim *part, cu_color *pic)
-{
-   //first get the index m of this thread
-  int m=blockIdx.x *blockDim.x + threadIdx.x;
-  if (m >= nC3) return;
-
-  pic[index[m]].r += - (part[m].e.r /* * part[m].I*/);
-  pic[index[m]].g += - (part[m].e.g /* * part[m].I*/);
-  pic[index[m]].b += - (part[m].e.b /* * part[m].I*/);
-  
-}
-
-// __global__ void k_update_C1_I(int nC1, cu_particle_sim *part)
-// {
-//    //first get the index m of this thread
-//   int m=blockIdx.x *blockDim.x + threadIdx.x;
-//   if (m >= nC1) return;
-
-//   part[m].e.r *= part[m].I;
-//   part[m].e.g *= part[m].I;
-//   part[m].e.b *= part[m].I;
-  
-// }
+#endif
 
 #endif
 

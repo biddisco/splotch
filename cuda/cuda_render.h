@@ -20,16 +20,18 @@
  *
  */
 
-#ifndef CURENDER_H
-#define CURENDER_H
+#ifndef CUDA_RENDER_H
+#define CUDA_RENDER_H
 
-#include "cuda/splotch_cuda2.h"
-#include "cuda/splotch_cuda.h"
-
+#include "cuda/cuda_utils.h"
 
 using namespace std;
 
+#ifdef SPLOTCH_PARAVIEW
 int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata);
+#else
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs);
+#endif
 int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres);
 
 #endif

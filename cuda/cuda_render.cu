@@ -36,26 +36,39 @@
 
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
-#include "cuda/CuRender.h"
-#include "cuda/CuPolicy.h"
+
+#include "cuda/cuda_render.h"
+#include "cuda/cuda_policy.h"
+#include "cuda/cuda_kernel.cuh"
 
 using namespace std;
 
+#ifdef SPLOTCH_PARAVIEW
 int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata)
+#else 
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs)
+#endif
 {
   cudaError_t error;
 
-  //copy data particle to device memory
+  // Copy data particle to device memory
+  // Paraview version might not need to copy
   tstack_push("Data copy");
+
+#ifdef SPLOTCH_PARAVIEW
   if (gpudata) {
     cu_copy_particles_from_gpubuffer(gpudata, nParticle, gv);
   }
   else {
     cu_copy_particles_to_device(d_particle_data, nParticle, gv);
   }
+#else 
+  cu_copy_particles_to_device(d_particle_data, nParticle, gv);
+#endif
+
   tstack_pop("Data copy");
 
-  //get parameters for rendering
+  // Get parameters for rendering
   int tile_sidex, tile_sidey, width, nxtiles, nytiles;
   gv->policy->GetTileInfo(&tile_sidex, &tile_sidey, &width, &nxtiles, &nytiles);
 
@@ -72,6 +85,8 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   //--------------------------------------
 
   tstack_push("Particle projection & coloring");
+  // Project and color particles, set activity 
+  // active: either the tile to which it belongs, -2 for big particle, -1 for clipped or ntx*nty for pointlike particles
   cu_process(nParticle, gv, tile_sidex, tile_sidey, width, nxtiles, nytiles);
   cudaThreadSynchronize();
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
@@ -80,26 +95,25 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   int new_ntiles, newParticle, nHostPart=0;
   int nC3 = 0;
   particle_sim *host_part = 0;
+  // Thrust dev pointer to particle data
   thrust::device_ptr<cu_particle_sim> dev_ptr_pd((cu_particle_sim *) gv->d_pd);
   try
   { 
    tstack_push("Particle Filtering");
-
    thrust::device_ptr<int> dev_ptr_flag((int *) gv->d_active);
-
    // Select big particles to be processed by the host
+   // First create buffer to store large particles
    thrust::device_vector<cu_particle_sim> d_host_part(nParticle);
+   // Copy particles from device array to big particle array if active flag == -2 
    thrust::device_vector<cu_particle_sim>::iterator end = thrust:: copy_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, d_host_part.begin(), reg_notValid()); 
+   // Check how many big particles we had
    nHostPart = end - d_host_part.begin();
 
    // Copy back big particles
    if (nHostPart > 0)
    {
+
     cu_particle_sim *d_host_part_ptr = thrust::raw_pointer_cast(&d_host_part[0]);
-
-    // Modify color by this frames intensity value before sending back
-    //cu_update_C1_I(nHostPart, d_host_part_ptr, gv);
-
     error = cudaHostAlloc((void**) &host_part, nHostPart*sizeof(cu_particle_sim), cudaHostAllocDefault);
     if (error != cudaSuccess) cout << "cudaHostAlloc error!" << endl;
     else
@@ -115,14 +129,14 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    long nLeft = 0;
    if( newParticle != nParticle )
    {
-    cout << endl << "Eliminating inactive particles..." << endl;
+     cout << endl << "Eliminating inactive particles..." << endl;
     nLeft = newParticle+nHostPart;
     if(!nLeft)
       cout << "No active particles left!" << endl;
     else
       cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
+    // Remove if active < 0 (i.e. -1 for clipped or -2 for big)
     thrust::remove_if(dev_ptr_flag, dev_ptr_flag+nParticle, particle_notValid());
-    cout << "Eliminated" << endl;
    }
   
    tstack_pop("Particle Filtering");
@@ -132,8 +146,6 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    {  
       return 0;
    }  
-
-   
 
    tstack_push("Particle Distribution");
 
@@ -151,7 +163,6 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 //   cout << nC3 << " of them are point-like particles" << endl;
 
    thrust::inclusive_scan(dev_ptr_nT, dev_ptr_nT + new_ntiles, dev_ptr_nT);
-   cout << "Distribution finished" << endl;
    tstack_pop("Particle Distribution");
 
   }
@@ -184,8 +195,8 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<cu_particle_sim> >  new_end_C3;
     thrust::sort_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3);
     new_end_C3 = thrust::reduce_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3, dev_ptr_Index, dev_ptr_pd + newParticle - nC3,  binary_pred, sum_op());
-    //nC3 = new_end_C3.first.get() - dev_ptr_Index.get();
-    cu_addC3(newParticle, nC3, new_end_C3.first.get() - dev_ptr_Index.get(), gv);
+    int nAffectedPixels = new_end_C3.first.get() - dev_ptr_Index.get();
+    cu_renderC3(newParticle, nC3, nAffectedPixels, gv);
     new_ntiles--; 
     tstack_pop("point-like particles rendering");
   }
@@ -244,8 +255,11 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres)
 {
   int res = xres*yres;
-  // add images on the device: pic+pic1+pic2+pic3
-  cu_add_images(res, gv);
+
+  #ifndef CUDA_USE_ATOMICS
+    // add images on the device: pic+pic1+pic2+pic3
+    cu_add_images(res, gv);
+  #endif
   // cout << "Rank " << MPI_Manager::GetInstance()->rank() << cudaGetErrorString(cudaGetLastError()) << endl;
 
   COLOUR *Pic = new COLOUR [res];

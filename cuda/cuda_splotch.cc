@@ -20,25 +20,11 @@
  *
  */
 
-#include <cmath>
-#include <iostream>
-#include <fstream>
-
-#include "splotch/scenemaker.h"
-#include "splotch/splotchutils.h"
-#include "cxxsupport/lsconstants.h"
-#include "cxxsupport/walltimer.h"
-#include "cxxsupport/cxxutils.h"
-#include "cxxsupport/datatypes.h"
-
-#include "cuda/splotch_cuda2.h"
-#include "cuda/splotch_cuda.h"
-#include "cxxsupport/string_utils.h"
-#include "cuda/CuPolicy.h"
-#include "cuda/CuRender.h"
+#include "cuda/cuda_splotch.h"
 
 using namespace std;
 
+#ifdef SPLOTCH_PARAVIEW
 //
 // paraview version of rendering sets up colour map independently
 // and leaves particles on GPU between frames if they have not been modified
@@ -125,7 +111,8 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   }
 
  }
-
+#else
+ 
 void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
 {
   tstack_push("CUDA");
@@ -192,7 +179,8 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
 
  }
 
-
+#endif
+ 
 void setup_colormap(int ptypes, vector<COLOURMAP> &amap, cu_gpu_vars* gv)
 {
 //init C style colormap
