@@ -111,7 +111,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   }
 
  }
-#else
+#endif
  
 void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
 {
@@ -179,7 +179,6 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
 
  }
 
-#endif
  
 void setup_colormap(int ptypes, vector<COLOURMAP> &amap, cu_gpu_vars* gv)
 {

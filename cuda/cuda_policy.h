@@ -27,7 +27,6 @@ All 'magic numbers' are out of this class.
 #define CUPOLICY_H
 
 #include "cxxsupport/paramfile.h"
-#include "cuda/splotch_cuda.h"
 
 #ifdef __CUDACC__
 #include <cuda.h>

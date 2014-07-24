@@ -126,7 +126,7 @@ if(NOT TARGET splotchcore)
     #--------------------------------------------------
     # #defines for splotch
     #--------------------------------------------------
-    add_definitions(-DCUDA -DHYPERQ)
+    add_definitions(-DCUDA -DHYPERQ -DSPLOTCH_PARAVIEW)
 
     #--------------------------------------------------
     # include path for Thrust
@@ -145,7 +145,7 @@ if(NOT TARGET splotchcore)
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_utils.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_device_query.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_policy.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
+#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_render.cu
     )
     set(PV_SPLOTCH_CUDA_PLUGIN_SRCS

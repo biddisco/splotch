@@ -35,7 +35,7 @@
 #include "cxxsupport/announce.h"
 
 #ifdef CUDA
-#include "cuda/splotch_cuda2.h"
+#include "cuda/cuda_splotch.h"
 #endif
 #ifdef OPENCL
 #include "opencl/splotch_cuda2.h"

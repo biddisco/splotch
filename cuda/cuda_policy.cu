@@ -19,7 +19,7 @@
  *
  */
  
-#include "cuda/CuPolicy.h"
+#include "cuda/cuda_policy.h"
 
 CuPolicy::CuPolicy(int xres, int yres, paramfile &params)
   {
@@ -74,7 +74,8 @@ int CuPolicy::GetBlockSize()
 
 size_t CuPolicy::GetImageSize()
 {
-    size_t size = (res.first)*(res.second)*sizeof(cu_color);
+    // sizeof cu_color
+    size_t size = (res.first)*(res.second)*(sizeof(float)*3);
     return size;
 }
 

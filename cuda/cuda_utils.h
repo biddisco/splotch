@@ -132,7 +132,7 @@ void      cu_renderC3(int nP, int nC3, int res, cu_gpu_vars* pgv);
 void      cu_end(cu_gpu_vars* pgv);
 long int  cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor);
 
-#ifndef SPLOTCH_PARAVIEW
+#ifdef SPLOTCH_PARAVIEW
 int cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);
 int cu_copy_particles_from_gpubuffer(void *gpubuffer, unsigned int n, cu_gpu_vars* pgv);
 long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor, int nP);
@@ -141,5 +141,7 @@ long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, s
 #ifndef CUDA_USE_ATOMICS
   void      cu_add_images(int res, cu_gpu_vars* pgv);
 #endif
+
+
 
 #endif

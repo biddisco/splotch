@@ -41,7 +41,7 @@
 #include <thrust/copy.h>
 #include <stdexcept>
 //
-#include "cuda/splotch_cuda2.h"
+#include "cuda/cuda_splotch.h"
 //
 #include <piston/choose_container.h>
 //

@@ -21,16 +21,18 @@
  */
 
 #include "cuda/cuda_utils.h"
-#include "cuda/cuda_kernel.cuh"
-
+//#include "cuda/cuda_kernel.cuh"
+#include "cuda/cuda_kernel.cu"
 using namespace std;
 
-extern __constant__ cu_param dparams;
-extern __constant__ cu_color_map_entry dmap[MAXSIZE];
-extern __constant__ int ptype_points[10];
+// extern __constant__ cu_param dparams;
+// extern __constant__ cu_color_map_entry dmap[MAXSIZE];
+// extern __constant__ int ptype_points[10];
 
 #define CLEAR_MEM(p) if(p) {cudaFree(p); p=0;}
 
+#define Pi 3.141592653589793238462643383279502884197
+#define MAXSIZE 1000
 
 template<typename T> T findParamWithoutChange(paramfile *param, std::string &key, T &deflt)
 {
@@ -262,10 +264,11 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   doLogs = findParamWithoutChange<bool>(&fparams, key, dflt);
 
   //dump parameters to device
-  int error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
+  cudaError_t error = cudaMemcpyToSymbol(dparams, &tparams, sizeof(cu_param));
   if (error != cudaSuccess)
   {
     cout << "Device Malloc: parameters allocation error!" << endl;
+    cout << "Error: " << cudaGetErrorString(error) << std::endl;
     return 1;
   }
 return 0;
