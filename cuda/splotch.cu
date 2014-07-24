@@ -149,6 +149,12 @@ int cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
    cout << "Device Memory: index buffer allocation error!" << endl;
    return 1;
   }
+  error = cudaMalloc((void**) &pgv->d_index_1, size);
+  if (error != cudaSuccess) 
+  {
+   cout << "Device Memory: index buffer_1 allocation error!" << endl;
+   return 1;
+  }
 
   // image + 3 copies
   size = pgv->policy->GetImageSize();
@@ -355,7 +361,7 @@ void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv)
   dim3 dimGrid, dimBlock;
   pgv->policy->GetDimsBlockGrid(nC3, &dimGrid, &dimBlock);
  
-  k_renderC3<<<dimGrid, dimBlock>>>(nC3, pgv->d_pd+nP-nC3, pgv->d_index);
+  k_renderC3<<<dimGrid, dimBlock>>>(nC3, pgv->d_pd+nP-nC3, pgv->d_index_1);
   }
 
 // // Update the intensity of C1 particles before copying back to host

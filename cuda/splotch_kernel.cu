@@ -345,7 +345,7 @@ __global__ void k_render1
   (int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
 {
    extern __shared__ cu_color Btile[];
-   __shared__ int local_chunk_length, end;
+   __shared__ int local_chunk_length, start;
    __shared__ cu_color e[NPSIZE];
   // __shared__ float it[NPSIZE];
    __shared__ float radsq[NPSIZE], stp[NPSIZE];
@@ -355,13 +355,22 @@ __global__ void k_render1
    int tileBsize = (tile_sidex+2*width)*(tile_sidey+2*width);
    int tile = tileId[blockIdx.x];	// tile number 
 
-   if (threadIdx.x == 0)
+   // if (threadIdx.x == 0)
+   // {
+   //    end = tilepart[blockIdx.x];
+   //    if (blockIdx.x == 0) local_chunk_length = end;
+   //    else local_chunk_length = end - tilepart[blockIdx.x-1];
+   //    end--;
+   // }
+
+    // New version iterating forward
+    if (threadIdx.x == 0)
    {
-      end = tilepart[blockIdx.x];
-      if (blockIdx.x == 0) local_chunk_length = end;
-      else local_chunk_length = end - tilepart[blockIdx.x-1];
-      end--;
-   }
+
+      if (blockIdx.x == 0) start = 0;
+      else start = tilepart[blockIdx.x-1];
+      local_chunk_length = tilepart[blockIdx.x] - start;
+   } 
    __syncthreads();
 
    int xo = (tile/nytiles)*tile_sidex - width;  // Btile origin x
@@ -383,7 +392,7 @@ __global__ void k_render1
       k = threadIdx.x; 
       if(k < last)
       {
-        cu_particle_sim p = part[end-k-j];
+        cu_particle_sim p = part[start+k+j];
         e[k] = p.e;
         //it[k] = p.I;
         posx[k] = p.x; posy[k] = p.y;

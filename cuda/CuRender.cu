@@ -180,10 +180,11 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cu_indexC3(newParticle, nC3, gv); 
     //cout << cudaGetErrorString(cudaGetLastError()) << endl;
     thrust::device_ptr<int> dev_ptr_Index(gv->d_index);
+    thrust::device_ptr<int> dev_ptr_Index_src(gv->d_index_1);
     thrust::equal_to<int> binary_pred;
     thrust::pair< thrust::device_ptr<int>,thrust::device_ptr<cu_particle_sim> >  new_end_C3;
     thrust::sort_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3);
-    new_end_C3 = thrust::reduce_by_key(dev_ptr_Index, dev_ptr_Index + nC3, dev_ptr_pd + newParticle - nC3, dev_ptr_Index, dev_ptr_pd + newParticle - nC3,  binary_pred, sum_op());
+    new_end_C3 = thrust::reduce_by_key(dev_ptr_Index_src, dev_ptr_Index_src + nC3, dev_ptr_pd + newParticle - nC3, dev_ptr_Index, dev_ptr_pd + newParticle - nC3,  binary_pred, sum_op());
     //nC3 = new_end_C3.first.get() - dev_ptr_Index.get();
     cu_addC3(newParticle, nC3, new_end_C3.first.get() - dev_ptr_Index.get(), gv);
     new_ntiles--; 
@@ -229,10 +230,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
     cudaThreadSynchronize();
   //  cout << "Rank " << MPI_Manager::GetInstance()->rank() << cudaGetErrorString(cudaGetLastError()) << endl;
   }
-
-  tstack_push("point-like particles rendering");
-
-  tstack_pop("point-like particles rendering");
+ 
   //cout << cudaGetErrorString(cudaGetLastError()) << endl;
 
   tstack_pop("CUDA Rendering");

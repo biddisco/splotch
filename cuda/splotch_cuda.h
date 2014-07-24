@@ -95,6 +95,7 @@ struct cu_gpu_vars //variables used by each gpu
   cu_particle_sim     *d_pd;             //device_particle_data
   int		              *d_active; //  -1=non-active particle, -2=active big particle, n=number of tile, n+1=C3 particles 
   int                 *d_index;
+  int                 *d_index_1;
   cu_color            *d_pic;
   cu_color            *d_pic1;
   cu_color            *d_pic2;
