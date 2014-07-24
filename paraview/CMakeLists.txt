@@ -139,14 +139,14 @@ if(NOT TARGET splotchcore)
     )
       
     set(PV_SPLOTCH_CUDA_CSRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch_cuda2.cc
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_splotch.cc
     )
     set(PV_SPLOTCH_CUDA_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/deviceQuery.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/CuPolicy.cu
-#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/splotch_kernel.cu
-#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/CuRender.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_utils.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_device_query.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_policy.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_render.cu
     )
     set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
       ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkCUDASplotchPainter.cxx
