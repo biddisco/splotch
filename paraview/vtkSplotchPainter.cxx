@@ -345,7 +345,8 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   // Unneeded because we use iceT window sizes below
   //X = ren->GetSize()[0];
   //Y = ren->GetSize()[1];
-
+  // We arent using cuda
+  params.setParam("cuda_paraview_splotch", false);
   // Get input dataset
   vtkDataObject *indo = this->GetInput();
   vtkPointSet *input = vtkPointSet::SafeDownCast(indo);
@@ -479,9 +480,10 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
       // If this is a new type we must update to handle this
       if(ptype >= this->NumberOfParticleTypes)
       {
-        std::cout << "Caught new type" << std::endl;
+        
         #pragma omp critical (update_type)
         {
+          std::cout << "Adding new type" << std::endl;
           // Double check in case another thread modified it before we entered critical section
           if(ptype >= this->NumberOfParticleTypes)
           {
@@ -526,12 +528,12 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
       double intensitydata[1];
       if (intensityarrays[ptype]) {
         intensityarrays[ptype]->GetTuple(i,intensitydata);
-        if (this->LogIntensity[ptype]) {
-          particle_data[activeParticles].I = pow(10,intensitydata[0]);
-        }
-        else {
+        // if (this->LogIntensity[ptype]) {
+        //   particle_data[activeParticles].I = pow(10,intensitydata[0]);
+        // }
+        // else {
           particle_data[activeParticles].I = intensitydata[0];
-        }
+        // }
       }
       else {
         particle_data[activeParticles].I = 1.0;

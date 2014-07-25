@@ -66,6 +66,120 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
   // should be done more elegantly
   arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20), rnorm(nt+20);
   int m;
+
+  #ifdef SPLOTCH_PARAVIEW
+  // FIXME: SO MUCH CODE REPITION ARGAHGHJHKSAHKDJB
+  if(params.find<bool>("cuda_paraview_splotch", false))
+  {
+    #pragma omp for schedule(guided,1000)
+    for (m=0; m<npart; ++m)
+    {
+      int t=p[m].type;
+      rnorm[t].collect(p[m].r);
+      if (log_int[t])
+      {
+        if (p[m].I>0) inorm[t].collect(p[m].I);
+        else          p[m].I = -38;
+      }
+      else inorm[t].collect(p[m].I);
+
+      if (log_col[t])
+      {
+        if (p[m].e.r>0) cnorm[t].collect(p[m].e.r);
+        else            p[m].e.r = -38;
+      }
+      else
+      {
+        if(asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+        cnorm[t].collect(p[m].e.r);
+      }
+
+      if (col_vector[t])
+      {
+        if (asinh_col[t])
+        {
+          p[m].e.g = my_asinh(p[m].e.g);
+          p[m].e.b = my_asinh(p[m].e.b);
+        }
+        cnorm[t].collect(p[m].e.g);
+        cnorm[t].collect(p[m].e.b);
+      }
+    }
+    #pragma omp critical
+    for (int t=0; t<nt; t++)
+    {
+      if (log_int[t])
+      {
+        if (inorm[t].minv > 0) inorm[t].minv = log10(inorm[t].minv);
+        if (inorm[t].maxv > 0) inorm[t].maxv = log10(inorm[t].maxv);
+      }
+      if (log_col[t])
+      {
+        if(cnorm[t].minv > 0) cnorm[t].minv = log10(cnorm[t].minv);
+        if(cnorm[t].maxv > 0) cnorm[t].maxv = log10(cnorm[t].maxv);
+      }
+    }
+  }
+  else
+  {
+    #pragma omp for schedule(guided,1000)
+    for (m=0; m<npart; ++m) // do log calculations if requested
+    {
+      int t=p[m].type;
+      rnorm[t].collect(p[m].r);
+      if (log_int[t])
+      {
+        if(p[m].I > 0)
+        {
+          p[m].I = log10(p[m].I);
+          inorm[t].collect(p[m].I);
+        }
+        else p[m].I = -38;
+      }
+      else inorm[t].collect(p[m].I);
+
+      if (log_col[t])
+      {
+        if(p[m].e.r > 0)
+        {
+          p[m].e.r = log10(p[m].e.r);
+          cnorm[t].collect(p[m].e.r);
+        }
+        else
+          p[m].e.r =-38;
+      }
+      else
+      {
+        if (asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+        cnorm[t].collect(p[m].e.r);
+      }
+      if (col_vector[t])
+      {
+        if (log_col[t])
+        {
+          p[m].e.g = log10(p[m].e.g);
+          p[m].e.b = log10(p[m].e.b);
+        }
+        if (asinh_col[t])
+        {
+          p[m].e.g = my_asinh(p[m].e.g);
+          p[m].e.b = my_asinh(p[m].e.b);
+        }
+        cnorm[t].collect(p[m].e.g);
+        cnorm[t].collect(p[m].e.b);
+      }
+    } 
+    #pragma omp critical
+    for(int t=0; t<nt; t++)
+    {
+      intnorm[t].collect(inorm[t]);
+      colnorm[t].collect(cnorm[t]);
+      sizenorm[t].collect(rnorm[t]);
+    }
+  }
+
+#else
+
 #ifdef CUDA
   // In cuda version logs are performed on device
   #pragma omp for schedule(guided,1000)
@@ -112,37 +226,37 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
       cnorm[t].collect(p[m].e.b);
       }
     }
-
+}
 #pragma omp critical
+{
   for (int t=0; t<nt; t++)
-    {
+  {
     if (log_int[t])
-      {
+    {
       if (inorm[t].minv > 0)
         inorm[t].minv = log10(inorm[t].minv);
 
       if (inorm[t].maxv > 0)
         inorm[t].maxv = log10(inorm[t].maxv);
-      }
+    }
 
     if (log_col[t])
-      {
+    {
       if(cnorm[t].minv > 0)
         cnorm[t].minv = log10(cnorm[t].minv);
 
       if(cnorm[t].maxv > 0)
         cnorm[t].maxv = log10(cnorm[t].maxv);
-      }
     }
+  }
 
-  for (int t=0; t<nt; t++)
-    {
+  for(int t=0; t<nt; t++)
+  {
     intnorm[t].collect(inorm[t]);
     colnorm[t].collect(cnorm[t]);
     sizenorm[t].collect(rnorm[t]);
-    }
+  }
 }
-
 #else
 
 #pragma omp for schedule(guided,1000)
@@ -198,15 +312,22 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
       cnorm[t].collect(p[m].e.b);
       }
     }
+  }
 #pragma omp critical
   for(int t=0; t<nt; t++)
-    {
+  {
     intnorm[t].collect(inorm[t]);
     colnorm[t].collect(cnorm[t]);
     sizenorm[t].collect(rnorm[t]);
-    }
   }
+
+// cuda else hashdef
 #endif
+//splotch_paraview hashdef
+#endif 
+// parallel section
+}
+
   for(int t=0; t<nt; t++)
     {
     MPI_Manager::GetInstance()->allreduce(intnorm[t].minv,MPI_Manager::Min);

@@ -63,6 +63,9 @@ int cuda_paraview_init(arr2<COLOUR> &pic, vector<particle_sim> &particle, const 
     MPI_Manager::GetInstance()->abort();
     }
 
+  // Set cuda paraview param
+  g_params.setParam("cuda_paraview_splotch", true);
+
   // enable device and allocate arrays
   int error=0;
   tstack_push("Device setup");
