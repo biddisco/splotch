@@ -23,7 +23,7 @@
 #ifndef __KERNEL__
 #define __KERNEL__
 
-// #include "cuda_kernel.cuh"
+ #include "cuda_kernel.cuh"
 //help functions
 #define Pi 3.141592653589793238462643383279502884197
 #define MAXSIZE 1000

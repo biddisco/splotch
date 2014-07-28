@@ -21,13 +21,14 @@
  */
 
 #include "cuda/cuda_utils.h"
-//#include "cuda/cuda_kernel.cuh"
-#include "cuda/cuda_kernel.cu"
+#include "cuda/cuda_kernel.cuh"
+ // FOR NON SEPERABLE COMPILATION
+//#include "cuda/cuda_kernel.cu"
 using namespace std;
 
-// extern __constant__ cu_param dparams;
-// extern __constant__ cu_color_map_entry dmap[MAXSIZE];
-// extern __constant__ int ptype_points[10];
+extern __constant__ cu_param dparams;
+extern __constant__ cu_color_map_entry dmap[MAXSIZE];
+extern __constant__ int ptype_points[10];
 
 #define CLEAR_MEM(p) if(p) {cudaFree(p); p=0;}
 

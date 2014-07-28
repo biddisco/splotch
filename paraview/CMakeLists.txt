@@ -145,7 +145,7 @@ if(NOT TARGET splotchcore)
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_utils.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_device_query.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_policy.cu
-#      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
       ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_render.cu
     )
     set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
@@ -156,9 +156,15 @@ if(NOT TARGET splotchcore)
     #--------------------------------------------------
     # Define CUDA compiled source files
     #--------------------------------------------------
+    # Shared libs for separable build  may not be supported, does this matter?
+    #set(BUILD_SHARED_LIBS OFF)
+    
     if(BUILD_SHARED_LIBS)
       set(GPGPU_BUILD_TYPE SHARED)
     endif()
+
+    # turn on separate compilation mode
+    set(CUDA_SEPARATE_COMPILATION ON)
 
     # set this, otherwise C_SOURCES is empty in Visual Studio  
     set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
