@@ -164,14 +164,16 @@ if(NOT TARGET splotchcore)
     endif()
 
     # turn on separate compilation mode
-    set(CUDA_SEPARATE_COMPILATION ON)
+    set(CUDA_SEPARABLE_COMPILATION ON)
 
     # set this, otherwise C_SOURCES is empty in Visual Studio  
     set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
 
     # call the cuda wrapper
-    cuda_compile(PV_SPLOTCH_CUDA_C_SRCS ${PV_SPLOTCH_CUDA_SRCS} ${GPGPU_BUILD_TYPE})
-    message("Cuda srcs generated from ${PV_SPLOTCH_CUDA_SRCS} are ${PV_SPLOTCH_CUDA_C_SRCS}|")
+    #cuda_compile(PV_SPLOTCH_CUDA_C_SRCS ${PV_SPLOTCH_CUDA_SRCS} STATIC)
+    cuda_add_library(cuda_splotch ${PV_SPLOTCH_CUDA_SRCS} STATIC)
+
+    #message("Cuda srcs generated from ${PV_SPLOTCH_CUDA_SRCS} are ${PV_SPLOTCH_CUDA_C_SRCS}|")
   endif()
 
   #-----------------------------------------------------------------------------
@@ -235,7 +237,7 @@ if(NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc
     ${PV_SPLOTCH_CUDA_CSRCS}
-    ${PV_SPLOTCH_CUDA_C_SRCS}
+   # ${PV_SPLOTCH_CUDA_C_SRCS}
   )
 
 #  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
@@ -244,7 +246,7 @@ if(NOT TARGET splotchcore)
   TARGET_LINK_LIBRARIES(splotchcore 
     ${SPLOTCH_IO_LIBRARY} 
     ${SPLOTCH_MPI_LIBS}     
-    ${CUDA_LIBRARIES}
+    cuda_splotch
   )
   SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
 
