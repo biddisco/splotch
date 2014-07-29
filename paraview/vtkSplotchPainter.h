@@ -97,6 +97,12 @@ public:
 
   void SetMaxRadius(int ptype, double);
   double GetMaxRadius(int ptype);
+
+  // Description:
+  // Enable/disable post processing & splotch MPI reduction
+  void SetPostComposite(int m);
+  vtkGetMacro(PostComposite, int);
+
   // Description:
   // The MIP Renderer needs to manually convert scalars to colours
   // so we must have a copy of the painter used by the rest of the rendering pipeline
@@ -175,6 +181,7 @@ protected:
 //  double *brightness;
   bool    colourspresent;
   bool    a_eq_e;
+  bool    PostComposite;
   unsigned char *cdata3;
   unsigned char *cdata4;
 

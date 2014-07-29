@@ -101,6 +101,8 @@ vtkSplotchPainter::vtkSplotchPainter()
   //
   this->lastX = -1;
   this->lastY = -1;
+
+  this->PostComposite = false;
   //
   MPI_Manager::GetInstance();
 }
@@ -264,6 +266,15 @@ void vtkSplotchPainter::SetMaxRadius(int ptype, double r)
 double vtkSplotchPainter::GetMaxRadius(int ptype)
 {
   return this->MaxRadius[ptype];
+}
+// ---------------------------------------------------------------------------
+void vtkSplotchPainter::SetPostComposite(int mode)
+{
+  if(PostComposite != mode)
+  {
+    PostComposite = mode;
+    this->Modified();
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -663,6 +674,10 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     grayabsorb = params.find<float32>("gray_absorption",this->GrayAbsorption);
   }
 
+  // If a == e but we dont want to post composite, set a != e
+  if(a_eq_e)
+    a_eq_e &= PostComposite;
+
   if (particle_data.size()>0) {
     host_funct::render_new(&(particle_data[0]), particle_data.size(), pic, a_eq_e, this->GrayAbsorption);
   }
@@ -673,7 +688,8 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
 void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 {
   //
-  MPI_Manager::GetInstance()->allreduceRaw
+  if(a_eq_e)
+   MPI_Manager::GetInstance()->allreduceRaw
     (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
   if (MPI_Manager::GetInstance()->master() && a_eq_e) {
@@ -716,7 +732,7 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
     }
   }
 
-  if (!MPI_Manager::GetInstance()->master()) {
+  if (!MPI_Manager::GetInstance()->master() && a_eq_e) {
 #pragma omp parallel for
     for (int ix=0;ix<X;ix++) {
       for (int iy=0;iy<Y;iy++) {
@@ -727,7 +743,7 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
     }
   }
 
-  if (MPI_Manager::GetInstance()->master()) {
+  if (MPI_Manager::GetInstance()->master() || !a_eq_e) {
     //
     // copy to OpenGL image buffer
     //

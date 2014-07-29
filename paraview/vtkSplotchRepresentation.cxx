@@ -189,6 +189,12 @@ void vtkSplotchRepresentation::SetEnableCUDA(int mode)
   this->MarkModified();
 #endif
 }
+
+void vtkSplotchRepresentation::SetPostComposite(int mode)
+{
+  this->SplotchPainter->SetPostComposite(mode);
+  this->MarkModified();  
+}
 //----------------------------------------------------------------------------
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetActiveParticleType(int p)

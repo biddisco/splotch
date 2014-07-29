@@ -82,6 +82,7 @@ public:
   double GetGrayAbsorption();
 
   void   SetEnableCUDA(int mode);
+  void   SetPostComposite(int mode);
 
   // Gather all the settings in one call for feeding back to the gui display
   vtkStringArray *GetActiveParticleSettings();

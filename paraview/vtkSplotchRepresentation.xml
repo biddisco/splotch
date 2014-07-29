@@ -39,6 +39,7 @@
           </PropertyGroup>
           <PropertyGroup label="Render Parameters" >
             <Property name="EnableCUDA"/> 
+            <Property name="PostComposite"/> 
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
@@ -85,6 +86,7 @@
           </PropertyGroup>
           <PropertyGroup label="Render Parameters" >
             <Property name="EnableCUDA"/> 
+            <Property name="PostComposite"/> 
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
@@ -224,6 +226,14 @@
          command="SetEnableCUDA"
          number_of_elements="1"
          default_values="0" >
+        <BooleanDomain name="bool"/>
+      </IntVectorProperty>
+
+      <IntVectorProperty
+         name="PostComposite"
+         command="SetPostComposite"
+         number_of_elements="1"
+         default_values="1" >
         <BooleanDomain name="bool"/>
       </IntVectorProperty>
 
