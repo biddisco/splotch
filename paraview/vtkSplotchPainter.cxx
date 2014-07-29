@@ -672,11 +672,12 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
 // ---------------------------------------------------------------------------
 void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 {
-  //
-  MPI_Manager::GetInstance()->allreduceRaw
-    (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
+  // 
+  // MPI_Manager::GetInstance()->allreduceRaw
+  //  (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
-  if (MPI_Manager::GetInstance()->master() && a_eq_e) {
+  //if (MPI_Manager::GetInstance()->master() && a_eq_e) {
+    if(a_eq_e) {
     // std::cout << "Image dimensions are " << X << "," << Y << std::endl;
     //
     float global_min=std::numeric_limits<double>::max();
@@ -716,18 +717,18 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
     }
   }
 
-  if (!MPI_Manager::GetInstance()->master()) {
-#pragma omp parallel for
-    for (int ix=0;ix<X;ix++) {
-      for (int iy=0;iy<Y;iy++) {
-        pic[ix][iy].r = 0.0;
-        pic[ix][iy].g = 0.0;
-        pic[ix][iy].b = 0.0;
-      }
-    }
-  }
+//   if (!MPI_Manager::GetInstance()->master()) {
+// #pragma omp parallel for
+//     for (int ix=0;ix<X;ix++) {
+//       for (int iy=0;iy<Y;iy++) {
+//         pic[ix][iy].r = 0.0;
+//         pic[ix][iy].g = 0.0;
+//         pic[ix][iy].b = 0.0;
+//       }
+//     }
+//   }
 
-  if (MPI_Manager::GetInstance()->master()) {
+ // if (MPI_Manager::GetInstance()->master()) {
     //
     // copy to OpenGL image buffer
     //
@@ -754,6 +755,6 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
     glPopMatrix();
     glMatrixMode( GL_PROJECTION );
     glPopMatrix();
-  }
+ // }
 }
 
