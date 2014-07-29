@@ -163,13 +163,16 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    //Remove non-active and host particles
    thrust::device_ptr<cu_particle_sim> new_end = thrust::remove_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, particle_notValid());
    newParticle = new_end.get() - dev_ptr_pd.get();
-   long nLeft = 0;
+   bool pLeft = true;
    if( newParticle != nParticle )
    {
-     cout << endl << "Eliminating inactive particles..." << endl;
-    nLeft = newParticle+nHostPart;
+    cout << endl << "Eliminating inactive particles..." << endl;
+    long nLeft = newParticle+nHostPart;
     if(!nLeft)
-      cout << "No active particles left!" << endl;
+    {
+        cout << "No active particles left!" << endl;
+        pLeft = false;
+    }
     else
       cout << newParticle+nHostPart << "/" << nParticle << " particles left" << endl; 
     // Remove if active < 0 (i.e. -1 for clipped or -2 for big)
@@ -179,7 +182,8 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
    tstack_pop("Particle Filtering");
    
    // We didnt have to render anything, all particles were inactive.
-   if(!nLeft)
+   // FIXME: We should still be rendering large particles on the host...
+   if(!pLeft)
    {  
       return 0;
    }  
