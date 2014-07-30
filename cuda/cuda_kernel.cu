@@ -284,9 +284,9 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
 
 //device render function k_render1
 // a_eq_e = false is not supported
-__global__ void k_renderC2
+__global__ void 
 __launch_bounds__(256, 8) 
-(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
+k_renderC2(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
 {
    extern __shared__ cu_color Btile[];
    __shared__ int local_chunk_length, start;
