@@ -554,6 +554,11 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
         particle_data[activeParticles].e.b = 0.1;
       }
     }
+
+    int N = this->NumberOfParticleTypes;
+    MPI_Manager::GetInstance()->allreduceRaw<int>(&N, 1, MPI_Manager::Max);
+    this->SetNumberOfParticleTypes(N);
+
     std::cout << "Particle data recomputed successfully" << std::endl; 
   }
 
@@ -641,8 +646,8 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     // ------------------------------------
     // -- Eliminating inactive particles --
     // ------------------------------------
-    tsize npart_all;
-    host_funct::particle_eliminate(params, particle_data, npart_all);
+//    tsize npart_all;
+//    host_funct::particle_eliminate(params, particle_data, npart_all);
 
     // --------------------------------
     // ----------- Sorting ------------
