@@ -45,6 +45,7 @@ pqSplotchPropertyWidgetDecorator::pqSplotchPropertyWidgetDecorator(
 {
   // Get set of properties through the proxy
   vtkSMProxy* proxy = parentObject->proxy();
+  std::cout << "Proxy class is " << proxy->GetVTKClassName() << std::endl;
   vtkSMProperty* prop = proxy? proxy->GetProperty("ActiveParticleType") : NULL;
   if (!prop)
     {

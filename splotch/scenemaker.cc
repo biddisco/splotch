@@ -43,7 +43,7 @@ using namespace std;
 namespace host_funct {
 
 void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbose)
-  {
+{
   // how many particle types are there
   int nt = params.find<int>("ptypes",1);
   arr<bool> col_vector(nt),log_int(nt),log_col(nt),asinh_col(nt);
@@ -51,46 +51,166 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
 
   // Get data from parameter file
   for(int t=0; t<nt; t++)
-    {
+  {
     log_int[t] = params.find<bool>("intensity_log"+dataToString(t),false);
     log_col[t] = params.find<bool>("color_log"+dataToString(t),false);
     asinh_col[t] = params.find<bool>("color_asinh"+dataToString(t),false);
     col_vector[t] = params.find<bool>("color_is_vector"+dataToString(t),false);
-    }
+  }
 
   int npart=p.size();
   tstack_push("minmax");
 #pragma omp parallel
-{
-  // FIXME: the "+20" serves as protection against false sharing,
-  // should be done more elegantly
-  arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20), rnorm(nt+20);
-  int m;
-
-  #ifdef SPLOTCH_PARAVIEW
-  // FIXME: SO MUCH CODE REPITION ARGAHGHJHKSAHKDJB
-  if(params.find<bool>("cuda_paraview_splotch", false))
   {
-    #pragma omp for schedule(guided,1000)
+    // FIXME: the "+20" serves as protection against false sharing,
+    // should be done more elegantly
+    arr<Normalizer<float32> > inorm(nt+20), cnorm(nt+20), rnorm(nt+20);
+    int m;
+
+#ifdef SPLOTCH_PARAVIEW
+    // FIXME: SO MUCH CODE REPITION ARGAHGHJHKSAHKDJB
+    if(params.find<bool>("cuda_paraview_splotch", false))
+    {
+#pragma omp for schedule(guided,1000)
+      for (m=0; m<npart; ++m)
+      {
+        int t=p[m].type;
+        rnorm[t].collect(p[m].r);
+        if (log_int[t])
+        {
+          if (p[m].I>0) inorm[t].collect(p[m].I);
+          else          p[m].I = -38;
+        }
+        else inorm[t].collect(p[m].I);
+
+        if (log_col[t])
+        {
+          if (p[m].e.r>0) cnorm[t].collect(p[m].e.r);
+          else            p[m].e.r = -38;
+        }
+        else
+        {
+          if(asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+          cnorm[t].collect(p[m].e.r);
+        }
+
+        if (col_vector[t])
+        {
+          if (asinh_col[t])
+          {
+            p[m].e.g = my_asinh(p[m].e.g);
+            p[m].e.b = my_asinh(p[m].e.b);
+          }
+          cnorm[t].collect(p[m].e.g);
+          cnorm[t].collect(p[m].e.b);
+        }
+      }
+#pragma omp critical
+      for (int t=0; t<nt; t++)
+      {
+        if (log_int[t])
+        {
+          if (inorm[t].minv > 0) inorm[t].minv = log10(inorm[t].minv);
+          if (inorm[t].maxv > 0) inorm[t].maxv = log10(inorm[t].maxv);
+        }
+        if (log_col[t])
+        {
+          if(cnorm[t].minv > 0) cnorm[t].minv = log10(cnorm[t].minv);
+          if(cnorm[t].maxv > 0) cnorm[t].maxv = log10(cnorm[t].maxv);
+        }
+      }
+    }
+    else
+    {
+#pragma omp for schedule(guided,1000)
+      for (m=0; m<npart; ++m) // do log calculations if requested
+      {
+        int t=p[m].type;
+        rnorm[t].collect(p[m].r);
+        if (log_int[t])
+        {
+          if(p[m].I > 0)
+          {
+            p[m].I = log10(p[m].I);
+            inorm[t].collect(p[m].I);
+          }
+          else p[m].I = -38;
+        }
+        else inorm[t].collect(p[m].I);
+
+        if (log_col[t])
+        {
+          if(p[m].e.r > 0)
+          {
+            p[m].e.r = log10(p[m].e.r);
+            cnorm[t].collect(p[m].e.r);
+          }
+          else
+            p[m].e.r =-38;
+        }
+        else
+        {
+          if (asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+          cnorm[t].collect(p[m].e.r);
+        }
+        if (col_vector[t])
+        {
+          if (log_col[t])
+          {
+            p[m].e.g = log10(p[m].e.g);
+            p[m].e.b = log10(p[m].e.b);
+          }
+          if (asinh_col[t])
+          {
+            p[m].e.g = my_asinh(p[m].e.g);
+            p[m].e.b = my_asinh(p[m].e.b);
+          }
+          cnorm[t].collect(p[m].e.g);
+          cnorm[t].collect(p[m].e.b);
+        }
+      } 
+#pragma omp critical
+      for(int t=0; t<nt; t++)
+      {
+        intnorm[t].collect(inorm[t]);
+        colnorm[t].collect(cnorm[t]);
+        sizenorm[t].collect(rnorm[t]);
+      }
+    }
+
+#else
+
+#ifdef CUDA
+    // In cuda version logs are performed on device
+#pragma omp for schedule(guided,1000)
     for (m=0; m<npart; ++m)
     {
       int t=p[m].type;
+
       rnorm[t].collect(p[m].r);
+
       if (log_int[t])
       {
-        if (p[m].I>0) inorm[t].collect(p[m].I);
-        else          p[m].I = -38;
+        if (p[m].I>0)
+          inorm[t].collect(p[m].I);
+        else
+          p[m].I = -38;
       }
-      else inorm[t].collect(p[m].I);
+      else
+        inorm[t].collect(p[m].I);
 
       if (log_col[t])
       {
-        if (p[m].e.r>0) cnorm[t].collect(p[m].e.r);
-        else            p[m].e.r = -38;
+        if (p[m].e.r>0)
+          cnorm[t].collect(p[m].e.r);
+        else
+          p[m].e.r = -38;
       }
       else
       {
-        if(asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+        if(asinh_col[t])
+          p[m].e.r = my_asinh(p[m].e.r);
+
         cnorm[t].collect(p[m].e.r);
       }
 
@@ -101,32 +221,51 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
           p[m].e.g = my_asinh(p[m].e.g);
           p[m].e.b = my_asinh(p[m].e.b);
         }
+
         cnorm[t].collect(p[m].e.g);
         cnorm[t].collect(p[m].e.b);
       }
     }
-    #pragma omp critical
+  }
+#pragma omp critical
+  {
     for (int t=0; t<nt; t++)
     {
       if (log_int[t])
       {
-        if (inorm[t].minv > 0) inorm[t].minv = log10(inorm[t].minv);
-        if (inorm[t].maxv > 0) inorm[t].maxv = log10(inorm[t].maxv);
+        if (inorm[t].minv > 0)
+          inorm[t].minv = log10(inorm[t].minv);
+
+        if (inorm[t].maxv > 0)
+          inorm[t].maxv = log10(inorm[t].maxv);
       }
+
       if (log_col[t])
       {
-        if(cnorm[t].minv > 0) cnorm[t].minv = log10(cnorm[t].minv);
-        if(cnorm[t].maxv > 0) cnorm[t].maxv = log10(cnorm[t].maxv);
+        if(cnorm[t].minv > 0)
+          cnorm[t].minv = log10(cnorm[t].minv);
+
+        if(cnorm[t].maxv > 0)
+          cnorm[t].maxv = log10(cnorm[t].maxv);
       }
     }
+
+    for(int t=0; t<nt; t++)
+    {
+      intnorm[t].collect(inorm[t]);
+      colnorm[t].collect(cnorm[t]);
+      sizenorm[t].collect(rnorm[t]);
+    }
   }
-  else
-  {
-    #pragma omp for schedule(guided,1000)
+#else
+
+#pragma omp for schedule(guided,1000)
     for (m=0; m<npart; ++m) // do log calculations if requested
     {
       int t=p[m].type;
+
       rnorm[t].collect(p[m].r);
+
       if (log_int[t])
       {
         if(p[m].I > 0)
@@ -134,9 +273,11 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
           p[m].I = log10(p[m].I);
           inorm[t].collect(p[m].I);
         }
-        else p[m].I = -38;
+        else
+          p[m].I = -38;
       }
-      else inorm[t].collect(p[m].I);
+      else
+        inorm[t].collect(p[m].I);
 
       if (log_col[t])
       {
@@ -150,9 +291,11 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
       }
       else
       {
-        if (asinh_col[t]) p[m].e.r = my_asinh(p[m].e.r);
+        if (asinh_col[t])
+          p[m].e.r = my_asinh(p[m].e.r);
         cnorm[t].collect(p[m].e.r);
       }
+
       if (col_vector[t])
       {
         if (log_col[t])
@@ -168,149 +311,6 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
         cnorm[t].collect(p[m].e.g);
         cnorm[t].collect(p[m].e.b);
       }
-    } 
-    #pragma omp critical
-    for(int t=0; t<nt; t++)
-    {
-      intnorm[t].collect(inorm[t]);
-      colnorm[t].collect(cnorm[t]);
-      sizenorm[t].collect(rnorm[t]);
-    }
-  }
-
-#else
-
-#ifdef CUDA
-  // In cuda version logs are performed on device
-  #pragma omp for schedule(guided,1000)
-  for (m=0; m<npart; ++m)
-    {
-    int t=p[m].type;
-
-    rnorm[t].collect(p[m].r);
-
-    if (log_int[t])
-      {
-      if (p[m].I>0)
-        inorm[t].collect(p[m].I);
-      else
-        p[m].I = -38;
-      }
-    else
-      inorm[t].collect(p[m].I);
-
-    if (log_col[t])
-      {
-      if (p[m].e.r>0)
-        cnorm[t].collect(p[m].e.r);
-      else
-        p[m].e.r = -38;
-      }
-    else
-      {
-      if(asinh_col[t])
-        p[m].e.r = my_asinh(p[m].e.r);
-
-      cnorm[t].collect(p[m].e.r);
-      }
-
-    if (col_vector[t])
-      {
-      if (asinh_col[t])
-        {
-        p[m].e.g = my_asinh(p[m].e.g);
-        p[m].e.b = my_asinh(p[m].e.b);
-        }
-
-      cnorm[t].collect(p[m].e.g);
-      cnorm[t].collect(p[m].e.b);
-      }
-    }
-}
-#pragma omp critical
-{
-  for (int t=0; t<nt; t++)
-  {
-    if (log_int[t])
-    {
-      if (inorm[t].minv > 0)
-        inorm[t].minv = log10(inorm[t].minv);
-
-      if (inorm[t].maxv > 0)
-        inorm[t].maxv = log10(inorm[t].maxv);
-    }
-
-    if (log_col[t])
-    {
-      if(cnorm[t].minv > 0)
-        cnorm[t].minv = log10(cnorm[t].minv);
-
-      if(cnorm[t].maxv > 0)
-        cnorm[t].maxv = log10(cnorm[t].maxv);
-    }
-  }
-
-  for(int t=0; t<nt; t++)
-  {
-    intnorm[t].collect(inorm[t]);
-    colnorm[t].collect(cnorm[t]);
-    sizenorm[t].collect(rnorm[t]);
-  }
-}
-#else
-
-#pragma omp for schedule(guided,1000)
-  for (m=0; m<npart; ++m) // do log calculations if requested
-    {
-    int t=p[m].type;
-
-    rnorm[t].collect(p[m].r);
-
-    if (log_int[t])
-      {
-      if(p[m].I > 0)
-        {
-        p[m].I = log10(p[m].I);
-        inorm[t].collect(p[m].I);
-        }
-      else
-        p[m].I = -38;
-      }
-    else
-      inorm[t].collect(p[m].I);
-
-    if (log_col[t])
-      {
-      if(p[m].e.r > 0)
-        {
-        p[m].e.r = log10(p[m].e.r);
-        cnorm[t].collect(p[m].e.r);
-        }
-      else
-        p[m].e.r =-38;
-      }
-    else
-      {
-      if (asinh_col[t])
-        p[m].e.r = my_asinh(p[m].e.r);
-      cnorm[t].collect(p[m].e.r);
-      }
-
-    if (col_vector[t])
-      {
-      if (log_col[t])
-        {
-        p[m].e.g = log10(p[m].e.g);
-        p[m].e.b = log10(p[m].e.b);
-        }
-      if (asinh_col[t])
-        {
-        p[m].e.g = my_asinh(p[m].e.g);
-        p[m].e.b = my_asinh(p[m].e.b);
-        }
-      cnorm[t].collect(p[m].e.g);
-      cnorm[t].collect(p[m].e.b);
-      }
     }
   }
 #pragma omp critical
@@ -321,98 +321,98 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
     sizenorm[t].collect(rnorm[t]);
   }
 
-// cuda else hashdef
+  // cuda else hashdef
 #endif
-//splotch_paraview hashdef
+  //splotch_paraview hashdef
 #endif 
-// parallel section
+  // parallel section
 }
 
-  for(int t=0; t<nt; t++)
-    {
-    MPI_Manager::GetInstance()->allreduce(intnorm[t].minv,MPI_Manager::Min);
-    MPI_Manager::GetInstance()->allreduce(colnorm[t].minv,MPI_Manager::Min);
-    MPI_Manager::GetInstance()->allreduce(sizenorm[t].minv,MPI_Manager::Min);
-    MPI_Manager::GetInstance()->allreduce(intnorm[t].maxv,MPI_Manager::Max);
-    MPI_Manager::GetInstance()->allreduce(colnorm[t].maxv,MPI_Manager::Max);
-    MPI_Manager::GetInstance()->allreduce(sizenorm[t].maxv,MPI_Manager::Max);
+for(int t=0; t<nt; t++)
+{
+  MPI_Manager::GetInstance()->allreduce(intnorm[t].minv,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(colnorm[t].minv,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(sizenorm[t].minv,MPI_Manager::Min);
+  MPI_Manager::GetInstance()->allreduce(intnorm[t].maxv,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(colnorm[t].maxv,MPI_Manager::Max);
+  MPI_Manager::GetInstance()->allreduce(sizenorm[t].maxv,MPI_Manager::Max);
 
-    if (verbose && MPI_Manager::GetInstance()->master())
-      {
-      cout << " For particles of type " << t << ":" << endl;
-      cout << " From data: " << endl;
-      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
-           colnorm[t].maxv << " (max) " << endl;
-      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
-           intnorm[t].maxv << " (max) " << endl;
-      cout << " Size Range: " << sizenorm[t].minv << " (min) , " <<
-	   sizenorm[t].maxv << " (max) " << endl;
-      }
+  if (verbose && MPI_Manager::GetInstance()->master())
+  {
+    cout << " For particles of type " << t << ":" << endl;
+    cout << " From data: " << endl;
+    cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
+      colnorm[t].maxv << " (max) " << endl;
+    cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
+      intnorm[t].maxv << " (max) " << endl;
+    cout << " Size Range: " << sizenorm[t].minv << " (min) , " <<
+      sizenorm[t].maxv << " (max) " << endl;
+  }
 
-    if(params.param_present("intensity_min"+dataToString(t)))
-      intnorm[t].minv = params.find<float>("intensity_min"+dataToString(t));
+  if(params.param_present("intensity_min"+dataToString(t)))
+    intnorm[t].minv = params.find<float>("intensity_min"+dataToString(t));
 
-    if(params.param_present("intensity_max"+dataToString(t)))
-      intnorm[t].maxv = params.find<float>("intensity_max"+dataToString(t));
+  if(params.param_present("intensity_max"+dataToString(t)))
+    intnorm[t].maxv = params.find<float>("intensity_max"+dataToString(t));
 
-    if(params.param_present("color_min"+dataToString(t)))
-      colnorm[t].minv = params.find<float>("color_min"+dataToString(t));
+  if(params.param_present("color_min"+dataToString(t)))
+    colnorm[t].minv = params.find<float>("color_min"+dataToString(t));
 
-    if(params.param_present("color_max"+dataToString(t)))
-      colnorm[t].maxv = params.find<float>("color_max"+dataToString(t));
+  if(params.param_present("color_max"+dataToString(t)))
+    colnorm[t].maxv = params.find<float>("color_max"+dataToString(t));
 
-    if (verbose && MPI_Manager::GetInstance()->master())
-      {
-      cout << " Restricted to: " << endl;
-      cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
-           colnorm[t].maxv << " (max) " << endl;
-      cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
-           intnorm[t].maxv << " (max) " << endl;
-      }
-    }
+  if (verbose && MPI_Manager::GetInstance()->master())
+  {
+    cout << " Restricted to: " << endl;
+    cout << " Color Range:     " << colnorm[t].minv << " (min) , " <<
+      colnorm[t].maxv << " (max) " << endl;
+    cout << " Intensity Range: " << intnorm[t].minv << " (min) , " <<
+      intnorm[t].maxv << " (max) " << endl;
+  }
+}
 
-  tstack_pop("minmax");
+tstack_pop("minmax");
 
 #ifdef CUDA
 
-  // Write max/mins to param file to be used in cuda norm/clamping
-  for(int t=0; t<nt; t++)
-    {
-    params.setParam("intensity_min"+dataToString(t), intnorm[t].minv);
-    params.setParam("intensity_max"+dataToString(t), intnorm[t].maxv);
-    params.setParam("color_min"+dataToString(t), colnorm[t].minv);
-    params.setParam("color_max"+dataToString(t), colnorm[t].maxv);
-    }
+// Write max/mins to param file to be used in cuda norm/clamping
+for(int t=0; t<nt; t++)
+{
+  params.setParam("intensity_min"+dataToString(t), intnorm[t].minv);
+  params.setParam("intensity_max"+dataToString(t), intnorm[t].maxv);
+  params.setParam("color_min"+dataToString(t), colnorm[t].minv);
+  params.setParam("color_max"+dataToString(t), colnorm[t].maxv);
+}
 
-  params.setParam("cuda_doLogs", true);
+params.setParam("cuda_doLogs", true);
 
 #else
-  if (MPI_Manager::GetInstance()->master())
-    cout << " Host normalization and clamping" << endl;
-  tstack_push("clamp");
+if (MPI_Manager::GetInstance()->master())
+  cout << " Host normalization and clamping" << endl;
+tstack_push("clamp");
 
 #pragma omp parallel
 {
   int m;
 #pragma omp for schedule(guided,1000)
   for(m=0; m<npart; ++m)
-    {
+  {
     int t=p[m].type;
 #ifndef NO_I_NORM
     intnorm[t].normAndClamp(p[m].I);
 #endif
     colnorm[t].normAndClamp(p[m].e.r);
     if (col_vector[t])
-      {
+    {
       colnorm[t].normAndClamp(p[m].e.g);
       colnorm[t].normAndClamp(p[m].e.b);
-      }
     }
+  }
 }
-  tstack_pop("clamp");
+tstack_pop("clamp");
 
 #endif
-  } // END particle_normalize2
+} // END particle_normalize2
 } // namespace
 
 void sceneMaker::particle_normalize(vector<particle_sim> &p, bool verbose)

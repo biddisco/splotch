@@ -330,17 +330,32 @@ void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
 typedef IceTUnsignedInt32       IceTEnum;
 typedef IceTInt32               IceTInt;
 typedef void *                  IceTContext;
-#ifdef USE_ICET
+//#ifdef USE_ICET
  extern "C" ICET_EXPORT void icetGetIntegerv(IceTEnum pname, IceTInt *params);
  extern "C" ICET_EXPORT IceTContext icetGetContext(void);
-#endif
+ extern "C" ICET_EXPORT ICET_EXPORT void icetCompositeMode(IceTEnum mode);
+ extern "C" ICET_EXPORT void icetSetColorFormat(IceTEnum color_format);
+ extern "C" ICET_EXPORT void icetSetDepthFormat(IceTEnum depth_format);
+//#endif
 
 #define ICET_STATE_ENGINE_START (IceTEnum)0x00000000
 #define ICET_NUM_TILES          (ICET_STATE_ENGINE_START | (IceTEnum)0x0010)
 #define ICET_TILE_VIEWPORTS     (ICET_STATE_ENGINE_START | (IceTEnum)0x0011)
+#define ICET_COMPOSITE_MODE_Z_BUFFER    (IceTEnum)0x0301
+#define ICET_COMPOSITE_MODE_BLEND       (IceTEnum)0x0302
+#define ICET_IMAGE_COLOR_RGBA_UBYTE     (IceTEnum)0xC001
+#define ICET_IMAGE_COLOR_RGBA_FLOAT     (IceTEnum)0xC002
+#define ICET_IMAGE_COLOR_NONE           (IceTEnum)0xC000
+
+#define ICET_IMAGE_DEPTH_FLOAT          (IceTEnum)0xD001
+#define ICET_IMAGE_DEPTH_NONE           (IceTEnum)0xD000
+
 //-----------------------------------------------------------------------------
 void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
 {
+//       icetSetColorFormat(ICET_IMAGE_COLOR_RGBA_UBYTE);
+//      icetSetDepthFormat(ICET_IMAGE_DEPTH_NONE);
+//     icetCompositeMode(ICET_COMPOSITE_MODE_BLEND);
   //
   // Unneeded because we use iceT window sizes below
   //X = ren->GetSize()[0];
@@ -749,11 +764,63 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 
     // we draw our image just in front of the back clipping plane, 
     // so all other geometry will appear in front of it. (z = -0.99)
+    // glColor4f(0.0, 0.0, 0.0, 0.5);
+    //glPixelTransferf( GL_RED_SCALE, 1.0);
+    //glPixelTransferf( GL_RED_BIAS,  0.0);
+    //glPixelTransferf( GL_GREEN_SCALE, 1.0);
+    //glPixelTransferf( GL_GREEN_BIAS,  0.0);
+    //glPixelTransferf( GL_BLUE_SCALE, 1.0);
+    //glPixelTransferf( GL_BLUE_BIAS,  0.0);
+
+    // option 1
+    // us glPixelTransfer to multiply pixels as we copy them and thus set alpha
+    glPixelTransferf( GL_ALPHA_SCALE, 0.0025);
+    glPixelTransferf( GL_ALPHA_BIAS,  0.0);
+
+    // option 2
+    // create e temporary copy of the image and set alpha by hand
+/*
+    struct RGBA_TUPLE {
+      float r,g,b,a;
+    };
+
+    arr2<RGBA_TUPLE> rgba_pic;
+    rgba_pic.alloc(X,Y);
+
+#pragma omp parallel for
+    for (int ix=0;ix<X;ix++) {
+      for (int iy=0;iy<Y;iy++) {
+        rgba_pic[ix][iy].r = pic[ix][iy].r;
+        rgba_pic[ix][iy].g = pic[ix][iy].g;
+        rgba_pic[ix][iy].b = pic[ix][iy].b;
+        // lower than this and everythingbecomes invisible.
+        // @todo, check if iceT is skipping the composite when alpha is low
+        rgba_pic[ix][iy].a = 0.0025;
+      }
+    }
+*/
+    GLboolean on = glIsEnabled(GL_BLEND);
+    glDisable(GL_BLEND);
+
     for (int i=0; i<X; i++) {
       glRasterPos3f(X-1-i, 0, -0.99);
+
+///* original RGB
       COLOUR *ptr = &pic[i][0];
       float *x0 = &ptr->r;
       glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
+//*/
+/*
+      RGBA_TUPLE *ptr = &rgba_pic[i][0];
+      float *x0 = &ptr->r;
+      glDrawPixels(1, Y, (GLenum)(GL_RGBA), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
+*/
+    }
+    glPixelTransferf( GL_ALPHA_SCALE, 1.0);
+    glPixelTransferf( GL_ALPHA_BIAS,  0.0);
+
+    if (on) {
+      glEnable(GL_BLEND);
     }
 
     glMatrixMode( GL_MODELVIEW );   
