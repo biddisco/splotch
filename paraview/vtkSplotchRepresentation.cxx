@@ -61,8 +61,8 @@ vtkSplotchRepresentation::vtkSplotchRepresentation()
   this->SplotchPainter->Register(this);
   this->LODSplotchPainter->Register(this);
   this->ActiveParticleType   = 0;
-  this->ColorArrayName       = 0;
-  this->ColorAttributeType   = POINT_DATA;
+//  this->ColorArrayName       = 0;
+//  this->ColorAttributeType   = POINT_DATA;
   this->Representation       = POINTS;
   this->Settings             = vtkSmartPointer<vtkStringArray>::New();
   //

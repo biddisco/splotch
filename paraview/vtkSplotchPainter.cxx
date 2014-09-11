@@ -799,6 +799,7 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
       glRasterPos3f(X-1-i, 0, -0.99);
 /* original RGB
       COLOUR *ptr = &pic[i][0];
+
       float *x0 = &ptr->r;
       glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
 */

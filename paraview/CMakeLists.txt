@@ -397,10 +397,12 @@ endif(BUILD_TESTING)
 # Tools : Splotch format converter
 #--------------------------------------------------
 if(NOT PV_SPLOTCH_DISABLE_READERS)
-  if(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
-    INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
-    ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
-    TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
-  endif(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+  if (TARGET pv_meshless)
+    if(EXISTS "${PROJECT_SOURCE_DIR}/../../pv-meshless/")
+      INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-meshless)
+      ADD_EXECUTABLE(splotch2H5Part splotch2H5Part.cpp)
+      TARGET_LINK_LIBRARIES(splotch2H5Part splotchcore splotchio pv_meshless)
+    endif()
+  endif()
 endif()
 
