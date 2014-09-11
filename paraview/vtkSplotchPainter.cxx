@@ -719,13 +719,16 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
       }
 #pragma omp critical 
       {
-        global_min = std::min(global_min, local_min);
+        global_min = std::min(global_min, local_min)/10.0;
         global_max = std::max(global_max, local_max);
       }
     }
 
+    float mpi_min = global_min;
+    MPI_Manager::GetInstance()->allreduceRaw<float>(&mpi_min, 1, MPI_Manager::Min);
+
     // std::cout << "global_min, global_max are {" << global_min << "," << global_max << "}" << std::endl;
-    exptable<float32> xexp(global_min);
+    exptable<float32> xexp(mpi_min);
     //
 #pragma omp parallel for
     for (int ix=0;ix<X;ix++) {
