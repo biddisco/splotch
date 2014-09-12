@@ -322,12 +322,16 @@ double vtkSplotchRepresentation::GetGrayAbsorption()
 void vtkSplotchRepresentation::SetInputArrayToProcess(
   int idx, int port, int connection, int fieldAssociation, const char *name)
 {
+  std::cout << "SetInputArrayToProcess " << idx << " " << name << std::endl;
   switch (idx) {
     case 0: this->SetIntensityScalars(name); break;
     case 1: this->SetRadiusScalars(name); break;
     case 2: this->SetTypeScalars(name); break;
     case 3: this->SetActiveScalars(name); break;
   }
+  vtkGeometryRepresentation::SetInputArrayToProcess(
+      idx, port, connection, fieldAssociation, name
+  );
 }
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetIntensityScalars(const char *s)

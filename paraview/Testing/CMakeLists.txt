@@ -23,6 +23,7 @@ IF (pv_meshless_FOUND AND TARGET pv_meshless)
     pv_meshless
     pv_splotch
     ${SPLOTCH_IO_LIBRARY}
+    vtkTestingRendering
     )
 
   ADD_TEST(
