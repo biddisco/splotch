@@ -69,6 +69,11 @@
 #include "vtkgl.h"
 #include "IceTConfig.h"
 
+    struct RGBA_TUPLE {
+      float r,g,b,a;
+    };
+
+ 
 //----------------------------------------------------------------------------
 vtkInstantiatorNewMacro(vtkSplotchPainter);
 vtkCxxSetObjectMacro(vtkSplotchPainter, Controller, vtkMultiProcessController);
@@ -774,10 +779,6 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 
     //glPixelTransferf( GL_ALPHA_SCALE, 0.5);
     //glPixelTransferf( GL_ALPHA_BIAS,  0.0);
-
-    struct RGBA_TUPLE {
-      float r,g,b,a;
-    };
 
     arr2<RGBA_TUPLE> rgba_pic;
     rgba_pic.alloc(X,Y);
