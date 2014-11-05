@@ -17,6 +17,10 @@
 //
 #include "vtksys/ios/sstream"
 //
+#include "vtkMPI.h"
+#include "vtkMPIController.h"
+#include "vtkMPICommunicator.h"
+//
 #include "vtkDataObject.h"
 #include "vtkDefaultPainter.h"
 #include "vtkSplotchPainter.h"
@@ -41,9 +45,6 @@
 #include <vtksys/RegularExpression.hxx>
 
 //#ifdef PARAVIEW_USE_MPI
-#include "vtkMPI.h"
-#include "vtkMPIController.h"
-#include "vtkMPICommunicator.h"
 //#endif
 // Otherwise
 #include "vtkMultiProcessController.h"

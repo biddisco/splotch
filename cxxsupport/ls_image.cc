@@ -36,6 +36,7 @@
 #include "font_data.inc"
 #include "string_utils.h"
 #include "share_utils.h"
+#include <string.h>
 
 using namespace std;
 
