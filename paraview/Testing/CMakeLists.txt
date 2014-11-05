@@ -26,6 +26,10 @@ IF (pv_meshless_FOUND AND TARGET pv_meshless)
     vtkTestingRendering
     )
 
+  if(APPLE)
+    set_target_properties(TestSplotchMapper PROPERTIES LINK_FLAGS "-F/Library/Frameworks -framework CUDA")
+  endif()
+
   ADD_TEST(
     NAME TestSplotchMapper 
     COMMAND 

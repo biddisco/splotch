@@ -373,6 +373,9 @@ TARGET_LINK_LIBRARIES(${PLUGIN_NAME}
 )
 
 SET_TARGET_PROPERTIES(${PLUGIN_NAME} PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+if(APPLE)
+  set_target_properties(pv_splotch PROPERTIES LINK_FLAGS "-F/Library/Frameworks -framework CUDA")
+endif()
 
 #--------------------------------------------------------
 # Create the UsePackage configuration for other projects
