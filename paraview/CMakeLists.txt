@@ -94,6 +94,7 @@ if(NOT TARGET splotchcore)
     if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
       SET(OpenMP_CXX_FLAGS "-fopenmp" )
     endif(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_COMPILER_IS_GNUCC)
+    MESSAGE("Splotch OpenMP Flags ${OpenMP_CXX_FLAGS}")
   endif(PV_SPLOTCH_USE_OPENMP)
 
   #-----------------------------------------------------------------------------
@@ -240,7 +241,6 @@ if(NOT TARGET splotchcore)
    # ${PV_SPLOTCH_CUDA_C_SRCS}
   )
 
-#  MESSAGE("Splotch Flags ${OpenMP_CXX_FLAGS}")
   ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
 
   TARGET_LINK_LIBRARIES(splotchcore 
@@ -255,12 +255,18 @@ if(NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch.cc
   )
 
+  SET_TARGET_PROPERTIES(splotch PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
   target_link_libraries(splotch 
     splotchcore 
     ${SPLOTCH_IO_LIBRARY} 
     ${SPLOTCH_MPI_LIBS}     
     ${CUDA_LIBRARIES}
   )
+  if (NOT APPLE AND PV_SPLOTCH_USE_OPENMP)
+    target_link_libraries(splotch 
+      gomp
+    )
+  endif()
 
 endif(NOT TARGET splotchcore)
 

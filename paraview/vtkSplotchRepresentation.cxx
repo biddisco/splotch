@@ -12,10 +12,15 @@
      PURPOSE.  See the above copyright notice for more information.
 
 =========================================================================*/
+#include <vtksys/SystemTools.hxx>
 #include "vtkSplotchRepresentation.h"
 #include "vtkSplotchDefaultPainter.h"
 //
 #include "vtksys/ios/sstream"
+//
+#include "vtkMPI.h"
+#include "vtkMPIController.h"
+#include "vtkMPICommunicator.h"
 //
 #include "vtkDataObject.h"
 #include "vtkDefaultPainter.h"
@@ -34,19 +39,16 @@
 #include "vtkPVCacheKeeper.h"
 #include "vtkPVGeometryFilter.h"
 
-#ifdef PV_SPLOTCH_USE_PISTON
-#include "vtkCUDASplotchPainter.h"
-#endif
-
-#include <vtksys/SystemTools.hxx>
 #include <vtksys/SystemInformation.hxx>
 #include <vtksys/RegularExpression.hxx>
 
 //#ifdef PARAVIEW_USE_MPI
-#include "vtkMPI.h"
-#include "vtkMPIController.h"
-#include "vtkMPICommunicator.h"
 //#endif
+
+#ifdef PV_SPLOTCH_USE_PISTON
+#include "vtkCUDASplotchPainter.h"
+#endif
+
 // Otherwise
 #include "vtkMultiProcessController.h"
 #include "vtkMIPDefaultPainter.h"
