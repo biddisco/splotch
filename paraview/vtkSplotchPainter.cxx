@@ -666,8 +666,8 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
     // ------------------------------------
     // -- Eliminating inactive particles --
     // ------------------------------------
-//    tsize npart_all;
-//    host_funct::particle_eliminate(params, particle_data, npart_all);
+    tsize npart_all;
+    host_funct::particle_eliminate(params, particle_data, npart_all);
 
     // --------------------------------
     // ----------- Sorting ------------
@@ -698,11 +698,10 @@ void vtkSplotchPainter::RenderInternal(vtkRenderer* ren, vtkActor* actor,
 void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 {
   // 
-  // MPI_Manager::GetInstance()->allreduceRaw
-  //  (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
+  MPI_Manager::GetInstance()->allreduceRaw
+    (reinterpret_cast<float *>(&pic[0][0]),3*X*Y,MPI_Manager::Sum);
 
-  //if (MPI_Manager::GetInstance()->master() && a_eq_e) {
-    if(a_eq_e) {
+  if (MPI_Manager::GetInstance()->master() && a_eq_e) {
     // std::cout << "Image dimensions are " << X << "," << Y << std::endl;
     //
     float global_min=std::numeric_limits<double>::max();
@@ -742,18 +741,18 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
     }
   }
 
-//   if (!MPI_Manager::GetInstance()->master()) {
-// #pragma omp parallel for
-//     for (int ix=0;ix<X;ix++) {
-//       for (int iy=0;iy<Y;iy++) {
-//         pic[ix][iy].r = 0.0;
-//         pic[ix][iy].g = 0.0;
-//         pic[ix][iy].b = 0.0;
-//       }
-//     }
-//   }
+  if (!MPI_Manager::GetInstance()->master()) {
+#pragma omp parallel for
+    for (int ix=0;ix<X;ix++) {
+      for (int iy=0;iy<Y;iy++) {
+        pic[ix][iy].r = 0.0;
+        pic[ix][iy].g = 0.0;
+        pic[ix][iy].b = 0.0;
+      }
+    }
+  }
 
- // if (MPI_Manager::GetInstance()->master()) {
+  if (MPI_Manager::GetInstance()->master()) {
     //
     // copy to OpenGL image buffer
     //
@@ -769,56 +768,18 @@ void vtkSplotchPainter::PostRenderCompositing(vtkRenderer* ren, vtkActor* actor)
 
     // we draw our image just in front of the back clipping plane, 
     // so all other geometry will appear in front of it. (z = -0.99)
-    //glColor4f(0.0, 0.0, 0.0, 0.5);
-    //glPixelTransferf( GL_RED_SCALE, 1.0);
-    //glPixelTransferf( GL_RED_BIAS,  0.0);
-    //glPixelTransferf( GL_GREEN_SCALE, 1.0);
-    //glPixelTransferf( GL_GREEN_BIAS,  0.0);
-    //glPixelTransferf( GL_BLUE_SCALE, 1.0);
-    //glPixelTransferf( GL_BLUE_BIAS,  0.0);
-
-    //glPixelTransferf( GL_ALPHA_SCALE, 0.5);
-    //glPixelTransferf( GL_ALPHA_BIAS,  0.0);
-
-    arr2<RGBA_TUPLE> rgba_pic;
-    rgba_pic.alloc(X,Y);
-
-#pragma omp parallel for
-    for (int ix=0;ix<X;ix++) {
-      for (int iy=0;iy<Y;iy++) {
-        rgba_pic[ix][iy].r = pic[ix][iy].r;
-        rgba_pic[ix][iy].g = pic[ix][iy].g;
-        rgba_pic[ix][iy].b = pic[ix][iy].b;
-        rgba_pic[ix][iy].a = 0.001;
-      }
-    }
-
-    GLboolean on = glIsEnabled(GL_BLEND);
-    glDisable(GL_BLEND);
-
     for (int i=0; i<X; i++) {
       glRasterPos3f(X-1-i, 0, -0.99);
-/* original RGB
       COLOUR *ptr = &pic[i][0];
 
       float *x0 = &ptr->r;
       glDrawPixels(1, Y, (GLenum)(GL_RGB), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
-*/
-      RGBA_TUPLE *ptr = &rgba_pic[i][0];
-      float *x0 = &ptr->r;
-      glDrawPixels(1, Y, (GLenum)(GL_RGBA), (GLenum)(GL_FLOAT), (GLvoid*)(x0));
-    }
-//    glPixelTransferf( GL_ALPHA_SCALE, 1.0);
-//    glPixelTransferf( GL_ALPHA_BIAS,  0.0);
-
-    if (on) {
-      glEnable(GL_BLEND);
     }
 
     glMatrixMode( GL_MODELVIEW );   
     glPopMatrix();
     glMatrixMode( GL_PROJECTION );
     glPopMatrix();
- // }
+  }
 }
 
