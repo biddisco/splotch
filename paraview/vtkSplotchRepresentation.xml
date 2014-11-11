@@ -106,7 +106,6 @@
         Representation for Particle or Point Data.
       </Documentation>
       
-      <!-- Properties relating to data structure -->
       <InputProperty name="Input" command="SetInputConnection">
         <DataTypeDomain name="input_type">
           <DataType value="vtkPointSet"/>

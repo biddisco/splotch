@@ -310,7 +310,7 @@ std::string vtkSplotchPainter::NumToStrSPM(T data) {
   return oss.str();
 }
 //----------------------------------------------------------------------------
-void FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
+void vtkSplotch_FloatOrDoubleArrayPointer(vtkDataArray *dataarray, float *&F, double *&D) {
   if (dataarray && vtkFloatArray::SafeDownCast(dataarray)) {
     F = vtkFloatArray::SafeDownCast(dataarray)->GetPointer(0);
     D = NULL;
@@ -455,7 +455,7 @@ void vtkSplotchPainter::PrepareForRendering(vtkRenderer* ren, vtkActor* actor)
   float *pointsF = NULL;
   double *pointsD = NULL;
   if (N>0) {
-    FloatOrDoubleArrayPointer(pts->GetData(), pointsF, pointsD);
+    vtkSplotch_FloatOrDoubleArrayPointer(pts->GetData(), pointsF, pointsD);
   }
 
   ren->GetActiveCamera()->GetPosition(&campos.x);

@@ -319,6 +319,7 @@ double vtkSplotchRepresentation::GetGrayAbsorption()
   return this->SplotchPainter->GetGrayAbsorption();
 }
 //----------------------------------------------------------------------------
+/*
 void vtkSplotchRepresentation::SetInputArrayToProcess(
   int idx, int port, int connection, int fieldAssociation, const char *name)
 {
@@ -333,6 +334,7 @@ void vtkSplotchRepresentation::SetInputArrayToProcess(
       idx, port, connection, fieldAssociation, name
   );
 }
+*/
 //----------------------------------------------------------------------------
 void vtkSplotchRepresentation::SetIntensityScalars(const char *s)
 {

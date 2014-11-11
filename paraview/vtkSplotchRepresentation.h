@@ -44,10 +44,11 @@ public:
   //**************************************************************************
   // Forwarded to vtkSplotchMapper
   //**************************************************************************
-  virtual void SetInputArrayToProcess(int idx, int port, int connection,
+/*
+virtual void SetInputArrayToProcess(int idx, int port, int connection,
                               int fieldAssociation,
                               const char *name);
-
+*/
   void SetIntensityScalars(const char *);
   void SetRadiusScalars(const char *);
   void SetTypeScalars(const char *);
