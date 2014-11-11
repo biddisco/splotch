@@ -31,6 +31,8 @@
 #include "vtkPVLODActor.h"
 #include "vtkMultiProcessController.h"
 #include "vtkPVRenderView.h"
+#include "vtkPVCacheKeeper.h"
+#include "vtkPVGeometryFilter.h"
 
 #ifdef PV_SPLOTCH_USE_PISTON
 #include "vtkCUDASplotchPainter.h"
@@ -47,6 +49,8 @@
 //#endif
 // Otherwise
 #include "vtkMultiProcessController.h"
+#include "vtkMIPDefaultPainter.h"
+#include "vtkMIPPainter.h"
 
 vtkStandardNewMacro(vtkSplotchRepresentation);
 //----------------------------------------------------------------------------
@@ -58,8 +62,13 @@ vtkSplotchRepresentation::vtkSplotchRepresentation()
   this->LODSplotchDefaultPainter = vtkSplotchDefaultPainter::New();
   this->SplotchPainter           = this->SplotchDefaultPainter->GetSplotchPainter();
   this->LODSplotchPainter        = this->LODSplotchDefaultPainter->GetSplotchPainter();
+
+  this->LODMIPDefaultPainter = vtkMIPDefaultPainter::New();
+  this->LODMIPPainter        = this->LODMIPDefaultPainter->GetMIPPainter();
+
   this->SplotchPainter->Register(this);
   this->LODSplotchPainter->Register(this);
+  this->LODMIPPainter->Register(this);
   this->ActiveParticleType   = 0;
 //  this->ColorArrayName       = 0;
 //  this->ColorAttributeType   = POINT_DATA;
@@ -139,6 +148,11 @@ void vtkSplotchRepresentation::SetupDefaults()
 //  this->DeliveryFilter->SetOutputDataType(VTK_POLY_DATA);
 //  this->LODDeliveryFilter->SetOutputDataType(VTK_POLY_DATA);
   this->Decimator->SetCopyCellData(0);
+
+  this->MultiBlockMaker->SetInputConnection(this->GeometryFilter->GetOutputPort());
+  this->CacheKeeper->SetInputConnection(this->MultiBlockMaker->GetOutputPort());
+  this->Decimator->SetInputConnection(this->CacheKeeper->GetOutputPort());
+
   // We don't want the MultiBlockMaker as we don't support multiblock
   // connect the GeometryFilter to the CacheKeeper and bypass multiblockmaker.
   // The SplotchDefaultPainter removes the composite painter from the painter chain
@@ -153,8 +167,11 @@ void vtkSplotchRepresentation::SetupDefaults()
 
   // Setup LOD painters
   painterMapper = vtkPainterPolyDataMapper::SafeDownCast(this->LODMapper);
-  this->LODSplotchDefaultPainter->SetDelegatePainter(painterMapper->GetPainter()->GetDelegatePainter());
-  painterMapper->SetPainter(this->LODSplotchDefaultPainter);
+//  this->LODSplotchDefaultPainter->SetDelegatePainter(painterMapper->GetPainter()->GetDelegatePainter());
+//  painterMapper->SetPainter(this->LODSplotchDefaultPainter);
+  this->LODMIPDefaultPainter->SetDelegatePainter(painterMapper->GetPainter()->GetDelegatePainter());
+  painterMapper->SetPainter(this->LODMIPDefaultPainter);
+  this->Actor->SetEnableLOD(0);
 }
 
 //----------------------------------------------------------------------------
@@ -432,6 +449,66 @@ bool vtkSplotchRepresentation::AddToView(vtkView* view)
 }
 
 //----------------------------------------------------------------------------
+int vtkSplotchRepresentation::ProcessViewRequest(
+  vtkInformationRequestKey* request_type,
+  vtkInformation* inInfo, vtkInformation* outInfo)
+{
+  if (this->GetVisibility() == false)
+    {
+    return 0;
+    }
+
+  if (request_type == vtkPVView::REQUEST_UPDATE_LOD())
+    {
+    // Called to generate and provide the LOD data to the view.
+    // If SuppressLOD is true, we tell the view we have no LOD data to provide,
+    // otherwise we provide the decimated data.
+    if (!this->SuppressLOD)
+      {
+      if (inInfo->Has(vtkPVRenderView::USE_OUTLINE_FOR_LOD()))
+        {
+        // HACK to ensure that when Decimator is next employed, it delivers a
+        // new geometry.
+        this->Decimator->Modified();
+
+        this->LODOutlineFilter->Update();
+        // Pass along the LOD geometry to the view so that it can deliver it to
+        // the rendering node as and when needed.
+        vtkPVRenderView::SetPieceLOD(inInfo, this,
+          this->LODOutlineFilter->GetOutputDataObject(0));
+        }
+      else
+        {
+        // HACK to ensure that when Decimator is next employed, it delivers a
+        // new geometry.
+/*
+        this->LODOutlineFilter->Modified();
+
+        if (inInfo->Has(vtkPVRenderView::LOD_RESOLUTION()))
+          {
+          int division = static_cast<int>(150 *
+            inInfo->Get(vtkPVRenderView::LOD_RESOLUTION())) + 10;
+          division = 10; 
+          this->Decimator->SetNumberOfDivisions(division, division, division);
+          }
+
+        this->Decimator->Update();
+*/
+        // Pass along the LOD geometry to the view so that it can deliver it to
+        // the rendering node as and when needed.
+        vtkPVRenderView::SetPieceLOD(inInfo, this,
+          this->CacheKeeper->GetOutputDataObject(0));
+        }
+      }
+    }
+  else if (!this->Superclass::ProcessViewRequest(request_type, inInfo, outInfo))
+    {
+    // i.e. this->GetVisibility() == false, hence nothing to do.
+    return 0;
+    }
+
+  return 1;
+}
 
 
 //----------------------------------------------------------------------------

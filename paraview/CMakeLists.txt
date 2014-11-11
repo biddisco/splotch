@@ -54,9 +54,9 @@ if(PARAVIEW_USE_MPI)
   set(SPLOTCH_MPI_LIBS ${MPI_LIBRARY} ${MPI_C_LIBRARIES})
 endif(PARAVIEW_USE_MPI)
 
-if(PARAVIEW_USE_ICE_T)
+#if(PARAVIEW_USE_ICE_T)
   ADD_DEFINITIONS(-DUSE_ICET)
-endif(PARAVIEW_USE_ICE_T)
+#endif(PARAVIEW_USE_ICE_T)
 
 ADD_DEFINITIONS(-DPARAVIEW_SPLOTCH)
 
@@ -64,6 +64,15 @@ ADD_DEFINITIONS(-DPARAVIEW_SPLOTCH)
 # We must build sub libraries with -fPIC
 # --------------------------------------------------
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/GitExternal.cmake)
+Git_External(
+  ${CMAKE_CURRENT_SOURCE_DIR}/pv-MIP
+  git@github.com:biddisco/pv-MIP.git
+  master
+#  NO_UPDATE
+  VERBOSE
+)
 
 #--------------------------------------------------
 # if not called from the splotch source directory
@@ -270,6 +279,9 @@ SET( splotch_plugin_WRAPPED_SRCS
   vtkSplotchRepresentation.cxx  
   vtkSplotchDefaultPainter.cxx
   vtkSplotchPainter.cxx
+  pv-MIP/vtkMIPRepresentation.cxx  
+  pv-MIP/vtkMIPDefaultPainter.cxx
+  pv-MIP/vtkMIPPainter.cxx
   ${PV_SPLOTCH_CUDA_PLUGIN_SRCS}
 )
 
@@ -321,6 +333,9 @@ if(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
   ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
 endif(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
 
+ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/pv-MIP)
+
 #--------------------------------------------------
 # Define Plugin
 #--------------------------------------------------
@@ -332,6 +347,7 @@ ADD_PARAVIEW_PLUGIN(
 
   SERVER_MANAGER_XML 
     ${CMAKE_CURRENT_SOURCE_DIR}/vtkSplotchRepresentation.xml
+    ${CMAKE_CURRENT_SOURCE_DIR}/pv-MIP/vtkMIPRepresentation.xml
   SERVER_MANAGER_SOURCES
     ${splotch_plugin_WRAPPED_SRCS}
   SERVER_SOURCES

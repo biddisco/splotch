@@ -27,6 +27,8 @@
 
 class vtkSplotchPainter;
 class vtkSplotchDefaultPainter;
+class vtkMIPPainter;
+class vtkMIPDefaultPainter;
 
 class pv_splotch_EXPORT vtkSplotchRepresentation : public vtkGeometryRepresentation
 {
@@ -89,6 +91,15 @@ virtual void SetInputArrayToProcess(int idx, int port, int connection,
 
   bool AddToView(vtkView* view);
 
+  // Description:
+  // vtkAlgorithm::ProcessRequest() equivalent for rendering passes. This is
+  // typically called by the vtkView to request meta-data from the
+  // representations or ask them to perform certain tasks e.g.
+  // PrepareForRendering.
+  virtual int ProcessViewRequest(vtkInformationRequestKey* request_type,
+    vtkInformation* inInfo, vtkInformation* outInfo);
+
+
 //BTX
 protected:
   vtkSplotchRepresentation();
@@ -117,6 +128,9 @@ protected:
   vtkSplotchPainter         *LODSplotchPainter;
   vtkSplotchDefaultPainter  *SplotchDefaultPainter;
   vtkSplotchDefaultPainter  *LODSplotchDefaultPainter;
+  //
+  vtkMIPPainter             *LODMIPPainter;
+  vtkMIPDefaultPainter      *LODMIPDefaultPainter;
   //
   int                    ActiveParticleType;
   vtkSmartPointer<vtkStringArray> Settings;
