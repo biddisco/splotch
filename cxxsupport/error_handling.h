@@ -76,8 +76,12 @@ do { throw PlanckError(msg); } while(0)
 
 /*! Writes diagnostic output and exits with an error status if \a testval
     is \a false. */
+#ifdef SPLOTCH_PARAVIEW
+#define planck_assert(testval,msg) 
+#else
 #define planck_assert(testval,msg) \
 do { if (testval); else planck_fail(msg); } while(0)
+#endif
 
 /*! Macro for improving error diagnostics. Should be placed immediately
     after the opening brace of \c main(). Must be used in conjunction with
