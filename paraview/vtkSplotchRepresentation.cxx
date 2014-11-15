@@ -58,7 +58,7 @@ vtkStandardNewMacro(vtkSplotchRepresentation);
 //----------------------------------------------------------------------------
 vtkSplotchRepresentation::vtkSplotchRepresentation()
 {
-//  this->CheckMPIController();
+  this->CheckMPIController();
   //
   this->SplotchDefaultPainter    = vtkSplotchDefaultPainter::New();
   this->LODSplotchDefaultPainter = vtkSplotchDefaultPainter::New();
@@ -123,13 +123,25 @@ void vtkSplotchRepresentation::CheckMPIController()
           << "MPI distribution with threads enabled" << std::endl;
         }
         else {
-          std::cout << "MPI_THREAD_MULTIPLE is OK (DSM override)" << std::endl;
+          std::cout << "MPI_THREAD_MULTIPLE is OK (splotch(rep) override)" << std::endl;
         }
       }
     }
     //
     vtkDebugMacro("Setting Global MPI controller");
-    vtkSmartPointer<vtkMPIController> controller = vtkSmartPointer<vtkMPIController>::New();
+
+    MPI_Comm *ocomm = new MPI_Comm(MPI_COMM_WORLD);
+    vtkMPICommunicatorOpaqueComm comm(ocomm);
+    // create a vtkCommunicator and initialize it with the external communicator
+    vtkMPICommunicator *communicator = vtkMPICommunicator::New();
+    communicator->InitializeExternal(&comm);
+    vtkMPICommunicator::SetWorldCommunicator(communicator);
+
+    vtkMPIController *controller = vtkMPIController::New();
+    controller->Register(NULL); // to stop it going out of context
+//    vtkProcessModule::GlobalController = controller;
+    controller->SetCommunicator(communicator);
+
     if (flag == 0) controller->Initialize(NULL, NULL, 1);
     vtkMPIController::SetGlobalController(controller);
   }

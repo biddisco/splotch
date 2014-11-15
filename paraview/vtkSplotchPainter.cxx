@@ -50,9 +50,14 @@
 #include "vtkFloatArray.h"
 #include "vtkDoubleArray.h"
 //
-#ifdef VTK_USE_MPI
-#include "vtkMPICommunicator.h"
+// For PARAVIEW_USE_MPI
+#include "vtkPVConfig.h"
+#ifdef PARAVIEW_USE_MPI
+ #include "vtkMPI.h"
+ #include "vtkMPIController.h"
+ #include "vtkMPICommunicator.h"
 #endif
+// Otherwise
 #include "vtkMultiProcessController.h"
 
 #include "splotch/scenemaker.h"
@@ -107,6 +112,13 @@ vtkSplotchPainter::vtkSplotchPainter()
   this->lastX = -1;
   this->lastY = -1;
   //
+  vtkMPICommunicator *communicator = vtkMPICommunicator::SafeDownCast(this->Controller->GetCommunicator());
+  MPI_Comm mpiComm = MPI_COMM_NULL;
+  if (communicator) {
+    mpiComm = *(communicator->GetMPIComm()->GetHandle());
+    std::cout << "Overriding world communicator in splotch MPI_Manager " << std::endl;
+  }
+  MPI_Manager::COMMUNICATOR = mpiComm;
   MPI_Manager::GetInstance();
 }
 // ---------------------------------------------------------------------------
