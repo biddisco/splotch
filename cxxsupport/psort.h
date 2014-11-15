@@ -322,7 +322,7 @@ void parallel_sort (RAIter first, RAIter last, Tcomp comp)
              : std::sort (first, last, comp);
 
 #ifdef USE_MPI
-  MPI_Comm comm = MPI_COMM_WORLD;
+  MPI_Comm comm = MPI_Manager::COMMUNICATOR;
 
   int nproc;
   MPI_Comm_size (comm, &nproc);

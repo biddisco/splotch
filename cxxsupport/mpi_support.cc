@@ -48,7 +48,8 @@ void assert_unequal (const void *a, const void *b)
 
 #ifdef USE_MPI
 
-#define LS_COMM MPI_COMM_WORLD
+MPI_Comm MPI_Manager::COMMUNICATOR = 0;
+#define LS_COMM MPI_Manager::COMMUNICATOR
 
 namespace {
 
@@ -233,7 +234,7 @@ void MPI_Manager::allreduceRawVoid (const void *in, void *out, NDT type,
   {
   assert_unequal(in,out);
   MPI_Allreduce (const_cast<void *>(in),out,num,ndt2mpi(type),op2mop(op),
-    MPI_COMM_WORLD);
+    LS_COMM);
   }
 void MPI_Manager::reduceRawVoid (const void *in, void *out, NDT type, tsize num,
   redOp op, int root) const

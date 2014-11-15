@@ -65,6 +65,9 @@ class MPI_Manager
      MPI_Manager(bool need_init);
     ~MPI_Manager();
 
+    typedef int MPI_Comm;
+    static MPI_Comm COMMUNICATOR;
+
     static MPI_Manager *Instance;
     static MPI_Manager *GetInstance() { 
       if (MPI_Manager::Instance==NULL) {
