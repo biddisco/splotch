@@ -13,6 +13,16 @@
 
 =========================================================================*/
 
+// For PARAVIEW_USE_MPI
+#include "vtkPVConfig.h"
+#ifdef PARAVIEW_USE_MPI
+ #include "vtkMPI.h"
+ #include "vtkMPIController.h"
+ #include "vtkMPICommunicator.h"
+#endif
+// Otherwise
+#include "vtkMultiProcessController.h"
+
 #include "vtkSplotchPainter.h"
 
 #include "vtksys/ios/sstream"
@@ -50,16 +60,6 @@
 #include "vtkFloatArray.h"
 #include "vtkDoubleArray.h"
 //
-// For PARAVIEW_USE_MPI
-#include "vtkPVConfig.h"
-#ifdef PARAVIEW_USE_MPI
- #include "vtkMPI.h"
- #include "vtkMPIController.h"
- #include "vtkMPICommunicator.h"
-#endif
-// Otherwise
-#include "vtkMultiProcessController.h"
-
 #include "splotch/scenemaker.h"
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
