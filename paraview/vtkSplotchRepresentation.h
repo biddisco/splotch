@@ -72,6 +72,9 @@ virtual void SetInputArrayToProcess(int idx, int port, int connection,
   void   SetMaxRadius(double r);
   double GetMaxRadius();
 
+  void   SetLargeParticleRetention(int r);
+  int    GetLargeParticleRetention();
+
   // void   SetLODMIP(int l);
   // int    GetLODMIP();
 

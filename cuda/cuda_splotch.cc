@@ -92,6 +92,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     //a new linear pic object that will carry the result
     float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
     bool a_eq_e = g_params.find<bool>("a_eq_e",true);
+    int     prf = g_params.find<int>("particle_retention_factor",100);
  
     int endP = 0;
     int startP = 0;
@@ -100,7 +101,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
     // We only render a single chunk in the paraview version.
     endP = startP + LEN;   //set range
     if (endP > nP) endP = nP;
-    nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, gpudata);
+    nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, pic, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, prf, gpudata);
     // combine host results of chunks
     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
     startP = endP;
@@ -165,7 +166,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
     {
      endP = startP + len;   //set range
      if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, NULL);
+     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, 100, NULL);
      // combine host results of chunks
      tstack_push("combine images");
      for (int x=0; x<xres; x++)

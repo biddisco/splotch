@@ -97,6 +97,10 @@ public:
 
   void SetMaxRadius(int ptype, double);
   double GetMaxRadius(int ptype);
+
+  void   SetLargeParticleRetention(int r);
+  int    GetLargeParticleRetention();
+
   // Description:
   // The MIP Renderer needs to manually convert scalars to colours
   // so we must have a copy of the painter used by the rest of the rendering pipeline
@@ -157,6 +161,7 @@ protected:
   std::vector<int>         LogColour;
   std::vector<int>         TypeActive;
   std::vector<double>      MaxRadius;
+  int LargeParticleRetention;
 
   vtkMultiProcessController *Controller;
   vtkScalarsToColorsPainter *ScalarsToColorsPainter;

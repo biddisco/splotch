@@ -25,7 +25,7 @@
         </ShareProperties>
 
         <ExposedProperties>
-          <PropertyGroup label="Data Structure" >
+          <PropertyGroup label="Splotch Data Structure" >
             <Property name="TypeActive"/>
             <Property name="ActiveParticleType"/>
             <Property name="ActiveParticleSettings"/>
@@ -33,15 +33,16 @@
             <Property name="RadiusScalars"/>
             <Property name="TypeScalars"/> 
           </PropertyGroup>
-          <PropertyGroup label="Preprocessing" >
+          <PropertyGroup label="Splotch Preprocessing" >
             <Property name="GrayAbsorption"/>
             <Property name="LogIntensity"/>
           </PropertyGroup>
-          <PropertyGroup label="Render Parameters" >
+          <PropertyGroup label="Splotch Render Parameters" >
             <Property name="EnableCUDA"/> 
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
+            <Property name="LargeParticleRetention"/>
             <!--Property name="LODMIP"/-->
             <Property name="BrightnessLOD"/>         
           </PropertyGroup>
@@ -71,7 +72,7 @@
         </ShareProperties>
 
         <ExposedProperties>
-          <PropertyGroup label="Data Structure" >
+          <PropertyGroup label="Splotch Data Structure" >
             <Property name="TypeActive"/>
             <Property name="ActiveParticleType"/>
             <Property name="ActiveParticleSettings"/>
@@ -79,15 +80,16 @@
             <Property name="RadiusScalars"/>
             <Property name="TypeScalars"/> 
           </PropertyGroup>
-          <PropertyGroup label="Preprocessing" >
+          <PropertyGroup label="Splotch Preprocessing" >
             <Property name="GrayAbsorption"/>
             <Property name="LogIntensity"/>
           </PropertyGroup>
-          <PropertyGroup label="Render Parameters" >
+          <PropertyGroup label="Splotch Render Parameters" >
             <Property name="EnableCUDA"/> 
             <Property name="Brightness"/>
             <Property name="RadiusMultiplier"/>
             <Property name="MaxRadius"/>
+            <Property name="LargeParticleRetention"/>
             <!--Property name="LODMIP"/-->
             <Property name="BrightnessLOD"/>         
           </PropertyGroup>
@@ -199,6 +201,17 @@
         </ArrayListDomain>
       </StringVectorProperty>
 
+       <!-- Properties relating to data preprocessing -->
+      <IntVectorProperty name="LargeParticleRetention"
+        command="SetLargeParticleRetention"
+        number_of_elements="1"
+        default_values="100">
+        <IntRangeDomain name="range" min="0" max="100"/>
+        <Documentation>
+          To remove large particles, set this low
+        </Documentation>
+      </IntVectorProperty>
+      
        <!-- Properties relating to data preprocessing -->
       <DoubleVectorProperty name="GrayAbsorption"
         command="SetGrayAbsorption"

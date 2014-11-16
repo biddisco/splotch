@@ -2,6 +2,8 @@
 #ifndef CUDA_KERNEL_H
 #define CUDA_KERNEL_H
 
+#include <thrust/random.h>
+#include <thrust/tuple.h>
 #include "cuda/cuda_utils.h"
 #include <cstdio>
 
@@ -32,15 +34,65 @@ struct particle_notValid
       return (flag < 0);
     }
   };
+  
+__host__ __device__
+inline unsigned int hash(unsigned int a)
+{
+  a = (a+0x7ed55d16) + (a<<12);
+  a = (a^0xc761c23c) ^ (a>>19);
+  a = (a+0x165667b1) + (a<<5);
+  a = (a+0xd3a2646c) ^ (a<<9);
+  a = (a+0xfd7046c5) + (a<<3);
+  a = (a^0xb55a4f09) ^ (a>>16);
+  return a;
+}
+  
 
 // check for active big particles to copy back to the host
 struct reg_notValid
   {
     __host__ __device__
-    bool operator()(const int flag)
+    reg_notValid(int prf) 
     {
-      return (flag==-2);
+      _prf = prf/100.0f;
+      unsigned int seed = hash(prf);
+      // seed a random number generator
+      rng = thrust::default_random_engine(seed);
+
+      // create a mapping from random numbers to [0,1)
+      u = thrust::uniform_real_distribution<float>(0,1);
     }
+    
+    __host__ __device__
+    bool operator()(int &flag, int index)
+    {
+      bool copyback = (flag==-2);
+      rng.discard(index);
+      float x = u(rng);
+      printf("%7.3f ",x);
+      if (x>_prf) {
+        copyback = false;
+      }
+      return copyback;
+    }
+    __host__ __device__
+    bool operator()(thrust::tuple<int &, int> ref)
+    {
+      bool copyback = (thrust::get<0>(ref)==-2);
+      rng.discard(thrust::get<1>(ref));
+      float x = u(rng);
+      printf("%7.3f ",x);
+      if (x>_prf) {
+        copyback = false;
+      }
+      return copyback;
+    }
+    
+    
+    float _prf;
+    // variables needed to create random numbers
+    thrust::default_random_engine rng;
+    thrust::uniform_real_distribution<float> u;
   };
 
 struct sum_op

@@ -32,6 +32,8 @@
 #include <thrust/extrema.h>
 #include <thrust/scan.h>
 #include <thrust/iterator/constant_iterator.h>
+#include <thrust/iterator/zip_iterator.h>
+#include <thrust/iterator/counting_iterator.h>
 #include <thrust/system_error.h>
 
 #include "splotch/splotchutils.h"
@@ -40,6 +42,8 @@
 #include "cuda/cuda_render.h"
 #include "cuda/cuda_policy.h"
 #include "cuda/cuda_kernel.cuh"
+
+#define DUMP_BIG_PARTICLES
 
 using namespace std;
 
@@ -81,7 +85,7 @@ using namespace std;
 
 
 #ifdef SPLOTCH_PARAVIEW
-int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata)
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, int prf, void *gpudata)
 #else 
 int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs)
 #endif
@@ -138,11 +142,31 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   { 
    tstack_push("Particle Filtering");
    thrust::device_ptr<int> dev_ptr_flag((int *) gv->d_active);
+   thrust::device_vector<int> dummy(nParticle);
+
+   //
+   // we will throw away large particles to save time and allow better zooming
+   // Use particle_retention_factor to reduce the number of large particles retained
+   // a value of 0, means throw them all away, 100 keep them.
+   //
+   
    // Select big particles to be processed by the host
    // First create buffer to store large particles
    thrust::device_vector<cu_particle_sim> d_host_part(nParticle);
    // Copy particles from device array to big particle array if active flag == -2 
-   thrust::device_vector<cu_particle_sim>::iterator end = thrust:: copy_if(dev_ptr_pd, dev_ptr_pd+nParticle, dev_ptr_flag, d_host_part.begin(), reg_notValid()); 
+std::cout << "prf is " << prf << std::endl;
+
+   reg_notValid func = reg_notValid(prf);
+ 
+    thrust::device_vector<cu_particle_sim>::iterator end = 
+    thrust::copy_if(
+      dev_ptr_pd, 
+      dev_ptr_pd+nParticle, 
+      thrust::make_zip_iterator(thrust::make_tuple(dev_ptr_flag, thrust::make_counting_iterator<int>(0))), 
+      d_host_part.begin(), 
+      reg_notValid(prf)
+      ); 
+       
    // Check how many big particles we had
    nHostPart = end - d_host_part.begin();
 

@@ -99,6 +99,7 @@ vtkSplotchPainter::vtkSplotchPainter()
   this->SetNumberOfParticleTypes(0); 
   this->GrayAbsorption         = 0.001;
   this->RadiusMultiplier       = 1.0;
+  this->LargeParticleRetention = 100;
   this->ScalarsToColorsPainter = NULL;
   this->Controller             = NULL;
   this->EnableCUDA             = 0;
@@ -282,7 +283,16 @@ double vtkSplotchPainter::GetMaxRadius(int ptype)
 {
   return this->MaxRadius[ptype];
 }
-
+//-----------------------------------------------------------------------------
+void vtkSplotchPainter::SetLargeParticleRetention(int r)
+{
+  this->LargeParticleRetention = r;
+}
+//-----------------------------------------------------------------------------
+int vtkSplotchPainter::GetLargeParticleRetention()
+{
+  return this->LargeParticleRetention;
+}
 //-----------------------------------------------------------------------------
 void vtkSplotchPainter::ProcessInformation(vtkInformation* info)
 {
@@ -619,6 +629,7 @@ void vtkSplotchPainter::RenderSplotchParams(vtkRenderer* ren, vtkActor* actor)
   params.setParam("colorbar", false);
   params.setParam("quality_factor", 0.001);
   params.setParam("boost", false);
+  params.setParam("particle_retention_factor", this->GetLargeParticleRetention());
 
 //  params.setParam("color_min0",  0.0);
 //  params.setParam("color_max0",  1.0);
