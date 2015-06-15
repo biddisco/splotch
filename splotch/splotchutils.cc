@@ -141,5 +141,5 @@ void hostTimeReport(wallTimerSet &Timers)
 bool file_present(const string &name)
   {
   ifstream test(name.c_str());
-  return test;
+  return test.good();
   }
