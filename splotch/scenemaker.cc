@@ -168,7 +168,7 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
           cnorm[t].collect(p[m].e.g);
           cnorm[t].collect(p[m].e.b);
         }
-      } 
+      }
 #pragma omp critical
       for(int t=0; t<nt; t++)
       {
@@ -312,7 +312,7 @@ void particle_normalize2(paramfile &params, vector<particle_sim> &p, bool verbos
         cnorm[t].collect(p[m].e.b);
       }
     }
-  }
+  //}
 #pragma omp critical
   for(int t=0; t<nt; t++)
   {
@@ -465,7 +465,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
     double dt = (t2 - t1) * h;
     v_unit1=v_unit/l_unit/sqrt(time1)*dt;
     v_unit2=v_unit/l_unit/sqrt(time2)*dt;
-    //    cout << "Times: " << time1 << " " << time2 << " " << t1 << " " << t2 << " " << v_unit1 << " " << v_unit2 << endl; 
+    //    cout << "Times: " << time1 << " " << time2 << " " << t1 << " " << t2 << " " << v_unit1 << " " << v_unit2 << endl;
     }
 
   vector<pair<MyIDType,MyIDType> > v;
@@ -525,9 +525,9 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
     if (interpol_mode>1)
       {
 	vec3f v1(0,0,0),v2(0,0,0);
-        if (i1 < MyMaxID && i2 < MyMaxID) 
+        if (i1 < MyMaxID && i2 < MyMaxID)
 	  {
-	    v1 = vel1[i1]; 
+	    v1 = vel1[i1];
 	    v2 = vel2[i2];
 	  }
 	if (i1 == MyMaxID)
@@ -542,10 +542,10 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 	  }
 	if (interpol_mode == 2)           // polynomial interpolation
 	  {
-	    pos = x1 + (x2-x1)*3*frac*frac 
+	    pos = x1 + (x2-x1)*3*frac*frac
 	             - (x2-x1)*2*frac*frac*frac
-	             + v1*v_unit1*frac 
-                     - (v1*2*v_unit1+v2*v_unit2)*frac*frac 
+	             + v1*v_unit1*frac
+                     - (v1*2*v_unit1+v2*v_unit2)*frac*frac
                      + (v1*v_unit1+v2*v_unit2)*frac*frac*frac;
 	  }
 	else                              // orbital interpolation
@@ -554,21 +554,21 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 	    for(int k=0;k<3;k++)
 	      {
 		double myx1=0,myx2=0,myv1=0,myv2=0;
-                if (k==0) 
+                if (k==0)
 		  {
 		    myx1=x1.x;
 		    myx2=x2.x;
 		    myv1=v1.x;
 		    myv2=v2.x;
 		  }
-                if (k==1) 
+                if (k==1)
 		  {
 		    myx1=x1.y;
 		    myx2=x2.y;
 		    myv1=v1.y;
 		    myv2=v2.y;
 		  }
-                if (k==2) 
+                if (k==2)
 		  {
 		    myx1=x1.z;
 		    myx2=x2.z;
@@ -582,7 +582,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 		double dvdx = (myv1*v_unit1+myv2*v_unit2) / (myx2-myx1);
 		if(dvdx > 1.99)
 		  dvdx = 1.99;
-		// produce a scaled version of a/tan(0.5*a) which can be simple inverted 
+		// produce a scaled version of a/tan(0.5*a) which can be simple inverted
 		// (function is almost symmetric to the diagonal in the coordinate system)
 		double xx=6.25;
 		double yy=abs(xx/tan(0.5*xx));
@@ -610,9 +610,9 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 			// we have a complicated polynomial fit to do a fist correction to the result
 			double myp0 = -0.0063529879 , myp1 = 0.42990545,  myp2 = -0.015337119, myp3 = -0.017165266,
 			       myp4 =  0.16812639   , myp5 = 0.062027583, myp6 =  1.8925764;
-			correction = myp0 * exp(myp5*pow(a_guess,myp6)) * pow(a_guess,myp1) * 
-                                           (a_guess - 3.2518792) * pow(abs(a_guess - 3.2518792),myp2) * 
-		                           (a_guess - 5.8155169) * pow(abs(a_guess - 5.8155169),myp3) * 
+			correction = myp0 * exp(myp5*pow(a_guess,myp6)) * pow(a_guess,myp1) *
+                                           (a_guess - 3.2518792) * pow(abs(a_guess - 3.2518792),myp2) *
+		                           (a_guess - 5.8155169) * pow(abs(a_guess - 5.8155169),myp3) *
                                            (a_guess - 6.25) * pow(abs(a_guess - 6.25),myp4);
 			a_found = a_guess + correction;
 		      }
@@ -621,7 +621,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 		long iter=0;
 		while((abs(dvdx - a_found/tan(0.5*a_found)) > 1e-6) && (iter < 10))
 		  {
-		    double da_found = -1 * (dvdx * (1-cos(a_found)) - a_found * sin(a_found)) / 
+		    double da_found = -1 * (dvdx * (1-cos(a_found)) - a_found * sin(a_found)) /
 		                          ((dvdx-1)*sin(a_found) - a_found * cos(a_found));
                     if(a_found + da_found < 0)
 		      a_found = a_found*0.95;
@@ -630,12 +630,12 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 		    iter++;
 		    if(iter > 6)
 		      {
-			cout << "Iter: " << iter << " " 
-			     << dvdx << " " 
-			     << dvdx_scale << " " 
-			     << a_guess << " " 
-			     << a_guess + correction << " " 
-			     << a_found << " " 
+			cout << "Iter: " << iter << " "
+			     << dvdx << " "
+			     << dvdx_scale << " "
+			     << a_guess << " "
+			     << a_guess + correction << " "
+			     << a_found << " "
 			     << dvdx - a_found/tan(0.5*a_found) << endl;
 		      }
 		  }
@@ -643,7 +643,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
 		  planck_fail("could not find zero point for interpolation fit !");
 		// Now find the other aprameters
 		double a0,a1,a2=myv1*v_unit1/a_found;
-		if (abs(sin(a_found)) < 1e-6) 
+		if (abs(sin(a_found)) < 1e-6)
 		  a1=(myx1-myx2+a2*sin(a_found))/(1-cos(a_found));
 		else
 		  a1=(myv1*v_unit1*cos(a_found)-myv2*v_unit2)/(a_found*sin(a_found));
@@ -660,7 +660,7 @@ void sceneMaker::particle_interpolate(vector<particle_sim> &p,double frac) const
       pos = x1*(1.-frac) + x2*frac;
 
 
-    if (i1 < MyMaxID && i2 < MyMaxID) 
+    if (i1 < MyMaxID && i2 < MyMaxID)
       p[i]=particle_sim(p1[i1].e*(1.-frac)+p2[i2].e*frac,
 			pos.x,pos.y,pos.z,
 			(1-frac) * p1[i1].r  + frac*p2[i2].r,
