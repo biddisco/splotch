@@ -55,7 +55,7 @@ struct reg_notValid
     reg_notValid(int prf) 
     {
       _prf = prf/100.0f;
-      unsigned int seed = hash(prf);
+      unsigned int seed = ::hash(prf);
       // seed a random number generator
       rng = thrust::default_random_engine(seed);
 

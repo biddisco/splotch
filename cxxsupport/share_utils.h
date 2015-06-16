@@ -32,6 +32,7 @@
 #ifndef PLANCK_SHARE_UTILS_H
 #define PLANCK_SHARE_UTILS_H
 
+#include <algorithm>
 #include "datatypes.h"
 
 /*! Divides the index range [\a glo; \a ghi) into \a nshares approximately
@@ -73,7 +74,7 @@ class chunkMaker
       using namespace std;
       if (offset>=s_full) return false;
       start=offset;
-      size=min(s_chunk,s_full-offset);
+      size=std::min(s_chunk,s_full-offset);
       offset+=s_chunk;
       return true;
       }
