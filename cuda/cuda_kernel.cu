@@ -20,13 +20,15 @@
  *
  */
 
+
+
 #ifndef __KERNEL__
 #define __KERNEL__
 
  #include "cuda_kernel.cuh"
 //help functions
-#define Pi 3.141592653589793238462643383279502884197
-#define MAXSIZE 1000
+//#define Pi 3.141592653589793238462643383279502884197
+//#define MAXSIZE 1000
 
 __constant__ cu_param dparams;
 __constant__ cu_color_map_entry dmap[MAXSIZE];
@@ -66,19 +68,25 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size
 }
 
 //Transform+coloring by kernel
+#if !defined(CUDA_FULL_ATOMICS)
 __global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize, int types, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
+#else
+__global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
+#endif
 {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
 
   #ifdef SPLOTCH_PARAVIEW
-  // For paraview version we may be using active to filter by type 
-  // Which is set before this kernel runs
-    if(!p[m].active) {
-      p_active[m] = -1;
-      return;
-    }
+    #ifndef CUDA_FULL_ATOMICS
+    // For paraview version we may be using active to filter by type 
+    // Which is set before this kernel runs
+      if(!p[m].active) {
+        p_active[m] = -1;
+        return;
+      }
+    #endif
   #else
    float er = p[m].e.r;
    float eg = p[m].e.g;
@@ -129,8 +137,14 @@ __global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize,
   y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
 
-  if(z <= 0.0f){p[m].active = false; p_active[m]=-1;return;};
-  if(z >= 1e23){p[m].active = false; p_active[m]=-1;return;};
+#ifdef CUDA_FULL_ATOMICS
+  if(-z <= 0.0f){p[m].active = false;return;};
+  if(-z >= 1e23){p[m].active = false;return;};
+#else
+  if(-z <= 0.0f){p[m].active = false; p_active[m]=-1;return;};
+  if(-z >= 1e23){p[m].active = false; p_active[m]=-1;return;};
+#endif
+
   //do r
   float xfac2 = dparams.xfac;
   //const float   res2 = 0.5f*dparams.xres;
@@ -167,7 +181,12 @@ __global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize,
   I *= dparams.brightness[ptype];
 
   p[m].active = false;
-  p_active[m] = -1;	// non active particle
+
+#if !defined(CUDA_FULL_ATOMICS) 
+  // Tiled implementation has seperate active array for filtering
+  p_active[m] = -1; 
+#endif
+
   // compute region occupied by the partile
   //float raux=dparams.rfac;
   const float rfacr=dparams.rfac*r;
@@ -211,19 +230,24 @@ __global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize,
  p[m].e.g *= I;
  p[m].e.b *= I; 
   
-  // manage particles outside the image but that influence it
+
+  #if !defined(CUDA_FULL_ATOMICS) 
+  // Tiled implementation
+  // Manage particles outside the image but that influence it
   if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
   if(y < 0.0 || y >= (float)dparams.yres){p_active[m] = -2; return;};
-  // active particle = tile_id to which it belongs to
+  // Active particle = tile_id to which it belongs to
   /////////////CLAAAAA p_active[m] = int(y)/tile_sidey + int(x)/tile_sidex*nytiles; 
   p_active[m] = int(y/float(tile_sidey)) + int(x/float(tile_sidex))*nytiles; 
-  //if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
+ // if (p_active[m] < 0 || p_active[m] > nxtiles*nytiles) {printf("x=%f, y=%f, flag=%d\n",x,y,p_active[m]);}
   if ((maxx-minx)*(maxy-miny) <= 1) p_active[m] = nxtiles*nytiles; // point-like particles 
   if (int(rfacr)>=width) 
   {
       p_active[m] = -2; // particle to be removed and copied back to the host 
       //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);
   }
+#endif
+
 }
  
  
@@ -268,6 +292,8 @@ __global__ void k_range(int nP, cu_particle_sim *p)
   }
 
 }
+#if !defined(CUDA_FULL_ATOMICS) 
+// Tiled implementation 
 
 // change of linear coordinate: from tile to global image
 // lpix -> (x,y) -> (X,Y) -> gpix 
@@ -284,9 +310,9 @@ __device__ int pixelLocalToGlobal(int lpix, int xo, int yo, int width, int tile_
 
 //device render function k_render1
 // a_eq_e = false is not supported
-__global__ void 
+__global__ void k_renderC2
 __launch_bounds__(256, 8) 
-k_renderC2(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
+(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3, int tile_sidex, int tile_sidey, int width, int nytiles)
 {
    extern __shared__ cu_color Btile[];
    __shared__ int local_chunk_length, start;
@@ -302,6 +328,7 @@ k_renderC2(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *
 
    if (threadIdx.x == 0)
    {
+
       if (blockIdx.x == 0) start = 0;
       else start = tilepart[blockIdx.x-1];
       local_chunk_length = tilepart[blockIdx.x] - start;
@@ -311,7 +338,7 @@ k_renderC2(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *
    int xo = (tile/nytiles)*tile_sidex - width;  // Btile origin x
    int yo = (tile%nytiles)*tile_sidey - width;  // Btile origin y
 
-   // Inizialise Btile
+  // Inizialise Btile
    // Block Dim is width of Btile, each thread inits the y column of pixels corresponding to its index on the x
   for (int i=threadIdx.x; i<tileBsize; i=i+blockDim.x) 
   {
@@ -382,7 +409,7 @@ k_renderC2(int nP, cu_particle_sim *part, int *tileId, int *tilepart, cu_color *
       __syncthreads();  
   }
 
-#ifdef CUDA_USE_ATOMICS
+#ifdef CUDA_ATOMIC_TILE_UPDATE
 
     // Atomic update of image
    for (int i=threadIdx.x; i<9*tile_sidex*tile_sidey; i=i+blockDim.x) 
@@ -552,7 +579,7 @@ __global__ void k_renderC3(int nC3, int *index, cu_particle_sim *part, cu_color 
   
 }
 
-#ifndef CUDA_USE_ATOMICS
+#ifndef CUDA_ATOMIC_TILE_UPDATE
 __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic2, cu_color *pic3)
 {
    //first get the index m of this thread
@@ -565,5 +592,71 @@ __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic
 }
 #endif
 
+// End tiled implementation
+#else
+
+// --------------------------------------
+// Render for full atomic implementation
+// --------------------------------------
+__global__ void k_render(int nP, cu_particle_sim *part, cu_color *pic)
+{
+  // Get index, double check its not out of bounds 
+  // (launch parameters mean it shouldnt be...)
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >=nP) return;
+
+  cu_particle_sim p = part[idx];
+
+  if(p.active)
+  {
+    // Work out radial factor
+    float rfacr = dparams.rfac*p.r;
+    float radsq = rfacr*rfacr;
+    float stp = -1.f/(dparams.h2sigma*dparams.h2sigma*p.r*p.r);
+
+    // Get min and max pixels affected, clamp to image boundary
+    int minx=int(p.x-rfacr+1.f);
+    minx=max(minx,0);
+    int maxx=int(p.x+rfacr+1.f);
+    maxx=min(maxx,dparams.xres); 
+    int miny=int(p.y-rfacr+1.f);
+    miny=max(miny,0);
+    int maxy=int(p.y+rfacr+1.f);
+    maxy=min(maxy,dparams.yres);
+
+
+    // For each pixel on x
+    for(int x = minx; x < maxx; ++x)
+    {
+      
+      // Work out x dist from centre and new yminmax 
+      float dxsq = (x - p.x)*(x-p.x);
+      float dy = sqrt(radsq-dxsq);
+      int miny2=max(miny,int(p.y-dy+1)),
+          maxy2=min(maxy,int(p.y+dy+1));
+      float pre2 = __expf(stp*dxsq);
+      // For each pixel on y
+      for(int y = miny2; y < maxy2; ++y)
+      {
+          // Work out y dist from centre  
+          float dysq = (y - p.y) * (y - p.y);
+          float att = __expf(stp*dysq);
+          // Update global image
+          atomicAdd(&(pic[x*dparams.yres+y].r),-att*p.e.r*pre2);
+          atomicAdd(&(pic[x*dparams.yres+y].g),-att*p.e.g*pre2);
+          atomicAdd(&(pic[x*dparams.yres+y].b),-att*p.e.b*pre2);      
+
+      }
+    
+    }
+  }
+  //__syncthreads();
+  //if(idx == 3) printf("px3 r: %f g: %f b: %f\n", pic[3].r,pic[3].g,pic[3].b);
+  
+}
+// End atomic implementation
 #endif
+
+#endif
+
 

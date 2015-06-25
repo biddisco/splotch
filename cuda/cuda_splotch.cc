@@ -53,7 +53,13 @@ int cuda_paraview_init(arr2<COLOUR> &pic, vector<particle_sim> &particle, const 
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
   gv.policy = policy;
 
-  int ntiles = gv.policy->GetNumTiles();
+#ifndef CUDA_FULL_ATOMICS
+  int ntiles = policy->GetNumTiles();
+#else
+  // For atomic implementation just a placeholder
+  int ntiles = 0;
+#endif
+  
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 4);
   LEN = cu_paraview_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor, nP);
@@ -114,6 +120,7 @@ void cuda_paraview_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vect
   }
 
  }
+
 #endif
  
 void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<particle_sim> &particle, const vec3 &campos, const vec3 &lookat, vec3 &sky, vector<COLOURMAP> &amap, float b_brightness, paramfile &g_params)
@@ -121,39 +128,60 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
   tstack_push("CUDA");
   tstack_push("Device setup");
   long int nP = particle.size();
+
+  // Fill our output image with black
   pic.fill(COLOUR(0.0, 0.0, 0.0));
   int xres = pic.size1();
   int yres = pic.size2();
- // cout << "resolution = " << xres << " x " << yres << endl;
+
+#ifndef CUDA_FULL_ATOMICS
+  // Create our host image buffer - to be incrementally filled by looped draw call
   arr2<COLOUR> Pic_host(xres,yres);
-  int ptypes = g_params.find<int>("ptypes",1);
+#else
+  // For atomic implementation just a placeholder
+  arr2<COLOUR> Pic_host;
+#endif
 
   // CUDA Init
   // Initialize policy class
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
-  int ntiles = policy->GetNumTiles();
 
+#ifndef CUDA_FULL_ATOMICS
+  int ntiles = policy->GetNumTiles();
+#else
+  // For atomic implementation just a placeholder
+  int ntiles = 0;
+#endif
+
+  // Initialise struct to hold gpu-destined variables
   cu_gpu_vars gv;
   memset(&gv, 0, sizeof(cu_gpu_vars));
   gv.policy = policy;
+
+   // Setup gpu colormap
+  int ptypes = g_params.find<int>("ptypes",1);
   setup_colormap(ptypes, amap, &gv);
 
-  // num particles to manage at once
+  // Calculate how many particles to manage at once dependant on GPU memory size
+  // Particle mem factor modifies how much memory we request
   float factor = g_params.find<float>("particle_mem_factor", 4);
   long int len = cu_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor);
   if (len <= 0)
-    {
+  {
     cout << "Graphics memory setting error" << endl;
-    MPI_Manager::GetInstance()->abort();
-    }
+    // Splotch paraview doesnt use mpimgr
+    #ifndef SPLOTCH_PARAVIEW
+    mpiMgr.abort();
+    #endif
+  }
 
-  // enable device and allocate arrays
-  bool doLogs = true;
+  // Initialise device and allocate arrays
+  bool doLogs;
   int error = cu_init(mydevID, len, ntiles, &gv);
   tstack_pop("Device setup");
   if (!error)
   {
-    //a new linear pic object that will carry the result
+    // Now we start
     float64 grayabsorb = g_params.find<float>("gray_absorption",0.2);
     bool a_eq_e = g_params.find<bool>("a_eq_e",true);
  
@@ -161,21 +189,40 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
     int startP = 0;
     int nPR = 0;
 
+    // Loop over chunks of particles as big as we can fit in dev mem
     while(endP < nP)
     {
-     endP = startP + len;   //set range
-     if (endP > nP) endP = nP;
-     nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, NULL);
-     // combine host results of chunks
-     tstack_push("combine images");
-     for (int x=0; x<xres; x++)
-      for (int y=0; y<yres; y++)
-        pic[x][y] += Pic_host[x][y];
-     tstack_pop("combine images");
-     cout << "Rank " << MPI_Manager::GetInstance()->rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
-     startP = endP;
+      // Set range and draw first chunk
+      endP = startP + len;
+      if (endP > nP) endP = nP;
+      #ifdef SPLOTCH_PARAVIEW
+      // Splotch paraview uses an extra void pointer.
+      // This is only to allow compilation with/without paraview, splotch paraview wouldnt actually be in this code block
+      void* dummy;
+      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, dummy);
+      #else
+      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
+      #endif
+#ifndef CUDA_FULL_ATOMICS
+      // Combine host render of large particles to final image
+      // No need to do this for atomic implementation
+      tstack_push("combine images");
+      for (int x=0; x<xres; x++)
+        for (int y=0; y<yres; y++)
+          pic[x][y] += Pic_host[x][y];
+      tstack_pop("combine images");
+#endif
+
+    // Splotch paraview doesnt use mpimgr
+    #ifndef SPLOTCH_PARAVIEW
+      cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;
+    #endif
+      startP = endP;
     }
+    // Get device image and combine with final image
+    tstack_push("add_device_image()");
     add_device_image(pic, &gv, xres, yres);
+    tstack_pop("add_device_image()");
     tstack_pop("CUDA");
     cu_end(&gv);
   }
