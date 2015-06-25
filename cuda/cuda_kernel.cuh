@@ -46,7 +46,7 @@ struct reg_notValid
 struct sum_op
 {
   __host__ __device__
-  cu_particle_sim operator()(cu_particle_sim& p1, cu_particle_sim& p2) const{
+  cu_particle_sim operator()(const cu_particle_sim& p1, const cu_particle_sim& p2) const{
 
     cu_particle_sim sum;
     sum = p1;
