@@ -43,7 +43,7 @@
 //#define CUDA_ATOMIC_TILE_UPDATE
 
 // Replace full implementation with atomic update
-//#define CUDA_FULL_ATOMICS
+#define CUDA_FULL_ATOMICS
 
 //  Data structs for using on device
 // 'd_' means device (for device pointers)
