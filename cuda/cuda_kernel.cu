@@ -93,6 +93,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
    float eb = p[m].e.b;    
   #endif
 
+
   int ptype = p[m].type;
   float r = p[m].r;
   float I = p[m].I;
@@ -132,19 +133,22 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
   //now do x,y,z
  // float zminval = 0.0;
  // float zmaxval = 1e23;
+  // if(m==0) printf("p[0] before k_process: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active, p[m].r, p[m].I);
+
   float x,y,z;
   x =p[m].x*dparams.p[0] + p[m].y*dparams.p[1] + p[m].z*dparams.p[2] + dparams.p[3];
   y =p[m].x*dparams.p[4] + p[m].y*dparams.p[5] + p[m].z*dparams.p[6] + dparams.p[7];
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
 
+ // if(m==0) printf("p[0] before z clip: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n", x, y, z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active, p[m].r, p[m].I);
 #ifdef CUDA_FULL_ATOMICS
-  if(-z <= 0.0f){p[m].active = false;return;};
-  if(-z >= 1e23){p[m].active = false;return;};
+ // if(-z <= 0.0f){p[m].active = false;return;};
+ // if(-z >= 1e23){p[m].active = false;return;};
 #else
   if(-z <= 0.0f){p[m].active = false; p_active[m]=-1;return;};
   if(-z >= 1e23){p[m].active = false; p_active[m]=-1;return;};
 #endif
-
+ if(m==0) printf("p[0] after z clip: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n",  x,  y,  z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active, p[m].r, p[m].I);
   //do r
   float xfac2 = dparams.xfac;
   //const float   res2 = 0.5f*dparams.xres;
@@ -186,6 +190,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
   // Tiled implementation has seperate active array for filtering
   p_active[m] = -1; 
 #endif
+  //if(m==0) printf("p[0] before clip: x %f y %f z %f r %f g %f b %f active: %d\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active);
 
   // compute region occupied by the partile
   //float raux=dparams.rfac;
@@ -208,7 +213,8 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
   maxy=min(maxy,dparams.yres);
   if (miny>=maxy) return;
   p[m].active = true;
-  
+  //if(m==0) printf("p[0] after clip: x %f y %f z %f r %f g %f b %f active: %d\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active);
+
   p[m].x = x;
   p[m].y = y;
   p[m].r = r;
@@ -231,7 +237,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
  p[m].e.b *= I; 
   
 
-  #if !defined(CUDA_FULL_ATOMICS) 
+#if !defined(CUDA_FULL_ATOMICS) 
   // Tiled implementation
   // Manage particles outside the image but that influence it
   if(x < 0.0 || x >= (float)dparams.xres){p_active[m] = -2; return;};
@@ -247,7 +253,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
       //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);
   }
 #endif
-
+if(m==0) printf("p[0] after k_process: x %f y %f z %f r %f g %f b %f active: %d\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active);
 }
  
  
@@ -606,9 +612,10 @@ __global__ void k_render(int nP, cu_particle_sim *part, cu_color *pic)
   if (idx >=nP) return;
 
   cu_particle_sim p = part[idx];
-
+  //if(idx == 0) printf("Particle 0: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n", p.x, p.y, p.z, p.e.r, p.e.g, p.e.b, p.active, p.r, p.I);
   if(p.active)
   {
+    //if(idx == 0) printf("Particle 0: x %f y %f z %f r %f g %f b %f\n", p.x, p.y, p.z, p.e.r, p.e.g, p.e.b);
     // Work out radial factor
     float rfacr = dparams.rfac*p.r;
     float radsq = rfacr*rfacr;
