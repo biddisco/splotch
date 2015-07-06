@@ -196,14 +196,14 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
       // Set range and draw first chunk
       endP = startP + len;
       if (endP > nP) endP = nP;
-      #ifdef SPLOTCH_PARAVIEW
+  #ifdef SPLOTCH_PARAVIEW
       // Splotch paraview uses an extra void pointer.
       // This is only to allow compilation with/without paraview, splotch paraview wouldnt actually be in this code block
       void* dummy;
-      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, dummy);
-      #else
+      nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs, 100, dummy);
+  #else
       nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
-      #endif
+  #endif
 #ifndef CUDA_FULL_ATOMICS
       // Combine host render of large particles to final image
       // No need to do this for atomic implementation
