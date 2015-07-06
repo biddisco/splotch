@@ -34,7 +34,7 @@
 #include <thrust/iterator/constant_iterator.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/counting_iterator.h>
-#include <thrust/system_error.h>
+//#include <thrust/system_error.h>
 
 #include "splotch/splotchutils.h"
 #include "splotch/splotch_host.h"
@@ -232,12 +232,12 @@ std::cout << "prf is " << prf << std::endl;
    tstack_pop("Particle Distribution");
 
   }
-  catch(thrust::system_error &e)
-  {
+//  catch(thrust::system_error &e)
+//  {
     // output an error message and exit
-    std::cerr << "Error accessing vector element: " << e.what() << std::endl;
-    exit(-1);
-  }
+//    std::cerr << "Error accessing vector element: " << e.what() << std::endl;
+//    exit(-1);
+//  }
   catch(std::bad_alloc &e)
   {
     std::cerr << "Couldn't allocate vector" << std::endl;
