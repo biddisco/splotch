@@ -68,17 +68,24 @@ __device__ __forceinline__ cu_color get_color(int ptype, float val, int map_size
 }
 
 //Transform+coloring by kernel
+/*
+REMOVED TILED IMPLEMENTATION
 #if !defined(CUDA_FULL_ATOMICS)
 __global__ void k_process(cu_particle_sim *p, int *p_active, int n, int mapSize, int types, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
 #else
+*/
 __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
-#endif
+/*#endif*/
 {
   //first get the index m of this thread
   int m=blockIdx.x *blockDim.x + threadIdx.x;
   if (m >=n) return;
 
+
   #ifdef SPLOTCH_PARAVIEW
+    /*
+    REMOVED TILED IMPLEMENTATION
+    DOUBLE CHECK IF THIS IS NECESSARY <----------
     #ifndef CUDA_FULL_ATOMICS
     // For paraview version we may be using active to filter by type 
     // Which is set before this kernel runs
@@ -87,6 +94,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
         return;
       }
     #endif
+    */
   #else
    float er = p[m].e.r;
    float eg = p[m].e.g;
@@ -141,13 +149,14 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
   z =p[m].x*dparams.p[8] + p[m].y*dparams.p[9] + p[m].z*dparams.p[10]+ dparams.p[11];
 
  // if(m==0) printf("p[0] before z clip: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n", x, y, z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active, p[m].r, p[m].I);
-#ifdef CUDA_FULL_ATOMICS
- // if(-z <= 0.0f){p[m].active = false;return;};
- // if(-z >= 1e23){p[m].active = false;return;};
+//#ifdef CUDA_FULL_ATOMICS
+ // if(-z <= 0.0f){p[m].active = false;return;}; <-----------
+ // if(-z >= 1e23){p[m].active = false;return;}; <---------- CLIPPING commented for testing
+/* REMOVED TILED IMPLEMENTATION
 #else
   if(-z <= 0.0f){p[m].active = false; p_active[m]=-1;return;};
   if(-z >= 1e23){p[m].active = false; p_active[m]=-1;return;};
-#endif
+#endif*/
  if(m==0) printf("p[0] after z clip: x %f y %f z %f r %f g %f b %f active: %d r %f I %f\n",  x,  y,  z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active, p[m].r, p[m].I);
   //do r
   float xfac2 = dparams.xfac;
@@ -186,10 +195,11 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
 
   p[m].active = false;
 
-#if !defined(CUDA_FULL_ATOMICS) 
+//REMOVED TILED IMPLEMENTATION
+//#if !defined(CUDA_FULL_ATOMICS) 
   // Tiled implementation has seperate active array for filtering
-  p_active[m] = -1; 
-#endif
+ // p_active[m] = -1; 
+//#endif
   //if(m==0) printf("p[0] before clip: x %f y %f z %f r %f g %f b %f active: %d\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active);
 
   // compute region occupied by the partile
@@ -236,7 +246,8 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
  p[m].e.g *= I;
  p[m].e.b *= I; 
   
-
+/*
+REMOVED TILED IMPLEMENTATION
 #if !defined(CUDA_FULL_ATOMICS) 
   // Tiled implementation
   // Manage particles outside the image but that influence it
@@ -253,6 +264,7 @@ __global__ void k_process(cu_particle_sim *p, int n, int mapSize, int types)
       //printf("x=%f, y=%f, rfacr=%d, WIDTH=%d \n",p[m].r,raux,int(rfacr),width);
   }
 #endif
+*/
 if(m==0) printf("p[0] after k_process: x %f y %f z %f r %f g %f b %f active: %d\n", p[m].x, p[m].y, p[m].z, p[m].e.r, p[m].e.g, p[m].e.b, p[m].active);
 }
  
@@ -298,6 +310,8 @@ __global__ void k_range(int nP, cu_particle_sim *p)
   }
 
 }
+/*
+REMOVED TILED IMPLEMENTATION
 #if !defined(CUDA_FULL_ATOMICS) 
 // Tiled implementation 
 
@@ -600,7 +614,7 @@ __global__ void k_add_images(int n, cu_color *pic, cu_color *pic1, cu_color *pic
 
 // End tiled implementation
 #else
-
+*/
 // --------------------------------------
 // Render for full atomic implementation
 // --------------------------------------
@@ -661,9 +675,11 @@ __global__ void k_render(int nP, cu_particle_sim *part, cu_color *pic)
   //if(idx == 3) printf("px3 r: %f g: %f b: %f\n", pic[3].r,pic[3].g,pic[3].b);
   
 }
+/*
+REMOVED TILED IMPLEMENTATION
 // End atomic implementation
 #endif
-
+*/
 #endif
 
 

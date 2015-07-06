@@ -39,11 +39,14 @@
 
 #include "cuda/cuda_policy.h"
 
+/*
+REMOVED TILED IMPLEMENTATION
 // Use atomics for image update instead of layered update in k_renderC2
 //#define CUDA_ATOMIC_TILE_UPDATE
 
 // Replace full implementation with atomic update
 #define CUDA_FULL_ATOMICS
+*/
 
 //  Data structs for using on device
 // 'd_' means device (for device pointers)
@@ -114,7 +117,8 @@ struct cu_gpu_vars
   cu_color            *d_pic;
   int                 colormap_size;
   int                 colormap_ptypes;
-
+/*
+REMOVED TILED IMPLEMENTATION
   // Implementation specific
 #ifndef CUDA_FULL_ATOMICS
 #ifndef CUDA_ATOMIC_TILE_UPDATE
@@ -127,7 +131,7 @@ struct cu_gpu_vars
   int                 *d_tiles;          // Number of particles per tile
   int                 *d_tileID;         // Tile ID
 #endif
-
+*/
 };
 
 void      cu_get_trans_params(cu_param &para_trans, paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);
@@ -136,6 +140,8 @@ void      cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 int       cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
 int       cu_range(int nP, cu_gpu_vars* pgv);
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
 int       cu_process(int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles);
 void      cu_renderC2(int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
@@ -145,9 +151,13 @@ void      cu_renderC3(int nP, int nC3, int res, cu_gpu_vars* pgv);
 void      cu_add_images(int res, cu_gpu_vars* pgv);
 #endif
 #else
+*/
 int cu_process(int nP, cu_gpu_vars* pgv);
 void cu_render(int nP, cu_gpu_vars* pgv);
+/*
+REMOVED TILED IMPLEMENTATION
 #endif
+*/
 
 #ifdef SPLOTCH_PARAVIEW
 int cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);

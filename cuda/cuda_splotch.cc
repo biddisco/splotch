@@ -53,13 +53,18 @@ int cuda_paraview_init(arr2<COLOUR> &pic, vector<particle_sim> &particle, const 
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
   gv.policy = policy;
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
   int ntiles = policy->GetNumTiles();
 #else
+*/
   // For atomic implementation just a placeholder
   int ntiles = 0;
+  /*
 #endif
-  
+  */
+
   // num particles to manage at once
   float factor = g_params.find<float>("particle_mem_factor", 4);
   LEN = cu_paraview_get_chunk_particle_count(&gv, nTasksDev, sizeof(cu_particle_sim), ntiles, factor, nP);
@@ -134,24 +139,33 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
   int xres = pic.size1();
   int yres = pic.size2();
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
   // Create our host image buffer - to be incrementally filled by looped draw call
   arr2<COLOUR> Pic_host(xres,yres);
 #else
+*/
   // For atomic implementation just a placeholder
   arr2<COLOUR> Pic_host;
+  /*
 #endif
-
+*/
   // CUDA Init
   // Initialize policy class
   CuPolicy *policy = new CuPolicy(xres, yres, g_params); 
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
   int ntiles = policy->GetNumTiles();
 #else
+*/
   // For atomic implementation just a placeholder
   int ntiles = 0;
+  /*
 #endif
+*/
 
   // Initialise struct to hold gpu-destined variables
   cu_gpu_vars gv;
@@ -203,6 +217,8 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
       #else
       nPR += cu_draw_chunk(mydevID, (cu_particle_sim *) &(particle[startP]), endP-startP, Pic_host, &gv, a_eq_e, grayabsorb, xres, yres, doLogs);
       #endif
+      /*
+      REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
       // Combine host render of large particles to final image
       // No need to do this for atomic implementation
@@ -212,7 +228,7 @@ void cuda_rendering(int mydevID, int nTasksDev, arr2<COLOUR> &pic, vector<partic
           pic[x][y] += Pic_host[x][y];
       tstack_pop("combine images");
 #endif
-
+*/
     // Splotch paraview doesnt use mpimgr
     #ifndef SPLOTCH_PARAVIEW
       cout << "Rank " << mpiMgr.rank() << ": Rendered " << nPR << "/" << nP << " particles" << endl << endl;

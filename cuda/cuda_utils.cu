@@ -139,7 +139,8 @@ int  cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   cudaMemset(pgv->d_pic,0,size);
 
 
-
+/*
+REMOVED TILED IMPLEMENTATION
 #if !defined(CUDA_FULL_ATOMICS)
 
   // Particle active flag vector
@@ -201,6 +202,7 @@ int  cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   cudaMemset(pgv->d_pic3,0,size);
 #endif 
 #endif
+*/
 
 #ifndef SPLOTCH_PARAVIEW
   //retrieve parameters
@@ -245,6 +247,8 @@ int  cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   {
   int size = pgv->policy->GetImageSize();
   cudaMemset(pgv->d_pic,0,size);
+  /*
+  REMOVED TILED IMPLEMENTATION
   #if !defined(CUDA_FULL_ATOMICS)
   #if !defined(CUDA_ATOMIC_TILE_UPDATE)
   cudaMemset(pgv->d_pic1,0,size);
@@ -252,6 +256,7 @@ int  cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
   cudaMemset(pgv->d_pic3,0,size);
   #endif
   #endif
+  */
 
  //retrieve parameters
   cu_param tparams;
@@ -343,7 +348,10 @@ int cu_range(int nP, cu_gpu_vars* pgv)
   return 0;
 }
  
+ /*
+ REMOVED TILED IMPLEMENTATION
 #ifdef CUDA_FULL_ATOMICS
+*/
 // --------------------------------------
 // Raster/render for full atomic implementation
 // --------------------------------------
@@ -371,6 +379,8 @@ void cu_render(int nP, cu_gpu_vars* pgv)
   k_render<<<dimGrid,dimBlock>>>(nP, pgv->d_pd, pgv->d_pic);
 }
 
+/*
+REMOVED TILED IMPLEMENTATION
 #else
 // --------------------------------------
 // Raster/render etc for tiled & partial atomics
@@ -435,12 +445,15 @@ void cu_renderC3(int nP, int nC3, int res, cu_gpu_vars* pgv)
 }
 
 #endif
+*/
 
 void cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
   CLEAR_MEM((pgv->d_pic));
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
   CLEAR_MEM((pgv->d_active));
   CLEAR_MEM((pgv->d_index));
@@ -452,7 +465,7 @@ void cu_end(cu_gpu_vars* pgv)
   CLEAR_MEM((pgv->d_pic3));
 #endif
 #endif
-
+*/
   delete pgv->policy;
 #ifndef PARAVIEW_SPLOTCH
   cudaThreadExit();
@@ -469,9 +482,14 @@ long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psi
 
    // Number of imagebuffers, if atomics are not used in any way then we use 4 buffers
    int nIm = 4;
+   /*
+   REMOVED TILED IMPLEMENTATION
 #if defined(CUDA_FULL_ATOMICS) || defined(CUDA_ATOMIC_TILE_UPDATE)
+*/
    nIm = 1;
+   /*
 #endif
+*/
 
    long int arrayParticleSize = gMemSize/nTasksDev - nIm*ImSize - 2*tiles - spareMem - colormap_size;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
@@ -496,10 +514,14 @@ long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, s
 
    // Number of imagebuffers, if atomics are not used in any way then we use 4 buffers
    int nIm = 4;
+   /*
+   REMOVED TILED IMPLEMENTATION
 #if defined(CUDA_FULL_ATOMICS) || defined(CUDA_ATOMIC_TILE_UPDATE)
+*/
    nIm = 1;
+   /*
 #endif
-
+*/
    size_t spareMem = 20*(1<<20);
    long int arrayParticleSize = gMemSize/nTasksDev - nIm*ImSize - 2*tiles - spareMem - colormap_size - vtk_size;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 

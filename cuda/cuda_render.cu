@@ -79,6 +79,8 @@ using namespace std;
 //    } 
 // };
 
+/*
+REMOVED TILED IMPLEMENTATION
 #ifndef CUDA_FULL_ATOMICS
 
 #ifdef SPLOTCH_PARAVIEW
@@ -295,6 +297,7 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
 }
 
 #else
+*/
 
 #ifdef SPLOTCH_PARAVIEW
 int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata)
@@ -356,17 +359,20 @@ int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, 
   return nParticle;
 
 }
-
+/*
 #endif
-
+*/
 int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres)
 {
   int res = xres*yres;
 
+/*
+REMOVED TILED IMPLEMENTATION
   #if !defined(CUDA_ATOMIC_TILE_UPDATE) && !defined(CUDA_FULL_ATOMICS)
     // add images on the device: pic+pic1+pic2+pic3
     cu_add_images(res, gv);
   #endif
+  */
   // cout << "Rank " << MPI_Manager::GetInstance()->rank() << cudaGetErrorString(cudaGetLastError()) << endl;
 
   COLOUR *Pic = new COLOUR [res];
