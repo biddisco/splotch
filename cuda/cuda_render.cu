@@ -83,6 +83,7 @@ using namespace std;
 //    } 
 // };
 
+#ifndef CUDA_FULL_ATOMICS
 
 #ifdef SPLOTCH_PARAVIEW
 int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, int prf, void *gpudata)
@@ -317,11 +318,76 @@ std::cout << "prf is " << prf << std::endl;
   return nHostPart+newParticle;
 }
 
+#else
+
+#ifdef SPLOTCH_PARAVIEW
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs, void *gpudata)
+#else 
+int cu_draw_chunk(int mydevID, cu_particle_sim *d_particle_data, int nParticle, arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, bool a_eq_e, float64 grayabsorb, int xres, int yres, bool doLogs)
+#endif
+{
+
+ cudaError_t error;
+
+  // Copy data particle to device memory
+  tstack_push("Data copy");
+  
+#ifdef SPLOTCH_PARAVIEW
+  if (gpudata) {
+    cu_copy_particles_from_gpubuffer(gpudata, nParticle, gv);
+  }
+  else {
+    cu_copy_particles_to_device(d_particle_data, nParticle, gv);
+  }
+#else 
+  cu_copy_particles_to_device(d_particle_data, nParticle, gv);
+#endif
+
+  tstack_pop("Data copy");
+  
+  // Getting logs etc if necessary
+  tstack_push("do logs");
+  if(doLogs)
+  {
+    cu_range(nParticle, gv);
+    cudaDeviceSynchronize();
+  }
+  tstack_pop("do logs");
+ 
+  //--------------------------------------
+  //  particle projection and coloring
+  //--------------------------------------
+
+  tstack_push("Particle projection & coloring");
+  // Project and color particles
+  cu_process(nParticle, gv);
+  cudaDeviceSynchronize();
+  //cout << cudaGetErrorString(cudaGetLastError()) << endl;
+  tstack_pop("Particle projection & coloring");
+
+  // Clip particles here?
+
+  //--------------------------------------
+  //  particle rendering
+  //--------------------------------------
+
+  tstack_push("CUDA Rendering");
+  
+  cu_render(nParticle, gv);
+  cudaDeviceSynchronize();
+  tstack_pop("CUDA Rendering");
+
+  return nParticle;
+
+}
+
+#endif
+
 int add_device_image(arr2<COLOUR> &Pic_host, cu_gpu_vars* gv, int xres, int yres)
 {
   int res = xres*yres;
 
-  #ifndef CUDA_USE_ATOMICS
+  #if !defined(CUDA_ATOMIC_TILE_UPDATE) && !defined(CUDA_FULL_ATOMICS)
     // add images on the device: pic+pic1+pic2+pic3
     cu_add_images(res, gv);
   #endif
