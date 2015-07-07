@@ -138,72 +138,6 @@ int  cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv)
    }
   cudaMemset(pgv->d_pic,0,size);
 
-
-/*
-REMOVED TILED IMPLEMENTATION
-#if !defined(CUDA_FULL_ATOMICS)
-
-  // Particle active flag vector
-  size = nP * sizeof(int);
-  error = cudaMalloc((void**) &pgv->d_active, size);
-  if (error != cudaSuccess)
-   {
-     cout << "Device Malloc: active flag vector allocation error!" << endl;
-     return 1;
-   }
-
-  // Index buffer for C3 particles
-  size = nP * sizeof(int);
-  error = cudaMalloc((void**) &pgv->d_index, size);
-  if (error != cudaSuccess) 
-  {
-   cout << "Device Memory: index buffer allocation error!" << endl;
-   return 1;
-  }
-
-  // Tiles
-  size = (ntiles+1)*sizeof(int);
-  error = cudaMalloc((void**) &pgv->d_tiles, size);   // containing number of particles per tile
-  if (error != cudaSuccess) 
-  {
-     cout << "Device Malloc: array tiles allocation error!" << endl;
-     return 1;
-  }
-  // Tile IDs
-  error = cudaMalloc((void**) &pgv->d_tileID, size);  // containing tiles ID
-  if (error != cudaSuccess) 
-  {
-     cout << "Device Malloc: array tiles allocation error!" << endl;
-     return 1;
-  }
-
-#if !defined(CUDA_ATOMIC_TILE_UPDATE)
-  size = pgv->policy->GetImageSize();
-  error = cudaMalloc((void**) &pgv->d_pic1, size); 
-  if (error != cudaSuccess)
-   {
-     cout << "Device Malloc: image 1 allocation error!" << endl;
-     return 1;
-   }
-  cudaMemset(pgv->d_pic1,0,size);
-  error = cudaMalloc((void**) &pgv->d_pic2, size); 
-  if (error != cudaSuccess)
-   {
-     cout << "Device Malloc: image 2 allocation error!" << endl;
-     return 1;
-   }
-  cudaMemset(pgv->d_pic2,0,size);
-  error = cudaMalloc((void**) &pgv->d_pic3, size); 
-  if (error != cudaSuccess)
-   {
-     cout << "Device Malloc: image 3 allocation error!" << endl;
-     return 1;
-   }
-  cudaMemset(pgv->d_pic3,0,size);
-#endif 
-#endif
-*/
-
 #ifndef SPLOTCH_PARAVIEW
   //retrieve parameters
   cu_param tparams;
@@ -242,21 +176,12 @@ REMOVED TILED IMPLEMENTATION
   return error;
   }
 
+
 #ifdef SPLOTCH_PARAVIEW
  int cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs)
   {
   int size = pgv->policy->GetImageSize();
   cudaMemset(pgv->d_pic,0,size);
-  /*
-  REMOVED TILED IMPLEMENTATION
-  #if !defined(CUDA_FULL_ATOMICS)
-  #if !defined(CUDA_ATOMIC_TILE_UPDATE)
-  cudaMemset(pgv->d_pic1,0,size);
-  cudaMemset(pgv->d_pic2,0,size);
-  cudaMemset(pgv->d_pic3,0,size);
-  #endif
-  #endif
-  */
 
  //retrieve parameters
   cu_param tparams;
@@ -348,10 +273,6 @@ int cu_range(int nP, cu_gpu_vars* pgv)
   return 0;
 }
  
- /*
- REMOVED TILED IMPLEMENTATION
-#ifdef CUDA_FULL_ATOMICS
-*/
 // --------------------------------------
 // Raster/render for full atomic implementation
 // --------------------------------------
@@ -379,93 +300,12 @@ void cu_render(int nP, cu_gpu_vars* pgv)
   k_render<<<dimGrid,dimBlock>>>(nP, pgv->d_pd, pgv->d_pic);
 }
 
-/*
-REMOVED TILED IMPLEMENTATION
-#else
-// --------------------------------------
-// Raster/render etc for tiled & partial atomics
-// --------------------------------------
-
-int cu_process (int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles)
-{
-  //Get block dim and grid dim from pgv->policy object
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(n, &dimGrid, &dimBlock);
-
-  cudaFuncSetCacheConfig(k_process, cudaFuncCachePreferL1);
-  k_process<<<dimGrid,dimBlock>>>(pgv->d_pd, pgv->d_active, n, pgv->colormap_size, pgv->colormap_ptypes, tile_sidex, tile_sidey, width, nxtiles, nytiles);
- 
-  return 0;
-}
-
-#ifndef CUDA_ATOMIC_TILE_UPDATE
-void cu_add_images(int res, cu_gpu_vars* pgv)
-{
-  //fetch grid dim and block dim and call device
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(res, &dimGrid, &dimBlock);
-
-  cudaFuncSetCacheConfig(k_add_images, cudaFuncCachePreferL1);
-  k_add_images<<<dimGrid,dimBlock>>>(res, pgv->d_pic, pgv->d_pic1, pgv->d_pic2, pgv->d_pic3);
-}
-#endif
-
-void cu_renderC2(int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nytiles)
-{
-  //get dims from pgv->policy object first
-  dim3 dimGrid = dim3(grid); 
-  dim3 dimBlock = dim3(block);
-  size_t SharedMem = (tile_sidex+2*width)*(tile_sidey+2*width)*sizeof(cu_color);
-
-  cudaFuncSetCacheConfig(k_renderC2, cudaFuncCachePreferShared);
-  k_renderC2<<<dimGrid, dimBlock, SharedMem>>>(nP, pgv->d_pd, pgv->d_tileID, pgv->d_tiles, pgv->d_pic,
-  pgv->d_pic1, pgv->d_pic2, pgv->d_pic3, tile_sidex, tile_sidey, width, nytiles);
-}
-
-void cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv)
-{
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(nC3, &dimGrid, &dimBlock);
- 
-  k_indexC3<<<dimGrid, dimBlock>>>(nC3, pgv->d_pd+nP-nC3, pgv->d_index);
-}
-
-void cu_renderC3(int nP, int nC3, int res, cu_gpu_vars* pgv)
-{
-  //fetch grid dim and block dim and call device
-  dim3 dimGrid, dimBlock;
-  pgv->policy->GetDimsBlockGrid(res, &dimGrid, &dimBlock);
-
-  if (nC3 > 0)
-  {
-    cudaThreadSynchronize();
-    pgv->policy->GetDimsBlockGrid(nC3, &dimGrid, &dimBlock);
-    k_renderC3<<<dimGrid,dimBlock>>>(nC3, pgv->d_index, pgv->d_pd+nP-nC3, pgv->d_pic);
-  }
-}
-
-#endif
-*/
 
 void cu_end(cu_gpu_vars* pgv)
   {
   CLEAR_MEM((pgv->d_pd));
   CLEAR_MEM((pgv->d_pic));
 
-/*
-REMOVED TILED IMPLEMENTATION
-#ifndef CUDA_FULL_ATOMICS
-  CLEAR_MEM((pgv->d_active));
-  CLEAR_MEM((pgv->d_index));
-  CLEAR_MEM((pgv->d_tiles));
-  CLEAR_MEM((pgv->d_tileID));
-#ifndef CUDA_ATOMIC_TILE_UPDATE
-  CLEAR_MEM((pgv->d_pic1));
-  CLEAR_MEM((pgv->d_pic2));
-  CLEAR_MEM((pgv->d_pic3));
-#endif
-#endif
-*/
   delete pgv->policy;
 #ifndef PARAVIEW_SPLOTCH
   cudaThreadExit();
@@ -481,15 +321,7 @@ long int cu_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psi
    size_t spareMem = 20*(1<<20);
 
    // Number of imagebuffers, if atomics are not used in any way then we use 4 buffers
-   int nIm = 4;
-   /*
-   REMOVED TILED IMPLEMENTATION
-#if defined(CUDA_FULL_ATOMICS) || defined(CUDA_ATOMIC_TILE_UPDATE)
-*/
-   nIm = 1;
-   /*
-#endif
-*/
+   int nIm = 1;
 
    long int arrayParticleSize = gMemSize/nTasksDev - nIm*ImSize - 2*tiles - spareMem - colormap_size;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 
@@ -511,17 +343,8 @@ long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, s
    size_t vtk_size = nP*sizeof(cu_particle_sim);
    // sizeof RGBA array (floats after scalars to colours has converted them)
 //   vtk_size += nP*(sizeof(float)*4);
-
-   // Number of imagebuffers, if atomics are not used in any way then we use 4 buffers
-   int nIm = 4;
-   /*
-   REMOVED TILED IMPLEMENTATION
-#if defined(CUDA_FULL_ATOMICS) || defined(CUDA_ATOMIC_TILE_UPDATE)
-*/
-   nIm = 1;
-   /*
-#endif
-*/
+   int nIm = 1;
+   
    size_t spareMem = 20*(1<<20);
    long int arrayParticleSize = gMemSize/nTasksDev - nIm*ImSize - 2*tiles - spareMem - colormap_size - vtk_size;
    long int len = (long int) (arrayParticleSize/((psize+2*sizeof(int))*pfactor)); 

@@ -39,14 +39,6 @@
 
 #include "cuda/cuda_policy.h"
 
-/*
-REMOVED TILED IMPLEMENTATION
-// Use atomics for image update instead of layered update in k_renderC2
-//#define CUDA_ATOMIC_TILE_UPDATE
-
-// Replace full implementation with atomic update
-#define CUDA_FULL_ATOMICS
-*/
 
 //  Data structs for using on device
 // 'd_' means device (for device pointers)
@@ -117,21 +109,6 @@ struct cu_gpu_vars
   cu_color            *d_pic;
   int                 colormap_size;
   int                 colormap_ptypes;
-/*
-REMOVED TILED IMPLEMENTATION
-  // Implementation specific
-#ifndef CUDA_FULL_ATOMICS
-#ifndef CUDA_ATOMIC_TILE_UPDATE
-  cu_color            *d_pic1;
-  cu_color            *d_pic2;
-  cu_color            *d_pic3;
-#endif
-  int                 *d_active;         // -1=non-active particle, -2=active big particle, n=number of tile, n+1=C3 particles 
-  int                 *d_index;
-  int                 *d_tiles;          // Number of particles per tile
-  int                 *d_tileID;         // Tile ID
-#endif
-*/
 };
 
 void      cu_get_trans_params(cu_param &para_trans, paramfile &params, const vec3 &campos, const vec3 &lookat, vec3 &sky);
@@ -139,30 +116,14 @@ int       cu_init(int devID, long int nP, int ntiles, cu_gpu_vars* pgv);
 void      cu_init_colormap(cu_colormap_info info, cu_gpu_vars* pgv);
 int       cu_copy_particles_to_device(cu_particle_sim* h_pd, unsigned int n, cu_gpu_vars* pgv);
 int       cu_range(int nP, cu_gpu_vars* pgv);
+int       cu_process(int nP, cu_gpu_vars* pgv);
+void      cu_render(int nP, cu_gpu_vars* pgv);
 
-/*
-REMOVED TILED IMPLEMENTATION
-#ifndef CUDA_FULL_ATOMICS
-int       cu_process(int n, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles, int nytiles);
-void      cu_renderC2(int nP, int grid, int block, bool a_eq_e, float grayabsorb, cu_gpu_vars* pgv, int tile_sidex, int tile_sidey, int width, int nxtiles);
-void      cu_indexC3(int nP, int nC3, cu_gpu_vars* pgv);
-void      cu_renderC3(int nP, int nC3, int res, cu_gpu_vars* pgv);
-#ifndef CUDA_ATOMIC_TILE_UPDATE
-void      cu_add_images(int res, cu_gpu_vars* pgv);
-#endif
-#else
-*/
-int cu_process(int nP, cu_gpu_vars* pgv);
-void cu_render(int nP, cu_gpu_vars* pgv);
-/*
-REMOVED TILED IMPLEMENTATION
-#endif
-*/
 
 #ifdef SPLOTCH_PARAVIEW
-int cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);
-int cu_copy_particles_from_gpubuffer(void *gpubuffer, unsigned int n, cu_gpu_vars* pgv);
-long int cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor, int nP);
+int       cu_init_params(cu_gpu_vars* pgv, paramfile &fparams, const vec3 &campos, const vec3 &lookat, vec3 &sky, float b_brightness, bool& doLogs);
+int       cu_copy_particles_from_gpubuffer(void *gpubuffer, unsigned int n, cu_gpu_vars* pgv);
+long int  cu_paraview_get_chunk_particle_count(cu_gpu_vars* pgv, int nTasksDev, size_t psize, int ntiles, float pfactor, int nP);
 #endif
 
 void      cu_end(cu_gpu_vars* pgv);
