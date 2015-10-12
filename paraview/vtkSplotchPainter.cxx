@@ -111,8 +111,14 @@ vtkSplotchPainter::vtkSplotchPainter()
   this->lastX = -1;
   this->lastY = -1;
   //
-  vtkMPICommunicator *communicator = vtkMPICommunicator::SafeDownCast(this->Controller->GetCommunicator());
+  vtkMPICommunicator *communicator = NULL;
   MPI_Comm mpiComm = MPI_COMM_NULL;
+  if (this->Controller) {
+      communicator = vtkMPICommunicator::SafeDownCast(this->Controller->GetCommunicator());
+  }
+  else {
+      mpiComm = MPI_COMM_WORLD;
+  }
   if (communicator) {
     mpiComm = *(communicator->GetMPIComm()->GetHandle());
     std::cout << "Overriding world communicator in splotch MPI_Manager " << std::endl;
