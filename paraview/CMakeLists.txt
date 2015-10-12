@@ -113,70 +113,6 @@ if(NOT TARGET splotchcore)
 
   option(PV_SPLOTCH_USE_CUDA "Compile with Cuda support" ${CUDA_DEFAULT})
 
-  if(PV_SPLOTCH_USE_CUDA)
-    # these should have already been found by pv-cuda-piston
-    find_package(CUDA REQUIRED)
-
-    if (WIN32 AND ${CUDA_VERSION} VERSION_LESS "5.5")
-      set(NEED_PATH_HACK_FOR_VISUAL_STUDIO 1)
-      message("set(NEED_PATH_HACK_FOR_VISUAL_STUDIO 1)")
-    endif()
-
-    #
-    # use /MDd flag in CXX flags to solve some link issues on windows
-    #
-    if (NOT TARGET pv_cuda_piston)
-      message(FATAL_ERROR "Cannot enable Cuda without cuda-piston plugin")
-    endif()
-
-    set(PV_SPLOTCH_DEP_LIBS pv_cuda_piston)
-
-    add_definitions(-DPV_SPLOTCH_USE_PISTON)
-
-    INCLUDE_DIRECTORIES(
-      ${CMAKE_CURRENT_SOURCE_DIR}/piston
-      ${pv_cuda_piston_INCLUDE_DIR}
-    )
-
-    #--------------------------------------------------
-    # #defines for splotch
-    #--------------------------------------------------
-    add_definitions(-DCUDA -DHYPERQ -DSPLOTCH_PARAVIEW)
-
-    INCLUDE_DIRECTORIES(
-      ${CMAKE_CURRENT_SOURCE_DIR}/../
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda
-    )
-      
-    #--------------------------------------------------
-    # Define CUDA compiled source files
-    #--------------------------------------------------
-    set(PV_SPLOTCH_CUDA_CSRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_splotch.cc
-    )
-    set(PV_SPLOTCH_CUDA_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_utils.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_device_query.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_policy.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
-      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_render.cu
-    )
-    set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkCUDASplotchPainter.cxx
-      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkDataSetToSplotch.cxx
-    )
-
-    #--------------------------------------------------
-    # Create a single library containing all the cuda compiled code
-    #--------------------------------------------------
-    # set this, otherwise C_SOURCES is empty in Visual Studio  
-    set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
-
-    # call the cuda wrapper
-    cuda_add_library(pv_splotch_culib ${PV_SPLOTCH_CUDA_SRCS} STATIC)
-
-  endif()
-
   #-----------------------------------------------------------------------------
   # Include Directories
   #-----------------------------------------------------------------------------
@@ -216,7 +152,75 @@ if(NOT TARGET splotchcore)
     SET_TARGET_PROPERTIES(${SPLOTCH_IO_LIBRARY} PROPERTIES COMPILE_FLAGS "${PV_SPLOTCH_OPENMP_CXX_FLAGS}")
     TARGET_LINK_LIBRARIES(${SPLOTCH_IO_LIBRARY} ${SPLOTCH_MPI_LIBS})
   endif()
-  
+
+  if(PV_SPLOTCH_USE_CUDA)
+    # these should have already been found by pv-cuda-piston
+    find_package(CUDA REQUIRED)
+
+    set(CUDA_SEPARABLE_COMPILATION ON)
+
+    if (WIN32 AND ${CUDA_VERSION} VERSION_LESS "5.5")
+      set(NEED_PATH_HACK_FOR_VISUAL_STUDIO 1)
+      message("set(NEED_PATH_HACK_FOR_VISUAL_STUDIO 1)")
+    endif()
+
+    #
+    # use /MDd flag in CXX flags to solve some link issues on windows
+    #
+    if (NOT TARGET pv_cuda_piston)
+      message(FATAL_ERROR "Cannot enable Cuda without cuda-piston plugin")
+    endif()
+
+    set(PV_SPLOTCH_DEP_LIBS pv_cuda_piston)
+
+    add_definitions(-DPV_SPLOTCH_USE_PISTON)
+
+    INCLUDE_DIRECTORIES(
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston
+      ${pv_cuda_piston_INCLUDE_DIR}
+    )
+
+    #--------------------------------------------------
+    # #defines for splotch
+    #--------------------------------------------------
+    add_definitions(-DCUDA -DHYPERQ -DSPLOTCH_PARAVIEW)
+
+    INCLUDE_DIRECTORIES(
+      ${CMAKE_CURRENT_SOURCE_DIR}/../
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda
+    )
+      
+    #--------------------------------------------------
+    # Define CUDA compiled source files
+    #--------------------------------------------------
+    set(PV_SPLOTCH_CUDA_CSRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_splotch.cc
+    )
+    set(PV_SPLOTCH_CUDA_SRCS
+      ${PV_SPLOTCH_CUDA_CSRCS}
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_utils.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_device_query.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_policy.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_kernel.cu
+      ${CMAKE_CURRENT_SOURCE_DIR}/../cuda/cuda_render.cu
+    )
+    set(PV_SPLOTCH_CUDA_PLUGIN_SRCS
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkCUDASplotchPainter.cxx
+      ${CMAKE_CURRENT_SOURCE_DIR}/piston/vtkDataSetToSplotch.cxx
+    )
+
+    #--------------------------------------------------
+    # Create a single library containing all the cuda compiled code
+    #--------------------------------------------------
+    # set this, otherwise C_SOURCES is empty in Visual Studio  
+    set(CUDA_ATTACH_VS_BUILD_RULE_TO_CUDA_FILE OFF) 
+
+    # call the cuda wrapper
+#    cuda_add_library(pv_splotch_culib SHARED ${PV_SPLOTCH_CUDA_SRCS})
+#    target_link_libraries(pv_splotch_culib s#plotchcore)
+
+  endif()
+
   #-----------------------------------------------------------------------------
   # Source files for splotch core library
   #-----------------------------------------------------------------------------
@@ -237,36 +241,35 @@ if(NOT TARGET splotchcore)
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/mesh_creator_vs1.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/p_selector.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/../booster/randomizer.cc
-    ${PV_SPLOTCH_CUDA_CSRCS}
-   # ${PV_SPLOTCH_CUDA_C_SRCS}
+    ${PV_SPLOTCH_CUDA_SRCS}
   )
 
-  ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
+#  ADD_LIBRARY(splotchcore STATIC ${SPLOTCH_CORE_LIB_SRCS})
+  cuda_add_library(pv_splotch_culib SHARED ${SPLOTCH_CORE_LIB_SRCS})
 
-  TARGET_LINK_LIBRARIES(splotchcore 
-    ${SPLOTCH_IO_LIBRARY} 
-    ${SPLOTCH_MPI_LIBS}     
-    pv_splotch_culib
-    ${CUDA_LIBRARIES}
-  )
-  SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${PV_SPLOTCH_OPENMP_CXX_FLAGS}")
-
-  add_executable(splotch 
-    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch.cc
-  )
-
-  SET_TARGET_PROPERTIES(splotch PROPERTIES COMPILE_FLAGS "${PV_SPLOTCH_OPENMP_CXX_FLAGS}")
-  target_link_libraries(splotch 
-    splotchcore 
+  TARGET_LINK_LIBRARIES(pv_splotch_culib #splotchcore 
     ${SPLOTCH_IO_LIBRARY} 
     ${SPLOTCH_MPI_LIBS}     
     ${CUDA_LIBRARIES}
   )
-  if (NOT APPLE AND NOT WIN32 AND PV_SPLOTCH_USE_OPENMP)
-    target_link_libraries(splotch 
-      gomp
-    )
-  endif()
+#  SET_TARGET_PROPERTIES(splotchcore PROPERTIES COMPILE_FLAGS "${PV_SPLOTCH_OPENMP_CXX_FLAGS}")
+
+#  add_executable(splotch 
+#    ${CMAKE_CURRENT_SOURCE_DIR}/../splotch/splotch.cc
+#  )
+
+#  SET_TARGET_PROPERTIES(splotch PROPERTIES COMPILE_FLAGS "${PV_SPLOTCH_OPENMP_CXX_FLAGS}")
+#  target_link_libraries(splotch 
+#    splotchcore 
+#    ${SPLOTCH_IO_LIBRARY} 
+#    ${SPLOTCH_MPI_LIBS}     
+#    ${CUDA_LIBRARIES}
+#  )
+#  if (NOT APPLE AND NOT WIN32 AND PV_SPLOTCH_USE_OPENMP)
+#    target_link_libraries(splotch 
+#      gomp
+#    )
+#  endif()
 
 endif(NOT TARGET splotchcore)
 
@@ -292,34 +295,22 @@ SET( splotch_plugin_WRAPPED_SRCS
 )
 
 if(PARAVIEW_BUILD_QT_GUI)
-  #--------------------------------------------------
-  # Qt .ui files that are wrapped and added to plugin
-  #--------------------------------------------------
-#  set(UI_FORMS
-#    pqSplotchDisplayPanelDecorator.ui
-#  )
-      
- # qt4_wrap_ui(UI_SRCS 
-#    ${UI_FORMS}
-#  )
 
-#  qt4_wrap_cpp(MOC_SRCS 
-#    pqSplotchDisplayPanelDecorator.h
-#    )
-     
-#  set(Plugin_SRCS
-#    pqSplotchDisplayPanelDecorator.cxx
-#    )
-
-#  add_paraview_display_panel_decorator(
-#    IFACES
- #   IFACE_SRCS
- #   CLASS_NAME pqSplotchDisplayPanelDecorator
- #   PANEL_TYPES pqDisplayProxyEditor)
-
-   qt4_wrap_cpp(MOC_SRCS
-    pqSplotchPropertyWidgetDecorator.h)
-
+  if (PARAVIEW_QT_VERSION VERSION_GREATER "4")
+    set (Qt5_FIND_COMPONENTS Widgets)
+    include (ParaViewQt5)
+    
+    qt5_wrap_cpp(MOC_SRCS
+      pqSplotchPropertyWidgetDecorator.h
+    )
+  else()
+    include (${QT_USE_FILE})
+  
+    qt4_wrap_cpp(MOC_SRCS
+      pqSplotchPropertyWidgetDecorator.h
+    )
+  endif()
+  
   set(Plugin_SRCS
     pqSplotchPropertyWidgetDecorator.cxx
     )
@@ -333,11 +324,11 @@ endif(PARAVIEW_BUILD_QT_GUI)
 #--------------------------------------------------
 # Splotch uses MIP for LOD
 #--------------------------------------------------
-if(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
-  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-astro)
-  SET(PV_SPLOTCH_DEP_LIBS ${PV_SPLOTCH_DEP_LIBS} pv_astro)
-  ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
-endif(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+#if(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
+#  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/../../pv-astro)
+#  SET(PV_SPLOTCH_DEP_LIBS ${PV_SPLOTCH_DEP_LIBS} pv_astro)
+#  ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
+#endif(TARGET "pv_astro" AND EXISTS "${PROJECT_SOURCE_DIR}/../../pv-astro/")
 
 ADD_DEFINITIONS(-DPV_SPLOTCH_WITH_MIP)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/pv-MIP)
@@ -372,7 +363,8 @@ ADD_PARAVIEW_PLUGIN(
 
 TARGET_LINK_LIBRARIES(${PLUGIN_NAME} 
   PUBLIC
-    splotchcore 
+ pv_splotch_culib
+#   splotchcore 
     ${SPLOTCH_IO_LIBRARY} 
     ${PV_SPLOTCH_DEP_LIBS}
     ${MPI_LIBRARY}
