@@ -25,8 +25,6 @@
 
 #include "vtkSplotchPainter.h"
 
-#include "vtksys/ios/sstream"
-
 #include "vtkgl.h"
 #include "vtkMapper.h"
 #include "vtkActor.h"
@@ -326,7 +324,7 @@ void vtkSplotchPainter::ProcessInformation(vtkInformation* info)
 // ---------------------------------------------------------------------------
 template <typename T>
 std::string vtkSplotchPainter::NumToStrSPM(T data) {
-  vtksys_ios::ostringstream oss;
+  std::ostringstream oss;
   oss.precision(5);  
   oss << data;
   return oss.str();

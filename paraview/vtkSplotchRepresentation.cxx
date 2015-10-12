@@ -16,8 +16,6 @@
 #include "vtkSplotchRepresentation.h"
 #include "vtkSplotchDefaultPainter.h"
 //
-#include "vtksys/ios/sstream"
-//
 #include "vtkMPI.h"
 #include "vtkMPIController.h"
 #include "vtkMPICommunicator.h"
@@ -235,7 +233,7 @@ void vtkSplotchRepresentation::SetActiveParticleType(int p)
 //----------------------------------------------------------------------------
 template <typename T>
 std::string NumToStr(T data) {
-  vtksys_ios::ostringstream oss;
+  std::ostringstream oss;
 //  oss.setf(0,ios::floatfield);
   oss.precision(5);  
   oss << data;
